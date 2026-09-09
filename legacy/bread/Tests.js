@@ -427,3 +427,57 @@ function stressTestOrders() {
   console.log(report);
   return report;
 }
+function compareStoreLists() {
+  var SRC = {
+    bread:  { id: '1QJca7XlvZbIWfEIyxBxC64dSD6RkrlWoZOSmem2tix4', sheet: 'Маршруты и Магазины', col: 2 },
+    bakery: { id: '1THdB-b4JkXzAKsaVPw8DLrXATlycpFkTgolTmqCOXWo', sheet: 'Адреса ТТ', col: 1 },
+    veg:    { id: '1HbvDCuMMJe7GI4zQyDxkyqVWahTPtWf5vNuMFLEXIC0', sheet: 'Адреса ТТ', col: 1 }
+  };
+
+  function norm(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/[\u2019'`]/g, '')
+      .replace(/(м\.|вул\.|просп\.|пров\.|буд\.)/g, ' ')
+      .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  var sets = {}, originals = {};
+  Object.keys(SRC).forEach(function (k) {
+    var c = SRC[k];
+    var sh = SpreadsheetApp.openById(c.id).getSheetByName(c.sheet);
+    sets[k] = {};
+    originals[k] = {};
+    if (!sh || sh.getLastRow() < 2) return;
+    var vals = sh.getRange(2, c.col, sh.getLastRow() - 1, 1).getValues();
+    vals.forEach(function (r) {
+      var n = norm(r[0]);
+      if (n) { sets[k][n] = true; originals[k][n] = String(r[0]).trim(); }
+    });
+  });
+
+  var all = {};
+  Object.keys(sets).forEach(function (k) {
+    Object.keys(sets[k]).forEach(function (n) { all[n] = true; });
+  });
+
+  var out = [['Адрес (как в хлебе/первом найденном)', 'Хлеб', 'Выпечка', 'Овощи']];
+  Object.keys(all).sort().forEach(function (n) {
+    var label = originals.bread[n] || originals.bakery[n] || originals.veg[n] || n;
+    out.push([label, sets.bread[n] ? '+' : '', sets.bakery[n] ? '+' : '', sets.veg[n] ? '+' : '']);
+  });
+
+  Object.keys(sets).forEach(function (k) {
+    console.log(k + ': ' + Object.keys(sets[k]).length + ' адресов');
+  });
+  console.log('Уникальных всего: ' + Object.keys(all).length);
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var res = ss.getSheetByName('_Сверка_ТТ') || ss.insertSheet('_Сверка_ТТ');
+  res.clear();
+  res.getRange(1, 1, out.length, 4).setValues(out);
+  res.setFrozenRows(1);
+}
+
