@@ -3,31 +3,31 @@
 <head>
   <style>
     body { font-family: Arial, sans-serif; padding: 12px; margin: 0; }
-    h3 { margin: 0 0 12px; color: #1565C0; font-size: 15px; text-align: center; }
+    h3 { margin: 0 0 12px; color: #2E7D32; font-size: 15px; text-align: center; }
     .btn {
       width: 100%; padding: 10px; font-size: 13px; font-weight: 500;
       border: none; border-radius: 8px; cursor: pointer; margin-bottom: 6px; color: #fff;
     }
     .btn-today { background: #43A047; }
-    .btn-filter { background: #1976D2; }
+    .btn-filter { background: #2E7D32; }
     .btn-clear { background: #e53935; }
     .btn:hover { opacity: 0.9; }
     .date-input {
       width: 100%; padding: 10px; font-size: 15px;
-      border: 2px solid #1976D2; border-radius: 8px; margin-bottom: 8px;
+      border: 2px solid #43A047; border-radius: 8px; margin-bottom: 8px;
       box-sizing: border-box;
     }
     .dates-list { margin-top: 12px; }
     .dates-label { font-size: 12px; color: #666; margin-bottom: 6px; }
     .date-chip {
       display: inline-block; padding: 6px 12px; margin: 3px;
-      background: #E3F2FD; border: 1px solid #90CAF9; border-radius: 15px;
-      font-size: 13px; cursor: pointer; color: #1565C0;
+      background: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 15px;
+      font-size: 13px; cursor: pointer; color: #2E7D32;
     }
-    .date-chip:hover { background: #BBDEFB; }
-    .date-chip.active { background: #1976D2; color: #fff; border-color: #1565C0; }
+    .date-chip:hover { background: #C8E6C9; }
+    .date-chip.active { background: #2E7D32; color: #fff; border-color: #1B5E20; }
     .count { font-size: 11px; color: #888; }
-    .date-chip.active .count { color: #B3E5FC; }
+    .date-chip.active .count { color: #A5D6A7; }
     .status {
       margin-top: 10px; font-size: 12px; text-align: center; padding: 8px;
       border-radius: 6px; min-height: 20px;
@@ -38,7 +38,7 @@
   </style>
 </head>
 <body>
-  <h3>📅 Фільтр замовлень за датою</h3>
+  <h3>📅 Фільтр замовлень овочів за датою</h3>
 
   <button class="btn btn-today" onclick="filterToday()">📌 Сьогодні</button>
 
@@ -55,8 +55,6 @@
   <div class="status" id="status"></div>
 
   <script>
-    var activeChip = null;
-
     var today = new Date();
     var dd = String(today.getDate()).padStart(2, '0');
     var mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -99,7 +97,7 @@
       google.script.run
         .withSuccessHandler(function(msg) { setStatus(msg, 'success'); })
         .withFailureHandler(function(err) { setStatus('❌ ' + err.message, 'error'); })
-        .filterRawByDate(dateVal);
+        .applyDateFilter(dateVal);
     }
 
     function quickFilter(dateValue, el) {
@@ -122,7 +120,7 @@
       google.script.run
         .withSuccessHandler(function(msg) { setStatus(msg, 'success'); })
         .withFailureHandler(function(err) { setStatus('❌ ' + err.message, 'error'); })
-        .clearRawFilter();
+        .applyDateFilter('ALL');
     }
 
     function setStatus(text, cls) {

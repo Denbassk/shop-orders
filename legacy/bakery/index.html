@@ -2,18 +2,18 @@
 <html>
 <head>
     <base target="_top">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Замовлення овочів</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Замовлення випічки та кулінарії</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
-    <style>
+<style>
       * { box-sizing: border-box; }
       body { font-family: 'Roboto', sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
       .container { max-width: 720px; margin: 0 auto; padding: 10px 15px; }
 
       .header-block {
-        background: linear-gradient(135deg, #2E7D32 0%, #43A047 100%);
+        background: linear-gradient(135deg, #1565C0 0%, #1976D2 100%);
         padding: 18px 20px; border-radius: 0 0 12px 12px; color: #fff; text-align: center;
-        box-shadow: 0 4px 15px rgba(46,125,50,0.3); margin-top: 0;
+        box-shadow: 0 4px 15px rgba(21,101,192,0.3); margin-top: 0;
       }
       .header-block h1 { margin: 0; font-size: 20px; font-weight: 700; }
 
@@ -28,7 +28,7 @@
         width: 100%; padding: 14px 10px; font-size: 16px; border: 2px solid #ddd;
         border-radius: 8px; background: #fff; transition: border-color 0.2s;
       }
-      select#store-select:focus { border-color: #43A047; outline: none; }
+      select#store-select:focus { border-color: #1976D2; outline: none; }
 
       .stores-status-info {
         background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;
@@ -37,10 +37,44 @@
       .stores-status-info.has-orders { display: block !important; }
       .stores-with-orders-list { margin-top: 6px; padding-left: 18px; font-size: 12px; color: #856404; max-height: 120px; overflow-y: auto; }
 
-      .products-section {
+      .category-selector {
         margin-top: 12px; background: #fff; border-radius: 12px; padding: 16px 18px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       }
+      .category-selector h2 {
+        font-size: 16px; color: #333; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #eee;
+      }
+      .category-tabs { display: flex; gap: 10px; }
+      .category-tab {
+        flex: 1; padding: 16px 10px; border: 2px solid #ddd; border-radius: 12px;
+        text-align: center; cursor: pointer; font-size: 15px; font-weight: 500;
+        transition: all 0.25s ease; background: #fafafa; color: #555; user-select: none;
+        position: relative;
+      }
+      .category-tab:hover { border-color: #90CAF9; background: #E3F2FD; }
+      .category-tab.active-bakery {
+        border-color: #E65100; background: #FFF3E0; color: #E65100;
+        box-shadow: 0 2px 8px rgba(230,81,0,0.15);
+      }
+      .category-tab.active-culinary {
+        border-color: #6A1B9A; background: #F3E5F5; color: #6A1B9A;
+        box-shadow: 0 2px 8px rgba(106,27,154,0.15);
+      }
+      .category-tab .tab-icon { font-size: 30px; display: block; margin-bottom: 6px; }
+      .category-tab .tab-count { display: block; font-size: 12px; font-weight: 400; margin-top: 3px; opacity: 0.7; }
+      .category-tab .tab-badge {
+        position: absolute; top: -6px; right: -6px; background: #4CAF50; color: #fff;
+        font-size: 11px; font-weight: 700; min-width: 20px; height: 20px;
+        border-radius: 10px; display: none; align-items: center; justify-content: center;
+        padding: 0 5px;
+      }
+      .category-tab .tab-badge.visible { display: flex; }
+
+      .products-section {
+        margin-top: 12px; background: #fff; border-radius: 12px; padding: 16px 18px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: none;
+      }
+      .products-section.visible { display: block; }
       .products-section h2 {
         font-size: 16px; color: #333; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #eee;
       }
@@ -50,25 +84,18 @@
         padding: 10px 10px; text-align: left; font-size: 13px; font-weight: 600;
         color: #666; border-bottom: 2px solid #eee; background: #fafafa;
       }
-      .product-table th:nth-child(2) { text-align: right; }
-      .product-table th:nth-child(3) { text-align: center; }
-      .product-table th:nth-child(4) { text-align: right; }
-      
       .product-table td {
         padding: 12px 10px; font-size: 14px; border-bottom: 1px solid #f0f0f0; vertical-align: middle;
       }
       .product-table tr:last-child td { border-bottom: none; }
-      .product-table td:nth-child(2) { text-align: right; color: #388E3C; font-weight: 500; white-space: nowrap; }
+      .product-table td:nth-child(2) { text-align: right; color: #388E3C; font-weight: 500; }
       .product-table td:nth-child(3) { text-align: center; }
-      .product-table td:nth-child(4) { text-align: right; font-weight: 500; white-space: nowrap; min-width: 80px; }
-
-      .product-table tr:hover { background: #f5fff5; }
 
       td input[type="number"] {
-        width: 80px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px;
+        width: 70px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px;
         text-align: center; font-size: 16px; font-weight: 500; transition: border-color 0.2s;
       }
-      td input[type="number"]:focus { border-color: #43A047; outline: none; }
+      td input[type="number"]:focus { border-color: #1976D2; outline: none; }
       td input[type="number"].has-value { border-color: #4CAF50; background: #f1fdf1; }
 
       .total-section {
@@ -77,7 +104,6 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       }
       .total-section .total-count { font-size: 14px; color: #666; font-weight: 400; margin-top: 4px; }
-      .total-section .total-kg { font-size: 14px; color: #666; font-weight: 400; margin-top: 2px; }
 
       .button-container { display: flex; gap: 10px; margin-top: 12px; }
       button {
@@ -94,7 +120,7 @@
 
       .message {
         margin-top: 12px; padding: 14px; border-radius: 8px; display: none;
-        font-weight: 500; text-align: center; font-size: 14px; white-space: pre-line;
+        font-weight: 500; text-align: center; font-size: 14px;
       }
       .message.error { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
       .message.success { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
@@ -115,53 +141,49 @@
       .loading { text-align: center; padding: 60px 20px; font-size: 16px; color: #888; }
       .loading .spinner {
         width: 40px; height: 40px; border: 4px solid #e0e0e0;
-        border-top: 4px solid #43A047; border-radius: 50%;
+        border-top: 4px solid #1976D2; border-radius: 50%;
         animation: spin 0.8s linear infinite; margin: 0 auto 15px;
       }
       @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-      .min-order-warning {
-        background: linear-gradient(135deg, #FF6F00, #E65100);
-        border-radius: 8px; padding: 10px 14px; margin-top: 8px;
-        text-align: center; color: #fff; font-size: 13px; font-weight: 500;
-      }
+      .category-products-container { display: none; }
+      .category-products-container.active { display: block; }
 
-      .search-box {
-        width: 100%; padding: 12px 14px; font-size: 15px; border: 2px solid #e0e0e0;
-        border-radius: 8px; margin-bottom: 12px; transition: border-color 0.2s;
+      .product-unavailable { opacity: 0.45; }
+      .product-unavailable td { text-decoration: line-through; }
+      .product-unavailable input[type="number"] {
+        background: #f5f5f5 !important; border-color: #e0e0e0 !important;
+        color: #999 !important; cursor: not-allowed;
       }
-      .search-box:focus { border-color: #43A047; outline: none; }
-      .search-box::placeholder { color: #bbb; }
+      .product-low { background-color: #FFF8E1; }
 
-      .product-hidden { display: none !important; }
-
-      .duplicate-banner {
-        display: none; white-space: pre-line; margin-top: 10px; padding: 14px;
-        border-radius: 8px; font-size: 14px; font-weight: 500; line-height: 1.45;
-        background: #ffebee; color: #b71c1c; border: 2px solid #ef5350;
+      .avail-badge {
+        display: inline-block; font-size: 11px; font-weight: 500;
+        padding: 2px 8px; border-radius: 10px; margin-left: 6px;
+        vertical-align: middle;
       }
-      .duplicate-banner.active { display: block; }
-      select#store-select option[value=""] { color: #999; }
-    </style>
+      .avail-no { background: #FFCDD2; color: #C62828; }
+      .avail-low { background: #FFF9C4; color: #F57F17; }
+</style>
 </head>
 <body>
     <div class="container">
         
-        <!-- Логотип -->
+        <!-- Логотип на белом фоне -->
         <div style="text-align:center; padding:2px 6px 0; background:#fff; border-radius:10px 10px 0 0; line-height:0;">
             <img src="https://lh3.googleusercontent.com/d/1J9zoqdUwHdQoJSAw50F7dw70GBmS8XaK" 
                  alt="Фемелі Маркет" 
                  style="width:100%; max-height:50px; object-fit:contain; display:block;">
         </div>
 
-        <!-- Зелёная панель -->
-        <div class="header-block">
-            <h1 id="form-title">🥬 Замовлення овочів</h1>
+        <!-- Синяя панель -->
+        <div class="header-block" style="border-radius:0 0 12px 12px; margin-top:0;">
+            <h1 id="form-title">Замовлення продукції</h1>
         </div>
 
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            Завантаження даних та цін...
+            Завантаження даних...
         </div>
 
         <form id="order-form" style="display:none;">
@@ -171,32 +193,27 @@
                 <option value="">-- Оберіть ТТ --</option>
               </select>
               <div id="protection-indicator" class="protection-indicator"></div>
-              <div id="duplicate-banner" class="duplicate-banner"></div>
             </div>
 
-            <!-- Предупреждение о времени -->
+<!-- Предупреждение о времени -->
             <div style="background:linear-gradient(135deg,#D32F2F,#C62828);border-radius:6px;padding:7px 12px;margin-top:8px;text-align:center;color:#fff;font-size:12px;font-weight:500;">
-              ⚠️ УВАГА! Замовлення необхідно надіслати до 18:00!
-            </div>
-
-            <!-- Минимальный заказ -->
-            <div class="min-order-warning" id="min-order-info">
-              💰 Мінімальне замовлення: <span id="min-amount-display">500</span> грн | Кратність: 1 кг
-            </div>
-
+    ⚠️ УВАГА! Замовлення необхідно надіслати до 13:00!
+</div>
             <!-- Список ТТ с заказами -->
             <div id="stores-status-info" class="stores-status-info">
                 <strong>ℹ️ Наступні ТТ вже зробили замовлення сьогодні:</strong>
                 <div id="stores-with-orders-list" class="stores-with-orders-list"></div>
             </div>
 
-            <!-- Секция товаров -->
-            <div class="products-section">
-              <h2>🥬 Овочі <span id="products-count" style="font-size:13px;color:#888;font-weight:400;"></span></h2>
-              
-              <!-- Поиск -->
-              <input type="text" class="search-box" id="search-input" placeholder="🔍 Пошук овоча..." oninput="filterProducts()">
-              
+            <!-- Выбор категории -->
+            <div class="category-selector">
+              <h2>Оберіть категорію</h2>
+              <div class="category-tabs" id="category-tabs"></div>
+            </div>
+
+            <!-- Секция товаров — ВСЕ категории рендерятся сразу, переключаем видимость -->
+            <div id="products-section" class="products-section">
+              <h2 id="products-title">Товари</h2>
               <div id="products-container"></div>
             </div>
 
@@ -205,7 +222,6 @@
             <div class="total-section">
                 <div>Разом: <span id="total-sum">0.00 грн</span></div>
                 <div class="total-count">Позицій: <span id="total-count">0</span></div>
-                <div class="total-kg">Вага: <span id="total-kg">0</span> кг</div>
             </div>
 
             <div id="min-amount-message" class="message error" style="display:none;"></div>
@@ -217,19 +233,16 @@
         </form>
 
         <div class="notes">
-            <p><strong>Як замовити:</strong> Оберіть ТТ → вкажіть кількість кг → відправте замовлення.</p>
-            <p><strong>Кратність:</strong> Замовлення приймається тільки цілими кілограмами (1, 2, 3... кг).</p>
-            <p><strong>Мінімальне замовлення:</strong> 750 грн.</p>
+            <p><strong>Як замовити:</strong> Оберіть ТТ → категорію → вкажіть кількість → відправте замовлення.</p>
             <p><strong>Захист від дублів:</strong> Кожна ТТ може зробити лише одне замовлення на день.</p>
         </div>
     </div>
 
     <script>
-        var MIN_ORDER_AMOUNT = 500;
-        var allProducts = [];
-        var orderedStoresMap = {};
-        var isStoreLocked = false;
-        var currentOrderToken = null;
+        var MIN_ORDER_AMOUNT = 0;
+        var productsByCategory = {};
+        var activeCategory = null;
+        var categoriesRendered = false;
         var isSubmitting = false;
         var lastSubmitTime = 0;
         var SUBMIT_COOLDOWN = 5000;
@@ -268,40 +281,21 @@
         function onDataLoaded(data) {
             try {
                 if (data.minOrderAmount !== undefined) MIN_ORDER_AMOUNT = data.minOrderAmount;
-                document.getElementById('min-amount-display').textContent = MIN_ORDER_AMOUNT;
-                
-                allProducts = data.products || [];
+                productsByCategory = data.productsByCategory || {};
 
-                // === МАГАЗИНИ: показуємо ВСІ ТТ, замовлені — з позначкою ===
+                // === МАГАЗИНЫ ===
                 var storeSelect = document.getElementById('store-select');
                 storeSelect.innerHTML = '<option value="">-- Оберіть ТТ --</option>';
-                orderedStoresMap = {};
 
-                var storeList = (data.allStores && data.allStores.length) ? data.allStores : null;
-
-                if (!storeList) {
-                    storeList = [];
-                    (data.stores || []).forEach(function(s) { storeList.push({ name: s, ordered: false }); });
-                    (data.storesWithOrders || []).forEach(function(s) { storeList.push({ name: s, ordered: true }); });
-                    storeList.sort(function(a, b) { return a.name.localeCompare(b.name, 'uk'); });
+                if (data.stores && data.stores.length > 0) {
+                    data.stores.forEach(function(store) {
+                        storeSelect.innerHTML += '<option value="' + escapeHtml(store) + '">' + escapeHtml(store) + '</option>';
+                    });
+                    document.getElementById('submit-button').disabled = false;
+                } else {
+                    storeSelect.innerHTML += '<option value="">Всі ТТ вже замовили</option>';
+                    document.getElementById('submit-button').disabled = true;
                 }
-
-                var freeCount = 0;
-                storeList.forEach(function(s) {
-                    if (s.ordered) {
-                        orderedStoresMap[s.name] = s;
-                        storeSelect.innerHTML += '<option value="' + escapeHtml(s.name) + '">🚫 ' +
-                          escapeHtml(s.name) + ' — ВЖЕ ЗАМОВЛЕНО' +
-                          (s.time ? ' (' + escapeHtml(s.time) + ')' : '') + '</option>';
-                    } else {
-                        freeCount++;
-                        storeSelect.innerHTML += '<option value="' + escapeHtml(s.name) + '">' + escapeHtml(s.name) + '</option>';
-                    }
-                });
-
-                hideDuplicateBanner();
-                setFormLocked(false);
-                document.getElementById('submit-button').disabled = (freeCount === 0);
 
                 // === СПИСОК ТТ С ЗАКАЗАМИ ===
                 var statusInfo = document.getElementById('stores-status-info');
@@ -309,6 +303,7 @@
                 
                 if (data.storesWithOrders && data.storesWithOrders.length > 0) {
                     statusInfo.style.display = 'block';
+                    
                     var listHtml = '<div style="margin-bottom:5px;font-size:13px;color:#666;">Всього замовлень: <strong>' + data.storesWithOrders.length + '</strong></div>';
                     data.storesWithOrders.forEach(function(s) {
                         listHtml += '✅ ' + escapeHtml(s) + '<br>';
@@ -319,17 +314,15 @@
                     listDiv.innerHTML = '';
                 }
 
-                // === РЕНДЕРИМ ТОВАРЫ ===
-                renderProducts();
+                // === РЕНДЕРИМ ВСЕ КАТЕГОРИИ СРАЗУ (скрыто) ===
+                renderAllProducts();
+                renderCategoryTabs();
+
                 updateFormTitle();
                 setLoadingState(false);
 
                 if (!data.stores || data.stores.length === 0) {
                     showMessage('warning', 'Всі ТТ вже зробили замовлення на сьогодні.');
-                }
-                
-                if (allProducts.length === 0) {
-                    showMessage('warning', 'Не вдалося завантажити прайс-лист. Спробуйте пізніше.');
                 }
             } catch (e) {
                 onError(e);
@@ -337,130 +330,213 @@
         }
 
         // =============================================
-        // РЕНДЕР ТОВАРОВ
+        // РЕНДЕР ВСЕХ ТОВАРОВ РАЗОМ (все категории)
         // =============================================
 
-        function renderProducts() {
+        function renderAllProducts() {
             var container = document.getElementById('products-container');
             container.innerHTML = '';
+            categoriesRendered = true;
 
-            if (allProducts.length === 0) {
-                container.innerHTML = '<div style="color:#999;padding:15px;text-align:center;">Немає доступних товарів у прайсі</div>';
+            var categories = Object.keys(productsByCategory);
+            if (categories.length === 0) {
+                container.innerHTML = '<div style="color:#999;padding:15px;">Немає доступних товарів</div>';
                 return;
             }
 
-            document.getElementById('products-count').textContent = '(' + allProducts.length + ' позицій)';
+            categories.forEach(function(cat) {
+                var products = productsByCategory[cat];
+                var catId = getCatId(cat);
 
-            var html = '<table class="product-table"><thead><tr><th>Назва овочу</th><th>Ціна/кг</th><th>Кг</th><th>Сума</th></tr></thead><tbody>';
+                var div = document.createElement('div');
+                div.className = 'category-products-container';
+                div.id = catId;
 
-            allProducts.forEach(function(product, index) {
-                html += '<tr class="product-row" data-name="' + escapeHtml(product.name.toLowerCase()) + '">';
-                html += '<td>' + escapeHtml(product.name) + '</td>';
-                html += '<td>' + product.displayPrice.toFixed(2) + ' грн</td>';
-                html += '<td><input type="number" min="0" step="1" class="product-quantity"' +
-                  ' data-id="' + escapeHtml(product.id) + '"' +
-                  ' data-price="' + product.displayPrice + '"' +
-                  ' data-name="' + escapeHtml(product.name) + '"' +
-                  ' placeholder="0"' +
-                  ' oninput="onQuantityInput(this, ' + index + ')"></td>';
-                html += '<td class="row-sum" id="row-sum-' + index + '">—</td>';
-                html += '</tr>';
+                var html = '';
+                
+                var hasUnavailable = products.some(function(p) { return p.availability === 'unavailable'; });
+                var hasLow = products.some(function(p) { return p.availability === 'low'; });
+                
+                if (hasUnavailable || hasLow) {
+                    html += '<div style="background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#E65100;">';
+                    html += '⚠️ <strong>Увага!</strong> Деякі товари можуть бути відсутні або закінчуються. ';
+                    html += 'Зверніть увагу на позначки біля товарів.';
+                    html += '</div>';
+                }
+
+                html += '<table class="product-table"><thead><tr><th>Товар</th><th>Ціна</th><th>Кількість</th></tr></thead><tbody>';
+
+                products.forEach(function(product) {
+                    var rowClass = '';
+                    var nameExtra = '';
+                    var isUnavailable = (product.availability === 'unavailable');
+                    
+                    if (isUnavailable) {
+                        rowClass = ' class="product-unavailable"';
+                        nameExtra = ' <span class="avail-badge avail-no">відсутній</span>';
+                    } else if (product.availability === 'low') {
+                        rowClass = ' class="product-low"';
+                        nameExtra = ' <span class="avail-badge avail-low">закінчується</span>';
+                    }
+
+                    html += '<tr' + rowClass + '>';
+                    html += '<td>' + escapeHtml(product.name) + nameExtra + '</td>';
+                    html += '<td>' + product.price.toFixed(2) + '</td>';
+                    
+                    if (isUnavailable) {
+                        // Для отсутствующих — просто текст, без input
+                        html += '<td style="text-align:center;color:#999;font-style:italic;">—</td>';
+                    } else {
+                        html += '<td><input type="number" min="0" class="product-quantity"' +
+                          ' data-barcode="' + escapeHtml(product.barcode) + '"' +
+                          ' data-price="' + product.price + '"' +
+                          ' data-name="' + escapeHtml(product.name) + '"' +
+                          ' data-category="' + escapeHtml(product.category) + '"' +
+                          ' oninput="onQuantityInput(this)"></td>';
+                    }
+                    
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+                div.innerHTML = html;
+                container.appendChild(div);
             });
-
-            html += '</tbody></table>';
-            container.innerHTML = html;
         }
 
         // =============================================
-        // ПОИСК
+        // ТАБЫ КАТЕГОРИЙ
         // =============================================
 
-        function filterProducts() {
-            var query = document.getElementById('search-input').value.toLowerCase().trim();
-            var rows = document.querySelectorAll('.product-row');
-            
-            rows.forEach(function(row) {
-                var name = row.getAttribute('data-name') || '';
-                if (!query || name.indexOf(query) !== -1) {
-                    row.classList.remove('product-hidden');
-                } else {
-                    row.classList.add('product-hidden');
+        function renderCategoryTabs() {
+            var tabsContainer = document.getElementById('category-tabs');
+            tabsContainer.innerHTML = '';
+
+            var categories = Object.keys(productsByCategory);
+            if (categories.length === 0) {
+                tabsContainer.innerHTML = '<div style="color:#999;padding:10px;">Немає доступних товарів</div>';
+                return;
+            }
+
+            var icons = { 'Випічка': '🥐', 'Кулінарія': '🍲' };
+
+            categories.sort(function(a, b) {
+                var order = ['Випічка', 'Кулінарія'];
+                var ia = order.indexOf(a), ib = order.indexOf(b);
+                return (ia >= 0 ? ia : 999) - (ib >= 0 ? ib : 999);
+            });
+
+            categories.forEach(function(cat) {
+                var products = productsByCategory[cat];
+                var tab = document.createElement('div');
+                tab.className = 'category-tab';
+                tab.dataset.category = cat;
+                tab.innerHTML = '<span class="tab-badge" id="badge-' + getCatId(cat) + '">0</span>' +
+                  '<span class="tab-icon">' + (icons[cat] || '📦') + '</span>' +
+                  escapeHtml(cat) +
+                  '<span class="tab-count">' + products.length + ' товарів</span>';
+
+                tab.addEventListener('click', function() { selectCategory(cat); });
+                tabsContainer.appendChild(tab);
+            });
+        }
+
+        function getCatId(cat) {
+            return 'cat-' + cat.replace(/[^a-zA-Zа-яА-ЯіІїЇєЄґҐ0-9]/g, '');
+        }
+
+        function selectCategory(category) {
+            activeCategory = category;
+
+            // Обновляем стили табов
+            document.querySelectorAll('.category-tab').forEach(function(tab) {
+                tab.classList.remove('active-bakery', 'active-culinary');
+                if (tab.dataset.category === category) {
+                    tab.classList.add(category === 'Кулінарія' ? 'active-culinary' : 'active-bakery');
                 }
             });
+
+            // Показываем нужный контейнер, скрываем остальные
+            document.querySelectorAll('.category-products-container').forEach(function(div) {
+                div.classList.remove('active');
+            });
+
+            var catDiv = document.getElementById(getCatId(category));
+            if (catDiv) {
+                catDiv.classList.add('active');
+            }
+
+            // Показываем секцию товаров
+            var section = document.getElementById('products-section');
+            section.classList.add('visible');
+            document.getElementById('products-title').textContent = category;
         }
 
         // =============================================
         // ВВОД КОЛИЧЕСТВА
         // =============================================
 
-        function onQuantityInput(input, index) {
-            var val = parseInt(input.value) || 0;
-            
-            // Кратность 1 кг — убираем дробную часть
-            if (input.value && input.value.indexOf('.') !== -1) {
-                input.value = Math.floor(parseFloat(input.value));
-                val = parseInt(input.value) || 0;
-            }
-            
-            if (val > 0) {
+        function onQuantityInput(input) {
+            if (parseFloat(input.value) > 0) {
                 input.classList.add('has-value');
             } else {
                 input.classList.remove('has-value');
             }
-            
-            // Сумма в строке
-            var price = parseFloat(input.dataset.price) || 0;
-            var sumCell = document.getElementById('row-sum-' + index);
-            if (sumCell) {
-                if (val > 0) {
-                    sumCell.textContent = (val * price).toFixed(2) + ' грн';
-                    sumCell.style.color = '#2E7D32';
-                } else {
-                    sumCell.textContent = '—';
-                    sumCell.style.color = '';
-                }
-            }
-            
+            updateCategoryBadges();
             calculateTotal();
+        }
+
+        function updateCategoryBadges() {
+            var categories = Object.keys(productsByCategory);
+            categories.forEach(function(cat) {
+                var catId = getCatId(cat);
+                var container = document.getElementById(catId);
+                if (!container) return;
+
+                var inputs = container.querySelectorAll('.product-quantity');
+                var filled = 0;
+                inputs.forEach(function(inp) {
+                    if (parseFloat(inp.value) > 0) filled++;
+                });
+
+                var badge = document.getElementById('badge-' + catId);
+                if (badge) {
+                    if (filled > 0) {
+                        badge.textContent = filled;
+                        badge.classList.add('visible');
+                    } else {
+                        badge.classList.remove('visible');
+                    }
+                }
+            });
         }
 
         function calculateTotal() {
             var total = 0;
             var count = 0;
-            var totalKg = 0;
 
+            // Считаем ВСЕ инпуты из ВСЕХ категорий
             document.querySelectorAll('.product-quantity').forEach(function(input) {
-                var quantity = parseInt(input.value) || 0;
+                var quantity = parseFloat(input.value) || 0;
                 var price = parseFloat(input.dataset.price) || 0;
-                if (quantity > 0) {
-                    total += quantity * price;
-                    count++;
-                    totalKg += quantity;
-                }
+                if (quantity > 0) { total += quantity * price; count++; }
             });
 
             document.getElementById('total-sum').textContent = total.toFixed(2) + ' грн';
             document.getElementById('total-count').textContent = count;
-            document.getElementById('total-kg').textContent = totalKg;
-
-            // Подсветка суммы
-            var sumEl = document.getElementById('total-sum');
-            if (total > 0 && total < MIN_ORDER_AMOUNT) {
-                sumEl.style.color = '#C62828';
-            } else if (total >= MIN_ORDER_AMOUNT) {
-                sumEl.style.color = '#2E7D32';
-            } else {
-                sumEl.style.color = '#333';
-            }
 
             var minDiv = document.getElementById('min-amount-message');
             if (MIN_ORDER_AMOUNT > 0 && total > 0 && total < MIN_ORDER_AMOUNT) {
-                minDiv.textContent = '⚠️ Не вистачає ' + (MIN_ORDER_AMOUNT - total).toFixed(2) + ' грн до мінімальної суми (' + MIN_ORDER_AMOUNT + ' грн).';
+                minDiv.textContent = 'Не вистачає ' + (MIN_ORDER_AMOUNT - total).toFixed(2) + ' грн до мінімальної суми (' + MIN_ORDER_AMOUNT + ' грн).';
                 minDiv.style.display = 'block';
             } else {
                 minDiv.style.display = 'none';
             }
         }
+
+
+
+
 
         // =============================================
         // ОТПРАВКА ЗАКАЗА
@@ -481,53 +557,30 @@
             var selectedStore = document.getElementById('store-select').value;
             if (!selectedStore) { showMessage('error', 'Будь ласка, оберіть ТТ.'); return; }
 
-            if (orderedStoresMap[selectedStore]) {
-                showDuplicateBanner(orderedStoresMap[selectedStore]);
-                setFormLocked(true);
-                showMessage('error', '🚫 Ця ТТ вже зробила замовлення сьогодні. Повторне замовлення заблоковано.');
-                return;
-            }
-
+            // Собираем ВСЕ товары из ВСЕХ категорий
             var productsInOrder = [];
             var totalOrderSum = 0;
-            var invalidQty = [];
 
             document.querySelectorAll('.product-quantity').forEach(function(input) {
-                var quantity = parseInt(input.value) || 0;
+                var quantity = parseFloat(input.value) || 0;
                 if (quantity > 0) {
-                    // Проверка кратности 1 кг
-                    if (quantity % 1 !== 0) {
-                        invalidQty.push(input.dataset.name);
-                    }
                     productsInOrder.push({
-                        id: input.dataset.id,
+                        barcode: input.dataset.barcode,
                         name: input.dataset.name,
                         price: parseFloat(input.dataset.price),
-                        quantity: quantity
+                        quantity: quantity,
+                        category: input.dataset.category
                     });
                     totalOrderSum += quantity * parseFloat(input.dataset.price);
                 }
             });
 
-            if (productsInOrder.length === 0) { showMessage('error', 'Ви не обрали жодного овоча.'); return; }
-            
-            if (invalidQty.length > 0) {
-                showMessage('error', 'Кількість повинна бути цілим числом кг:\n' + invalidQty.join(', '));
-                return;
-            }
-            
+            if (productsInOrder.length === 0) { showMessage('error', 'Ви не обрали жодного товару.'); return; }
             if (MIN_ORDER_AMOUNT > 0 && totalOrderSum < MIN_ORDER_AMOUNT) {
-                showMessage('error', 'Сума замовлення ' + totalOrderSum.toFixed(2) + ' грн менше мінімальної (' + MIN_ORDER_AMOUNT + ' грн).');
+                showMessage('error', 'Сума замовлення менше мінімальної (' + MIN_ORDER_AMOUNT + ' грн).');
                 return;
             }
 
-            // Подтверждение
-            var confirmMsg = '📍 ' + selectedStore + '\n📦 Позицій: ' + productsInOrder.length + '\n💰 Сума: ' + totalOrderSum.toFixed(2) + ' грн\n\nВідправити замовлення?';
-            if (!confirm(confirmMsg)) return;
-
-            if (!currentOrderToken) {
-                currentOrderToken = 'tk' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
-            }
             document.getElementById('submit-button').textContent = 'Відправка...';
             isSubmitting = true;
             lastSubmitTime = currentTime;
@@ -537,7 +590,7 @@
             google.script.run
                 .withSuccessHandler(onOrderSuccess)
                 .withFailureHandler(onOrderError)
-                .recordOrder({ selectedStore: selectedStore, products: productsInOrder, totalOrderSum: totalOrderSum, orderToken: currentOrderToken });
+                .recordOrder({ selectedStore: selectedStore, products: productsInOrder, totalOrderSum: totalOrderSum });
         }
 
         function onOrderSuccess(result) {
@@ -545,39 +598,23 @@
             setLoadingState(false);
             document.getElementById('submit-button').textContent = 'Відправити замовлення';
             
+            // Поддержка и строки, и объекта
             if (!result) {
-                showMessage('error', '❌ Сервер не відповів. Перевірте лист замовлень.');
+                showMessage('error', '❌ Сервер не відповів. Перевірте лист замовлень — можливо замовлення збережено.');
                 return;
             }
             
             if (typeof result === 'string') {
+                // Старый формат — простая строка
                 showMessage('success', result);
                 setTimeout(function() { clearForm(); loadInitialData(); }, 2000);
             } else if (result.success) {
-                currentOrderToken = null;
-                var st = document.getElementById('store-select').value;
-                if (st) {
-                    orderedStoresMap[st] = { name: st, ordered: true, time: '', positions: 0, kg: 0, sum: 0 };
-                    markStoreOptionAsOrdered(st, null);
-                }
-                setFormLocked(true);
                 showMessage('success', result.message);
-                setTimeout(function() { clearForm(); loadInitialData(); }, 2500);
+                setTimeout(function() { clearForm(); loadInitialData(); }, 2000);
             } else {
                 showMessage('error', result.message || '❌ Невідома помилка');
-                if (result.alreadyOrdered) {
-                    var st2 = document.getElementById('store-select').value;
-                    var info = result.storeInfo || null;
-                    if (st2) {
-                        orderedStoresMap[st2] = info || { ordered: true };
-                        markStoreOptionAsOrdered(st2, info);
-                    }
-                    showDuplicateBanner(info);
-                    setFormLocked(true);
-                    setTimeout(loadInitialData, 3000);
-                } else if ((result.message || '').indexOf('вже зробила') !== -1) {
-                    setFormLocked(true);
-                    setTimeout(loadInitialData, 3000);
+                if ((result.message || '').indexOf('вже зробила') !== -1) {
+                    setTimeout(loadInitialData, 2000);
                 }
             }
         }
@@ -586,9 +623,14 @@
             isSubmitting = false;
             setLoadingState(false);
             document.getElementById('submit-button').textContent = 'Відправити замовлення';
+            console.error('Помилка відправки:', error);
             
             var errorMsg = error.message || error.toString() || 'Невідома помилка';
             showMessage('error', '❌ Помилка зʼєднання з сервером.\n' + errorMsg + '\n\nСпробуйте ще раз.');
+            
+            if (errorMsg.indexOf('вже зробила') !== -1) {
+                setTimeout(loadInitialData, 2000);
+            }
         }
 
         // =============================================
@@ -597,26 +639,22 @@
 
         function clearForm() {
             document.getElementById('store-select').value = '';
-            document.getElementById('search-input').value = '';
-            
             document.querySelectorAll('.product-quantity').forEach(function(input) {
                 input.value = '';
                 input.classList.remove('has-value');
             });
-            
-            document.querySelectorAll('.row-sum').forEach(function(cell) {
-                cell.textContent = '—';
-                cell.style.color = '';
-            });
-            
-            document.querySelectorAll('.product-row').forEach(function(row) {
-                row.classList.remove('product-hidden');
-            });
-            
-            hideDuplicateBanner();
-            setFormLocked(false);
+            updateCategoryBadges();
             calculateTotal();
             showMessage();
+
+            activeCategory = null;
+            document.querySelectorAll('.category-tab').forEach(function(tab) {
+                tab.classList.remove('active-bakery', 'active-culinary');
+            });
+            document.querySelectorAll('.category-products-container').forEach(function(div) {
+                div.classList.remove('active');
+            });
+            document.getElementById('products-section').classList.remove('visible');
         }
 
         // =============================================
@@ -630,13 +668,10 @@
             }
             var submitBtn = document.getElementById('submit-button');
             var clearBtn = document.getElementById('clear-button');
-            submitBtn.disabled = isLoading || isStoreLocked;
+            submitBtn.disabled = isLoading;
             clearBtn.disabled = isLoading;
             if (isLoading) { submitBtn.classList.add('is-loading'); }
-            else {
-              submitBtn.classList.remove('is-loading');
-              submitBtn.textContent = isStoreLocked ? '🚫 Замовлення вже зроблено' : 'Відправити замовлення';
-            }
+            else { submitBtn.classList.remove('is-loading'); submitBtn.textContent = 'Відправити замовлення'; }
             document.querySelectorAll('.product-quantity, #store-select').forEach(function(input) { input.disabled = isLoading; });
         }
 
@@ -662,74 +697,12 @@
 
         function updateFormTitle() {
             var today = new Date().toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            document.getElementById('form-title').textContent = '🥬 Замовлення овочів на ' + today;
+            document.getElementById('form-title').textContent = 'Замовлення випічки та кулінарії на ' + today;
         }
 
         function onStoreSelectionChange() {
             var div = document.getElementById('message');
             if (div.classList.contains('error')) div.style.display = 'none';
-
-            var store = document.getElementById('store-select').value;
-            hideDuplicateBanner();
-
-            if (!store) { setFormLocked(false); return; }
-
-            // 1) вже відомо з завантажених даних
-            if (orderedStoresMap[store]) {
-                showDuplicateBanner(orderedStoresMap[store]);
-                setFormLocked(true);
-                return;
-            }
-
-            // 2) жива перевірка на сервері (якщо хтось замовив хвилину тому)
-            setFormLocked(false);
-            var checking = store;
-            google.script.run
-                .withSuccessHandler(function(res) {
-                    if (document.getElementById('store-select').value !== checking) return;
-                    if (res && res.ordered) {
-                        orderedStoresMap[checking] = res;
-                        markStoreOptionAsOrdered(checking, res);
-                        showDuplicateBanner(res);
-                        setFormLocked(true);
-                    }
-                })
-                .withFailureHandler(function() {})
-                .checkStoreOrderStatus(store);
-        }
-
-        function showDuplicateBanner(info) {
-            var el = document.getElementById('duplicate-banner');
-            var txt = '🚫 Ця торгова точка вже зробила замовлення сьогодні!';
-            if (info && info.time) txt += '\n🕐 Час: ' + info.time;
-            if (info && info.positions) txt += '\n📦 Позицій: ' + info.positions + ' (' + info.kg + ' кг)';
-            if (info && info.sum) txt += '\n💰 Сума: ' + Number(info.sum).toFixed(2) + ' грн';
-            txt += '\n\nПовторне замовлення неможливе. Якщо потрібно щось змінити — зверніться до менеджера.';
-            el.textContent = txt;
-            el.classList.add('active');
-        }
-
-        function hideDuplicateBanner() {
-            var el = document.getElementById('duplicate-banner');
-            el.classList.remove('active');
-            el.textContent = '';
-        }
-
-        function setFormLocked(locked) {
-            isStoreLocked = !!locked;
-            var btn = document.getElementById('submit-button');
-            btn.disabled = !!locked;
-            btn.textContent = locked ? '🚫 Замовлення вже зроблено' : 'Відправити замовлення';
-        }
-
-        function markStoreOptionAsOrdered(storeName, info) {
-            var sel = document.getElementById('store-select');
-            for (var i = 0; i < sel.options.length; i++) {
-                if (sel.options[i].value === storeName && sel.options[i].textContent.indexOf('🚫') === -1) {
-                    sel.options[i].textContent = '🚫 ' + storeName + ' — ВЖЕ ЗАМОВЛЕНО' +
-                      (info && info.time ? ' (' + info.time + ')' : '');
-                }
-            }
         }
     </script>
 </body>
