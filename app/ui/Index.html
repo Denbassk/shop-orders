@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+     background:#f0f2f5;color:#202124;font-size:15px}
+.wrap{max-width:680px;margin:0 auto;padding:12px 12px 96px}
+.top{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+h1{font-size:17px;margin:0}
+.sub{color:#5f6368;font-size:13px;margin-top:3px}
+.card{background:#fff;border-radius:14px;padding:14px;margin-top:10px;
+      box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:15px;font-size:16px;
+     font-weight:600;color:#fff;background:#1a73e8;cursor:pointer}
+.btn:disabled{background:#dadce0;color:#80868b}
+.btn.ghost{background:#fff;color:#1a73e8;border:1.5px solid #dadce0;font-weight:500}
+.search{width:100%;padding:13px 14px;font-size:16px;border:1.5px solid #dadce0;
+        border-radius:12px;background:#fff}
+.search:focus{outline:none;border-color:#1a73e8}
+.store{display:flex;align-items:center;justify-content:space-between;gap:10px;
+       padding:14px;border-bottom:1px solid #f1f3f4;cursor:pointer}
+.store:last-child{border-bottom:0}
+.store:active{background:#f8f9fa}
+.store b{font-weight:600}
+.store .r{color:#80868b;font-size:12px;margin-top:2px}
+.dir{display:flex;align-items:center;gap:12px;padding:16px;border-radius:14px;
+     margin-top:10px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;
+     border-left:5px solid #dadce0}
+.dir.done{opacity:.6}
+.dir .ic{font-size:26px;width:34px;text-align:center}
+.dir .t{flex:1}
+.dir .t b{display:block;font-size:16px}
+.dir .t span{font-size:12px;color:#5f6368}
+.badge{font-size:11px;padding:4px 9px;border-radius:20px;background:#e6f4ea;color:#137333;
+       font-weight:600;white-space:nowrap}
+.row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f1f3f4}
+.row:last-child{border-bottom:0}
+.row .info{flex:1;min-width:0}
+.row .nm{font-size:14px;line-height:1.35}
+.row .pr{font-size:12px;color:#5f6368;margin-top:3px}
+.row.off{opacity:.45}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{width:38px;height:38px;border:1.5px solid #dadce0;background:#fff;
+            border-radius:10px;font-size:20px;line-height:1;cursor:pointer;color:#1a73e8}
+.qty button:active{background:#e8f0fe}
+.qty input{width:56px;height:38px;text-align:center;font-size:16px;border:1.5px solid #dadce0;
+           border-radius:10px}
+.qty input.has{border-color:#1a73e8;background:#e8f0fe;font-weight:600}
+.tabs{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto}
+.tab{flex:0 0 auto;padding:9px 16px;border-radius:20px;border:1.5px solid #dadce0;
+     background:#fff;font-size:14px;cursor:pointer}
+.tab.on{background:#1a73e8;color:#fff;border-color:#1a73e8;font-weight:600}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:10px 12px;
+     box-shadow:0 -2px 12px rgba(0,0,0,.12);display:none}
+.bar.on{display:block}
+.bar .in{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.bar .sum{flex:1}
+.bar .sum b{display:block;font-size:18px}
+.bar .sum span{font-size:12px;color:#5f6368}
+.bar button{flex:0 0 auto;width:auto;padding:14px 26px}
+.msg{padding:13px;border-radius:12px;margin-top:10px;font-size:14px}
+.msg.e{background:#fce8e6;color:#c5221f}
+.msg.w{background:#fef7e0;color:#994b00}
+.msg.s{background:#e6f4ea;color:#137333}
+.hide{display:none}
+.spin{width:26px;height:26px;border:3px solid #e8eaed;border-top-color:#1a73e8;
+      border-radius:50%;animation:s 1s linear infinite;margin:24px auto}
+@keyframes s{to{transform:rotate(360deg)}}
+.chg{background:none;border:0;color:#1a73e8;font-size:13px;padding:0;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Замовлення Фемелі Маркет</h1>
+    <div class="sub" id="sub">завантаження…</div>
+  </div>
+  <div id="body"><div class="spin"></div></div>
+</div>
+<div class="bar" id="bar">
+  <div class="in">
+    <div class="sum"><b id="bsum">0 грн</b><span id="bcnt"></span></div>
+    <button class="btn" id="bsend">Відправити</button>
+  </div>
+</div>
+
+<script>
+var ICONS = { bread:"\ud83c\udf5e", bakery:"\ud83e\udd50", veg:"\ud83e\udd6c" };
+var S = { boot:null, store:null, dir:null, data:null, qty:{}, cat:null, sending:false };
+
+function call(a, p) {
+  return new Promise(function (res, rej) {
+    google.script.run.withSuccessHandler(function (r) {
+      if (r && r.ok) res(r.data); else rej(new Error(r ? r.error : "Немає відповіді"));
+    }).withFailureHandler(function (e) {
+      rej(new Error(e && e.message ? e.message : "Помилка звязку"));
+    }).api(a, p || {});
+  });
+}
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) {
+  return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]; }); }
+function money(n) { return (Math.round(n * 100) / 100).toFixed(2) + " грн"; }
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+// ---------- старт ----------
+call("bootstrap").then(function (d) {
+  S.boot = d;
+  el("sub").textContent = d.today;
+  var saved = lsGet("ttId");
+  var found = saved && d.stores.filter(function (s) { return s.id === saved; })[0];
+  if (found) { S.store = found; screenDirs(); } else screenStores();
+}).catch(fatal);
+
+function fatal(e) {
+  el("body").innerHTML = '<div class="card msg e">' + esc(e.message) +
+    '<div style="margin-top:10px"><button class="btn ghost" onclick="location.reload()">Оновити</button></div></div>';
+}
+
+// ---------- екран 1: вибір ТТ ----------
+function screenStores() {
+  S.store = null; el("bar").classList.remove("on");
+  el("body").innerHTML =
+    '<div class="card"><input class="search" id="q" placeholder="Пошук торгової точки…" autocomplete="off"></div>' +
+    '<div class="card" style="padding:0" id="list"></div>';
+  el("q").oninput = function () { drawStores(this.value); };
+  drawStores("");
+}
+function drawStores(f) {
+  var k = f.toLowerCase().trim();
+  var arr = S.boot.stores.filter(function (s) {
+    return !k || s.label.toLowerCase().indexOf(k) >= 0 ||
+           (s.route || "").toLowerCase().indexOf(k) >= 0;
+  });
+  el("list").innerHTML = arr.length ? arr.map(function (s) {
+    var left = s.directions.filter(function (d) { return !s.ordered[d]; }).length;
+    return '<div class="store" onclick="pickStore(\'' + s.id + '\')">' +
+      '<div><b>' + esc(s.label) + '</b>' +
+      (s.route ? '<div class="r">' + esc(s.route) + '</div>' : '') + '</div>' +
+      (left ? '<span class="badge" style="background:#e8f0fe;color:#1967d2">' + left + '</span>'
+            : '<span class="badge">все ✓</span>') + '</div>';
+  }).join("") : '<div style="padding:16px;color:#5f6368">Нічого не знайдено</div>';
+}
+function pickStore(id) {
+  S.store = S.boot.stores.filter(function (s) { return s.id === id; })[0];
+  lsSet("ttId", id);
+  screenDirs();
+}
+
+// ---------- екран 2: напрямки ----------
+function screenDirs() {
+  S.dir = null; S.qty = {}; el("bar").classList.remove("on");
+  var s = S.store;
+  var html = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center">' +
+    '<div><b>' + esc(s.label) + '</b>' + (s.route ? '<div class="r" style="color:#80868b;font-size:12px">' +
+    esc(s.route) + '</div>' : '') + '</div>' +
+    '<button class="chg" onclick="screenStores()">змінити ТТ</button></div></div>';
+
+  html += s.directions.map(function (k) {
+    var d = S.boot.directions[k], done = s.ordered[k];
+    return '<div class="dir' + (done ? ' done' : '') + '" style="border-left-color:' + d.color +
+      '" onclick="' + (done ? 'reOpen(\'' + k + '\')' : 'openDir(\'' + k + '\')') + '">' +
+      '<div class="ic">' + ICONS[k] + '</div>' +
+      '<div class="t"><b>' + esc(d.title) + '</b><span>' + esc(d.subtitle) +
+      (d.minOrder > 0 ? " · мін. " + d.minOrder + " грн" : "") + '</span></div>' +
+      (done ? '<span class="badge">замовлено ✓</span>' : '<span style="color:#80868b">›</span>') +
+      '</div>';
+  }).join("");
+
+  el("body").innerHTML = html;
+}
+function reOpen(k) {
+  alert("Замовлення на «" + S.boot.directions[k].title +
+        "» сьогодні вже відправлено.\n\nІнші напрямки доступні як завжди.");
+}
+
+// ---------- екран 3: замовлення ----------
+function openDir(k) {
+  S.dir = k; S.qty = {}; S.cat = null;
+  el("body").innerHTML = '<div class="spin"></div>';
+  call("products", { dir: k, storeId: S.store.id }).then(function (d) {
+    S.data = d;
+    if (d.alreadyOrdered) { S.store.ordered[k] = true; screenDirs(); reOpen(k); return; }
+    S.cat = d.categories.length ? d.categories[0] : null;
+    drawOrder("");
+  }).catch(function (e) {
+    el("body").innerHTML = '<div class="card msg e">' + esc(e.message) +
+      '</div><div class="card"><button class="btn ghost" onclick="screenDirs()">Назад</button></div>';
+  });
+}
+
+function drawOrder(filter) {
+  var d = S.data, dir = S.boot.directions[S.dir];
+  var html = '<div class="card" style="display:flex;justify-content:space-between;align-items:center">' +
+    '<div><b>' + ICONS[S.dir] + " " + esc(dir.title) + '</b>' +
+    '<div style="font-size:12px;color:#5f6368">' + esc(S.store.label) + '</div></div>' +
+    '<button class="chg" onclick="screenDirs()">← назад</button></div>';
+
+  if (dir.minOrder > 0)
+    html += '<div class="msg w" id="minmsg">Мінімальне замовлення ' + dir.minOrder +
+            ' грн · кратність 1 ' + d.unit + '</div>';
+
+  html += '<div class="card"><input class="search" id="q" placeholder="Пошук товару…" autocomplete="off" value="' +
+          esc(filter || "") + '">';
+  if (d.categories.length) {
+    html += '<div class="tabs" style="margin-top:12px">' + d.categories.map(function (c) {
+      return '<div class="tab' + (c === S.cat ? " on" : "") + '" onclick="setCat(\'' +
+             esc(c).replace(/'/g, "") + '\')">' + esc(c) + '</div>'; }).join("") + '</div>';
+  }
+  html += '<div id="items" style="margin-top:6px"></div></div>';
+
+  el("body").innerHTML = html;
+  el("q").oninput = function () { drawItems(this.value); };
+  el("bsend").onclick = submit;
+  drawItems(filter || "");
+}
+function setCat(c) { S.cat = c; drawOrder(el("q") ? el("q").value : ""); }
+
+function drawItems(f) {
+  var k = f.toLowerCase().trim(), d = S.data;
+  var arr = d.products.filter(function (p) {
+    if (k) return p.name.toLowerCase().indexOf(k) >= 0;
+    return !S.cat || p.category === S.cat;
+  });
+  el("items").innerHTML = arr.length ? arr.map(function (p) {
+    var q = S.qty[p.id] || "";
+    var off = p.availability === "немає";
+    return '<div class="row' + (off ? " off" : "") + '">' +
+      '<div class="info"><div class="nm">' + esc(p.name) + '</div>' +
+      '<div class="pr">' + money(p.price) + " / " + d.unit +
+      (p.box ? " · ящик " + esc(p.box) + " шт" : "") +
+      (p.availability ? ' · <b style="color:#c5221f">' + esc(p.availability) + "</b>" : "") +
+      '</div></div>' +
+      (off ? "" : '<div class="qty">' +
+        '<button onclick="bump(\'' + p.id + '\',-1)">−</button>' +
+        '<input type="number" inputmode="decimal" min="0" value="' + q +
+        '" class="' + (q ? "has" : "") + '" oninput="setQ(\'' + p.id + '\',this.value)">' +
+        '<button onclick="bump(\'' + p.id + '\',1)">+</button></div>') +
+      '</div>';
+  }).join("") : '<div style="padding:14px;color:#5f6368">Нічого не знайдено</div>';
+}
+
+function setQ(id, v) {
+  var n = parseFloat(String(v).replace(",", "."));
+  if (n > 0) S.qty[id] = n; else delete S.qty[id];
+  total();
+}
+function bump(id, dl) {
+  var n = (parseFloat(S.qty[id]) || 0) + dl;
+  if (n > 0) S.qty[id] = n; else delete S.qty[id];
+  drawItems(el("q").value); total();
+}
+function total() {
+  var sum = 0, cnt = 0;
+  S.data.products.forEach(function (p) {
+    var q = S.qty[p.id]; if (q > 0) { sum += p.price * q; cnt++; }
+  });
+  var min = S.boot.directions[S.dir].minOrder;
+  el("bsum").textContent = money(sum);
+  el("bcnt").textContent = cnt + " позицій" + (min > 0 && sum < min ? " · до мінімуму " +
+    money(min - sum) : "");
+  el("bsend").disabled = !cnt || (min > 0 && sum < min - 0.01) || S.sending;
+  el("bar").classList.toggle("on", cnt > 0);
+  return sum;
+}
+
+function submit() {
+  if (S.sending) return;
+  var items = Object.keys(S.qty).map(function (id) { return { id: id, qty: S.qty[id] }; });
+  if (!items.length) return;
+  if (!confirm("Відправити замовлення?\n" + S.boot.directions[S.dir].title +
+               "\n" + S.store.label + "\n" + items.length + " позицій, " + money(total()))) return;
+
+  S.sending = true;
+  el("bsend").disabled = true;
+  el("bsend").textContent = "Надсилання…";
+
+  call("submitOrder", { dir: S.dir, storeId: S.store.id, items: items }).then(function (r) {
+    S.store.ordered[S.dir] = true;
+    S.sending = false;
+    el("bar").classList.remove("on");
+    el("body").innerHTML = '<div class="card msg s"><b>Замовлення відправлено ✓</b><br>' +
+      esc(r.direction) + " · " + esc(r.store) + "<br>" + r.positions + " позицій · " +
+      money(r.total) + " · " + esc(r.time) + '</div>' +
+      '<div class="card"><button class="btn" onclick="screenDirs()">До інших напрямків</button></div>';
+  }).catch(function (e) {
+    S.sending = false;
+    el("bsend").textContent = "Відправити";
+    el("bsend").disabled = false;
+    alert(e.message);
+  });
+}
+</script>
+</body>
+</html>
