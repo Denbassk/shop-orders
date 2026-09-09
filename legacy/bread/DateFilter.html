@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 12px; margin: 0; }
+    h3 { margin: 0 0 12px; color: #2E7D32; font-size: 15px; text-align: center; }
+    .btn {
+      width: 100%; padding: 10px; font-size: 13px; font-weight: 500;
+      border: none; border-radius: 8px; cursor: pointer; margin-bottom: 6px; color: #fff;
+    }
+    .btn-today { background: #43A047; }
+    .btn-filter { background: #2E7D32; }
+    .btn-clear { background: #e53935; }
+    .btn:hover { opacity: 0.9; }
+    .date-input {
+      width: 100%; padding: 10px; font-size: 15px;
+      border: 2px solid #43A047; border-radius: 8px; margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+    .dates-list { margin-top: 12px; }
+    .dates-label { font-size: 12px; color: #666; margin-bottom: 6px; }
+    .date-chip {
+      display: inline-block; padding: 6px 12px; margin: 3px;
+      background: #E8F5E9; border: 1px solid #A5D6A7; border-radius: 15px;
+      font-size: 13px; cursor: pointer; color: #2E7D32;
+    }
+    .date-chip:hover { background: #C8E6C9; }
+    .date-chip.active { background: #2E7D32; color: #fff; border-color: #1B5E20; }
+    .count { font-size: 11px; color: #888; }
+    .date-chip.active .count { color: #A5D6A7; }
+    .status {
+      margin-top: 10px; font-size: 12px; text-align: center; padding: 8px;
+      border-radius: 6px; min-height: 20px;
+    }
+    .status.success { color: #2E7D32; background: #E8F5E9; }
+    .status.loading { color: #F57F17; background: #FFF8E1; }
+    .status.error { color: #C62828; background: #FFEBEE; }
+  </style>
+</head>
+<body>
+  <h3>📅 Фільтр замовлень овочів за датою</h3>
+
+  <button class="btn btn-today" onclick="filterToday()">📌 Сьогодні</button>
+
+  <input type="date" id="dateInput" class="date-input" onchange="filterByDate()">
+
+  <button class="btn btn-filter" onclick="filterByDate()">🔍 Показати обрану дату</button>
+  <button class="btn btn-clear" onclick="clearFilter()">📋 Показати всі дати</button>
+
+  <div class="dates-list">
+    <div class="dates-label">Доступні дати:</div>
+    <div id="datesList">Завантаження...</div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <script>
+    var today = new Date();
+    var dd = String(today.getDate()).padStart(2, '0');
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var yyyy = today.getFullYear();
+    document.getElementById('dateInput').value = yyyy + '-' + mm + '-' + dd;
+
+    loadDates();
+
+    function loadDates() {
+      google.script.run
+        .withSuccessHandler(function(dates) {
+          var container = document.getElementById('datesList');
+          if (!dates || !dates.length) {
+            container.innerHTML = '<div style="color:#999;">Немає даних</div>';
+            return;
+          }
+          var html = '';
+          dates.forEach(function(d) {
+            html += '<span class="date-chip" id="chip-' + d.value + '" onclick="quickFilter(\'' + d.value + '\', this)">'
+              + d.display + ' <span class="count">(' + d.count + ')</span></span>';
+          });
+          container.innerHTML = html;
+        })
+        .withFailureHandler(function() {
+          document.getElementById('datesList').innerHTML = '<div style="color:red;">Помилка завантаження</div>';
+        })
+        .getAvailableDates();
+    }
+
+    function filterToday() {
+      document.getElementById('dateInput').value = yyyy + '-' + mm + '-' + dd;
+      highlightChip('chip-' + yyyy + '-' + mm + '-' + dd);
+      filterByDate();
+    }
+
+    function filterByDate() {
+      var dateVal = document.getElementById('dateInput').value;
+      if (!dateVal) { setStatus('Оберіть дату', 'error'); return; }
+      setStatus('Фільтрую...', 'loading');
+      google.script.run
+        .withSuccessHandler(function(msg) { setStatus(msg, 'success'); })
+        .withFailureHandler(function(err) { setStatus('❌ ' + err.message, 'error'); })
+        .applyDateFilter(dateVal);
+    }
+
+    function quickFilter(dateValue, el) {
+      document.getElementById('dateInput').value = dateValue;
+      highlightChip(el ? el.id : null);
+      filterByDate();
+    }
+
+    function highlightChip(chipId) {
+      document.querySelectorAll('.date-chip').forEach(function(c) { c.classList.remove('active'); });
+      if (chipId) {
+        var chip = document.getElementById(chipId);
+        if (chip) chip.classList.add('active');
+      }
+    }
+
+    function clearFilter() {
+      setStatus('Знімаю фільтр...', 'loading');
+      document.querySelectorAll('.date-chip').forEach(function(c) { c.classList.remove('active'); });
+      google.script.run
+        .withSuccessHandler(function(msg) { setStatus(msg, 'success'); })
+        .withFailureHandler(function(err) { setStatus('❌ ' + err.message, 'error'); })
+        .applyDateFilter('ALL');
+    }
+
+    function setStatus(text, cls) {
+      var el = document.getElementById('status');
+      el.innerText = text;
+      el.className = 'status ' + (cls || '');
+    }
+  </script>
+</body>
+</html>

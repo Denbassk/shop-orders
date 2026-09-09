@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление заказами</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
+    <style>
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background-color: #ffffff; 
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #d32f2f; 
+            text-align: center; 
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .section {
+            background-color: #fff3e0;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        label { 
+            display: block; 
+            margin-bottom: 10px; 
+            font-weight: bold;
+            color: #333;
+        }
+        select { 
+            width: 100%; 
+            padding: 12px; 
+            font-size: 16px; 
+            border: 2px solid #ddd; 
+            border-radius: 5px;
+            margin-bottom: 15px;
+            background-color: white;
+        }
+        select:focus {
+            outline: none;
+            border-color: #d32f2f;
+        }
+        button { 
+            width: 100%; 
+            padding: 15px; 
+            font-size: 16px; 
+            font-weight: bold;
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #delete-button { 
+            background-color: #d32f2f; 
+            color: white;
+        }
+        #delete-button:hover {
+            background-color: #b71c1c;
+        }
+        #delete-button:disabled { 
+            background-color: #ccc; 
+            cursor: not-allowed;
+        }
+        #refresh-button {
+            background-color: #1976d2;
+            color: white;
+            margin-top: 10px;
+        }
+        #refresh-button:hover {
+            background-color: #1565c0;
+        }
+        .message { 
+            margin-top: 20px; 
+            padding: 15px; 
+            border-radius: 5px; 
+            display: none;
+            font-weight: bold;
+            text-align: center;
+        }
+        .message.error { 
+            background-color: #ffebee; 
+            color: #c62828;
+            border: 2px solid #ef5350;
+        }
+        .message.success { 
+            background-color: #e8f5e9; 
+            color: #2e7d32;
+            border: 2px solid #66bb6a;
+        }
+        .loading { 
+            text-align: center; 
+            padding: 30px; 
+            color: #666;
+        }
+        .store-info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .store-info strong {
+            color: #1976d2;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .warning-box strong {
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Управление заказами</h1>
+        <div class="subtitle">Удаление заказов магазинов за сегодня</div>
+
+        <div class="warning-box">
+            <strong>⚠️ Внимание:</strong> Удаление заказа позволит магазину снова сделать заказ на сегодня. Действие необратимо!
+        </div>
+
+        <div id="loading" class="loading">Загрузка списка заказов...</div>
+
+        <div id="admin-form" style="display:none;">
+            <div class="section">
+                <label for="store-select">Выберите магазин для удаления заказа:</label>
+                <select id="store-select" required>
+                    <option value="">-- Выберите магазин --</option>
+                </select>
+                
+                <button id="delete-button" type="button">🗑️ Удалить заказ</button>
+                <button id="refresh-button" type="button">🔄 Обновить список</button>
+            </div>
+
+            <div id="store-info" class="store-info" style="display:none;">
+                <strong>📊 Статистика:</strong>
+                <div id="stats-content"></div>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        let storesWithOrders = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStoresWithOrders();
+            document.getElementById('delete-button').addEventListener('click', handleDelete);
+            document.getElementById('refresh-button').addEventListener('click', loadStoresWithOrders);
+        });
+
+        function loadStoresWithOrders() {
+            setLoadingState(true);
+            google.script.run
+                .withSuccessHandler(onStoresLoaded)
+                .withFailureHandler(onError)
+                .getStoresWithOrdersForAdmin();
+        }
+
+        function onStoresLoaded(data) {
+            storesWithOrders = data.storesWithOrders;
+            const storeSelect = document.getElementById('store-select');
+            storeSelect.innerHTML = '<option value="">-- Выберите магазин --</option>';
+            
+            if (storesWithOrders.length === 0) {
+                storeSelect.innerHTML += '<option value="">Нет заказов на сегодня</option>';
+                document.getElementById('delete-button').disabled = true;
+                showMessage('error', 'На сегодня нет заказов для удаления.');
+            } else {
+                storesWithOrders.forEach(store => {
+                    storeSelect.innerHTML += `<option value="${escapeHtml(store)}">${escapeHtml(store)}</option>`;
+                });
+                document.getElementById('delete-button').disabled = false;
+                
+                // Показываем статистику
+                const statsDiv = document.getElementById('stats-content');
+                statsDiv.innerHTML = `
+                    <div style="margin-top: 10px;">
+                        Всего заказов сегодня: <strong>${storesWithOrders.length}</strong>
+                    </div>
+                `;
+                document.getElementById('store-info').style.display = 'block';
+            }
+            
+            setLoadingState(false);
+        }
+
+        function handleDelete() {
+            const selectedStore = document.getElementById('store-select').value;
+            
+            if (!selectedStore) {
+                showMessage('error', 'Пожалуйста, выберите магазин.');
+                return;
+            }
+
+            if (!confirm(`Вы уверены, что хотите удалить заказ магазина "${selectedStore}"?\n\nЭто действие нельзя отменить!`)) {
+                return;
+            }
+
+            setLoadingState(true);
+            showMessage('error', 'Удаление заказа...');
+            
+            google.script.run
+                .withSuccessHandler(onDeleteSuccess)
+                .withFailureHandler(onError)
+                .deleteOrderForStore(selectedStore);
+        }
+
+        function onDeleteSuccess(response) {
+            showMessage('success', response);
+            setLoadingState(false);
+            setTimeout(() => {
+                loadStoresWithOrders();
+            }, 2000);
+        }
+
+        function onError(error) {
+            showMessage('error', 'Ошибка: ' + error.message);
+            setLoadingState(false);
+        }
+
+        function setLoadingState(isLoading) {
+            document.getElementById('loading').style.display = isLoading ? 'block' : 'none';
+            document.getElementById('admin-form').style.display = isLoading ? 'none' : 'block';
+            document.getElementById('delete-button').disabled = isLoading;
+            document.getElementById('refresh-button').disabled = isLoading;
+        }
+
+        function showMessage(type, text) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            messageDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (text === null || typeof text === 'undefined') return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+</body>
+</html>
