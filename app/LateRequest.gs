@@ -14,11 +14,21 @@
 // Кому слати листи. Кілька адрес - через кому.
 // Порожньо = запит зафіксується, але нікого не сповістить.
 var LATE_MAIL = {
-  bread:  'svetlanalesakor@gmail.com',
-  nbhz:   'svetlanalesakor@gmail.com',
-  veg:    'svetlanalesakor@gmail.com',
-  bakery: 'haikora1004@gmail.com'
+  bread:  'denbassk@gmail.com',          // ТЕСТ. Робоча адреса: svetlanalesakor@gmail.com
+  bakery: 'haikora1004@gmail.com',
+  nbhz:   '',                            // svetlanalesakor@gmail.com - увімкнути після тесту
+  veg:    ''                             // svetlanalesakor@gmail.com - увімкнути після тесту
 };
+
+// Запустити ОДИН РАЗ із редактора після clasp push - Google спитає дозвіл
+// на відправку пошти. Без цього листи мовчки не підуть.
+function authorizeMail() {
+  var left = MailApp.getRemainingDailyQuota();
+  console.log('Пошта авторизована. Листів сьогодні залишилось: ' + left);
+  Object.keys(LATE_MAIL).forEach(function (k) {
+    console.log('   ' + dirCfg_(k).title + ': ' + (LATE_MAIL[k] || '- не налаштовано -'));
+  });
+}
 
 // --- сховище: одна властивість на напрямок ---
 // late_ok_<dir> = {"day":"10.09.2026","ids":["амосова 5а", ...]}
