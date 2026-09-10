@@ -94,7 +94,10 @@ function cleanupOldOrderIds() {
 // --- Зняти позначку "точка вже замовляла сьогодні" ---
 // Потрібно лише в одному випадку: рядки замовлення видалили з листа
 // руками, а застосунок далі вважає, що замовлення є.
+// Приклад виклику з редактора неможливий (потрібні аргументи) -
+// тимчасово підставте потрібні значення в clearOrderMarkHere() в Actions.gs
 function clearOrderMark(dirKey, part) {
+  if (!dirKey) { console.log('Вкажіть напрямок: ' + Object.keys(DIRECTIONS).join(', ')); return; }
   var q = String(part || '').toLowerCase();
   var props = PropertiesService.getScriptProperties();
   var hits = loadStores_().filter(function (s) {
@@ -111,6 +114,12 @@ function clearOrderMark(dirKey, part) {
 // --- Чому в напрямку нуль позицій ---
 // Показує шапку листа, перші рядки і причину відсіву кожного рядка.
 function whyNoProducts(dirKey) {
+  if (!dirKey) {                       // запустили з редактора без аргументу
+    Object.keys(DIRECTIONS).forEach(function (k) {
+      whyNoProducts(k); console.log('');
+    });
+    return;
+  }
   var cfg = dirCfg_(dirKey);
   if (!cfg.productsSheet) { console.log(cfg.title + ': асортимент із зовнішнього прайсу'); return; }
 
@@ -233,6 +242,10 @@ function clearDirLocks() {
 // Пише один службовий рядок у сирий лист і одразу його видаляє.
 // Якщо виконання обірветься посередині - лишиться один рядок
 // зі словом ЗАМІР, його видно і його можна прибрати руками.
+function measureWriteAll() {
+  Object.keys(DIRECTIONS).forEach(function (k) { measureWrite(k); console.log(''); });
+}
+
 function measureWrite(dirKey) {
   var cfg = dirCfg_(dirKey || 'bread');
   var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));

@@ -91,7 +91,9 @@ const DIRECTIONS = {
 
 function dirCfg_(key) {
   const c = DIRECTIONS[key];
-  if (!c) throw new Error('Невідомий напрямок: ' + key);
+  if (!c) throw new Error('Невідомий напрямок: "' + key + '". Доступні: ' +
+    Object.keys(DIRECTIONS).join(', ') +
+    '. Якщо запускали з редактора - беріть функцію з Actions.gs, вона без аргументів.');
   return c;
 }
 

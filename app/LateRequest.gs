@@ -251,6 +251,8 @@ function showLateToday() {
 
 // Посилання "Дозволити" вручну - можна переслати в месенджер
 function lateLinkFor(dirKey, part) {
+  if (!dirKey) { console.log('Потрібні аргументи. З редактора запускайте ' +
+    'lateLinkHere() у Actions.gs - там впишіть напрямок і назву точки.'); return; }
   var q = String(part || '').toLowerCase();
   var hits = loadStores_().filter(function (s) {
     return s.directions.indexOf(dirKey) >= 0 && s.label.toLowerCase().indexOf(q) >= 0;
@@ -264,6 +266,10 @@ function lateLinkFor(dirKey, part) {
 
 // Скасувати всі активні дозволи по напрямку
 function resetLateToday(dirKey) {
+  if (!dirKey) {                        // без аргументу - скидаємо всі напрямки
+    Object.keys(DIRECTIONS).forEach(function (k) { resetLateToday(k); });
+    return;
+  }
   var p = PropertiesService.getScriptProperties();
   p.deleteProperty('late_ok_' + dirKey);
   p.deleteProperty('late_q_' + dirKey);
