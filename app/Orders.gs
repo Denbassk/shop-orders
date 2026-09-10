@@ -84,6 +84,62 @@ function seenOrder_(orderId) {
   } catch (e) { return null; }
 }
 
+// ============================================================
+// ЗАМОК НА НАПРЯМОК, А НЕ НА ВЕСЬ СКРИПТ
+//
+// Гонка можлива лише між двома записами в ОДИН і той самий лист:
+// обидва рахують getLastRow() і пишуть в один рядок. Різні напрямки -
+// різні таблиці, їм ділити нічого.
+//
+// LockService дає тільки глобальний замок на весь скрипт. Тому робимо
+// поверх нього чотири окремі: глобальний береться на 20-30 мс, щоб
+// атомарно зайняти "busy_<напрямок>", і одразу відпускається. Сам запис
+// у таблицю (найдовша частина) іде вже без нього.
+//
+// Підсумок: хліб і овочі пишуться одночасно. Черга лишається тільки
+// всередині одного напрямку - і вона там потрібна.
+// ============================================================
+var DIR_LOCK_TTL_MS = 45000;   // якщо виконання впало - замок сам протухне
+
+function dirLockAcquire_(dirKey, waitMs) {
+  var token = Utilities.getUuid();
+  var props = PropertiesService.getScriptProperties();
+  var key = 'busy_' + dirKey;
+  var deadline = Date.now() + (waitMs || 30000);
+
+  while (Date.now() < deadline) {
+    var g = LockService.getScriptLock();
+    var got = false;
+    try { got = g.tryLock(10000); } catch (e) {}
+    if (got) {
+      try {
+        var cur = null;
+        try { cur = JSON.parse(props.getProperty(key) || 'null'); } catch (e) {}
+        if (!cur || (Date.now() - cur.ts) > DIR_LOCK_TTL_MS) {
+          props.setProperty(key, JSON.stringify({ t: token, ts: Date.now() }));
+          return token;
+        }
+      } finally { try { g.releaseLock(); } catch (e) {} }
+    }
+    Utilities.sleep(200 + Math.floor(Math.random() * 300));
+  }
+  return null;
+}
+
+function dirLockRelease_(dirKey, token) {
+  if (!token) return;
+  var props = PropertiesService.getScriptProperties();
+  var key = 'busy_' + dirKey;
+  var g = LockService.getScriptLock();
+  var got = false;
+  try { got = g.tryLock(10000); } catch (e) {}
+  try {
+    var cur = null;
+    try { cur = JSON.parse(props.getProperty(key) || 'null'); } catch (e) {}
+    if (cur && cur.t === token) props.deleteProperty(key);
+  } finally { if (got) { try { g.releaseLock(); } catch (e) {} } }
+}
+
 // Позначка "ця точка сьогодні по цьому напрямку вже замовляла".
 // Потрібна, щоб під ГЛОБАЛЬНИМ локом не читати сирий лист: читання
 // 5000 рядків - це 300-500 мс, і весь цей час решта телефонів чекає.
@@ -158,8 +214,8 @@ function apiSubmitOrder_(payload) {
       (Math.round(totalSupplier * cfg.markup * 100) / 100) + ' грн');
   }
 
-  var lock = LockService.getScriptLock();
-  if (!lock.tryLock(30000)) throw new Error('Сервер зайнятий, спробуйте через 10 секунд');
+  var lockToken = dirLockAcquire_(dirKey, 30000);
+  if (!lockToken) throw new Error('BUSY: зараз відправляється інше замовлення на цей напрямок');
 
   try {
     var again = seenOrder_(orderId);
@@ -217,6 +273,6 @@ function apiSubmitOrder_(payload) {
     rememberOrder_(orderId, result);
     return result;
   } finally {
-    lock.releaseLock();
+    dirLockRelease_(dirKey, lockToken);
   }
 }

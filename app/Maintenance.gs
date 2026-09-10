@@ -77,6 +77,7 @@ function cleanupOldOrderIds() {
   var today = formatDateDMY_(new Date());
   var killed = 0;
   Object.keys(all).forEach(function (k) {
+    if (k.indexOf('busy_') === 0) { props.deleteProperty(k); killed++; return; }
     if (k.indexOf('sub_') === 0) {                 // позначки "вже замовляли"
       if (all[k] !== today) { props.deleteProperty(k); killed++; }
       return;
@@ -154,6 +155,11 @@ function benchmarkApp() {
     console.log(String(r.ms).padStart(6) + ' | ' + r.label + ' | ' + r.note);
   });
 
+  console.log('---');
+  console.log('Черга при відправці тепер лише ВСЕРЕДИНІ напрямку: хліб, НБХЗ,');
+  console.log('випічка і овочі пишуться одночасно, бо це різні таблиці.');
+  console.log('Реальну вартість одного запису покаже measureWrite("bread").');
+
   var submitPath = res.filter(function (r) {
     return r.label.indexOf('isOrderedToday') === 0;
   }).reduce(function (a, r) { return Math.max(a, r.ms); }, 0);
@@ -161,6 +167,62 @@ function benchmarkApp() {
   console.log('Найдовший isOrderedToday: ' + submitPath + ' мс. Приблизно стільки триває ' +
               'глобальне блокування при відправці одного замовлення - решта телефонів ' +
               'чекає саме цей час.');
+}
+
+// --- Аварійне зняття замка напрямку ---
+// Потрібно, лише якщо виконання впало посеред запису і замок
+// висить довше 45 секунд (сам він протухає, це на всяк випадок).
+function clearDirLocks() {
+  var props = PropertiesService.getScriptProperties();
+  Object.keys(DIRECTIONS).forEach(function (k) {
+    if (props.getProperty('busy_' + k)) {
+      props.deleteProperty('busy_' + k);
+      console.log('Замок знято: ' + dirCfg_(k).title);
+    }
+  });
+  console.log('Готово');
+}
+
+// --- Скільки насправді триває один запис у таблицю ---
+// Пише один службовий рядок у сирий лист і одразу його видаляє.
+// Якщо виконання обірветься посередині - лишиться один рядок
+// зі словом ЗАМІР, його видно і його можна прибрати руками.
+function measureWrite(dirKey) {
+  var cfg = dirCfg_(dirKey || 'bread');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh) { console.log('Немає листа ' + rawSheetName_(cfg)); return; }
+
+  var w = Math.max(sh.getLastColumn(), 7);
+  var t0 = Date.now();
+  var tok = dirLockAcquire_(cfg.key, 15000);
+  var tLock = Date.now() - t0;
+  if (!tok) { console.log('Не вдалось взяти замок напрямку'); return; }
+
+  try {
+    var row = sh.getLastRow() + 1;
+    var vals = new Array(w).fill('');
+    vals[0] = 'ЗАМІР ' + formatTime_(new Date());
+
+    var t1 = Date.now();
+    sh.getRange(row, 1, 1, w).setValues([vals]);
+    SpreadsheetApp.flush();
+    var tWrite = Date.now() - t1;
+
+    sh.deleteRow(row);
+    SpreadsheetApp.flush();
+
+    var one = tLock + tWrite;
+    console.log(cfg.title);
+    console.log('   взяти замок напрямку: ' + tLock + ' мс');
+    console.log('   записати + зафіксувати: ' + tWrite + ' мс');
+    console.log('   разом на одне замовлення: ' + one + ' мс');
+    console.log('---');
+    console.log('Якщо всі 37 точок тиснуть "Відправити" в одну секунду по цьому напрямку,');
+    console.log('останній чекає ' + Math.round(37 * one / 1000) + ' с. Ліміт очікування - 30 с,');
+    console.log('плюс застосунок сам повторює спробу двічі. Інші напрямки не чекають взагалі.');
+  } finally {
+    dirLockRelease_(cfg.key, tok);
+  }
 }
 
 // ============================================================

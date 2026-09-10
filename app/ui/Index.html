@@ -355,9 +355,27 @@ function send(){
                S.boot.directions[S.dir].title + '\n' + what +
                '\n\nВідправити?')) return;
   var b=el('send'); b.disabled=true; b.textContent='Відправка…';
+  trySend(items, 0);
+}
+
+/* Якщо саме зараз пишеться інше замовлення на цей самий напрямок -
+   чекаємо і повторюємо самі, продавець нічого не помічає.
+   Безпечно: orderId той самий, тож дубль не створиться навіть якщо
+   перша спроба насправді дійшла до таблиці. */
+function trySend(items, attempt){
   call('submitOrder', { dir:S.dir, storeId:S.store.id, items:items, orderId:S.oid })
     .then(done)
-    .catch(function(e){ alert(e.message||e); b.disabled=false; b.textContent='Відправити'; });
+    .catch(function(e){
+      var b = el('send');
+      var msg = String((e && e.message) || e);
+      if (msg.indexOf('BUSY') >= 0 && attempt < 2){
+        if (b) b.textContent = 'Черга…';
+        setTimeout(function(){ trySend(items, attempt + 1); }, 4000 + attempt * 5000);
+        return;
+      }
+      alert(msg.replace(/^BUSY:\s*/, 'Сервер зайнятий. '));
+      if (b){ b.disabled=false; b.textContent='Відправити'; }
+    });
 }
 function done(r){
   S.screen='done'; S.store.ordered[S.dir]=true;
