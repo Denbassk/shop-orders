@@ -3,13 +3,13 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-10-1';
+const APP_VERSION = '2026-09-10-2';
 
 const TEST_MODE = true;
 
 const REGISTRY_ID = '1noOXYRRdxIuY6gd9kicI2OxGU0vJ_kfvLbcVTyqXi6o';
 const REGISTRY_SHEET = 'ТТ';
-const NBHZ_ID = '1D_BkzbBmsXPmkGNP3uKZUcetjctQCy8QAhnMHCYTjmE';
+const NBHZ_ID = '1ShyjK-P3xpe1ROsUPJwfpIzcNylgt05u_7r7ws6iHaY';
 
 const DIRECTIONS = {
   bread: {
@@ -36,7 +36,7 @@ const DIRECTIONS = {
     unit: 'шт', minOrder: 0, markup: 1,
     hasCategories: false, hasBarcodes: true,
     addressAlias: 'addrNbhz', routeAlias: 'routeNbhz', shortAddr: true,
-    lateRequest: true,
+    lateRequest: true, allowNoPrice: true, keepOrder: true,
     rawRow: function (ctx, p) {
       return [ctx.dateStr, ctx.route, ctx.shortAddress,
               p.barcode, p.name, p.price, p.qty];
