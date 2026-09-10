@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-10-6';
+const APP_VERSION = '2026-09-10-7';
 
 const TEST_MODE = true;
 
@@ -21,6 +21,7 @@ const DIRECTIONS = {
     unit: 'шт', minOrder: 350, markup: 1,
     hasCategories: false, hasBarcodes: true,
     addressAlias: 'addrBread', routeAlias: 'route', shortAddr: true,
+    lateRequest: true,
     rawRow: function (ctx, p) {
       return [ctx.dateStr, ctx.route, ctx.shortAddress,
               p.barcode, p.name, p.price, p.qty];
@@ -56,6 +57,7 @@ const DIRECTIONS = {
     unit: 'шт', minOrder: 0, markup: 1,
     hasCategories: true, hasBarcodes: true,
     addressAlias: 'addrBakery', routeAlias: 'route', shortAddr: false,
+    lateRequest: true,
     rawRow: function (ctx, p) {
       return [ctx.dateStr, ctx.timeStr, ctx.address,
               p.category, p.barcode, p.name, p.price, p.qty];
@@ -71,6 +73,7 @@ const DIRECTIONS = {
     unit: 'кг', minOrder: 500, markup: 1.5,
     hasCategories: false, hasBarcodes: false,
     addressAlias: 'addrVeg', routeAlias: 'route', shortAddr: false,
+    lateRequest: true,
     rawRow: function (ctx, p) {
       return [ctx.dateStr, ctx.timeStr, ctx.address,
               p.name, p.price, p.qty, Math.round(p.price * p.qty * 100) / 100];
