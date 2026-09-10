@@ -24,7 +24,7 @@ function apiProducts_(payload) {
   var lateSt = cfg.lateRequest ? lateRequestStatus_(dirKey, store.id) : null;
   var approved = lateSt === 'approved';
   var closed = deadlinePassed_(dirKey, store.id);
-  var already = isOrderedToday_(dirKey, store);
+  var already = orderedTodayCached_(dirKey, store);
 
   var cats = [];
   if (cfg.hasCategories) {
@@ -51,6 +51,17 @@ function apiProducts_(payload) {
     lateRequest: lateSt,
     lateLeftMin: approved ? lateLeftMin_(dirKey, store.id) : 0
   };
+}
+
+// Для ЕКРАНА досить кешованого статусу (60 с) - він і так рахується для
+// bootstrap і heartbeat. Пряме читання сирого листа тут коштувало ~600-1000 мс
+// на кожне відкриття товарів. Остаточна перевірка лишається у відправці.
+function orderedTodayCached_(dirKey, store) {
+  try {
+    var map = loadTodayStatus_()[dirKey];
+    if (map) return !!map[statusKey_(dirKey, store)];
+  } catch (e) {}
+  return isOrderedToday_(dirKey, store);
 }
 
 function isOrderedToday_(dirKey, store) {

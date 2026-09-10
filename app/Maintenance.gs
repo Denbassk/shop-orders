@@ -108,6 +108,52 @@ function clearOrderMark(dirKey, part) {
   invalidateAppCache();
 }
 
+// --- Чому в напрямку нуль позицій ---
+// Показує шапку листа, перші рядки і причину відсіву кожного рядка.
+function whyNoProducts(dirKey) {
+  var cfg = dirCfg_(dirKey);
+  if (!cfg.productsSheet) { console.log(cfg.title + ': асортимент із зовнішнього прайсу'); return; }
+
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
+  if (!sh) { console.log('Листа "' + cfg.productsSheet + '" немає. Є: ' +
+      SpreadsheetApp.openById(cfg.spreadsheetId).getSheets()
+        .map(function (x) { return x.getName(); }).join(' | ')); return; }
+
+  var w = Math.max(sh.getLastColumn(), 6);
+  console.log(cfg.title + ' -> лист "' + cfg.productsSheet + '", рядків ' +
+              sh.getLastRow() + ', колонок ' + sh.getLastColumn());
+  console.log('шапка: ' + sh.getRange(1, 1, 1, w).getValues()[0].join(' | '));
+  if (sh.getLastRow() < 2) { console.log('Даних немає'); return; }
+
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, Math.max(w, 6)).getValues();
+  console.log('перші 3 рядки:');
+  rows.slice(0, 3).forEach(function (r) { console.log('   ' + r.slice(0, w).join(' | ')); });
+
+  var why = { 'стоп': 0, 'порожня назва': 0, 'немає штрихкоду': 0,
+              'немає ціни': 0, 'ok': 0 };
+  rows.forEach(function (r) {
+    if (String(r[0] || '').trim().toLowerCase() === 'стоп') { why['стоп']++; return; }
+    var nameCol = (cfg.productLayout === 'nbhz') ? 2 : 4;
+    var name = String(r[nameCol] || '').trim();
+    if (!name) { why['порожня назва']++; return; }
+    if (cfg.productLayout === 'nbhz' || cfg.allowNoPrice) { why['ok']++; return; }
+    var barcode = String(r[2] || '').trim();
+    var price = parseFloat(String(r[3] || '').replace(',', '.'));
+    if (!barcode) { why['немає штрихкоду']++; return; }
+    if (!(price > 0)) { why['немає ціни']++; return; }
+    why['ok']++;
+  });
+
+  console.log('розбір ' + rows.length + ' рядків:');
+  Object.keys(why).forEach(function (k) { if (why[k]) console.log('   ' + k + ': ' + why[k]); });
+  console.log('застосунок бачить позицій: ' + loadProducts_(dirKey).length);
+  console.log('---');
+  console.log('Очікувані колонки: A статус | B ' +
+    (dirKey === 'bakery' ? 'категорія' : '№') +
+    ' | C штрихкод | D ціна | E номенклатура | F ' +
+    (dirKey === 'bakery' ? 'наявність' : 'шт в ящику'));
+}
+
 // ============================================================
 // ЗАМІРИ ШВИДКОСТІ
 // ============================================================
