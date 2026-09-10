@@ -31,13 +31,33 @@
 
 // ============ 1. ПІСЛЯ КОЖНОГО ДЕПЛОЮ ============
 
-/** Видати скрипту дозвіл на пошту і зовнішні запити. Запустити раз. */
+/** Видати дозволи і перевірити, що все підключено. Запустити після кожного push. */
 function a01_authorize() {
   authorizeMail();
   try {
-    UrlFetchApp.fetch(ScriptApp.getService().getUrl(), { muteHttpExceptions: true });
-    console.log('Зовнішні запити дозволені - навантажувальний тест запрацює.');
+    UrlFetchApp.fetch(appUrl_(), { muteHttpExceptions: true });
+    console.log('Зовнішні запити: OK');
   } catch (e) { console.log('Зовнішні запити: ' + e.message); }
+
+  // Sheets API працює на тому самому дозволі "spreadsheets", тож нового
+  // вікна згоди не буде. Але сам сервіс має бути увімкнений у проєкті.
+  console.log('---');
+  if (typeof Sheets === 'undefined') {
+    console.log('ПРОБЛЕМА: Sheets API не увімкнено - замовлення писатимуться');
+    console.log('старим шляхом із чергою.');
+    console.log('Полагодити: у редакторі зліва "Служби" -> + -> Google Sheets API -> Додати,');
+    console.log('ідентифікатор має лишитись "Sheets". Або перевірити, що clasp push');
+    console.log('залив appsscript.json з enabledAdvancedServices.');
+    return;
+  }
+  try {
+    var cfg = dirCfg_('bread');
+    var meta = Sheets.Spreadsheets.get(cfg.spreadsheetId, { fields: 'properties.title' });
+    console.log('Sheets API: OK, бачить таблицю "' + meta.properties.title + '"');
+    console.log('Замовлення пишуться без черги.');
+  } catch (e) {
+    console.log('Sheets API увімкнено, але виклик не пройшов: ' + e.message);
+  }
 }
 
 /** Скинути кеш - після правок у Довіднику чи асортименті. */
