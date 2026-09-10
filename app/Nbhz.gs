@@ -15,6 +15,12 @@
 //   'registry' - правильна адреса з Довідника
 var NBHZ_EXPORT_ADDR = 'factory';
 
+// Нахил назв товарів у шапці вивантаження:
+//   45 - навскіс, компактно (за замовчуванням)
+//    0 - горизонтально, у два рядки, колонки ширші
+//   90 - вертикально, як було у файлі заводу
+var NBHZ_HEAD_ROTATION = 45;
+
 function installNbhz() {
   setupNbhz();
   rebuildNbhzProducts();
@@ -347,11 +353,13 @@ function buildNbhzExport() {
   var out = ss.getSheetByName(name);
   if (out) out.clear(); else out = ss.insertSheet(name);
 
+  var rot = NBHZ_HEAD_ROTATION;
   out.getRange(1, 1, 1, head.length).setValues([head])
     .setFontWeight('bold').setBackground('#f1f3f4')
-    .setVerticalAlignment('bottom').setWrap(true);
-  out.getRange(1, 3, 1, prods.length).setTextRotation(90);
-  out.setRowHeight(1, 200);
+    .setVerticalAlignment('bottom');
+  out.getRange(1, 3, 1, prods.length).setTextRotation(rot).setWrap(rot === 0);
+  out.getRange(1, 1, 1, 2).setTextRotation(0).setVerticalAlignment('middle');
+  out.setRowHeight(1, rot === 0 ? 62 : (rot === 45 ? 150 : 200));
 
   out.getRange(2, 1, body.length, head.length).setValues(body);
   out.getRange(2, 1, body.length, head.length)
@@ -361,7 +369,8 @@ function buildNbhzExport() {
      .setBorder(true, true, true, true, true, true, '#c8ccd1', SpreadsheetApp.BorderStyle.SOLID);
 
   out.setColumnWidth(1, 120); out.setColumnWidth(2, 210);
-  for (var i = 0; i < prods.length; i++) out.setColumnWidth(3 + i, 44);
+  var colW = (rot === 0) ? 96 : 44;
+  for (var i = 0; i < prods.length; i++) out.setColumnWidth(3 + i, colW);
   out.setFrozenRows(1); out.setFrozenColumns(2);
 
   var ordered = order.filter(function (k) { return rowsByStore[k].got; }).length;
