@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-10-4';
+const APP_VERSION = '2026-09-10-5';
 
 const TEST_MODE = true;
 
@@ -13,7 +13,7 @@ const NBHZ_ID = '1ShyjK-P3xpe1ROsUPJwfpIzcNylgt05u_7r7ws6iHaY';
 
 const DIRECTIONS = {
   bread: {
-    key: 'bread', title: 'Хліб', subtitle: 'ЧП Рома',
+    key: 'bread', title: 'Хліб Рома', subtitle: 'ЧП Рома',
     color: '#8D6E63', deadline: '16:00', step: 1,
     spreadsheetId: '1QJca7XlvZbIWfEIyxBxC64dSD6RkrlWoZOSmem2tix4',
     productsSheet: 'Ассортимент',

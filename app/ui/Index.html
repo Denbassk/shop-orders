@@ -390,6 +390,7 @@ function askLate(){
   if (b){ b.disabled = true; b.textContent = 'Надсилаємо...'; }
   call('requestLate', { dir: S.dir, storeId: S.store.id }).then(function(r){
     S.prod.lateRequest = r.status;
+    S.prod.lateMailed = (r.mailed !== false);
     drawProd();
   }).catch(function(e){
     alert(e.message || e);
@@ -413,7 +414,10 @@ function injectLate(){
     box.innerHTML = 'Закупниця дозволила дозамовлення на сьогодні.';
   } else if (d.lateRequest === 'pending'){
     box.innerHTML = 'Запит надіслано закупниці. Щойно вона дозволить - кнопка ' +
-                    '"Відправити" увімкнеться сама, сторінку оновлювати не треба.';
+                    '"Відправити" увімкнеться сама, сторінку оновлювати не треба.' +
+                    (d.lateMailed === false
+                      ? '<br><br>Сповіщення ще не налаштоване - зателефонуйте закупниці.'
+                      : '');
   } else if (d.closed){
     box.innerHTML = 'Прийом на сьогодні закрито (до ' + esc(d.deadline) + '). ' +
                     'Можна попросити дозвіл на дозамовлення.' +

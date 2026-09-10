@@ -3,6 +3,9 @@
 // ============================================================
 
 function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (p.ok) return lateApprovePage_(p);   // кнопка "Дозволити" з листа закупниці
+
   return HtmlService.createTemplateFromFile('ui/Index')
     .evaluate()
     .setTitle('Замовлення Фемелі Маркет')
