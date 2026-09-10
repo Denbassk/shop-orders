@@ -39,7 +39,7 @@ function apiProducts_(payload) {
     hidePrice: !!cfg.hidePrice,
     step: cfg.step,
     deadline: cfg.deadline,
-    minOrder: Math.round(cfg.minOrder * cfg.markup * 100) / 100,
+    minOrder: approved ? 0 : Math.round(cfg.minOrder * cfg.markup * 100) / 100,
     categories: cats,
     products: products,
     closed: closed,
@@ -116,6 +116,11 @@ function apiSubmitOrder_(payload) {
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
+  // Дозвіл закупниці = добавка. Знімає ТРИ замки: дедлайн, повторне
+  // замовлення на сьогодні і мінімальну суму.
+  var approvedNow = !!cfg.lateRequest &&
+    lateRequestStatus_(dirKey, store.id) === 'approved';
+
   if (deadlinePassed_(dirKey, store.id)) {
     throw new Error(cfg.lateRequest
       ? 'Прийом на "' + cfg.title + '" закрито (до ' + cfg.deadline +
@@ -147,7 +152,7 @@ function apiSubmitOrder_(payload) {
 
   if (!lines.length) throw new Error('Не розпізнано жодної позиції');
 
-  var minSupplier = cfg.minOrder;
+  var minSupplier = approvedNow ? 0 : cfg.minOrder;
   if (minSupplier > 0 && totalSupplier < minSupplier - 0.01) {
     var shown = Math.round(minSupplier * cfg.markup * 100) / 100;
     throw new Error('Мінімальне замовлення ' + shown + ' грн. Зараз ' +
@@ -161,8 +166,6 @@ function apiSubmitOrder_(payload) {
     var again = seenOrder_(orderId);
     if (again) { again.duplicate = true; return again; }
 
-    var approvedNow = !!cfg.lateRequest &&
-      lateRequestStatus_(dirKey, store.id) === 'approved';
     if (isOrderedToday_(dirKey, store) && !approvedNow)
       throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
         (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));

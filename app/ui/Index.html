@@ -305,7 +305,9 @@ function total(){
   return Math.round(t*100)/100;
 }
 function drawBot(){
-  var n=Object.keys(S.cart).length, t=total(), min=S.prod.minOrder||0;
+  var n=Object.keys(S.cart).length, t=total();
+  // добавка з дозволу закупниці мінімалкою не обмежена
+  var min = (S.prod.lateRequest === 'approved') ? 0 : (S.prod.minOrder || 0);
   var low = min > 0 && t < min - 0.01;
   var sum = S.prod.hidePrice
     ? '<b>' + n + '</b>позицій у замовленні'
