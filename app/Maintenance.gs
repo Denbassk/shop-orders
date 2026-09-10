@@ -163,6 +163,35 @@ function whyNoProducts(dirKey) {
     (dirKey === 'bakery' ? 'наявність' : 'шт в ящику'));
 }
 
+// --- Прибрати чорний фон із рядків замовлень ---
+// Наслідок старого insertDataOption: INSERT_ROWS. Разова процедура.
+function fixRawFormat() {
+  Object.keys(DIRECTIONS).forEach(function (k) {
+    var cfg = dirCfg_(k);
+    try {
+      var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+      if (!sh || sh.getLastRow() < 2) { console.log(cfg.title + ': порожньо'); return; }
+
+      var n = sh.getLastRow() - 1;
+      var w = Math.max(sh.getLastColumn(), 1);
+      var body = sh.getRange(2, 1, n, w);
+      body.setBackground('#ffffff')
+          .setFontColor('#000000')
+          .setFontWeight('normal')
+          .setFontStyle('normal');
+
+      // числові формати повертаємо
+      sh.getRange(2, 1, n, 1).setNumberFormat('dd.MM.yyyy');
+      if (cfg.hasBarcodes) {
+        var bcCol = (k === 'bread' || k === 'nbhz') ? 4 : 5;
+        sh.getRange(2, bcCol, n, 1).setNumberFormat('@');
+      }
+      console.log(cfg.title + ': вирівняно ' + n + ' рядків');
+    } catch (e) { console.log(cfg.title + ': ' + e.message); }
+  });
+  console.log('Готово');
+}
+
 // ============================================================
 // ЗАМІРИ ШВИДКОСТІ
 // ============================================================

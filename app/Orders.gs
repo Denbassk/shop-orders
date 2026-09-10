@@ -120,12 +120,19 @@ var DIR_LOCK_TTL_MS = 45000;   // для archiveRawSheets, див. нижче
 // (148 замовлень на добу). Але якщо квота таки скінчилась, ми не відмовляємо
 // продавцю: чекаємо і пробуємо ще раз, а потім пишемо старим шляхом із
 // замком - у нього своєї квоти немає.
+// insertDataOption:
+//   INSERT_ROWS - вставляє НОВІ рядки, і вони успадковують формат рядка
+//                 вище. Перший запис успадковував чорну шапку, далі всі
+//                 наступні - від нього. Звідси були чорні рядки.
+//   OVERWRITE   - пише у вже наявні порожні рядки під таблицею, з їхнім
+//                 звичайним форматом. Під сирим листом нічого немає,
+//                 тож затирати нема чого.
 function apiAppend_(spreadsheetId, sheetName, rows) {
   Sheets.Spreadsheets.Values.append(
     { values: rows },
     spreadsheetId,
     "'" + sheetName + "'!A1",
-    { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' }
+    { valueInputOption: 'USER_ENTERED', insertDataOption: 'OVERWRITE' }
   );
 }
 

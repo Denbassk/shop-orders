@@ -286,37 +286,50 @@ function buildNbhzExport() {
   var colOf = {};
   prods.forEach(function (p, i) { colOf[nameKey_(p.name)] = i; });
 
-  var routeSh = ss.getSheetByName('Маршрути');
-  var routeOf = {};
-  routeSh.getRange(2, 1, routeSh.getLastRow() - 1, 3).getValues().forEach(function (r) {
-    var route = String(r[0] || '').trim();
-    var regA = String(r[1] || '').trim();
-    var factA = String(r[2] || '').trim() || regA;
-    if (!regA) return;
-    var meta = { route: route, addr: (NBHZ_EXPORT_ADDR === 'registry' ? regA : factA) };
-    routeOf[fuzzyKey_(regA)] = meta;
-    if (factA) routeOf[fuzzyKey_(factA)] = meta;
-  });
-
-  var raw = ss.getSheetByName(rawSheetName_(cfg));
-  if (!raw || raw.getLastRow() < 2) throw new Error('Замовлень немає');
-
+  // 1. Усі точки НБХЗ із Довідника - навіть ті, що сьогодні не замовляли.
+  //    Завод отримує повний список маршруту, як у їхньому файлі: де
+  //    замовлення немає, стоять нулі.
   var rowsByStore = {}, order = [];
-  raw.getRange(2, 1, raw.getLastRow() - 1, 7).getValues().forEach(function (r) {
-    var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
-    if (d !== today) return;
-    var key = fuzzyKey_(r[2]);
-    var ci = colOf[nameKey_(r[4])];
-    if (ci === undefined) return;
-    if (!rowsByStore[key]) {
-      var meta = routeOf[key] || { route: String(r[1] || '').trim(), addr: String(r[2] || '').trim() };
-      rowsByStore[key] = { route: meta.route, addr: meta.addr, qty: new Array(prods.length).fill(0) };
-      order.push(key);
-    }
-    rowsByStore[key].qty[ci] += Number(r[6]) || 0;
+  loadStores_().forEach(function (st) {
+    if (st.directions.indexOf('nbhz') < 0) return;
+    var addr = st.addrNbhz || st.address;
+    var key = fuzzyKey_(shortenAddress_(addr));
+    if (rowsByStore[key]) return;
+    rowsByStore[key] = {
+      route: st.routeNbhz || '',
+      addr: addr,
+      qty: new Array(prods.length).fill(0),
+      got: false
+    };
+    order.push(key);
   });
 
-  if (!order.length) throw new Error('На ' + today + ' замовлень немає');
+  // 2. Розкладаємо сьогоднішні замовлення
+  var raw = ss.getSheetByName(rawSheetName_(cfg));
+  if (raw && raw.getLastRow() > 1) {
+    var last = raw.getLastRow();
+    var take = Math.min(last - 1, RAW_TAIL_ROWS);
+    raw.getRange(last - take + 1, 1, take, 7).getValues().forEach(function (r) {
+      var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
+      if (d !== today) return;
+      var ci = colOf[nameKey_(r[4])];
+      if (ci === undefined) return;
+      var key = fuzzyKey_(String(r[2] || '').trim());
+      if (!rowsByStore[key]) {                       // точки немає в Довіднику
+        rowsByStore[key] = {
+          route: String(r[1] || '').trim(),
+          addr: String(r[2] || '').trim(),
+          qty: new Array(prods.length).fill(0),
+          got: true
+        };
+        order.push(key);
+      }
+      rowsByStore[key].qty[ci] += Number(r[6]) || 0;
+      rowsByStore[key].got = true;
+    });
+  }
+
+  if (!order.length) throw new Error('Немає жодної точки НБХЗ - запустіть installNbhz()');
 
   order.sort(function (a, b) {
     var A = rowsByStore[a], B = rowsByStore[b];
@@ -329,17 +342,34 @@ function buildNbhzExport() {
     return [s.route, s.addr].concat(s.qty);
   });
 
+  // 3. Лист вивантаження
   var name = 'Вивантаження ' + today;
   var out = ss.getSheetByName(name);
   if (out) out.clear(); else out = ss.insertSheet(name);
+
   out.getRange(1, 1, 1, head.length).setValues([head])
-    .setFontWeight('bold').setBackground('#f1f3f4').setVerticalAlignment('bottom').setWrap(false);
+    .setFontWeight('bold').setBackground('#f1f3f4')
+    .setVerticalAlignment('bottom').setWrap(true);
   out.getRange(1, 3, 1, prods.length).setTextRotation(90);
   out.setRowHeight(1, 200);
+
   out.getRange(2, 1, body.length, head.length).setValues(body);
+  out.getRange(2, 1, body.length, head.length)
+     .setBackground('#ffffff').setFontColor('#000000').setFontWeight('normal');
+  out.getRange(2, 3, body.length, prods.length).setHorizontalAlignment('center');
+  out.getRange(1, 1, body.length + 1, head.length)
+     .setBorder(true, true, true, true, true, true, '#c8ccd1', SpreadsheetApp.BorderStyle.SOLID);
+
   out.setColumnWidth(1, 120); out.setColumnWidth(2, 210);
   for (var i = 0; i < prods.length; i++) out.setColumnWidth(3 + i, 44);
   out.setFrozenRows(1); out.setFrozenColumns(2);
 
-  console.log('Готово: лист "' + name + '", точок ' + body.length + ', позицій ' + prods.length);
+  var ordered = order.filter(function (k) { return rowsByStore[k].got; }).length;
+  console.log('Готово: лист "' + name + '"');
+  console.log('   точок у списку: ' + body.length + ', з них замовили сьогодні: ' + ordered);
+  console.log('   позицій: ' + prods.length);
+  console.log('   ' + ss.getUrl() + '#gid=' + out.getSheetId());
+  console.log('---');
+  console.log('Щоб надіслати заводу: відкрийте лист -> Файл -> Завантажити -> Excel,');
+  console.log('у діалозі вибору аркушів лишіть тільки "' + name + '".');
 }

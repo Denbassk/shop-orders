@@ -245,6 +245,11 @@ function d07_showTriggers() {
   });
 }
 
+/** Прибрати чорний фон із рядків замовлень. Разово, після оновлення. */
+function d08_fixRawFormat() {
+  fixRawFormat();
+}
+
 /** Прибрати тестові листи і старі листи "Дозволи". Разово. */
 function d04_dropOldSheets() {
   dropTestSheets();

@@ -40,6 +40,7 @@ function loadProbe_(p) {
       var t1 = Date.now();
       if (typeof Sheets === 'undefined') throw new Error('Sheets API не увімкнено');
       var row = [[formatDateDMY_(new Date()), out.dir, out.n, out.waitMs]];
+      // apiAppend_ уже з OVERWRITE - формат шапки не успадковується
       out.quota = 0;
       for (var att = 0; att < 2; att++) {
         try { apiAppend_(cfg.spreadsheetId, LOAD_SHEET, row); break; }
