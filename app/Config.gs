@@ -15,7 +15,7 @@ const DIRECTIONS = {
     title: 'Хліб',
     subtitle: 'ЧП Рома',
     color: '#8D6E63',
-    deadline: '',
+    deadline: '16:00',
     step: 1,
     spreadsheetId: '1QJca7XlvZbIWfEIyxBxC64dSD6RkrlWoZOSmem2tix4',
     productsSheet: 'Ассортимент',
@@ -102,4 +102,5 @@ function statusKey_(dirKey, store) {
   const a = store[cfg.addressAlias];
   return addrKey_(cfg.shortAddr ? shortenAddress_(a) : a);
 }
+
 
