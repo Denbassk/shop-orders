@@ -192,6 +192,39 @@ function fixRawFormat() {
   console.log('Готово');
 }
 
+// --- Прибрати сьогоднішнє замовлення точки повністю ---
+// Видаляє рядки з сирого листа і знімає позначку "вже замовляли",
+// тобто точка зможе замовити наново як з чистого аркуша.
+function cancelTodayOrder(dirKey, part) {
+  if (!dirKey) { console.log('Вкажіть напрямок: ' + Object.keys(DIRECTIONS).join(', ')); return; }
+  var cfg = dirCfg_(dirKey);
+  var q = String(part || '').toLowerCase();
+  var hits = loadStores_().filter(function (s) {
+    return s.directions.indexOf(dirKey) >= 0 && s.label.toLowerCase().indexOf(q) >= 0;
+  });
+  if (!hits.length) { console.log('Не знайдено точку: ' + part); return; }
+  if (hits.length > 1) {
+    console.log('Знайдено кілька точок - уточніть назву:');
+    hits.forEach(function (s) { console.log('   ' + s.label); });
+    return;
+  }
+
+  var store = hits[0];
+  var g = LockService.getScriptLock();
+  if (!g.tryLock(30000)) { console.log('Сервер зайнятий, спробуйте ще раз'); return; }
+  var removed = 0;
+  try { removed = deleteTodayRows_(cfg, dirKey, store); }
+  finally { try { g.releaseLock(); } catch (e) {} }
+
+  PropertiesService.getScriptProperties().deleteProperty(orderMarkKey_(dirKey, store));
+  if (dirKey === 'nbhz')
+    PropertiesService.getScriptProperties().setProperty('nbhz_export_dirty', formatDateDMY_(new Date()));
+  invalidateAppCache();
+
+  console.log(cfg.title + ' / ' + store.label + ': видалено рядків ' + removed);
+  console.log('Точка може замовляти наново.');
+}
+
 // ============================================================
 // ЗАМІРИ ШВИДКОСТІ
 // ============================================================

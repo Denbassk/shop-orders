@@ -223,10 +223,12 @@ function d03_storeLinks() {
 /** Поставити розклад:
  *    чистка властивостей - щодня о 3:00
  *    архівування         - щопонеділка о 4:00
- *    вивантаження НБХЗ   - щодня після 18:00
+ *    оновлення вивантаження НБХЗ - кожні 15 хвилин удень
+ *    повна збірка вивантаження   - щодня після 18:00
  *  Запустити ОДИН РАЗ. Повторний запуск просто перестворює ті самі тригери. */
 function d06_installTriggers() {
-  var mine = { d01_archive: 1, d02_cleanupProps: 1, e03_nbhzExport: 1 };
+  var mine = { d01_archive: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
+               e04_refreshExport: 1 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (mine[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
   });
@@ -234,7 +236,9 @@ function d06_installTriggers() {
   ScriptApp.newTrigger('d02_cleanupProps').timeBased().everyDays(1).atHour(3).create();
   ScriptApp.newTrigger('d01_archive').timeBased()
     .onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(4).create();
-  // після 17:30 і 30 хвилин на дозамовлення
+  // лист вивантаження підтягується сам протягом дня
+  ScriptApp.newTrigger('e04_refreshExport').timeBased().everyMinutes(15).create();
+  // і гарантована повна збірка ввечері, після 17:30 плюс 30 хв на зміни
   ScriptApp.newTrigger('e03_nbhzExport').timeBased().everyDays(1).atHour(18).create();
 
   console.log('Розклад поставлено:');
@@ -274,11 +278,15 @@ function e02_matchNbhzRoutes() {
   matchNbhzRoutes();
 }
 
-/** Вивантаження для заводу за сьогодні.
- *  Стоїть на тригері щодня після 18:00 - руками потрібне лише тоді,
- *  коли треба перезібрати лист після пізнього дозамовлення. */
+/** Зібрати лист вивантаження ПРЯМО ЗАРАЗ, у будь-якому разі. */
 function e03_nbhzExport() {
   buildNbhzExport();
+}
+
+/** Перезібрати, якщо були нові замовлення або листа немає.
+ *  Стоїть на тригері кожні 15 хвилин - руками не потрібне. */
+function e04_refreshExport() {
+  refreshNbhzExport();
 }
 
 
@@ -311,6 +319,14 @@ function f05_lateLinkHere() {
   var DIR = 'nbhz';         // bread | nbhz | bakery | veg
   var STORE = 'амосова';    // частина назви ТТ
   lateLinkFor(DIR, STORE);
+}
+
+/** Прибрати сьогоднішнє замовлення точки повністю - і рядки, і позначку.
+ *  Точка зможе замовити наново. Впишіть напрямок і частину назви. */
+function f07_cancelOrderHere() {
+  var DIR = 'nbhz';         // bread | nbhz | bakery | veg
+  var STORE = 'амосова';    // частина назви ТТ
+  cancelTodayOrder(DIR, STORE);
 }
 
 /** Зняти позначку "точка вже замовляла сьогодні".

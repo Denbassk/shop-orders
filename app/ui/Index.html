@@ -51,6 +51,10 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
     margin-bottom:11px;font-size:15px;font-weight:600;line-height:1.45}
 .lt button{margin-top:10px;width:100%;background:#ffb300;color:#16181d;border:0;
            border-radius:11px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
+.lt .modes{display:flex;gap:8px;margin:12px 0 10px}
+.lt .modes button{flex:1;margin:0;background:#fff;border:2px solid #e6c67e;color:#7a5200;
+                  border-radius:10px;padding:11px 6px;font-size:14px;font-weight:700;line-height:1.25}
+.lt .modes button.on{background:#ffb300;border-color:#ffb300;color:#16181d}
 .dot.done{background:#c7cbd1;box-shadow:inset 0 0 0 2px #fff}
 .legend{font-size:12px;color:#6b7280;text-align:center;padding:14px 4px 0;line-height:1.6}
 
@@ -137,7 +141,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
 <div id="bot"></div>
 
 <script>
-var S = { boot:null, store:null, dir:null, prod:null, cart:{}, oid:null, screen:'store', q:'', cat:null };
+var S = { boot:null, store:null, dir:null, prod:null, cart:{}, oid:null, screen:'store',
+          q:'', cat:null, mode:'add' };
 
 var ICONS = {
   bread:'<svg viewBox="0 0 24 24"><path d="M3.5 10.4C3.5 7.6 7.3 6 12 6s8.5 1.6 8.5 4.4c0 1.4-1.1 2.3-2.4 2.5V18a1.5 1.5 0 0 1-1.5 1.5H7.4A1.5 1.5 0 0 1 5.9 18v-5.1c-1.3-.2-2.4-1.1-2.4-2.5Z"/><path d="M9 9.2 7.6 11M12 9.2 10.6 11M15 9.2 13.6 11"/></svg>',
@@ -257,7 +262,7 @@ function openStore(s){
 function openDir(k){
   if (S.store.ordered[k] && !confirm('Замовлення на сьогодні вже відправлено.\n\n' +
       'Відкрити, щоб переглянути або попросити дозвіл на добавку?')) return;
-  S.dir=k; S.screen='prod'; S.cart={}; S.q=''; S.cat=null; S.oid=uuid();
+  S.dir=k; S.screen='prod'; S.cart={}; S.q=''; S.cat=null; S.oid=uuid(); S.mode='add';
   el('wrap').innerHTML='<div class="spin"></div>'; el('bot').innerHTML='';
   call('products', { dir:k, storeId:S.store.id }).then(function(d){
     d.products.forEach(function(p,i){ p._i = i; });
@@ -342,7 +347,8 @@ function drawBot(){
       (low ? ' · <span class="warn">мінімум ' + money(min) + ' грн</span>' : '');
   el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum">' + sum +
     '</div><button class="btn" id="send"' +
-    (!n||low||S.prod.locked ? ' disabled' : '') + ' onclick="send()">Відправити</button></div></div>';
+    (!n||low||S.prod.locked ? ' disabled' : '') + ' onclick="send()">' +
+    (S.mode === 'replace' ? 'Замінити' : 'Відправити') + '</button></div></div>';
 }
 function send(){
   var items = Object.keys(S.cart).map(function(id){ return { id:id, qty:S.cart[id] }; });
@@ -351,7 +357,10 @@ function send(){
   var what = S.prod.hidePrice
     ? items.length + ' позицій'
     : money(total()) + ' грн, ' + items.length + ' поз.';
-  if (!confirm('ТОРГОВА ТОЧКА:\n' + who + '\n\n' +
+  var head = (S.mode === 'replace')
+    ? 'УВАГА: попереднє замовлення за сьогодні буде ВИДАЛЕНО\nі замінене на це.\n\n'
+    : '';
+  if (!confirm(head + 'ТОРГОВА ТОЧКА:\n' + who + '\n\n' +
                S.boot.directions[S.dir].title + '\n' + what +
                '\n\nВідправити?')) return;
   var b=el('send'); b.disabled=true; b.textContent='Відправка…';
@@ -363,7 +372,8 @@ function send(){
    Безпечно: orderId той самий, тож дубль не створиться навіть якщо
    перша спроба насправді дійшла до таблиці. */
 function trySend(items, attempt){
-  call('submitOrder', { dir:S.dir, storeId:S.store.id, items:items, orderId:S.oid })
+  call('submitOrder', { dir:S.dir, storeId:S.store.id, items:items,
+                        orderId:S.oid, mode:S.mode })
     .then(done)
     .catch(function(e){
       var b = el('send');
@@ -385,6 +395,8 @@ function done(r){
     '<h2>Замовлення прийнято</h2><p><b>' + esc(r.direction) + '</b> · ' + esc(r.store) + '</p>' +
     '<p>' + r.positions + ' позицій' +
       ((S.prod && S.prod.hidePrice) ? '' : ' на ' + money(r.total) + ' грн') + '</p>' +
+    (r.replaced ? '<p style="color:#7a5200">Попереднє замовлення замінено' +
+                  (r.removed ? ' (прибрано рядків: ' + r.removed + ')' : '') + '</p>' : '') +
     '<p>' + esc(r.date||'') + ' ' + esc(r.time) + '</p>' +
     (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
     '<div style="height:22px"></div>' +
@@ -464,10 +476,21 @@ drawProd = function(){
 };
 function lateHtml(d){
   if (!d || !d.canRequestLate) return '';
-  if (d.lateRequest === 'approved')
-    return 'Закупниця дозволила дозамовлення. Вкажіть <b>лише те, що додаєте</b> - ' +
-           'це піде окремим замовленням, попереднє нікуди не зникає.' +
-           (d.lateLeftMin ? '<br><br>Дозвіл діє ще <b>' + d.lateLeftMin + ' хв</b>.' : '');
+  if (d.lateRequest === 'approved'){
+    var add = (S.mode !== 'replace');
+    return 'Закупниця дозволила зміни' +
+      (d.lateLeftMin ? ' - ще <b>' + d.lateLeftMin + ' хв</b>' : '') + '.' +
+      '<div class="modes">' +
+        '<button class="' + (add ? 'on' : '') + '" onclick="setMode(\'add\')">' +
+        'Дозамовити</button>' +
+        '<button class="' + (add ? '' : 'on') + '" onclick="setMode(\'replace\')">' +
+        'Переробити все</button>' +
+      '</div>' +
+      (add
+        ? 'Вкажіть <b>лише те, що додаєте</b>. Попереднє замовлення лишається.'
+        : 'Вкажіть <b>усе замовлення заново</b>. Попереднє за сьогодні буде видалено — ' +
+          'так прибирають зайву позицію або міняють кількість.');
+  }
   if (d.lateRequest === 'pending')
     return 'Запит надіслано закупниці. Щойно вона дозволить - кнопка "Відправити" ' +
            'увімкнеться сама, сторінку оновлювати не треба.' +
@@ -479,6 +502,12 @@ function lateHtml(d){
            'Можна попросити дозвіл на дозамовлення.' +
            '<button id="askbtn" onclick="askLate()">Попросити дозвіл</button>';
   return '';
+}
+
+function setMode(m){
+  S.mode = m;
+  injectLate();
+  drawBot();
 }
 
 function injectLate(){

@@ -253,6 +253,52 @@ function rememberOrder_(orderId, result) {
   } catch (e) {}
 }
 
+// Видалити рядки сьогоднішнього замовлення однієї точки.
+// Викликати ЛИШЕ під замком: видалення зсуває нумерацію.
+function deleteTodayRows_(cfg, dirKey, store) {
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 2) return 0;
+
+  var today = formatDateDMY_(new Date());
+  var target = statusKey_(dirKey, store);
+  var last = sh.getLastRow();
+  var take = Math.min(last - 1, RAW_TAIL_ROWS);
+  var from = last - take + 1;
+  var rows = sh.getRange(from, 1, take, 3).getValues();
+
+  var hits = [];
+  for (var i = 0; i < rows.length; i++) {
+    var d = (rows[i][0] instanceof Date) ? formatDateDMY_(rows[i][0]) : String(rows[i][0]).trim();
+    if (d !== today) continue;
+    if (addrKey_(String(rows[i][2]).trim()) !== target) continue;
+    hits.push(from + i);
+  }
+  if (!hits.length) return 0;
+
+  // склеюємо сусідні рядки у відрізки і йдемо знизу вгору
+  var ranges = [], start = hits[0], prev = hits[0];
+  for (var j = 1; j < hits.length; j++) {
+    if (hits[j] === prev + 1) { prev = hits[j]; continue; }
+    ranges.push([start, prev]); start = hits[j]; prev = hits[j];
+  }
+  ranges.push([start, prev]);
+  ranges.reverse();
+
+  if (typeof Sheets !== 'undefined') {
+    Sheets.Spreadsheets.batchUpdate({
+      requests: ranges.map(function (r) {
+        return { deleteDimension: { range: {
+          sheetId: sh.getSheetId(), dimension: 'ROWS',
+          startIndex: r[0] - 1, endIndex: r[1] } } };
+      })
+    }, cfg.spreadsheetId);
+  } else {
+    ranges.forEach(function (r) { sh.deleteRows(r[0], r[1] - r[0] + 1); });
+    SpreadsheetApp.flush();
+  }
+  return hits.length;
+}
+
 function apiSubmitOrder_(payload) {
   var dirKey = String(payload.dir || '');
   var cfg = dirCfg_(dirKey);
@@ -266,10 +312,14 @@ function apiSubmitOrder_(payload) {
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
-  // Дозвіл закупниці = добавка. Знімає ТРИ замки: дедлайн, повторне
+  // Дозвіл закупниці = зміни. Знімає ТРИ замки: дедлайн, повторне
   // замовлення на сьогодні і мінімальну суму.
   var approvedNow = !!cfg.lateRequest &&
     lateRequestStatus_(dirKey, store.id) === 'approved';
+
+  // 'replace' - замовлення переписується з нуля: старі рядки за сьогодні
+  // видаляються. Так прибирають зайву позицію або міняють кількість.
+  var replaceAll = approvedNow && String(payload.mode || '') === 'replace';
 
   if (deadlinePassed_(dirKey, store.id)) {
     throw new Error(cfg.lateRequest
@@ -354,6 +404,14 @@ function apiSubmitOrder_(payload) {
   };
   var values = lines.map(function (p) { return cfg.rawRow(ctx, p); });
 
+  var removed = 0;
+  if (replaceAll) {
+    var gd = LockService.getScriptLock();
+    if (!gd.tryLock(SUBMIT_WAIT_MS)) throw new Error('BUSY: сервер зайнятий');
+    try { removed = deleteTodayRows_(cfg, dirKey, store); }
+    finally { try { gd.releaseLock(); } catch (e) {} }
+  }
+
   try {
     appendRows_(cfg, dirKey, values);
   } catch (e) {
@@ -362,6 +420,9 @@ function apiSubmitOrder_(payload) {
   }
 
   CacheService.getScriptCache().remove('status_v3');
+  if (dirKey === 'nbhz') {
+    try { props.setProperty('nbhz_export_dirty', todayStr); } catch (e) {}
+  }
 
   var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;
   console.log((TEST_MODE ? '[ТЕСТ] ' : '') + 'Замовлення ' + dirKey + ' / ' + store.label +
@@ -370,7 +431,8 @@ function apiSubmitOrder_(payload) {
   var result = {
     ok: true, positions: lines.length, total: totalShown,
     time: formatTime_(now), date: formatDateDMY_(now),
-    direction: cfg.title, store: store.label, test: TEST_MODE
+    direction: cfg.title, store: store.label, test: TEST_MODE,
+    replaced: replaceAll, removed: removed
   };
   rememberOrder_(orderId, result);
   return result;

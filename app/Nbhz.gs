@@ -31,6 +31,25 @@ function installNbhz() {
   console.log('НБХЗ готовий. Зробіть новий деплой веб-застосунку (Розгорнути -> Керувати розгортаннями -> Змінити версію).');
 }
 
+// Тримає лист вивантаження в актуальному стані.
+// Вішається на тригер кожні 15 хвилин: якщо після останньої збірки було
+// замовлення (позначка nbhz_export_dirty) або листа за сьогодні немає -
+// перезбирає. Решту разів виходить майже миттєво.
+function refreshNbhzExport() {
+  var n = nowKyiv_();
+  if (n.hh < 6 || n.hh > 20) return;                 // вночі не смикаємо
+
+  var props = PropertiesService.getScriptProperties();
+  var today = formatDateDMY_(new Date());
+  var dirty = props.getProperty('nbhz_export_dirty') === today;
+  var sheet = nbhzSS_().getSheetByName('Вивантаження ' + today);
+
+  if (!dirty && sheet) return;
+
+  buildNbhzExport();
+  props.deleteProperty('nbhz_export_dirty');
+}
+
 function nbhzSS_() {
   try { return SpreadsheetApp.openById(NBHZ_ID); }
   catch (e) { throw new Error('Не відкривається таблиця НБХЗ (' + NBHZ_ID + '): ' + e.message); }
