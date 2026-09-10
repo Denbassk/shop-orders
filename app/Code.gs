@@ -63,7 +63,8 @@ function apiBootstrap_() {
       const map = status[k];
       ordered[k] = map ? !!map[statusKey_(k, s)] : false;
     });
-    return { id: s.id, label: s.label, directions: s.directions, ordered: ordered };
+    return { id: s.id, label: s.label, code: s.code,
+             directions: s.directions, ordered: ordered };
   });
 
   return {
@@ -89,11 +90,28 @@ function apiRefresh_(payload) {
   const closed = {};
   Object.keys(DIRECTIONS).forEach(function (k) { closed[k] = deadlinePassed_(k); });
 
+  // стан конкретної пари "точка + напрямок", щоб телефон сам вмикав
+  // і ГАСИВ кнопку, коли 30 хвилин дозволу спливли
+  var late = 'none', lateLeft = 0, locked = null;
+  if (payload.dir && payload.storeId && DIRECTIONS[payload.dir]) {
+    var cfg = DIRECTIONS[payload.dir];
+    late = cfg.lateRequest ? lateRequestStatus_(payload.dir, payload.storeId) : 'none';
+    lateLeft = (late === 'approved') ? lateLeftMin_(payload.dir, payload.storeId) : 0;
+    try {
+      var st = findStore_(payload.storeId);
+      var map = status[payload.dir];                       // без зайвого читання таблиці
+      var already = map ? !!map[statusKey_(payload.dir, st)] : false;
+      locked = (deadlinePassed_(payload.dir, st.id) || already) && late !== 'approved';
+    } catch (e) {}
+  }
+
   return {
     version: APP_VERSION,
     today: formatDateDMY_(new Date()),
     ordered: ordered,
     closed: closed,
-    late: (payload.dir && payload.storeId) ? lateRequestStatus_(payload.dir, payload.storeId) : 'none'
+    late: late,
+    lateLeft: lateLeft,
+    locked: locked
   };
 }

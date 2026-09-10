@@ -35,6 +35,14 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
       min-height:104px;display:flex;flex-direction:column;justify-content:space-between}
 .cell:active{background:#fafafa;transform:scale(.98)}
 .cell .nm{font-size:17px;font-weight:700;line-height:1.25}
+.cell .code{font-size:12px;color:#8b9098;margin-top:3px;font-weight:600}
+.mine{background:#fff;border:2px solid #16181d;border-radius:14px;padding:12px 14px;
+      margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.mine .t{flex:1;min-width:0}
+.mine .t i{display:block;font-style:normal;font-size:12px;color:#6b7280;margin-bottom:2px}
+.mine .t b{font-size:17px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mine button{flex:none;background:#16181d;color:#fff;border:0;border-radius:10px;
+             padding:11px 16px;font-size:15px;font-weight:700;cursor:pointer}
 .cell .dots{display:flex;gap:5px;margin-top:10px}
 .dot{width:11px;height:11px;border-radius:50%;background:#d7dae0}
 .dot.b{background:#8D6E63}.dot.n{background:#5D4037}.dot.k{background:#E65100}.dot.v{background:#2E7D32}
@@ -180,7 +188,12 @@ function screenStore(){
   var list = S.boot.stores.filter(function(s){
     return !S.q || s.label.toLowerCase().indexOf(S.q.toLowerCase()) >= 0;
   });
-  var h = '<input class="search" id="q" placeholder="Пошук точки…" value="' + esc(S.q) + '">';
+  var h = '';
+  var mine = myStore();
+  if (mine && !S.q) h += '<div class="mine"><div class="t"><i>Ваша торгова точка</i><b>' +
+    esc(mine.label) + (mine.code ? ' · № ' + esc(mine.code) : '') +
+    '</b></div><button onclick="openMine()">Відкрити</button></div>';
+  h += '<input class="search" id="q" placeholder="Пошук точки…" value="' + esc(S.q) + '">';
   h += '<div class="grid">';
   if (!list.length) h += '<div class="msg">Нічого не знайдено</div>';
   list.forEach(function(s, i){
@@ -190,7 +203,8 @@ function screenStore(){
       return '<div class="dot ' + (s.ordered[k] ? 'done' : cls) + '"></div>';
     }).join('');
     h += '<div class="cell" onclick="pick(' + i + ')"><div class="nm">' + esc(s.label) +
-         '</div><div class="dots">' + dots + '</div></div>';
+         '</div>' + (s.code ? '<div class="code">№ ' + esc(s.code) + '</div>' : '') +
+         '<div class="dots">' + dots + '</div></div>';
   });
   h += '</div><div class="legend">Кольорові кружечки — доступні напрямки.<br>' +
        'Сірий кружечок означає, що замовлення на сьогодні вже відправлено.</div>';
@@ -206,8 +220,21 @@ function pick(i){
   openStore(s);
 }
 
+/* Телефон пам'ятає свою точку - щоб щоразу не шукати її в списку
+   і не тицьнути сусідню з такою самою назвою. */
+function rememberStore(id){ try { localStorage.setItem('tt', id); } catch(e){} }
+function myStore(){
+  try {
+    var id = localStorage.getItem('tt');
+    if (!id || !S.boot) return null;
+    return S.boot.stores.filter(function(x){ return x.id === id; })[0] || null;
+  } catch(e){ return null; }
+}
+function openMine(){ var s = myStore(); if (s) openStore(s); }
+
 /* ---------- екран 2: напрямки ---------- */
 function openStore(s){
+  rememberStore(s.id);
   S.store=s; S.screen='dir'; S.dir=null; S.cart={};
   el('back').style.display='';
   el('ttl').textContent = s.label;
@@ -320,10 +347,13 @@ function drawBot(){
 function send(){
   var items = Object.keys(S.cart).map(function(id){ return { id:id, qty:S.cart[id] }; });
   if (!items.length) return;
-  var ask = S.prod.hidePrice
-    ? 'Відправити замовлення: ' + items.length + ' позицій?'
-    : 'Відправити замовлення на ' + money(total()) + ' грн?';
-  if (!confirm(ask)) return;
+  var who = S.store.label + (S.store.code ? '   (№ ' + S.store.code + ')' : '');
+  var what = S.prod.hidePrice
+    ? items.length + ' позицій'
+    : money(total()) + ' грн, ' + items.length + ' поз.';
+  if (!confirm('ТОРГОВА ТОЧКА:\n' + who + '\n\n' +
+               S.boot.directions[S.dir].title + '\n' + what +
+               '\n\nВідправити?')) return;
   var b=el('send'); b.disabled=true; b.textContent='Відправка…';
   call('submitOrder', { dir:S.dir, storeId:S.store.id, items:items, orderId:S.oid })
     .then(done)
@@ -367,8 +397,11 @@ function beat(){
     else if (S.screen==='prod' && S.prod && S.prod.canRequestLate){
       var was = S.prod.lateRequest;
       S.prod.lateRequest = d.late;
-      if (d.late === 'approved'){ S.prod.closed = false; S.prod.locked = false; }
+      S.prod.lateLeftMin = d.lateLeft || 0;
+      if (typeof d.locked === 'boolean') S.prod.locked = d.locked;
+      if (d.late === 'approved') S.prod.closed = false;
       if (was !== d.late) drawProd();
+      else { injectLate(); drawBot(); }
     }
   }).catch(function(){});
 }
@@ -394,6 +427,7 @@ function askLate(){
   call('requestLate', { dir: S.dir, storeId: S.store.id }).then(function(r){
     S.prod.lateRequest = r.status;
     S.prod.lateMailed = (r.mailed !== false);
+    S.prod.lateLeftMin = r.leftMin || 0;
     if (r.status === 'approved') S.prod.locked = false;
     drawProd();
   }).catch(function(e){
@@ -408,30 +442,37 @@ drawProd = function(){
   _drawProd_orig.apply(null, arguments);
   try { injectLate(); } catch (e) {}
 };
+function lateHtml(d){
+  if (!d || !d.canRequestLate) return '';
+  if (d.lateRequest === 'approved')
+    return 'Закупниця дозволила дозамовлення. Вкажіть <b>лише те, що додаєте</b> - ' +
+           'це піде окремим замовленням, попереднє нікуди не зникає.' +
+           (d.lateLeftMin ? '<br><br>Дозвіл діє ще <b>' + d.lateLeftMin + ' хв</b>.' : '');
+  if (d.lateRequest === 'pending')
+    return 'Запит надіслано закупниці. Щойно вона дозволить - кнопка "Відправити" ' +
+           'увімкнеться сама, сторінку оновлювати не треба.' +
+           (d.lateMailed === false
+             ? '<br><br>Сповіщення ще не налаштоване - зателефонуйте закупниці.' : '');
+  if (d.closed || d.alreadyOrdered)
+    return (d.closed ? 'Прийом на сьогодні закрито (до ' + esc(d.deadline) + '). '
+                     : 'Замовлення на сьогодні вже відправлено. ') +
+           'Можна попросити дозвіл на дозамовлення.' +
+           '<button id="askbtn" onclick="askLate()">Попросити дозвіл</button>';
+  return '';
+}
+
 function injectLate(){
-  var d = S.prod;
-  if (!d || S.screen !== 'prod' || !d.canRequestLate) return;
-  if (el('ltbox')) return;
-  var box = document.createElement('div');
-  box.id = 'ltbox'; box.className = 'lt';
-  if (d.lateRequest === 'approved'){
-    box.innerHTML = 'Закупниця дозволила дозамовлення. Вкажіть <b>лише те, що додаєте</b> - ' +
-                    'це піде окремим замовленням, попереднє нікуди не зникає.';
-  } else if (d.lateRequest === 'pending'){
-    box.innerHTML = 'Запит надіслано закупниці. Щойно вона дозволить - кнопка ' +
-                    '"Відправити" увімкнеться сама, сторінку оновлювати не треба.' +
-                    (d.lateMailed === false
-                      ? '<br><br>Сповіщення ще не налаштоване - зателефонуйте закупниці.'
-                      : '');
-  } else if (d.closed || d.alreadyOrdered){
-    box.innerHTML = (d.closed
-                      ? 'Прийом на сьогодні закрито (до ' + esc(d.deadline) + '). '
-                      : 'Замовлення на сьогодні вже відправлено. ') +
-                    'Можна попросити дозвіл на дозамовлення.' +
-                    '<button id="askbtn" onclick="askLate()">Попросити дозвіл</button>';
-  } else { return; }
-  var w = el('wrap');
-  w.insertBefore(box, w.firstChild);
+  if (S.screen !== 'prod') return;
+  var html = lateHtml(S.prod);
+  var box = el('ltbox');
+  if (!html){ if (box && box.parentNode) box.parentNode.removeChild(box); return; }
+  if (!box){
+    box = document.createElement('div');
+    box.id = 'ltbox'; box.className = 'lt';
+    var w = el('wrap');
+    w.insertBefore(box, w.firstChild);
+  }
+  box.innerHTML = html;
 }
 
 start();

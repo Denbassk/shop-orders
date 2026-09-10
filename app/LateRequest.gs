@@ -1,67 +1,70 @@
 // ============================================================
 // ДОЗАМОВЛЕННЯ ПІСЛЯ ДЕДЛАЙНУ - БЕЗ ЖОДНИХ ТАБЛИЦЬ
 //
-// 1. Продавець після дедлайну тисне "Попросити дозвіл".
-// 2. Закупниці приходить лист із однією кнопкою "ДОЗВОЛИТИ".
-// 3. Вона тисне її з телефона - відкривається сторінка "Дозволено".
-// 4. Телефон продавця сам вмикає кнопку "Відправити" (до 45 секунд).
+// 1. Продавець тисне "Попросити дозвіл".
+// 2. Закупниці приходить лист з однією кнопкою "ДОЗВОЛИТИ".
+// 3. Вона тисне її з телефона.
+// 4. Кнопка "Відправити" у продавця вмикається сама (до 45 секунд)
+//    і працює LATE_TTL_MIN хвилин. Далі знову закрито.
 // 5. Замовлення падає у звичайну таблицю напрямку, як усі інші.
 //
-// Дозвіл живе у властивостях скрипта і діє ЛИШЕ сьогодні.
-// Назавтра гасне сам - прибирати нічого не треба.
+// Дозвіл живе у властивостях скрипта. Жодних листів, жодного прибирання.
 // ============================================================
 
 // Кому слати листи. Кілька адрес - через кому.
-// Порожньо = запит зафіксується, але нікого не сповістить.
 var LATE_MAIL = {
-  bread:  'denbassk@gmail.com',          // ТЕСТ. Робоча адреса: svetlanalesakor@gmail.com
-  bakery: 'haikora1004@gmail.com',
-  nbhz:   '',                            // svetlanalesakor@gmail.com - увімкнути після тесту
-  veg:    ''                             // svetlanalesakor@gmail.com - увімкнути після тесту
+  bread:  'svetlanalesakor@gmail.com',
+  nbhz:   'svetlanalesakor@gmail.com',
+  veg:    'svetlanalesakor@gmail.com',
+  bakery: 'haikora1004@gmail.com'
 };
 
-// Запустити ОДИН РАЗ із редактора після clasp push - Google спитає дозвіл
-// на відправку пошти. Без цього листи мовчки не підуть.
-function authorizeMail() {
-  var left = MailApp.getRemainingDailyQuota();
-  console.log('Пошта авторизована. Листів сьогодні залишилось: ' + left);
-  Object.keys(LATE_MAIL).forEach(function (k) {
-    console.log('   ' + dirCfg_(k).title + ': ' + (LATE_MAIL[k] || '- не налаштовано -'));
-  });
-}
+var LATE_TTL_MIN = 30;     // скільки хвилин діє дозвіл після натискання
+var LATE_Q_TTL_MIN = 120;  // скільки висить сам запит, якщо на нього не відповіли
 
 // --- сховище: одна властивість на напрямок ---
-// late_ok_<dir> = {"day":"10.09.2026","ids":["амосова 5а", ...]}
+// late_ok_<dir> = {"at":{"<id точки>": <мс>}}
 // late_q_<dir>  = те саме для надісланих запитів
 
 function lateBucket_(prefix, dirKey) {
   try {
     var v = PropertiesService.getScriptProperties().getProperty(prefix + dirKey);
     var o = v ? JSON.parse(v) : null;
-    if (!o || o.day !== nowKyiv_().day) return { day: nowKyiv_().day, ids: [] };
-    return { day: o.day, ids: o.ids || [] };
-  } catch (e) { return { day: nowKyiv_().day, ids: [] }; }
+    return { at: (o && o.at) ? o.at : {} };
+  } catch (e) { return { at: {} }; }
 }
 
-function lateBucketAdd_(prefix, dirKey, storeId) {
+function lateBucketPut_(prefix, dirKey, storeId, ttlMin) {
   var lock = LockService.getScriptLock();
-  try { lock.tryLock(5000); } catch (e) {}
+  var got = false;
+  try { got = lock.tryLock(5000); } catch (e) {}
   try {
     var b = lateBucket_(prefix, dirKey);
-    if (b.ids.indexOf(storeId) < 0) b.ids.push(storeId);
+    var now = Date.now(), keep = {};
+    Object.keys(b.at).forEach(function (k) {           // просрочені викидаємо
+      if (now - b.at[k] < ttlMin * 60000) keep[k] = b.at[k];
+    });
+    keep[String(storeId)] = now;
     PropertiesService.getScriptProperties()
-      .setProperty(prefix + dirKey, JSON.stringify(b));
+      .setProperty(prefix + dirKey, JSON.stringify({ at: keep }));
   } finally {
-    try { lock.releaseLock(); } catch (e) {}
+    if (got) { try { lock.releaseLock(); } catch (e) {} }
   }
+}
+
+function lateLeftMs_(prefix, dirKey, storeId, ttlMin) {
+  var ts = lateBucket_(prefix, dirKey).at[String(storeId)];
+  if (!ts) return 0;
+  var left = ttlMin * 60000 - (Date.now() - ts);
+  return left > 0 ? left : 0;
 }
 
 // 'none' | 'pending' | 'approved'
 function lateRequestStatus_(dirKey, storeId) {
   if (!dirKey || !storeId) return 'none';
   try {
-    if (lateBucket_('late_ok_', dirKey).ids.indexOf(String(storeId)) >= 0) return 'approved';
-    if (lateBucket_('late_q_', dirKey).ids.indexOf(String(storeId)) >= 0) return 'pending';
+    if (lateLeftMs_('late_ok_', dirKey, storeId, LATE_TTL_MIN) > 0) return 'approved';
+    if (lateLeftMs_('late_q_', dirKey, storeId, LATE_Q_TTL_MIN) > 0) return 'pending';
     return 'none';
   } catch (e) {
     console.error('lateRequestStatus_: ' + e.message);
@@ -69,8 +72,14 @@ function lateRequestStatus_(dirKey, storeId) {
   }
 }
 
+// Скільки хвилин ще діє дозвіл (0 - не діє)
+function lateLeftMin_(dirKey, storeId) {
+  var ms = lateLeftMs_('late_ok_', dirKey, storeId, LATE_TTL_MIN);
+  return ms > 0 ? Math.ceil(ms / 60000) : 0;
+}
+
 function approveLate_(dirKey, storeId) {
-  lateBucketAdd_('late_ok_', dirKey, String(storeId));
+  lateBucketPut_('late_ok_', dirKey, storeId, LATE_TTL_MIN);
 }
 
 // --- запит від продавця ---
@@ -79,10 +88,10 @@ function apiRequestLate_(payload) {
   var cfg = dirCfg_(dirKey);
   var store = findStore_(payload.storeId);
 
-  var st = lateRequestStatus_(dirKey, store.id);
-  if (st === 'approved') return { status: 'approved', mailed: true };
+  if (lateRequestStatus_(dirKey, store.id) === 'approved')
+    return { status: 'approved', mailed: true, leftMin: lateLeftMin_(dirKey, store.id) };
 
-  lateBucketAdd_('late_q_', dirKey, store.id);
+  lateBucketPut_('late_q_', dirKey, store.id, LATE_Q_TTL_MIN);
 
   var mailed = false;
   try { mailed = sendLateMail_(cfg, store); }
@@ -90,7 +99,7 @@ function apiRequestLate_(payload) {
 
   console.log('Запит дозволу: ' + cfg.title + ' / ' + store.label +
               (mailed ? ' - лист надіслано' : ' - БЕЗ листа (не налаштована пошта)'));
-  return { status: 'pending', mailed: mailed };
+  return { status: 'pending', mailed: mailed, leftMin: 0 };
 }
 
 // --- підпис посилання, щоб ніхто сторонній не "дозволив" ---
@@ -127,14 +136,17 @@ function sendLateMail_(cfg, store) {
     'margin:0 auto;padding:22px 18px;color:#16181d">' +
     '<div style="font-size:13px;color:#6b7280">Замовлення після дедлайну</div>' +
     '<div style="font-size:22px;font-weight:800;margin:6px 0 2px">' + esc_(store.label) + '</div>' +
-    '<div style="font-size:16px;margin-bottom:2px">' + esc_(cfg.title) + '</div>' +
+    (store.code ? '<div style="font-size:13px;color:#6b7280">обліковий номер ' +
+        esc_(store.code) + '</div>' : '') +
+    '<div style="font-size:16px;margin:8px 0 2px">' + esc_(cfg.title) + '</div>' +
     '<div style="font-size:13px;color:#6b7280;margin-bottom:22px">запит о ' +
       formatTime_(now) + ', дедлайн був ' + esc_(cfg.deadline) + '</div>' +
     '<a href="' + url + '" style="display:block;text-align:center;background:#e11b22;color:#fff;' +
     'text-decoration:none;padding:17px;border-radius:13px;font-size:18px;font-weight:800">' +
     'ДОЗВОЛИТИ</a>' +
     '<div style="font-size:13px;color:#6b7280;margin-top:18px;line-height:1.5">' +
-    'Дозвіл діє лише сьогодні і лише для цієї точки та цього напрямку.<br>' +
+    'Дозвіл відкриє прийом на <b>' + LATE_TTL_MIN + ' хвилин</b> і лише для цієї точки ' +
+    'та цього напрямку. Потім знову закриється.<br>' +
     'Нічого не робити - значить не дозволити.</div></div>';
 
   MailApp.sendEmail({
@@ -172,10 +184,10 @@ function lateApprovePage_(p) {
 
     var label = storeId;
     try { label = findStore_(storeId).label; } catch (e) {}
-    head = 'Дозволено';
+    head = 'Дозволено на ' + LATE_TTL_MIN + ' хв';
     body = '<b>' + esc_(cfg.title) + '</b><br>' + esc_(label) +
            '<br><br>Продавець зможе відправити замовлення протягом хвилини.<br>' +
-           'Дозвіл діє до кінця дня.';
+           'Через ' + LATE_TTL_MIN + ' хвилин прийом закриється знову.';
   } catch (err) {
     head = 'Не вийшло';
     body = esc_(String(err.message || err));
@@ -202,23 +214,42 @@ function lateApprovePage_(p) {
 // РУЧНЕ КЕРУВАННЯ З РЕДАКТОРА
 // ============================================================
 
-// Що дозволено сьогодні
-function showLateToday() {
-  Object.keys(DIRECTIONS).forEach(function (k) {
-    var ok = lateBucket_('late_ok_', k).ids;
-    var q = lateBucket_('late_q_', k).ids;
-    if (!ok.length && !q.length) return;
-    console.log(dirCfg_(k).title + ':');
-    if (ok.length) console.log('   дозволено: ' + ok.join(' | '));
-    q.filter(function (id) { return ok.indexOf(id) < 0; }).forEach(function (id) {
-      console.log('   чекає: ' + id);
-    });
+// Один раз після clasp push - Google спитає дозвіл на відправку пошти
+function authorizeMail() {
+  console.log('Пошта авторизована. Листів сьогодні залишилось: ' +
+              MailApp.getRemainingDailyQuota());
+  Object.keys(LATE_MAIL).forEach(function (k) {
+    console.log('   ' + dirCfg_(k).title + ': ' + (LATE_MAIL[k] || '- не налаштовано -'));
   });
-  console.log('---');
-  console.log('Ручне посилання на дозвіл: lateLinkFor("nbhz", "частина назви точки")');
+  console.log('Дозвіл діє ' + LATE_TTL_MIN + ' хв після натискання кнопки в листі.');
 }
 
-// Посилання "Дозволити" вручну - можна просто переслати в месенджер
+// Що зараз дозволено і скільки лишилось
+function showLateToday() {
+  var any = false;
+  Object.keys(DIRECTIONS).forEach(function (k) {
+    var ok = lateBucket_('late_ok_', k).at;
+    var q = lateBucket_('late_q_', k).at;
+    var lines = [];
+    Object.keys(ok).forEach(function (id) {
+      var left = lateLeftMin_(k, id);
+      if (left > 0) lines.push('   дозволено (' + left + ' хв): ' + id);
+    });
+    Object.keys(q).forEach(function (id) {
+      if (lateLeftMs_('late_ok_', k, id, LATE_TTL_MIN) > 0) return;
+      if (lateLeftMs_('late_q_', k, id, LATE_Q_TTL_MIN) > 0) lines.push('   чекає: ' + id);
+    });
+    if (!lines.length) return;
+    any = true;
+    console.log(dirCfg_(k).title + ':');
+    lines.forEach(function (l) { console.log(l); });
+  });
+  if (!any) console.log('Активних дозволів і запитів немає');
+  console.log('---');
+  console.log('Ручне посилання: lateLinkFor("nbhz", "частина назви точки")');
+}
+
+// Посилання "Дозволити" вручну - можна переслати в месенджер
 function lateLinkFor(dirKey, part) {
   var q = String(part || '').toLowerCase();
   var hits = loadStores_().filter(function (s) {
@@ -226,32 +257,15 @@ function lateLinkFor(dirKey, part) {
   });
   if (!hits.length) { console.log('Не знайдено точку: ' + part); return; }
   hits.forEach(function (s) {
-    console.log(s.label + '  ->  ' + lateApproveUrl_(dirKey, s.id));
+    console.log(s.label + (s.code ? ' (№' + s.code + ')' : '') + '  ->  ' +
+                lateApproveUrl_(dirKey, s.id));
   });
 }
 
-// Скасувати всі сьогоднішні дозволи по напрямку
+// Скасувати всі активні дозволи по напрямку
 function resetLateToday(dirKey) {
-  PropertiesService.getScriptProperties().deleteProperty('late_ok_' + dirKey);
-  PropertiesService.getScriptProperties().deleteProperty('late_q_' + dirKey);
+  var p = PropertiesService.getScriptProperties();
+  p.deleteProperty('late_ok_' + dirKey);
+  p.deleteProperty('late_q_' + dirKey);
   console.log('Дозволи скинуто: ' + dirCfg_(dirKey).title);
-}
-
-// --- прибрати листи "Дозволи", якщо вони десь лишилися ---
-function dropLateSheets() {
-  var ids = {};
-  ids[REGISTRY_ID] = 'Довідник ТТ';
-  Object.keys(DIRECTIONS).forEach(function (k) {
-    if (DIRECTIONS[k].spreadsheetId) ids[DIRECTIONS[k].spreadsheetId] = DIRECTIONS[k].title;
-  });
-  Object.keys(ids).forEach(function (id) {
-    try {
-      var ss = SpreadsheetApp.openById(id);
-      var sh = ss.getSheetByName('Дозволи');
-      if (!sh) return;
-      ss.deleteSheet(sh);
-      console.log('Видалено лист "Дозволи" з: ' + ids[id]);
-    } catch (e) { console.log(ids[id] + ': ' + e.message); }
-  });
-  console.log('Готово');
 }

@@ -48,7 +48,8 @@ function apiProducts_(payload) {
     // і дедлайн, і "сьогодні вже замовляли" (інакше добавку зробити неможливо).
     locked: (closed || already) && !approved,
     canRequestLate: !!cfg.lateRequest && (closed || already),
-    lateRequest: lateSt
+    lateRequest: lateSt,
+    lateLeftMin: approved ? lateLeftMin_(dirKey, store.id) : 0
   };
 }
 
@@ -60,7 +61,9 @@ function isOrderedToday_(dirKey, store) {
   try {
     var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
     if (!sh || sh.getLastRow() < 2) return false;
-    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
+    var last = sh.getLastRow();
+    var take = Math.min(last - 1, RAW_TAIL_ROWS);
+    var rows = sh.getRange(last - take + 1, 1, take, 3).getValues();
     for (var i = rows.length - 1; i >= 0; i--) {
       var d = (rows[i][0] instanceof Date) ? formatDateDMY_(rows[i][0]) : String(rows[i][0]).trim();
       if (d !== today) continue;
@@ -81,25 +84,21 @@ function seenOrder_(orderId) {
   } catch (e) { return null; }
 }
 
+// Позначка "ця точка сьогодні по цьому напрямку вже замовляла".
+// Потрібна, щоб під ГЛОБАЛЬНИМ локом не читати сирий лист: читання
+// 5000 рядків - це 300-500 мс, і весь цей час решта телефонів чекає.
+// Лист читається лише раз на добу на точку - поки позначки ще немає.
+function orderMarkKey_(dirKey, store) {
+  return 'sub_' + dirKey + '_' + statusKey_(dirKey, store);
+}
+
+// Чистка старих ключів - НЕ тут: getProperties() по всьому сховищу
+// займає секунди, а ця функція викликається під глобальним локом.
+// Прибирає cleanupOldOrderIds() у Maintenance.gs, раз на добу тригером.
 function rememberOrder_(orderId, result) {
   if (!orderId) return;
   try {
-    var props = PropertiesService.getScriptProperties();
-    props.setProperty('oid_' + orderId, JSON.stringify(result));
-    if (Math.random() < 0.05) cleanupOrderIds_(props);
-  } catch (e) {}
-}
-
-function cleanupOrderIds_(props) {
-  try {
-    var today = formatDateDMY_(new Date());
-    var all = props.getProperties();
-    Object.keys(all).forEach(function (k) {
-      if (k.indexOf('oid_') !== 0) return;
-      var rec = {};
-      try { rec = JSON.parse(all[k]); } catch (e) {}
-      if (rec.date && rec.date !== today) props.deleteProperty(k);
-    });
+    PropertiesService.getScriptProperties().setProperty('oid_' + orderId, JSON.stringify(result));
   } catch (e) {}
 }
 
@@ -166,7 +165,13 @@ function apiSubmitOrder_(payload) {
     var again = seenOrder_(orderId);
     if (again) { again.duplicate = true; return again; }
 
-    if (isOrderedToday_(dirKey, store) && !approvedNow)
+    var props = PropertiesService.getScriptProperties();
+    var markKey = orderMarkKey_(dirKey, store);
+    var todayStr = formatDateDMY_(new Date());
+    var already = (props.getProperty(markKey) === todayStr);
+    if (!already) already = isOrderedToday_(dirKey, store);   // перший раз за добу
+
+    if (already && !approvedNow)
       throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
         (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
 
@@ -184,7 +189,7 @@ function apiSubmitOrder_(payload) {
 
     var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
     if (!sh) throw new Error('Не знайдено лист "' + rawSheetName_(cfg) +
-      '". Запустіть setupTestSheets() або setupNbhz().');
+      '" у таблиці напрямку "' + cfg.title + '". Створіть його або перевірте назву в Config.gs.');
 
     var startRow = Math.max(sh.getLastRow() + 1, 2);
     var width = values[0].length;
@@ -197,6 +202,7 @@ function apiSubmitOrder_(payload) {
     }
     SpreadsheetApp.flush();
 
+    try { props.setProperty(markKey, todayStr); } catch (e) {}
     CacheService.getScriptCache().remove('status_v3');
 
     var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;

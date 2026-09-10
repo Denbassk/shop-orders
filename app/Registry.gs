@@ -59,7 +59,9 @@ function loadTodayStatus_() {
     try {
       const sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
       if (!sh || sh.getLastRow() < 2) return;
-      sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().forEach(function (r) {
+      const last = sh.getLastRow();
+      const take = Math.min(last - 1, RAW_TAIL_ROWS);
+      sh.getRange(last - take + 1, 1, take, 3).getValues().forEach(function (r) {
         const d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
         if (d === today) {
           const a = String(r[2]).trim();
