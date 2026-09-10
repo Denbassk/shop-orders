@@ -1,299 +1,305 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<base target="_top">
 <meta charset="utf-8">
+<base target="_top">
+<? var LOGO = (typeof LOGO_DATA_URI !== 'undefined') ? LOGO_DATA_URI : ''; ?>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-     background:#f0f2f5;color:#202124;font-size:15px}
-.wrap{max-width:680px;margin:0 auto;padding:12px 12px 96px}
-.top{background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-h1{font-size:17px;margin:0}
-.sub{color:#5f6368;font-size:13px;margin-top:3px}
-.card{background:#fff;border-radius:14px;padding:14px;margin-top:10px;
-      box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.btn{display:block;width:100%;border:0;border-radius:12px;padding:15px;font-size:16px;
-     font-weight:600;color:#fff;background:#1a73e8;cursor:pointer}
-.btn:disabled{background:#dadce0;color:#80868b}
-.btn.ghost{background:#fff;color:#1a73e8;border:1.5px solid #dadce0;font-weight:500}
-.search{width:100%;padding:13px 14px;font-size:16px;border:1.5px solid #dadce0;
-        border-radius:12px;background:#fff}
-.search:focus{outline:none;border-color:#1a73e8}
-.store{display:flex;align-items:center;justify-content:space-between;gap:10px;
-       padding:14px;border-bottom:1px solid #f1f3f4;cursor:pointer}
-.store:last-child{border-bottom:0}
-.store:active{background:#f8f9fa}
-.store b{font-weight:600}
-.store .r{color:#80868b;font-size:12px;margin-top:2px}
-.dir{display:flex;align-items:center;gap:12px;padding:16px;border-radius:14px;
-     margin-top:10px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;
-     border-left:5px solid #dadce0}
-.dir.done{opacity:.6}
-.dir .ic{font-size:26px;width:34px;text-align:center}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+     background:#f2f3f5;color:#16181d;font-size:15px}
+.hdr{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid #e3e5e9;
+     box-shadow:0 1px 6px rgba(0,0,0,.05)}
+.hdr .bar{display:flex;align-items:center;gap:12px;padding:10px 14px}
+.hdr img{height:38px;width:auto;display:block}
+.hdr .meta{margin-left:auto;text-align:right;font-size:12px;color:#6b7280;line-height:1.3}
+.back{border:0;background:#f2f3f5;width:38px;height:38px;border-radius:11px;font-size:20px;
+      color:#16181d;cursor:pointer;flex:none}
+.sub{padding:8px 14px;border-top:1px solid #f0f1f3;font-size:13px;color:#4b5563}
+.sub b{color:#16181d}
+.test{background:#e11b22;color:#fff;text-align:center;font-size:12px;font-weight:700;
+      padding:5px;letter-spacing:.4px}
+.wrap{max-width:640px;margin:0 auto;padding:12px 12px 120px}
+.search{width:100%;padding:13px 15px;border:1.5px solid #dfe1e6;border-radius:13px;
+        font-size:16px;background:#fff;outline:none}
+.search:focus{border-color:#e11b22}
+.card{background:#fff;border-radius:14px;margin-bottom:10px;overflow:hidden;
+      box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tt{display:flex;align-items:center;gap:10px;padding:15px 16px;border-bottom:1px solid #f0f1f3;
+    cursor:pointer}
+.tt:last-child{border-bottom:0}
+.tt:active{background:#fafafa}
+.tt .nm{font-weight:600;font-size:15.5px;flex:1}
+.tt .arw{color:#c4c8cf;font-size:19px}
+.dirs{display:flex;gap:4px}
+.dot{width:9px;height:9px;border-radius:50%;background:#d7dae0}
+.dot.on{background:#2e7d32}
+.dir{display:flex;align-items:center;gap:13px;padding:17px 16px;border-bottom:1px solid #f0f1f3;
+     cursor:pointer}
+.dir:last-child{border-bottom:0}
+.dir .ic{width:44px;height:44px;border-radius:12px;flex:none}
 .dir .t{flex:1}
-.dir .t b{display:block;font-size:16px}
-.dir .t span{font-size:12px;color:#5f6368}
-.badge{font-size:11px;padding:4px 9px;border-radius:20px;background:#e6f4ea;color:#137333;
-       font-weight:600;white-space:nowrap}
-.row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f1f3f4}
+.dir .t .a{font-weight:600;font-size:16px}
+.dir .t .b{font-size:12.5px;color:#6b7280;margin-top:2px}
+.dir.done{opacity:.55}
+.tag{font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;
+     background:#e8f5e9;color:#2e7d32;white-space:nowrap}
+.tag.no{background:#f2f3f5;color:#6b7280}
+.chips{display:flex;gap:7px;overflow-x:auto;padding:2px 0 10px;-webkit-overflow-scrolling:touch}
+.chip{flex:none;padding:8px 14px;border-radius:20px;background:#fff;border:1.5px solid #dfe1e6;
+      font-size:13.5px;cursor:pointer;white-space:nowrap}
+.chip.act{background:#16181d;color:#fff;border-color:#16181d}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #f4f5f7}
 .row:last-child{border-bottom:0}
 .row .info{flex:1;min-width:0}
-.row .nm{font-size:14px;line-height:1.35}
-.row .pr{font-size:12px;color:#5f6368;margin-top:3px}
-.row.off{opacity:.45}
-.qty{display:flex;align-items:center;gap:6px}
-.qty button{width:38px;height:38px;border:1.5px solid #dadce0;background:#fff;
-            border-radius:10px;font-size:20px;line-height:1;cursor:pointer;color:#1a73e8}
-.qty button:active{background:#e8f0fe}
-.qty input{width:56px;height:38px;text-align:center;font-size:16px;border:1.5px solid #dadce0;
-           border-radius:10px}
-.qty input.has{border-color:#1a73e8;background:#e8f0fe;font-weight:600}
-.tabs{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto}
-.tab{flex:0 0 auto;padding:9px 16px;border-radius:20px;border:1.5px solid #dadce0;
-     background:#fff;font-size:14px;cursor:pointer}
-.tab.on{background:#1a73e8;color:#fff;border-color:#1a73e8;font-weight:600}
-.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;padding:10px 12px;
-     box-shadow:0 -2px 12px rgba(0,0,0,.12);display:none}
-.bar.on{display:block}
-.bar .in{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:12px}
-.bar .sum{flex:1}
-.bar .sum b{display:block;font-size:18px}
-.bar .sum span{font-size:12px;color:#5f6368}
-.bar button{flex:0 0 auto;width:auto;padding:14px 26px}
-.msg{padding:13px;border-radius:12px;margin-top:10px;font-size:14px}
-.msg.e{background:#fce8e6;color:#c5221f}
-.msg.w{background:#fef7e0;color:#994b00}
-.msg.s{background:#e6f4ea;color:#137333}
-.hide{display:none}
-.spin{width:26px;height:26px;border:3px solid #e8eaed;border-top-color:#1a73e8;
-      border-radius:50%;animation:s 1s linear infinite;margin:24px auto}
-@keyframes s{to{transform:rotate(360deg)}}
-.chg{background:none;border:0;color:#1a73e8;font-size:13px;padding:0;cursor:pointer}
+.row .nm{font-size:14.5px;line-height:1.35}
+.row .pr{font-size:12.5px;color:#6b7280;margin-top:3px}
+.row.off{opacity:.4}
+.row.has{background:#fff8f8}
+.qty{display:flex;align-items:center;gap:7px;flex:none}
+.qty button{width:36px;height:36px;border:1.5px solid #dfe1e6;background:#fff;border-radius:10px;
+            font-size:19px;line-height:1;cursor:pointer;color:#16181d}
+.qty button:active{background:#f2f3f5}
+.qty button.plus{border-color:#e11b22;color:#e11b22;font-weight:700}
+.qty input{width:56px;height:36px;text-align:center;border:1.5px solid #dfe1e6;border-radius:10px;
+           font-size:15px;outline:none}
+.qty input:focus{border-color:#e11b22}
+.bot{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e3e5e9;
+     padding:10px 14px calc(10px + env(safe-area-inset-bottom));z-index:30;
+     box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+.bot .in{max-width:640px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.bot .sum{flex:1;font-size:13px;color:#6b7280;line-height:1.35}
+.bot .sum b{display:block;font-size:19px;color:#16181d}
+.bot .sum .warn{color:#e11b22}
+.btn{background:#e11b22;color:#fff;border:0;border-radius:12px;padding:14px 26px;font-size:16px;
+     font-weight:700;cursor:pointer}
+.btn:disabled{background:#c9ccd2;cursor:default}
+.msg{padding:40px 20px;text-align:center;color:#6b7280}
+.err{background:#fdecec;color:#b3261e;padding:12px 14px;border-radius:12px;margin-bottom:10px;
+     font-size:14px}
+.ok{text-align:center;padding:44px 20px}
+.ok .big{font-size:52px}
+.ok h2{margin:14px 0 6px;font-size:21px}
+.ok p{color:#6b7280;margin:5px 0}
+.spin{width:26px;height:26px;border:3px solid #e3e5e9;border-top-color:#e11b22;border-radius:50%;
+      animation:sp .8s linear infinite;margin:34px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top">
-    <h1>Замовлення Фемелі Маркет</h1>
-    <div class="sub" id="sub">завантаження…</div>
+
+<div id="test-bar"></div>
+<div class="hdr">
+  <div class="bar">
+    <button class="back" id="back" style="display:none" onclick="goBack()">&#8249;</button>
+    <img src="<?= LOGO ?>" alt="Фемелі Маркет">
+    <div class="meta" id="meta"></div>
   </div>
-  <div id="body"><div class="spin"></div></div>
+  <div class="sub" id="sub" style="display:none"></div>
 </div>
-<div class="bar" id="bar">
-  <div class="in">
-    <div class="sum"><b id="bsum">0 грн</b><span id="bcnt"></span></div>
-    <button class="btn" id="bsend">Відправити</button>
-  </div>
-</div>
+
+<div class="wrap" id="wrap"><div class="spin"></div></div>
+<div id="bot"></div>
 
 <script>
-var ICONS = { bread:"\ud83c\udf5e", bakery:"\ud83e\udd50", veg:"\ud83e\udd6c" };
-var S = { boot:null, store:null, dir:null, data:null, qty:{}, cat:null, sending:false };
+var S = { boot:null, store:null, dir:null, prod:null, cart:{}, oid:null, screen:'store', q:'', cat:null };
 
-function call(a, p) {
-  return new Promise(function (res, rej) {
-    google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) res(r.data); else rej(new Error(r ? r.error : "Немає відповіді"));
-    }).withFailureHandler(function (e) {
-      rej(new Error(e && e.message ? e.message : "Помилка звязку"));
-    }).api(a, p || {});
+function call(action, payload){
+  return new Promise(function(res, rej){
+    google.script.run
+      .withSuccessHandler(function(r){ r && r.ok ? res(r.data) : rej(new Error(r ? r.error : 'Помилка')); })
+      .withFailureHandler(function(e){ rej(e); })
+      .api(action, payload || {});
   });
 }
-function el(id) { return document.getElementById(id); }
-function esc(s) { return String(s).replace(/[&<>"]/g, function (c) {
-  return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]; }); }
-function money(n) { return (Math.round(n * 100) / 100).toFixed(2) + " грн"; }
-function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
-function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function money(n){ return (Math.round(n*100)/100).toFixed(2).replace(/\.00$/,''); }
+function el(id){ return document.getElementById(id); }
+function uuid(){ return 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2,10); }
 
-// ---------- старт ----------
-call("bootstrap").then(function (d) {
-  S.boot = d;
-  el("sub").textContent = d.today;
-  var saved = lsGet("ttId");
-  var found = saved && d.stores.filter(function (s) { return s.id === saved; })[0];
-  if (found) { S.store = found; screenDirs(); } else screenStores();
-}).catch(fatal);
-
-function fatal(e) {
-  el("body").innerHTML = '<div class="card msg e">' + esc(e.message) +
-    '<div style="margin-top:10px"><button class="btn ghost" onclick="location.reload()">Оновити</button></div></div>';
+function start(){
+  call('bootstrap').then(function(d){
+    S.boot = d;
+    if (d.testMode) el('test-bar').innerHTML = '<div class="test">ТЕСТОВИЙ РЕЖИМ — замовлення не потраплять у роботу</div>';
+    el('meta').textContent = d.today;
+    var last = null;
+    try { last = localStorage.getItem('tt'); } catch(e){}
+    var m = new URLSearchParams(location.search).get('tt') || last;
+    var s = m && d.stores.filter(function(x){ return x.id === m; })[0];
+    s ? openStore(s) : screenStore();
+  }).catch(function(e){ fail(e); });
+}
+function fail(e){
+  el('wrap').innerHTML = '<div class="err">' + esc(e.message || e) + '</div>' +
+    '<div class="msg">Оновіть сторінку. Якщо помилка повторюється — зверніть увагу керівника.</div>';
+  el('bot').innerHTML = '';
 }
 
-// ---------- екран 1: вибір ТТ ----------
-function screenStores() {
-  S.store = null; el("bar").classList.remove("on");
-  el("body").innerHTML =
-    '<div class="card"><input class="search" id="q" placeholder="Пошук торгової точки…" autocomplete="off"></div>' +
-    '<div class="card" style="padding:0" id="list"></div>';
-  el("q").oninput = function () { drawStores(this.value); };
-  drawStores("");
-}
-function drawStores(f) {
-  var k = f.toLowerCase().trim();
-  var arr = S.boot.stores.filter(function (s) {
-    return !k || s.label.toLowerCase().indexOf(k) >= 0 ||
-           (s.route || "").toLowerCase().indexOf(k) >= 0;
+/* ---------- екран 1: вибір ТТ ---------- */
+function screenStore(){
+  S.screen = 'store'; S.store = null; S.dir = null; S.cart = {};
+  el('back').style.display = 'none';
+  el('sub').style.display = 'none';
+  el('bot').innerHTML = '';
+  var list = S.boot.stores.filter(function(s){
+    return !S.q || s.label.toLowerCase().indexOf(S.q.toLowerCase()) >= 0;
   });
-  el("list").innerHTML = arr.length ? arr.map(function (s) {
-    var left = s.directions.filter(function (d) { return !s.ordered[d]; }).length;
-    return '<div class="store" onclick="pickStore(\'' + s.id + '\')">' +
-      '<div><b>' + esc(s.label) + '</b>' +
-      (s.route ? '<div class="r">' + esc(s.route) + '</div>' : '') + '</div>' +
-      (left ? '<span class="badge" style="background:#e8f0fe;color:#1967d2">' + left + '</span>'
-            : '<span class="badge">все ✓</span>') + '</div>';
-  }).join("") : '<div style="padding:16px;color:#5f6368">Нічого не знайдено</div>';
+  var h = '<input class="search" id="q" placeholder="Пошук торгової точки…" value="' + esc(S.q) + '">' +
+          '<div style="height:12px"></div><div class="card">';
+  if (!list.length) h += '<div class="msg">Нічого не знайдено</div>';
+  list.forEach(function(s){
+    var dots = ['bread','bakery','veg'].map(function(k){
+      if (s.directions.indexOf(k) < 0) return '';
+      return '<div class="dot' + (s.ordered[k] ? ' on' : '') + '"></div>';
+    }).join('');
+    h += '<div class="tt" onclick="pick(\'' + s.id + '\')">' +
+         '<div class="nm">' + esc(s.label) + '</div>' +
+         '<div class="dirs">' + dots + '</div><div class="arw">&#8250;</div></div>';
+  });
+  el('wrap').innerHTML = h + '</div>';
+  var q = el('q');
+  q.oninput = function(){ S.q = this.value; var p = this.selectionStart; screenStore();
+    var n = el('q'); n.focus(); n.setSelectionRange(p, p); };
 }
-function pickStore(id) {
-  S.store = S.boot.stores.filter(function (s) { return s.id === id; })[0];
-  lsSet("ttId", id);
-  screenDirs();
+function pick(id){
+  var s = S.boot.stores.filter(function(x){ return x.id === id; })[0];
+  try { localStorage.setItem('tt', id); } catch(e){}
+  openStore(s);
 }
 
-// ---------- екран 2: напрямки ----------
-function screenDirs() {
-  S.dir = null; S.qty = {}; el("bar").classList.remove("on");
-  var s = S.store;
-  var html = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center">' +
-    '<div><b>' + esc(s.label) + '</b>' + (s.route ? '<div class="r" style="color:#80868b;font-size:12px">' +
-    esc(s.route) + '</div>' : '') + '</div>' +
-    '<button class="chg" onclick="screenStores()">змінити ТТ</button></div></div>';
-
-  html += s.directions.map(function (k) {
+/* ---------- екран 2: напрямки ---------- */
+function openStore(s){
+  S.store = s; S.screen = 'dir'; S.dir = null; S.cart = {};
+  el('back').style.display = '';
+  el('sub').style.display = '';
+  el('sub').innerHTML = '<b>' + esc(s.label) + '</b>';
+  el('bot').innerHTML = '';
+  var h = '<div class="card">';
+  s.directions.forEach(function(k){
     var d = S.boot.directions[k], done = s.ordered[k];
-    return '<div class="dir' + (done ? ' done' : '') + '" style="border-left-color:' + d.color +
-      '" onclick="' + (done ? 'reOpen(\'' + k + '\')' : 'openDir(\'' + k + '\')') + '">' +
-      '<div class="ic">' + ICONS[k] + '</div>' +
-      '<div class="t"><b>' + esc(d.title) + '</b><span>' + esc(d.subtitle) +
-      (d.minOrder > 0 ? " · мін. " + d.minOrder + " грн" : "") + '</span></div>' +
-      (done ? '<span class="badge">замовлено ✓</span>' : '<span style="color:#80868b">›</span>') +
-      '</div>';
-  }).join("");
-
-  el("body").innerHTML = html;
-}
-function reOpen(k) {
-  alert("Замовлення на «" + S.boot.directions[k].title +
-        "» сьогодні вже відправлено.\n\nІнші напрямки доступні як завжди.");
-}
-
-// ---------- екран 3: замовлення ----------
-function openDir(k) {
-  S.dir = k; S.qty = {}; S.cat = null;
-  el("body").innerHTML = '<div class="spin"></div>';
-  call("products", { dir: k, storeId: S.store.id }).then(function (d) {
-    S.data = d;
-    if (d.alreadyOrdered) { S.store.ordered[k] = true; screenDirs(); reOpen(k); return; }
-    S.cat = d.categories.length ? d.categories[0] : null;
-    drawOrder("");
-  }).catch(function (e) {
-    el("body").innerHTML = '<div class="card msg e">' + esc(e.message) +
-      '</div><div class="card"><button class="btn ghost" onclick="screenDirs()">Назад</button></div>';
+    h += '<div class="dir' + (done ? ' done' : '') + '" onclick="openDir(\'' + k + '\')">' +
+      '<div class="ic" style="background:' + d.color + '"></div>' +
+      '<div class="t"><div class="a">' + esc(d.title) + '</div><div class="b">' +
+      esc(d.subtitle) + (d.deadline ? ' · до ' + d.deadline : '') + '</div></div>' +
+      '<div class="tag' + (done ? '' : ' no') + '">' + (done ? 'Замовлено' : 'Замовити') + '</div></div>';
   });
+  h += '</div><div class="msg" style="padding:16px 4px;font-size:13px">' +
+       'Напрямки незалежні: можна замовити зараз одне, а решту — пізніше.</div>';
+  el('wrap').innerHTML = h;
+  el('wrap').innerHTML += '<div style="text-align:center"><button class="chip" onclick="screenStore()">Змінити торгову точку</button></div>';
 }
 
-function drawOrder(filter) {
-  var d = S.data, dir = S.boot.directions[S.dir];
-  var html = '<div class="card" style="display:flex;justify-content:space-between;align-items:center">' +
-    '<div><b>' + ICONS[S.dir] + " " + esc(dir.title) + '</b>' +
-    '<div style="font-size:12px;color:#5f6368">' + esc(S.store.label) + '</div></div>' +
-    '<button class="chg" onclick="screenDirs()">← назад</button></div>';
-
-  if (dir.minOrder > 0)
-    html += '<div class="msg w" id="minmsg">Мінімальне замовлення ' + dir.minOrder +
-            ' грн · кратність 1 ' + d.unit + '</div>';
-
-  html += '<div class="card"><input class="search" id="q" placeholder="Пошук товару…" autocomplete="off" value="' +
-          esc(filter || "") + '">';
-  if (d.categories.length) {
-    html += '<div class="tabs" style="margin-top:12px">' + d.categories.map(function (c) {
-      return '<div class="tab' + (c === S.cat ? " on" : "") + '" onclick="setCat(\'' +
-             esc(c).replace(/'/g, "") + '\')">' + esc(c) + '</div>'; }).join("") + '</div>';
+/* ---------- екран 3: товари ---------- */
+function openDir(k){
+  if (S.store.ordered[k]) {
+    if (!confirm('На цей напрямок замовлення сьогодні вже відправлено. Відкрити для перегляду?')) return;
   }
-  html += '<div id="items" style="margin-top:6px"></div></div>';
-
-  el("body").innerHTML = html;
-  el("q").oninput = function () { drawItems(this.value); };
-  el("bsend").onclick = submit;
-  drawItems(filter || "");
+  S.dir = k; S.screen = 'prod'; S.cart = {}; S.q = ''; S.cat = null; S.oid = uuid();
+  el('wrap').innerHTML = '<div class="spin"></div>';
+  el('bot').innerHTML = '';
+  call('products', { dir:k, storeId:S.store.id }).then(function(d){
+    S.prod = d; drawProd();
+  }).catch(function(e){ fail(e); });
 }
-function setCat(c) { S.cat = c; drawOrder(el("q") ? el("q").value : ""); }
-
-function drawItems(f) {
-  var k = f.toLowerCase().trim(), d = S.data;
-  var arr = d.products.filter(function (p) {
-    if (k) return p.name.toLowerCase().indexOf(k) >= 0;
-    return !S.cat || p.category === S.cat;
+function drawProd(){
+  var d = S.prod, dir = S.boot.directions[S.dir];
+  el('sub').innerHTML = '<b>' + esc(S.store.label) + '</b> · ' + esc(dir.title) +
+    (dir.deadline ? ' · до ' + dir.deadline : '');
+  var list = d.products.filter(function(p){
+    if (S.cat && p.category !== S.cat) return false;
+    return !S.q || p.name.toLowerCase().indexOf(S.q.toLowerCase()) >= 0;
   });
-  el("items").innerHTML = arr.length ? arr.map(function (p) {
-    var q = S.qty[p.id] || "";
-    var off = p.availability === "немає";
-    return '<div class="row' + (off ? " off" : "") + '">' +
+  var h = '';
+  if (d.alreadyOrdered) h += '<div class="err">Замовлення на сьогодні вже відправлено.</div>';
+  h += '<input class="search" id="q" placeholder="Пошук товару…" value="' + esc(S.q) + '">' +
+       '<div style="height:10px"></div>';
+  if (d.categories && d.categories.length){
+    h += '<div class="chips"><div class="chip' + (S.cat ? '' : ' act') +
+         '" onclick="setCat(null)">Усі</div>';
+    d.categories.forEach(function(c){
+      h += '<div class="chip' + (S.cat === c ? ' act' : '') + '" onclick="setCat(\'' +
+           esc(c).replace(/'/g,"\\'") + '\')">' + esc(c) + '</div>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="card">';
+  if (!list.length) h += '<div class="msg">Нічого не знайдено</div>';
+  list.forEach(function(p){
+    var off = p.availability === false || p.availability === 'stop';
+    var q = S.cart[p.id] || 0;
+    h += '<div class="row' + (off ? ' off' : '') + (q ? ' has' : '') + '">' +
       '<div class="info"><div class="nm">' + esc(p.name) + '</div>' +
-      '<div class="pr">' + money(p.price) + " / " + d.unit +
-      (p.box ? " · ящик " + esc(p.box) + " шт" : "") +
-      (p.availability ? ' · <b style="color:#c5221f">' + esc(p.availability) + "</b>" : "") +
-      '</div></div>' +
-      (off ? "" : '<div class="qty">' +
-        '<button onclick="bump(\'' + p.id + '\',-1)">−</button>' +
-        '<input type="number" inputmode="decimal" min="0" value="' + q +
-        '" class="' + (q ? "has" : "") + '" oninput="setQ(\'' + p.id + '\',this.value)">' +
-        '<button onclick="bump(\'' + p.id + '\',1)">+</button></div>') +
-      '</div>';
-  }).join("") : '<div style="padding:14px;color:#5f6368">Нічого не знайдено</div>';
-}
-
-function setQ(id, v) {
-  var n = parseFloat(String(v).replace(",", "."));
-  if (n > 0) S.qty[id] = n; else delete S.qty[id];
-  total();
-}
-function bump(id, dl) {
-  var n = (parseFloat(S.qty[id]) || 0) + dl;
-  if (n > 0) S.qty[id] = n; else delete S.qty[id];
-  drawItems(el("q").value); total();
-}
-function total() {
-  var sum = 0, cnt = 0;
-  S.data.products.forEach(function (p) {
-    var q = S.qty[p.id]; if (q > 0) { sum += p.price * q; cnt++; }
+      '<div class="pr">' + money(p.price) + ' грн / ' + esc(d.unit) +
+      (p.box ? ' · ящик ' + esc(p.box) : '') + (off ? ' · немає' : '') + '</div></div>';
+    if (!off) h += '<div class="qty"><button onclick="chg(' + p.id + ',-1)">−</button>' +
+      '<input type="number" inputmode="decimal" id="i' + p.id + '" value="' + (q || '') +
+      '" onchange="setQ(' + p.id + ',this.value)"><button class="plus" onclick="chg(' +
+      p.id + ',1)">+</button></div>';
+    h += '</div>';
   });
-  var min = S.boot.directions[S.dir].minOrder;
-  el("bsum").textContent = money(sum);
-  el("bcnt").textContent = cnt + " позицій" + (min > 0 && sum < min ? " · до мінімуму " +
-    money(min - sum) : "");
-  el("bsend").disabled = !cnt || (min > 0 && sum < min - 0.01) || S.sending;
-  el("bar").classList.toggle("on", cnt > 0);
-  return sum;
+  el('wrap').innerHTML = h + '</div>';
+  var q = el('q');
+  q.oninput = function(){ S.q = this.value; var p = this.selectionStart; drawProd();
+    var n = el('q'); n.focus(); n.setSelectionRange(p, p); };
+  drawBot();
 }
-
-function submit() {
-  if (S.sending) return;
-  var items = Object.keys(S.qty).map(function (id) { return { id: id, qty: S.qty[id] }; });
+function setCat(c){ S.cat = c; drawProd(); }
+function chg(id, sign){
+  var step = S.prod.step || 1;
+  var v = (S.cart[id] || 0) + sign * step;
+  setQ(id, v < 0 ? 0 : v);
+}
+function setQ(id, v){
+  v = parseFloat(String(v).replace(',', '.'));
+  if (!(v > 0)) delete S.cart[id]; else S.cart[id] = Math.round(v * 1000) / 1000;
+  var i = el('i' + id); if (i) i.value = S.cart[id] || '';
+  drawBot();
+  var row = i && i.closest('.row'); if (row) row.classList.toggle('has', !!S.cart[id]);
+}
+function total(){
+  var t = 0; S.prod.products.forEach(function(p){ if (S.cart[p.id]) t += p.price * S.cart[p.id]; });
+  return Math.round(t * 100) / 100;
+}
+function drawBot(){
+  var n = Object.keys(S.cart).length, t = total(), min = S.prod.minOrder || 0;
+  var low = min > 0 && t < min - 0.01;
+  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum">' +
+    '<b>' + money(t) + ' грн</b>' + n + ' поз.' +
+    (low ? ' · <span class="warn">мінімум ' + money(min) + ' грн</span>' : '') +
+    '</div><button class="btn" id="send"' + (!n || low ? ' disabled' : '') +
+    ' onclick="send()">Відправити</button></div></div>';
+}
+function send(){
+  var items = Object.keys(S.cart).map(function(id){ return { id:+id, qty:S.cart[id] }; });
   if (!items.length) return;
-  if (!confirm("Відправити замовлення?\n" + S.boot.directions[S.dir].title +
-               "\n" + S.store.label + "\n" + items.length + " позицій, " + money(total()))) return;
-
-  S.sending = true;
-  el("bsend").disabled = true;
-  el("bsend").textContent = "Надсилання…";
-
-  call("submitOrder", { dir: S.dir, storeId: S.store.id, items: items }).then(function (r) {
-    S.store.ordered[S.dir] = true;
-    S.sending = false;
-    el("bar").classList.remove("on");
-    el("body").innerHTML = '<div class="card msg s"><b>Замовлення відправлено ✓</b><br>' +
-      esc(r.direction) + " · " + esc(r.store) + "<br>" + r.positions + " позицій · " +
-      money(r.total) + " · " + esc(r.time) + '</div>' +
-      '<div class="card"><button class="btn" onclick="screenDirs()">До інших напрямків</button></div>';
-  }).catch(function (e) {
-    S.sending = false;
-    el("bsend").textContent = "Відправити";
-    el("bsend").disabled = false;
-    alert(e.message);
-  });
+  if (!confirm('Відправити замовлення на ' + money(total()) + ' грн?')) return;
+  var b = el('send'); b.disabled = true; b.textContent = 'Відправка…';
+  call('submitOrder', { dir:S.dir, storeId:S.store.id, items:items, orderId:S.oid })
+    .then(function(r){ done(r); })
+    .catch(function(e){
+      alert(e.message || e);
+      b.disabled = false; b.textContent = 'Відправити';
+    });
 }
+function done(r){
+  S.screen = 'done';
+  S.store.ordered[S.dir] = true;
+  el('bot').innerHTML = '';
+  el('back').style.display = 'none';
+  el('wrap').innerHTML = '<div class="ok"><div class="big">✓</div><h2>Замовлення прийнято</h2>' +
+    '<p>' + esc(r.direction) + ' · ' + esc(r.store) + '</p>' +
+    '<p>' + r.positions + ' позицій на ' + money(r.total) + ' грн</p>' +
+    '<p>' + esc(r.date || '') + ' ' + esc(r.time) + '</p>' +
+    (r.duplicate ? '<p style="color:#b3261e">Це повторна відправка — дублі не створені</p>' : '') +
+    '<div style="height:18px"></div>' +
+    '<button class="btn" onclick="openStore(S.store)">До напрямків</button></div>';
+}
+function goBack(){
+  if (S.screen === 'prod') openStore(S.store);
+  else if (S.screen === 'dir') { S.q = ''; screenStore(); }
+}
+start();
 </script>
 </body>
 </html>

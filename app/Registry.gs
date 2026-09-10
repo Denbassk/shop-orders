@@ -3,7 +3,7 @@
 // ============================================================
 
 function loadStores_() {
-  const cached = cacheGet_('registry_v1');
+  const cached = cacheGet_('registry_v2');
   if (cached) return cached;
 
   const sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
@@ -18,7 +18,7 @@ function loadStores_() {
         label: String(r[1] || '').trim() || addr,
         address: addr,
         code: String(r[3] || '').trim(),
-        route: String(r[4] || '').trim(),
+        route: String(r[4] || '').trim(),   // тільки для запису в таблицю постачальника
         type: String(r[5] || 'Магазин').trim(),
         addrBread: String(r[10] || '').trim() || addr,
         addrBakery: String(r[11] || '').trim() || addr,
@@ -30,7 +30,7 @@ function loadStores_() {
     .filter(function (s) { return s.directions.length; })
     .sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
 
-  cachePut_('registry_v1', stores, 600);
+  cachePut_('registry_v2', stores, 600);
   return stores;
 }
 
@@ -43,7 +43,7 @@ function findStore_(storeId) {
 // Статус на сьогодні окремо по кожному напрямку.
 // Точка може замовити хліб зранку, овочі ввечері - напрямки незалежні.
 function loadTodayStatus_() {
-  const cached = cacheGet_('status_v1');
+  const cached = cacheGet_('status_v2');
   if (cached) return cached;
 
   const today = formatDateDMY_(new Date());
@@ -53,14 +53,14 @@ function loadTodayStatus_() {
     const cfg = DIRECTIONS[k];
     status[k] = {};
     try {
-      const sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.rawSheet);
+      const sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
       if (!sh || sh.getLastRow() < 2) return;
       // A = дата, C = адреса - однаково в усіх трьох листах
       sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().forEach(function (r) {
         const d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
         if (d === today) {
           const a = String(r[2]).trim();
-          if (a) status[k][canonKey_(a)] = true;
+          if (a) status[k][addrKey_(a)] = true;   // addrKey_ зрівнює повну і скорочену адресу
         }
       });
     } catch (e) {
@@ -69,7 +69,7 @@ function loadTodayStatus_() {
     }
   });
 
-  cachePut_('status_v1', status, 60);
+  cachePut_('status_v2', status, 60);
   return status;
 }
 
@@ -104,7 +104,7 @@ function cachePut_(k, data, sec) {
 }
 
 function invalidateAppCache() {
-  CacheService.getScriptCache().removeAll(['registry_v1', 'status_v1',
+  CacheService.getScriptCache().removeAll(['registry_v1', 'registry_v2', 'status_v1', 'status_v2',
     'products_bread', 'products_bakery', 'products_veg']);
   console.log('Кеш очищено');
 }

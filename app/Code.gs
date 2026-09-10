@@ -49,7 +49,7 @@ function apiBootstrap_() {
     const c = DIRECTIONS[k];
     dirs[k] = {
       key: c.key, title: c.title, subtitle: c.subtitle,
-      icon: c.icon, color: c.color, unit: c.unit,
+      color: c.color, unit: c.unit, deadline: c.deadline, step: c.step,
       minOrder: Math.round(c.minOrder * c.markup * 100) / 100,
       hasCategories: c.hasCategories
     };
@@ -59,14 +59,15 @@ function apiBootstrap_() {
     const ordered = {};
     s.directions.forEach(function (k) {
       const map = status[k];
-      const addr = s[DIRECTIONS[k].addressAlias];
-      ordered[k] = map ? !!map[canonKey_(addr)] : false;
+      ordered[k] = map ? !!map[statusKey_(k, s)] : false;
     });
-    return {
-      id: s.id, label: s.label, route: s.route, type: s.type,
-      directions: s.directions, ordered: ordered
-    };
+    // route і code навмисно НЕ віддаємо на телефон - вони потрібні лише
+    // постачальнику у вивантаженні закупниці
+    return { id: s.id, label: s.label, directions: s.directions, ordered: ordered };
   });
 
-  return { stores: list, directions: dirs, today: formatDateDMY_(new Date()) };
+  return {
+    stores: list, directions: dirs,
+    today: formatDateDMY_(new Date()), testMode: TEST_MODE
+  };
 }

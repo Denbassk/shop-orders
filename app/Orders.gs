@@ -31,6 +31,8 @@ function apiProducts_(payload) {
   return {
     dir: dirKey,
     unit: cfg.unit,
+    step: cfg.step,
+    deadline: cfg.deadline,
     minOrder: Math.round(cfg.minOrder * cfg.markup * 100) / 100,
     categories: cats,
     products: products,
@@ -40,13 +42,11 @@ function apiProducts_(payload) {
 
 function isOrderedToday_(dirKey, store) {
   var cfg = dirCfg_(dirKey);
-  var target = addrKey_(dirKey === 'bread'
-    ? shortenAddress_(store[cfg.addressAlias])
-    : store[cfg.addressAlias]);
+  var target = statusKey_(dirKey, store);
   var today = formatDateDMY_(new Date());
 
   try {
-    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.rawSheet);
+    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
     if (!sh || sh.getLastRow() < 2) return false;
     var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
     for (var i = rows.length - 1; i >= 0; i--) {
@@ -60,11 +60,49 @@ function isOrderedToday_(dirKey, store) {
   return false;
 }
 
+// --- Захист від повторної відправки при обриві зв'язку ---
+// Телефон генерує orderId один раз. Якщо відповідь не дійшла і продавець
+// натиснув ще раз - сервер віддає збережений результат, а не пише дублі.
+function seenOrder_(orderId) {
+  if (!orderId) return null;
+  try {
+    var v = PropertiesService.getScriptProperties().getProperty('oid_' + orderId);
+    return v ? JSON.parse(v) : null;
+  } catch (e) { return null; }
+}
+
+function rememberOrder_(orderId, result) {
+  if (!orderId) return;
+  try {
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty('oid_' + orderId, JSON.stringify(result));
+    if (Math.random() < 0.05) cleanupOrderIds_(props);
+  } catch (e) {}
+}
+
+// Прибираємо ключі старші за сьогодні, щоб не переповнити сховище
+function cleanupOrderIds_(props) {
+  try {
+    var today = formatDateDMY_(new Date());
+    var all = props.getProperties();
+    Object.keys(all).forEach(function (k) {
+      if (k.indexOf('oid_') !== 0) return;
+      var rec = {};
+      try { rec = JSON.parse(all[k]); } catch (e) {}
+      if (rec.date && rec.date !== today) props.deleteProperty(k);
+    });
+  } catch (e) {}
+}
+
 function apiSubmitOrder_(payload) {
   var dirKey = String(payload.dir || '');
   var cfg = dirCfg_(dirKey);
   var store = findStore_(payload.storeId);
   var items = payload.items || [];
+  var orderId = String(payload.orderId || '').slice(0, 60);
+
+  var prev = seenOrder_(orderId);
+  if (prev) { prev.duplicate = true; return prev; }   // повтор тієї ж відправки
 
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
@@ -102,6 +140,10 @@ function apiSubmitOrder_(payload) {
   if (!lock.tryLock(30000)) throw new Error('Сервер зайнятий, спробуйте через 10 секунд');
 
   try {
+    // Друга перевірка вже під блокуванням - на випадок двох телефонів одночасно
+    var again = seenOrder_(orderId);
+    if (again) { again.duplicate = true; return again; }
+
     if (isOrderedToday_(dirKey, store))
       throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено');
 
@@ -116,8 +158,9 @@ function apiSubmitOrder_(payload) {
 
     var values = lines.map(function (p) { return cfg.rawRow(ctx, p); });
 
-    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.rawSheet);
-    if (!sh) throw new Error('Не знайдено лист "' + cfg.rawSheet + '"');
+    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+    if (!sh) throw new Error('Не знайдено лист "' + rawSheetName_(cfg) +
+      '". Запустіть setupTestSheets().');
 
     var startRow = Math.max(sh.getLastRow() + 1, 2);
     var width = values[0].length;
@@ -131,16 +174,19 @@ function apiSubmitOrder_(payload) {
     }
     SpreadsheetApp.flush();
 
-    CacheService.getScriptCache().remove('status_v1');
+    CacheService.getScriptCache().remove('status_v2');
 
     var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;
-    console.log('Замовлення ' + dirKey + ' / ' + store.label + ': ' +
-      lines.length + ' позицій, ' + totalShown + ' грн');
+    console.log((TEST_MODE ? '[ТЕСТ] ' : '') + 'Замовлення ' + dirKey + ' / ' + store.label +
+      ': ' + lines.length + ' позицій, ' + totalShown + ' грн');
 
-    return {
+    var result = {
       ok: true, positions: lines.length, total: totalShown,
-      time: formatTime_(now), direction: cfg.title, store: store.label
+      time: formatTime_(now), date: formatDateDMY_(now),
+      direction: cfg.title, store: store.label, test: TEST_MODE
     };
+    rememberOrder_(orderId, result);
+    return result;
   } finally {
     lock.releaseLock();
   }
