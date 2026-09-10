@@ -1,18 +1,29 @@
 // ============================================================
 // ХЛІБ НБХЗ
 // Дані живуть у таблиці НБХЗ:
-//   "Ассортимент" - позиції (порядок рядків = порядок колонок для заводу)
-//   "Маршрути"    - маршрут + адреса точки
-// Код нічого не зберігає, лише читає з таблиці.
+//   "Ассортимент" - A Статус | B № | C Номенклатура
+//                   (порядок рядків = порядок колонок для заводу)
+//   "Маршрути"    - A Маршрут | B Адреса Магазина (як у Довіднику)
+//                   | C Адреса у файлі НБХЗ
 //
-// ПОРЯДОК ЗАПУСКУ:
-//   1) checkNbhz()                - чи відкривається таблиця
-//   2) setupNbhz()                - створити листи
-//   3) заповнити "Ассортимент" і "Маршрути" (або seedNbhzFromFiles())
-//   4) addNbhzColumnsToRegistry() - колонки N/O/P у Довіднику
-//   5) matchNbhzRoutes()          - розкласти маршрути, звіт "_Сверка_НБХЗ"
-//   6) invalidateAppCache()       - і новий деплой
+// ЗАПУСК ОДНІЄЮ КНОПКОЮ:  installNbhz()
+// Далі: новий деплой веб-застосунку.
 // ============================================================
+
+// Що писати в колонку P Довідника (і, відповідно, у вивантаження для заводу):
+//   'factory'  - адреса у написанні заводу (як у їхньому файлі)
+//   'registry' - правильна адреса з Довідника
+var NBHZ_EXPORT_ADDR = 'factory';
+
+function installNbhz() {
+  setupNbhz();
+  rebuildNbhzProducts();
+  rebuildNbhzRoutes();
+  addNbhzColumnsToRegistry();
+  matchNbhzRoutes();
+  invalidateAppCache();
+  console.log('НБХЗ готовий. Зробіть новий деплой веб-застосунку (Розгорнути -> Керувати розгортаннями -> Змінити версію).');
+}
 
 function nbhzSS_() {
   try { return SpreadsheetApp.openById(NBHZ_ID); }
@@ -24,7 +35,8 @@ function checkNbhz() {
   console.log('Таблиця: ' + ss.getName());
   console.log('Посилання: ' + ss.getUrl());
   ss.getSheets().forEach(function (sh) {
-    console.log('  лист "' + sh.getName() + '" - рядків: ' + sh.getLastRow());
+    console.log('  лист "' + sh.getName() + '" - рядків: ' + sh.getLastRow() +
+                ', колонок: ' + sh.getLastColumn());
   });
 }
 
@@ -33,13 +45,12 @@ function setupNbhz() {
   var cfg = dirCfg_('nbhz');
   var raw = ['Дата', 'Маршрут', 'Адреса', 'Штрихкод', 'Назва', 'Ціна', 'Кількість'];
 
-  ensureSheet_(ss, cfg.productsSheet,
-    ['Статус', '№', 'Штрихкод', 'Ціна', 'Номенклатура', 'Шт в ящику']);
-  ensureSheet_(ss, 'Маршрути', ['Маршрут', 'Адреса Магазина']);
+  ensureSheet_(ss, cfg.productsSheet, ['Статус', '№', 'Номенклатура']);
+  ensureSheet_(ss, 'Маршрути', ['Маршрут', 'Адреса Магазина (Довідник)', 'Адреса у файлі НБХЗ']);
   ensureSheet_(ss, cfg.rawSheet, raw);
   ensureSheet_(ss, cfg.testSheet, raw);
 
-  console.log('Листи готові. Заповніть "Ассортимент" і "Маршрути" - або запустіть seedNbhzFromFiles()');
+  console.log('Листи на місці.');
 }
 
 function ensureSheet_(ss, name, headers) {
@@ -53,16 +64,72 @@ function ensureSheet_(ss, name, headers) {
   return sh;
 }
 
-// --- Колонки НБХЗ у Довіднику ТТ (там же, де маршрути Роми) ---
+// Скинути лист до рівно N колонок і поставити шапку
+function resetSheet_(ss, name, headers) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) sh = ss.insertSheet(name);
+  sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).clearDataValidations();
+  sh.clear();
+  var extra = sh.getMaxColumns() - headers.length;
+  if (extra > 0) sh.deleteColumns(headers.length + 1, extra);
+  if (extra < 0) sh.insertColumnsAfter(sh.getMaxColumns(), -extra);
+  sh.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
+  sh.setFrozenRows(1);
+  return sh;
+}
+
+// --- Ассортимент: рівно 3 колонки, нічого зайвого ---
+function rebuildNbhzProducts() {
+  var ss = nbhzSS_();
+  var cfg = dirCfg_('nbhz');
+
+  // зберегти позначки "стоп" по назві
+  var stops = {};
+  var old = ss.getSheetByName(cfg.productsSheet);
+  if (old && old.getLastRow() > 1) {
+    var w = Math.max(old.getLastColumn(), 1);
+    old.getRange(2, 1, old.getLastRow() - 1, w).getValues().forEach(function (r) {
+      if (String(r[0] || '').trim().toLowerCase() !== 'стоп') return;
+      for (var i = 1; i < r.length; i++) {
+        var v = String(r[i] || '').trim();
+        if (v && !/^\d+([.,]\d+)?$/.test(v)) { stops[nameKey_(v)] = true; break; }
+      }
+    });
+  }
+
+  var sh = resetSheet_(ss, cfg.productsSheet, ['Статус', '№', 'Номенклатура']);
+  var rows = NBHZ_PRODUCTS.map(function (n, i) {
+    return [stops[nameKey_(n)] ? 'стоп' : '', i + 1, n];
+  });
+  sh.getRange(2, 1, rows.length, 3).setValues(rows);
+  sh.setColumnWidth(1, 80); sh.setColumnWidth(2, 46); sh.setColumnWidth(3, 340);
+  sh.getRange(2, 2, rows.length, 1).setHorizontalAlignment('center');
+
+  console.log('Ассортимент: ' + rows.length + ' позицій, 3 колонки' +
+              (Object.keys(stops).length ? ' (стопи збережено)' : ''));
+}
+
+// --- Маршрути: правильні адреси з Довідника + написання заводу ---
+function rebuildNbhzRoutes() {
+  var ss = nbhzSS_();
+  var sh = resetSheet_(ss, 'Маршрути',
+    ['Маршрут', 'Адреса Магазина (Довідник)', 'Адреса у файлі НБХЗ']);
+
+  sh.getRange(2, 1, NBHZ_ROUTES.length, 3).setValues(NBHZ_ROUTES);
+  sh.setColumnWidth(1, 130); sh.setColumnWidth(2, 320); sh.setColumnWidth(3, 220);
+  sh.getRange(2, 3, NBHZ_ROUTES.length, 1).setFontColor('#6b7280');
+
+  console.log('Маршрути: ' + NBHZ_ROUTES.length + ' рядків');
+}
+
+// --- Колонки НБХЗ у Довіднику ТТ ---
 function addNbhzColumnsToRegistry() {
   var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
   var last = sh.getLastRow();
   sh.getRange(1, 14, 1, 3).setValues([['Хліб НБХЗ', 'Маршрут НБХЗ', 'Адреса НБХЗ']])
     .setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
-  if (last > 1) {
-    var flags = sh.getRange(2, 14, last - 1, 1);
-    flags.insertCheckboxes();
-  }
+  if (last > 1) sh.getRange(2, 14, last - 1, 1).insertCheckboxes();
   sh.setColumnWidth(14, 90); sh.setColumnWidth(15, 150); sh.setColumnWidth(16, 240);
   console.log('Колонки N (прапорець), O (маршрут), P (адреса НБХЗ) готові');
 }
@@ -71,53 +138,61 @@ function addNbhzColumnsToRegistry() {
 function matchNbhzRoutes() {
   var ss = nbhzSS_();
   var src = ss.getSheetByName('Маршрути');
-  if (!src || src.getLastRow() < 2) throw new Error('Лист "Маршрути" порожній');
+  if (!src || src.getLastRow() < 2)
+    throw new Error('Лист "Маршрути" порожній - запустіть rebuildNbhzRoutes()');
 
-  var pairs = src.getRange(2, 1, src.getLastRow() - 1, 2).getValues()
+  var pairs = src.getRange(2, 1, src.getLastRow() - 1, 3).getValues()
     .filter(function (r) { return String(r[0]).trim() && String(r[1]).trim(); })
-    .map(function (r) { return { route: String(r[0]).trim(), addr: String(r[1]).trim() }; });
+    .map(function (r) {
+      var reg = String(r[1]).trim();
+      return { route: String(r[0]).trim(), reg: reg, fact: String(r[2] || '').trim() || reg };
+    });
 
   var reg = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
   var n = reg.getLastRow() - 1;
+  if (n < 1) throw new Error('Довідник ТТ порожній');
+
   var names = reg.getRange(2, 2, n, 1).getValues();
   var addrs = reg.getRange(2, 3, n, 1).getValues();
-  var cols = reg.getRange(2, 14, n, 3).getValues();
 
-  var map = {};
-  pairs.forEach(function (p) { map[fuzzyKey_(p.addr)] = p; });
+  // точний ключ - основний, нечіткий - страховка від різнописання
+  var byExact = {}, byFuzzy = {};
+  pairs.forEach(function (p) {
+    byExact[addrKey_(p.reg)] = p;
+    byFuzzy[fuzzyKey_(p.reg)] = p;
+    byFuzzy[fuzzyKey_(p.fact)] = byFuzzy[fuzzyKey_(p.fact)] || p;
+  });
 
-  var used = {}, matched = 0;
-  var report = [['Статус', 'Маршрут НБХЗ', 'Адреса зі списку заводу', 'ТТ у Довіднику', 'Адреса в Довіднику']];
+  var cols = [], used = {}, matched = 0;
+  var report = [['Статус', 'Маршрут', 'Адреса в Довіднику', 'Адреса у файлі НБХЗ', 'ТТ у Довіднику']];
 
   for (var i = 0; i < n; i++) {
-    var hit = map[fuzzyKey_(addrs[i][0])];
-    if (!hit) continue;
-    cols[i][0] = true;          // N - точку возить НБХЗ
-    cols[i][1] = hit.route;     // O - маршрут заводу
-    cols[i][2] = hit.addr;      // P - адреса в написанні заводу
-    used[fuzzyKey_(hit.addr)] = true;
+    var a = String(addrs[i][0] || '').trim();
+    var hit = a ? (byExact[addrKey_(a)] || byFuzzy[fuzzyKey_(a)]) : null;
+    if (!hit) { cols.push([false, '', '']); continue; }
+    cols.push([true, hit.route, NBHZ_EXPORT_ADDR === 'registry' ? hit.reg : hit.fact]);
+    used[hit.reg] = true;
     matched++;
-    report.push(['OK', hit.route, hit.addr, names[i][0], addrs[i][0]]);
+    report.push(['OK', hit.route, a, hit.fact, names[i][0]]);
   }
 
   pairs.forEach(function (p) {
-    if (!used[fuzzyKey_(p.addr)])
-      report.push(['НЕ ЗІСТАВЛЕНО - вписати вручну', p.route, p.addr, '', '']);
+    if (!used[p.reg])
+      report.push(['НЕ ЗНАЙДЕНО В ДОВІДНИКУ - перевірити адресу', p.route, p.reg, p.fact, '']);
   });
 
+  reg.getRange(2, 14, n, 1).insertCheckboxes();
   reg.getRange(2, 14, n, 3).setValues(cols);
 
-  var rep = ss.getSheetByName('_Сверка_НБХЗ');
-  if (rep) rep.clear(); else rep = ss.insertSheet('_Сверка_НБХЗ');
+  var rep = resetSheet_(ss, '_Сверка_НБХЗ', report[0]);
   rep.getRange(1, 1, report.length, 5).setValues(report);
   rep.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
-  rep.setFrozenRows(1);
-  rep.setColumnWidth(2, 130); rep.setColumnWidth(3, 240);
-  rep.setColumnWidth(4, 200); rep.setColumnWidth(5, 300);
+  rep.setColumnWidth(1, 260); rep.setColumnWidth(2, 130);
+  rep.setColumnWidth(3, 300); rep.setColumnWidth(4, 220); rep.setColumnWidth(5, 220);
 
   invalidateAppCache();
   console.log('Зіставлено ' + matched + ' з ' + pairs.length +
-              '. Решта - у листі "_Сверка_НБХЗ" таблиці НБХЗ');
+              '. Незіставлені - у листі "_Сверка_НБХЗ" таблиці НБХЗ');
 }
 
 // Ключ, стійкий до рос/укр написання адреси
@@ -143,8 +218,14 @@ function buildNbhzExport() {
 
   var routeSh = ss.getSheetByName('Маршрути');
   var routeOf = {};
-  routeSh.getRange(2, 1, routeSh.getLastRow() - 1, 2).getValues().forEach(function (r) {
-    if (String(r[1]).trim()) routeOf[fuzzyKey_(r[1])] = { route: String(r[0]).trim(), addr: String(r[1]).trim() };
+  routeSh.getRange(2, 1, routeSh.getLastRow() - 1, 3).getValues().forEach(function (r) {
+    var route = String(r[0] || '').trim();
+    var regA = String(r[1] || '').trim();
+    var factA = String(r[2] || '').trim() || regA;
+    if (!regA) return;
+    var meta = { route: route, addr: (NBHZ_EXPORT_ADDR === 'registry' ? regA : factA) };
+    routeOf[fuzzyKey_(regA)] = meta;
+    if (factA) routeOf[fuzzyKey_(factA)] = meta;
   });
 
   var raw = ss.getSheetByName(rawSheetName_(cfg));

@@ -12,10 +12,10 @@ function loadProducts_(dirKey) {
 
 // Лист "Ассортимент":
 // A статус | B № | C штрихкод | D ціна | E номенклатура | F шт в ящику
-// НБХЗ: ціна і штрихкод можуть бути порожні (allowNoPrice) -
-// замовлення для заводу кількісне, ціни допишете згодом.
 function loadSheetProducts_(dirKey) {
   var cfg = dirCfg_(dirKey);
+  if (cfg.productLayout === 'nbhz') return loadNbhzSheetProducts_(cfg);
+
   var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
   if (!sh || sh.getLastRow() < 2) return [];
 
@@ -52,6 +52,25 @@ function loadSheetProducts_(dirKey) {
       return a.name.localeCompare(b.name, 'uk');
     });
   }
+  return out;
+}
+
+// НБХЗ: без цін і штрихкодів. Лист рівно 3 колонки:
+// A Статус | B № | C Номенклатура. Порядок рядків = порядок колонок для заводу.
+function loadNbhzSheetProducts_(cfg) {
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
+  if (!sh || sh.getLastRow() < 2) return [];
+
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
+  var out = [];
+
+  rows.forEach(function (r) {
+    if (String(r[0] || '').trim().toLowerCase() === 'стоп') return;
+    var name = String(r[2] || '').trim();
+    if (!name) return;
+    out.push({ id: nameKey_(name), barcode: '', name: name, price: 0 });
+  });
+
   return out;
 }
 
@@ -109,7 +128,7 @@ function readVegPriceSheet_() {
 
 function nameKey_(s) {
   return String(s || '').toLowerCase()
-    .replace(/[\u2019\u0027\u0060\u0022()]/g, ' ')
+    .replace(/[’'`"()]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

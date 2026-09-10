@@ -31,6 +31,7 @@ function apiProducts_(payload) {
   return {
     dir: dirKey,
     unit: cfg.unit,
+    hidePrice: !!cfg.hidePrice,
     step: cfg.step,
     deadline: cfg.deadline,
     minOrder: Math.round(cfg.minOrder * cfg.markup * 100) / 100,

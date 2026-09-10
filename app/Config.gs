@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-10-2';
+const APP_VERSION = '2026-09-10-3';
 
 const TEST_MODE = true;
 
@@ -37,6 +37,10 @@ const DIRECTIONS = {
     hasCategories: false, hasBarcodes: true,
     addressAlias: 'addrNbhz', routeAlias: 'routeNbhz', shortAddr: true,
     lateRequest: true, allowNoPrice: true, keepOrder: true,
+    // Лист "Ассортимент" НБХЗ - лише 3 колонки: Статус | № | Номенклатура
+    productLayout: 'nbhz',
+    // Замовлення кількісне: цін немає - і в застосунку їх не показуємо
+    hidePrice: true,
     rawRow: function (ctx, p) {
       return [ctx.dateStr, ctx.route, ctx.shortAddress,
               p.barcode, p.name, p.price, p.qty];

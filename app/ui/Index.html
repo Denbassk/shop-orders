@@ -266,10 +266,13 @@ function drawProd(){
   list.forEach(function(p){
     var off = p.availability === 'немає' || p.availability === false;
     var q = S.cart[p.id] || 0;
+    var meta = d.hidePrice
+      ? (p.box ? 'ящик ' + esc(p.box) : '')
+      : money(p.price) + ' грн / ' + esc(d.unit) + (p.box ? ' · ящик ' + esc(p.box) : '');
+    if (off) meta = meta ? meta + ' · немає' : 'немає';
     h += '<div class="row' + (off?' off':'') + (q?' has':'') + '" id="r' + p._i + '">' +
       '<div class="info"><div class="nm">' + esc(p.name) + '</div><div class="pr">' +
-      money(p.price) + ' грн / ' + esc(d.unit) + (p.box ? ' · ящик ' + esc(p.box) : '') +
-      (off ? ' · немає' : '') + '</div></div>';
+      meta + '</div></div>';
     if (!off) h += '<div class="qty"><button onclick="chg(' + p._i + ',-1)">−</button>' +
       '<input type="number" inputmode="decimal" id="i' + p._i + '" value="' + (q||'') +
       '" onchange="setQ(' + p._i + ',this.value)"><button class="plus" onclick="chg(' +
@@ -303,15 +306,21 @@ function total(){
 function drawBot(){
   var n=Object.keys(S.cart).length, t=total(), min=S.prod.minOrder||0;
   var low = min > 0 && t < min - 0.01;
-  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum"><b>' + money(t) +
-    ' грн</b>' + n + ' поз.' + (low ? ' · <span class="warn">мінімум ' + money(min) +
-    ' грн</span>' : '') + '</div><button class="btn" id="send"' +
+  var sum = S.prod.hidePrice
+    ? '<b>' + n + '</b>позицій у замовленні'
+    : '<b>' + money(t) + ' грн</b>' + n + ' поз.' +
+      (low ? ' · <span class="warn">мінімум ' + money(min) + ' грн</span>' : '');
+  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum">' + sum +
+    '</div><button class="btn" id="send"' +
     (!n||low||S.prod.closed ? ' disabled' : '') + ' onclick="send()">Відправити</button></div></div>';
 }
 function send(){
   var items = Object.keys(S.cart).map(function(id){ return { id:id, qty:S.cart[id] }; });
   if (!items.length) return;
-  if (!confirm('Відправити замовлення на ' + money(total()) + ' грн?')) return;
+  var ask = S.prod.hidePrice
+    ? 'Відправити замовлення: ' + items.length + ' позицій?'
+    : 'Відправити замовлення на ' + money(total()) + ' грн?';
+  if (!confirm(ask)) return;
   var b=el('send'); b.disabled=true; b.textContent='Відправка…';
   call('submitOrder', { dir:S.dir, storeId:S.store.id, items:items, orderId:S.oid })
     .then(done)
@@ -323,7 +332,8 @@ function done(r){
   el('ttl').textContent = S.store.label;
   el('wrap').innerHTML = '<div class="ok"><div class="big">&#10003;</div>' +
     '<h2>Замовлення прийнято</h2><p><b>' + esc(r.direction) + '</b> · ' + esc(r.store) + '</p>' +
-    '<p>' + r.positions + ' позицій на ' + money(r.total) + ' грн</p>' +
+    '<p>' + r.positions + ' позицій' +
+      ((S.prod && S.prod.hidePrice) ? '' : ' на ' + money(r.total) + ' грн') + '</p>' +
     '<p>' + esc(r.date||'') + ' ' + esc(r.time) + '</p>' +
     (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
     '<div style="height:22px"></div>' +
