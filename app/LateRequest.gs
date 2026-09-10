@@ -136,8 +136,6 @@ function sendLateMail_(cfg, store) {
     'margin:0 auto;padding:22px 18px;color:#16181d">' +
     '<div style="font-size:13px;color:#6b7280">Замовлення після дедлайну</div>' +
     '<div style="font-size:22px;font-weight:800;margin:6px 0 2px">' + esc_(store.label) + '</div>' +
-    (store.code ? '<div style="font-size:13px;color:#6b7280">обліковий номер ' +
-        esc_(store.code) + '</div>' : '') +
     '<div style="font-size:16px;margin:8px 0 2px">' + esc_(cfg.title) + '</div>' +
     '<div style="font-size:13px;color:#6b7280;margin-bottom:22px">запит о ' +
       formatTime_(now) + ', дедлайн був ' + esc_(cfg.deadline) + '</div>' +
@@ -259,8 +257,7 @@ function lateLinkFor(dirKey, part) {
   });
   if (!hits.length) { console.log('Не знайдено точку: ' + part); return; }
   hits.forEach(function (s) {
-    console.log(s.label + (s.code ? ' (№' + s.code + ')' : '') + '  ->  ' +
-                lateApproveUrl_(dirKey, s.id));
+    console.log(s.label + '  ->  ' + lateApproveUrl_(dirKey, s.id));
   });
 }
 
