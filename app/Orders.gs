@@ -111,6 +111,9 @@ function seenOrder_(orderId) {
 // всередині одного напрямку - і вона там потрібна.
 // ============================================================
 var DIR_LOCK_TTL_MS = 45000;   // якщо виконання впало - замок сам протухне
+// Скільки чекати своєї черги. За замірами один запис коштує 0.6-1.05 с,
+// тож 39 точок одного напрямку разом - це до 41 с черги.
+var SUBMIT_WAIT_MS = 75000;
 
 function dirLockAcquire_(dirKey, waitMs) {
   var token = Utilities.getUuid();
@@ -132,7 +135,7 @@ function dirLockAcquire_(dirKey, waitMs) {
         }
       } finally { try { g.releaseLock(); } catch (e) {} }
     }
-    Utilities.sleep(200 + Math.floor(Math.random() * 300));
+    Utilities.sleep(150 + Math.floor(Math.random() * 250));
   }
   return null;
 }
@@ -225,7 +228,7 @@ function apiSubmitOrder_(payload) {
       (Math.round(totalSupplier * cfg.markup * 100) / 100) + ' грн');
   }
 
-  var lockToken = dirLockAcquire_(dirKey, 30000);
+  var lockToken = dirLockAcquire_(dirKey, SUBMIT_WAIT_MS);
   if (!lockToken) throw new Error('BUSY: зараз відправляється інше замовлення на цей напрямок');
 
   try {

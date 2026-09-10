@@ -61,7 +61,10 @@ function loadProbeToken_() {
 function loadTest(perDir) {
   perDir = perDir || 39;                      // скільки "магазинів" на напрямок
   var keys = Object.keys(DIRECTIONS);
-  var url = ScriptApp.getService().getUrl();
+  // getUrl() у редакторі часто віддає /dev - це адреса для розробки,
+  // вона вимагає входу в акаунт і на зовнішній запит віддає сторінку логіна.
+  // Тест має йти на /exec - розгорнуту версію.
+  var url = ScriptApp.getService().getUrl().replace(/\/dev$/, '/exec');
   var token = loadProbeToken_();
 
   // службові листи створюємо заздалегідь, щоб їх не створювали 156 виконань одночасно
@@ -74,6 +77,25 @@ function loadTest(perDir) {
       .setFontWeight('bold');
   });
   SpreadsheetApp.flush();
+
+  // пробний постріл: перевіряємо, що адреса взагалі відповідає нашим JSON
+  var probe = UrlFetchApp.fetch(url + '?load=bread&n=probe&k=' +
+    encodeURIComponent(token), { muteHttpExceptions: true });
+  var probeBody = probe.getContentText();
+  var probeOk = false;
+  try { probeOk = !!JSON.parse(probeBody).dir; } catch (e) {}
+  if (!probeOk) {
+    console.log('СТОП: пробний запит не повернув JSON.');
+    console.log('Адреса: ' + url);
+    console.log('Код відповіді: ' + probe.getResponseCode());
+    console.log('Початок відповіді: ' + probeBody.slice(0, 300));
+    console.log('---');
+    console.log('Найімовірніша причина: веб-застосунок не розгорнуто НОВОЮ ВЕРСІЄЮ,');
+    console.log('тому за адресою /exec працює старий код, який ще не знає про loadProbe_.');
+    console.log('Розгорнути: Розгорнути -> Керувати розгортаннями -> олівець -> Версія: Нова.');
+    return;
+  }
+  console.log('Пробний запит пройшов, стріляємо.');
 
   // запити впереміш, як у житті: не всі хлібні підряд
   var reqs = [];
