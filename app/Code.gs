@@ -4,6 +4,7 @@
 
 function doGet(e) {
   var p = (e && e.parameter) || {};
+  rememberAppUrl_();                      // адреса розгортання оновлюється сама
   if (p.ok) return lateApprovePage_(p);   // кнопка "Дозволити" з листа закупниці
   if (p.load) return loadProbe_(p);       // навантажувальний тест, Maintenance.gs
 

@@ -120,6 +120,11 @@ function loadTest(perDir, onlyDir) {
       console.log('   "Хто має доступ" = УСІ (не "Тільки я" і не "Будь-хто з акаунтом Google").');
       console.log('Це ж стосується і продавців: із закритим доступом застосунок');
       console.log('вимагатиме входу в Google на кожному телефоні.');
+    } else if (probe.getResponseCode() === 404) {
+      console.log('404: за цією адресою розгортання вже немає - схоже, створено нове.');
+      console.log('Відкрийте застосунок у браузері за актуальним посиланням -');
+      console.log('адреса запишеться сама. Потім a04_checkWebApp().');
+      PropertiesService.getScriptProperties().deleteProperty('WEB_APP_URL');
     } else {
       console.log('Схоже, розгорнуто стару версію коду, яка не знає про loadProbe_.');
       console.log('   Розгорнути -> Керувати розгортаннями -> олівець -> Версія: Нова.');

@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-10-19';
+const APP_VERSION = '2026-09-10-20';
 
 // true - замовлення падають у тестові листи і нікуди не йдуть
 const TEST_MODE = false;
@@ -95,6 +95,21 @@ const DIRECTIONS = {
 // входу в акаунт. Тому робочу адресу зберігаємо окремо: a03_setWebAppUrl().
 // Під час справжнього запиту від продавця getUrl() віддає правильну /exec,
 // тож властивість потрібна тільки для запусків з редактора.
+// Під час СПРАВЖНЬОГО запиту getUrl() віддає правильну /exec - запам'ятовуємо.
+// Достатньо один раз відкрити застосунок у браузері після нового
+// розгортання, і адреса оновиться сама.
+function rememberAppUrl_() {
+  try {
+    var u = ScriptApp.getService().getUrl();
+    if (!u || u.indexOf('/exec') < 0) return;
+    var p = PropertiesService.getScriptProperties();
+    if (p.getProperty('WEB_APP_URL') !== u) {
+      p.setProperty('WEB_APP_URL', u);
+      console.log('Записано робочу адресу: ' + u);
+    }
+  } catch (e) {}
+}
+
 function appUrl_() {
   try {
     var saved = PropertiesService.getScriptProperties().getProperty('WEB_APP_URL');

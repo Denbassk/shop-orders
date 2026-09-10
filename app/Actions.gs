@@ -93,7 +93,19 @@ function a04_checkWebApp() {
   }
   var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
   var body = r.getContentText();
-  console.log('Код відповіді: ' + r.getResponseCode());
+  var code = r.getResponseCode();
+  console.log('Код відповіді: ' + code);
+
+  if (code === 404) {
+    console.log('ПРОБЛЕМА: за цією адресою нічого немає - розгортання видалено');
+    console.log('або створено НОВЕ, з іншою адресою.');
+    console.log('Полагодити найпростіше так: відкрийте застосунок у браузері');
+    console.log('за актуальним посиланням - адреса запишеться сама.');
+    console.log('Або впишіть її руками в a03_setWebAppUrl().');
+    PropertiesService.getScriptProperties().deleteProperty('WEB_APP_URL');
+    console.log('Стару адресу прибрано зі сховища.');
+    return;
+  }
 
   if (body.indexOf('accounts.google.com') >= 0 || body.indexOf('/v3/signin') >= 0) {
     console.log('ПРОБЛЕМА: Google вимагає входу в акаунт.');
