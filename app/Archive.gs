@@ -64,7 +64,7 @@ function archiveOne_(dirKey, cutoff) {
   }).length;
   if (stray) {
     console.log(cfg.title + ': дати вперемішку (' + stray + ' свіжих серед старих) - пропускаю, ' +
-                'розберіться руками або запустіть archiveOneRebuild_("' + dirKey + '")');
+                'запустіть d05_archiveRebuildHere() з цим напрямком');
     return;
   }
 
