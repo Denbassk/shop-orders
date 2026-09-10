@@ -61,11 +61,12 @@ function loadProbeToken_() {
 function loadTest(perDir) {
   perDir = perDir || 39;                      // скільки "магазинів" на напрямок
   var keys = Object.keys(DIRECTIONS);
-  // getUrl() у редакторі часто віддає /dev - це адреса для розробки,
-  // вона вимагає входу в акаунт і на зовнішній запит віддає сторінку логіна.
-  // Тест має йти на /exec - розгорнуту версію.
-  var url = ScriptApp.getService().getUrl().replace(/\/dev$/, '/exec');
+  var url = appUrl_().replace(/\/dev$/, '/exec');
   var token = loadProbeToken_();
+  if (url.indexOf('/exec') < 0) {
+    console.log('СТОП: не знаю робочої адреси застосунку. Запустіть a03_setWebAppUrl().');
+    return;
+  }
 
   // службові листи створюємо заздалегідь, щоб їх не створювали 156 виконань одночасно
   keys.forEach(function (k) {
@@ -90,9 +91,17 @@ function loadTest(perDir) {
     console.log('Код відповіді: ' + probe.getResponseCode());
     console.log('Початок відповіді: ' + probeBody.slice(0, 300));
     console.log('---');
-    console.log('Найімовірніша причина: веб-застосунок не розгорнуто НОВОЮ ВЕРСІЄЮ,');
-    console.log('тому за адресою /exec працює старий код, який ще не знає про loadProbe_.');
-    console.log('Розгорнути: Розгорнути -> Керувати розгортаннями -> олівець -> Версія: Нова.');
+    if (probeBody.indexOf('accounts.google.com') >= 0 || probeBody.indexOf('signin') >= 0) {
+      console.log('Google повернув сторінку входу. Отже розгортання закрите:');
+      console.log('   Розгорнути -> Керувати розгортаннями -> олівець ->');
+      console.log('   "Хто має доступ" = УСІ (не "Тільки я" і не "Будь-хто з акаунтом Google").');
+      console.log('Це ж стосується і продавців: із закритим доступом застосунок');
+      console.log('вимагатиме входу в Google на кожному телефоні.');
+    } else {
+      console.log('Схоже, розгорнуто стару версію коду, яка не знає про loadProbe_.');
+      console.log('   Розгорнути -> Керувати розгортаннями -> олівець -> Версія: Нова.');
+    }
+    console.log('Перевірити адресу: a04_checkWebApp()');
     return;
   }
   console.log('Пробний запит пройшов, стріляємо.');

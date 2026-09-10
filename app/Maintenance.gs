@@ -9,7 +9,7 @@
 // і екран вибору точки більше не показується. Найнадійніший захист
 // від "натиснув сусідню Бучму".
 function storeLinks() {
-  var base = ScriptApp.getService().getUrl();
+  var base = appUrl_();
   var rows = loadStores_().map(function (s) {
     return [s.label, s.code, base + '?tt=' + encodeURIComponent(s.id)];
   });

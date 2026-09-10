@@ -45,6 +45,52 @@ function a02_clearCache() {
   invalidateAppCache();
 }
 
+/** Запам'ятати РОБОЧУ адресу застосунку. Впишіть її нижче і запустіть.
+ *  Взяти: Розгорнути -> Керувати розгортаннями -> копіювати "Веб-додаток".
+ *  Має закінчуватись на /exec. Потрібно один раз і після кожного
+ *  СТВОРЕННЯ нового розгортання (не після зміни версії). */
+function a03_setWebAppUrl() {
+  var URL = 'ВСТАВТЕ_СЮДИ_АДРЕСУ_ЩО_ЗАКІНЧУЄТЬСЯ_НА_EXEC';
+
+  if (URL.indexOf('/exec') < 0) {
+    console.log('Адреса має закінчуватись на /exec. Зараз: ' + URL);
+    console.log('Розгорнути -> Керувати розгортаннями -> копіювати посилання веб-додатка.');
+    return;
+  }
+  PropertiesService.getScriptProperties().setProperty('WEB_APP_URL', URL);
+  console.log('Записано: ' + URL);
+  a04_checkWebApp();
+}
+
+/** Перевірити, що робоча адреса жива і відкрита для всіх. */
+function a04_checkWebApp() {
+  var url = appUrl_();
+  console.log('Адреса застосунку: ' + url);
+  if (url.indexOf('/dev') >= 0) {
+    console.log('Це адреса ЧЕРНЕТКИ. Продавці нею користуватись не зможуть.');
+    console.log('Запустіть a03_setWebAppUrl() з робочою адресою.');
+    return;
+  }
+  var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+  var body = r.getContentText();
+  console.log('Код відповіді: ' + r.getResponseCode());
+
+  if (body.indexOf('accounts.google.com') >= 0 || body.indexOf('/v3/signin') >= 0) {
+    console.log('ПРОБЛЕМА: Google вимагає входу в акаунт.');
+    console.log('Розгортання закрите. Розгорнути -> Керувати розгортаннями -> олівець ->');
+    console.log('   "Хто має доступ" = УСІ.');
+    console.log('Поки так - продавець на телефоні побачить сторінку входу Google,');
+    console.log('а кнопка "Дозволити" в листі закупниці не спрацює.');
+    return;
+  }
+  if (body.indexOf('Фемелі') >= 0 || body.indexOf('Оберіть торгову точку') >= 0) {
+    console.log('OK: застосунок відкривається без входу в акаунт.');
+  } else {
+    console.log('Відповідь незрозуміла, початок:');
+    console.log(body.slice(0, 300));
+  }
+}
+
 
 // ============ 2. ПЕРЕВІРКИ ============
 
@@ -93,7 +139,8 @@ function c02_measureWrite() {
   measureWriteAll();
 }
 
-/** ЗАЛП: 39 точок x 4 напрямки одночасно. Потрібен свіжий деплой. */
+/** ЗАЛП: 39 точок x 4 напрямки одночасно.
+ *  Потрібні: a03_setWebAppUrl + свіже розгортання + доступ "Усі". */
 function c03_loadTest() {
   loadTest();
 }

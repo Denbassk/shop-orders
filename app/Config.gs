@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-10-15';
+const APP_VERSION = '2026-09-10-16';
 
 // true - замовлення падають у тестові листи і нікуди не йдуть
 const TEST_MODE = false;
@@ -88,6 +88,20 @@ const DIRECTIONS = {
     }
   }
 };
+
+// Адреса розгорнутого застосунку.
+// ScriptApp.getService().getUrl() у РЕДАКТОРІ віддає адресу чернетки (/dev),
+// а не робочого розгортання - у неї інший ідентифікатор і вона вимагає
+// входу в акаунт. Тому робочу адресу зберігаємо окремо: a03_setWebAppUrl().
+// Під час справжнього запиту від продавця getUrl() віддає правильну /exec,
+// тож властивість потрібна тільки для запусків з редактора.
+function appUrl_() {
+  try {
+    var saved = PropertiesService.getScriptProperties().getProperty('WEB_APP_URL');
+    if (saved) return saved;
+  } catch (e) {}
+  return ScriptApp.getService().getUrl();
+}
 
 function dirCfg_(key) {
   const c = DIRECTIONS[key];

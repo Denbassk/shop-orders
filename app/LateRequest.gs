@@ -117,7 +117,7 @@ function lateToken_(dirKey, storeId, day) {
 
 function lateApproveUrl_(dirKey, storeId) {
   var day = nowKyiv_().day;
-  return ScriptApp.getService().getUrl() +
+  return appUrl_() +
     '?ok=' + encodeURIComponent(dirKey) +
     '&st=' + encodeURIComponent(storeId) +
     '&d='  + encodeURIComponent(day) +
