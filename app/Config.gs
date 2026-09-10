@@ -65,7 +65,7 @@ const DIRECTIONS = {
     subtitle: 'від постачальника',
     color: '#2E7D32',
     deadline: '18:00',
-    step: 0.5,
+    step: 1,
     spreadsheetId: '1HbvDCuMMJe7GI4zQyDxkyqVWahTPtWf5vNuMFLEXIC0',
     rawSheet: '_Сырые_Заказы_Овочі',
     testSheet: '_Тест_Заказы_Овочі',
@@ -102,3 +102,4 @@ function statusKey_(dirKey, store) {
   const a = store[cfg.addressAlias];
   return addrKey_(cfg.shortAddr ? shortenAddress_(a) : a);
 }
+
