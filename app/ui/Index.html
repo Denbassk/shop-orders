@@ -379,7 +379,9 @@ function goBack(){
   else if (S.screen==='dir') { S.q=''; screenStore(); }
 }
 /* ---------- автооновлення: продавець нічого не натискає ---------- */
-var HB_MS = 45000;
+/* Розкид 40-55 с, щоб 37 телефонів не били по серверу в одну й ту саму
+   секунду і не збивали кеш статусів усі разом. */
+function hbDelay(){ return 40000 + Math.floor(Math.random() * 15000); }
 
 function beat(){
   if (!S.boot) return;
@@ -418,7 +420,7 @@ function showUpd(){
   document.body.appendChild(b);
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) beat(); });
-setInterval(beat, HB_MS);
+(function tick(){ setTimeout(function(){ beat(); tick(); }, hbDelay()); })();
 
 /* ---------- дозамовлення після дедлайну ---------- */
 function askLate(){
