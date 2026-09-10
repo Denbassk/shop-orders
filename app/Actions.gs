@@ -201,6 +201,15 @@ function d01_archive() {
   showRawSizes();
 }
 
+/** Повне перезбирання архіву одного напрямку - якщо дати переплутані.
+ *  Звичайний d01_archive викликає це сам, коли бачить потребу. */
+function d05_archiveRebuildHere() {
+  var DIR = 'bakery';       // bread | nbhz | bakery | veg
+  archiveRebuild(DIR);
+  console.log('');
+  showRawSizes();
+}
+
 /** Прибрати старі ключі у властивостях. Тригером раз на добу. */
 function d02_cleanupProps() {
   cleanupOldOrderIds();

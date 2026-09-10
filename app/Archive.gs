@@ -99,15 +99,36 @@ function archiveOne_(dirKey, cutoff) {
   } finally {
     dirLockRelease_(dirKey, tok);
   }
+
+  // Швидкий прохід ріже лише префікс і зупиняється на першому свіжому
+  // рядку. Якщо дати лежать не строго по порядку, за ним могли лишитись
+  // старі - тоді доганяємо повним перезбиранням.
+  if (hasOlderRows_(sh, cutoff)) {
+    console.log(cfg.title + ': дати не по порядку, доганяю повним перезбиранням');
+    archiveOneRebuild_(dirKey, cutoff);
+  }
+}
+
+function hasOlderRows_(sh, cutoff) {
+  if (sh.getLastRow() < 2) return false;
+  var col = sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues();
+  for (var i = 0; i < col.length; i++) {
+    var d = (col[i][0] instanceof Date) ? col[i][0] : parseDMY_(String(col[i][0]));
+    if (d && d < cutoff) return true;
+  }
+  return false;
 }
 
 // Повне перезбирання листа - на випадок, якщо дати лежать не по порядку
-function archiveOneRebuild_(dirKey, keepDays) {
-  var cfg = dirCfg_(dirKey);
+function archiveRebuild(dirKey, keepDays) {
   var cutoff = new Date();
   cutoff.setHours(0, 0, 0, 0);
   cutoff.setDate(cutoff.getDate() - ((keepDays || KEEP_DAYS) - 1));
+  archiveOneRebuild_(dirKey, cutoff);
+}
 
+function archiveOneRebuild_(dirKey, cutoff) {
+  var cfg = dirCfg_(dirKey);
   var ss = SpreadsheetApp.openById(cfg.spreadsheetId);
   var sh = ss.getSheetByName(rawSheetName_(cfg));
   if (!sh || sh.getLastRow() < 2) { console.log('порожньо'); return; }
