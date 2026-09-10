@@ -21,6 +21,11 @@ function apiProducts_(payload) {
     };
   });
 
+  var lateSt = cfg.lateRequest ? lateRequestStatus_(dirKey, store.id) : null;
+  var approved = lateSt === 'approved';
+  var closed = deadlinePassed_(dirKey, store.id);
+  var already = isOrderedToday_(dirKey, store);
+
   var cats = [];
   if (cfg.hasCategories) {
     products.forEach(function (p) {
@@ -37,10 +42,13 @@ function apiProducts_(payload) {
     minOrder: Math.round(cfg.minOrder * cfg.markup * 100) / 100,
     categories: cats,
     products: products,
-    closed: deadlinePassed_(dirKey, store.id),
-    canRequestLate: !!cfg.lateRequest,
-    lateRequest: cfg.lateRequest ? lateRequestStatus_(dirKey, store.id) : null,
-    alreadyOrdered: isOrderedToday_(dirKey, store)
+    closed: closed,
+    alreadyOrdered: already,
+    // locked - кнопка "Відправити" вимкнена. Дозвіл закупниці знімає обидва замки:
+    // і дедлайн, і "сьогодні вже замовляли" (інакше добавку зробити неможливо).
+    locked: (closed || already) && !approved,
+    canRequestLate: !!cfg.lateRequest && (closed || already),
+    lateRequest: lateSt
   };
 }
 
@@ -153,8 +161,11 @@ function apiSubmitOrder_(payload) {
     var again = seenOrder_(orderId);
     if (again) { again.duplicate = true; return again; }
 
-    if (isOrderedToday_(dirKey, store))
-      throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено');
+    var approvedNow = !!cfg.lateRequest &&
+      lateRequestStatus_(dirKey, store.id) === 'approved';
+    if (isOrderedToday_(dirKey, store) && !approvedNow)
+      throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
+        (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
 
     var now = new Date();
     var ctx = {
