@@ -24,25 +24,28 @@ function loadProbe_(p) {
   var t0 = Date.now();
   try {
     if (String(p.k || '') !== loadProbeToken_()) throw new Error('forbidden');
-
     var cfg = dirCfg_(out.dir);
-    var tok = dirLockAcquire_(out.dir, 30000);
-    out.waitMs = Date.now() - t0;
 
-    if (!tok) {
-      out.error = 'BUSY';
-    } else {
+    // Точно той самий шлях, що й у справжньої відправки:
+    // коротко глобальний замок на перевірку, потім запис без замка.
+    var g = LockService.getScriptLock();
+    var got = g.tryLock(SUBMIT_WAIT_MS);
+    out.waitMs = Date.now() - t0;
+    if (!got) { out.error = 'BUSY'; }
+    else {
       try {
-        var t1 = Date.now();
-        var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(LOAD_SHEET);
-        if (!sh) throw new Error('немає листа ' + LOAD_SHEET + ' - спершу loadTest()');
-        sh.getRange(sh.getLastRow() + 1, 1, 1, 4)
-          .setValues([[new Date(), out.dir, out.n, out.waitMs]]);
-        SpreadsheetApp.flush();
-        out.writeMs = Date.now() - t1;
-      } finally {
-        dirLockRelease_(out.dir, tok);
-      }
+        PropertiesService.getScriptProperties().getProperty('probe_' + out.dir);
+      } finally { try { g.releaseLock(); } catch (e) {} }
+
+      var t1 = Date.now();
+      if (typeof Sheets === 'undefined') throw new Error('Sheets API не увімкнено');
+      Sheets.Spreadsheets.Values.append(
+        { values: [[formatDateDMY_(new Date()), out.dir, out.n, out.waitMs]] },
+        cfg.spreadsheetId,
+        "'" + LOAD_SHEET + "'!A1",
+        { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' }
+      );
+      out.writeMs = Date.now() - t1;
     }
   } catch (e) {
     out.error = String((e && e.message) || e);

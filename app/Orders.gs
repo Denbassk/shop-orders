@@ -96,31 +96,72 @@ function seenOrder_(orderId) {
 }
 
 // ============================================================
-// ЗАМОК НА НАПРЯМОК, А НЕ НА ВЕСЬ СКРИПТ
+// ЗАПИС ЗАМОВЛЕННЯ БЕЗ ЧЕРГИ
 //
-// Гонка можлива лише між двома записами в ОДИН і той самий лист:
-// обидва рахують getLastRow() і пишуть в один рядок. Різні напрямки -
-// різні таблиці, їм ділити нічого.
+// Черга була потрібна через getLastRow() + setValues: два виконання
+// рахували один і той самий вільний рядок і писали одне поверх одного.
 //
-// LockService дає тільки глобальний замок на весь скрипт. Тому робимо
-// поверх нього чотири окремі: глобальний береться на 20-30 мс, щоб
-// атомарно зайняти "busy_<напрямок>", і одразу відпускається. Сам запис
-// у таблицю (найдовша частина) іде вже без нього.
+// Sheets API вміє дописувати рядки АТОМАРНО на своєму боці: append
+// сам знаходить кінець таблиці і вставляє рядки. Ніякого читання,
+// ніякого замка - скільки б телефонів не тиснули "Відправити"
+// одночасно, вони не заважають одне одному взагалі.
 //
-// Підсумок: хліб і овочі пишуться одночасно. Черга лишається тільки
-// всередині одного напрямку - і вона там потрібна.
+// Глобальний замок лишився в одному місці і на 30-50 мс: щоб дві
+// відправки з однієї точки не проскочили обидві. Це два звернення
+// до властивостей, без жодного читання таблиці.
 // ============================================================
-var DIR_LOCK_TTL_MS = 45000;   // якщо виконання впало - замок сам протухне
-// Скільки чекати своєї черги. За замірами один запис коштує 0.6-1.05 с,
-// тож 39 точок одного напрямку разом - це до 41 с черги.
-var SUBMIT_WAIT_MS = 75000;
+var USE_SHEETS_API = true;     // false - повернутись до старого шляху з замком
+var SUBMIT_WAIT_MS = 75000;    // скільки чекати свою чергу на коротку перевірку
+var DIR_LOCK_TTL_MS = 45000;   // для archiveRawSheets, див. нижче
 
+function appendRows_(cfg, dirKey, values) {
+  var sheetName = rawSheetName_(cfg);
+  if (!USE_SHEETS_API || typeof Sheets === 'undefined')
+    return appendRowsLocked_(cfg, dirKey, sheetName, values);
+
+  var bcCol = cfg.hasBarcodes ? ((dirKey === 'bread' || dirKey === 'nbhz') ? 4 : 5) : 0;
+  var rows = values.map(function (r) {
+    var out = r.slice();
+    if (out[0] instanceof Date) out[0] = formatDateDMY_(out[0]);
+    // апостроф не видно в комірці, але він не дає перетворити штрихкод на число
+    if (bcCol && out[bcCol - 1] !== '' && out[bcCol - 1] != null)
+      out[bcCol - 1] = "'" + String(out[bcCol - 1]);
+    return out;
+  });
+
+  Sheets.Spreadsheets.Values.append(
+    { values: rows },
+    cfg.spreadsheetId,
+    "'" + sheetName + "'!A1",
+    { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' }
+  );
+}
+
+// Старий шлях - на випадок, якщо треба вимкнути Sheets API
+function appendRowsLocked_(cfg, dirKey, sheetName, values) {
+  var g = LockService.getScriptLock();
+  if (!g.tryLock(SUBMIT_WAIT_MS)) throw new Error('BUSY: сервер зайнятий');
+  try {
+    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(sheetName);
+    if (!sh) throw new Error('Не знайдено лист "' + sheetName + '" у таблиці "' + cfg.title + '"');
+    var startRow = Math.max(sh.getLastRow() + 1, 2);
+    var width = values[0].length;
+    sh.getRange(startRow, 1, values.length, width).setValues(values);
+    sh.getRange(startRow, 1, values.length, 1).setNumberFormat('dd.MM.yyyy');
+    if (cfg.hasBarcodes) {
+      var bcCol = (dirKey === 'bread' || dirKey === 'nbhz') ? 4 : 5;
+      sh.getRange(startRow, bcCol, values.length, 1).setNumberFormat('@');
+    }
+    SpreadsheetApp.flush();
+  } finally { try { g.releaseLock(); } catch (e) {} }
+}
+
+// --- замок напрямку лишився тільки для архівування (нічний тригер) ---
 function dirLockAcquire_(dirKey, waitMs) {
   var token = Utilities.getUuid();
   var props = PropertiesService.getScriptProperties();
   var key = 'busy_' + dirKey;
   var deadline = Date.now() + (waitMs || 30000);
-
   while (Date.now() < deadline) {
     var g = LockService.getScriptLock();
     var got = false;
@@ -228,65 +269,69 @@ function apiSubmitOrder_(payload) {
       (Math.round(totalSupplier * cfg.markup * 100) / 100) + ' грн');
   }
 
-  var lockToken = dirLockAcquire_(dirKey, SUBMIT_WAIT_MS);
-  if (!lockToken) throw new Error('BUSY: зараз відправляється інше замовлення на цей напрямок');
+  var props = PropertiesService.getScriptProperties();
+  var markKey = orderMarkKey_(dirKey, store);
+  var todayStr = formatDateDMY_(new Date());
 
+  // Швидка відмова ПОЗА замком. Читання сирого листа буває лише один раз
+  // на добу на точку - поки позначки ще немає.
+  var already = (props.getProperty(markKey) === todayStr);
+  if (!already) already = isOrderedToday_(dirKey, store);
+  if (already && !approvedNow)
+    throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
+      (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
+
+  // Єдине місце із замком: 30-50 мс, два звернення до властивостей.
+  // Тут дві одночасні відправки з ОДНІЄЇ точки розходяться.
+  var claimed = false;
+  var g = LockService.getScriptLock();
+  if (!g.tryLock(SUBMIT_WAIT_MS))
+    throw new Error('BUSY: сервер зайнятий, спробуйте ще раз');
   try {
     var again = seenOrder_(orderId);
     if (again) { again.duplicate = true; return again; }
 
-    var props = PropertiesService.getScriptProperties();
-    var markKey = orderMarkKey_(dirKey, store);
-    var todayStr = formatDateDMY_(new Date());
-    var already = (props.getProperty(markKey) === todayStr);
-    if (!already) already = isOrderedToday_(dirKey, store);   // перший раз за добу
-
-    if (already && !approvedNow)
-      throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
-        (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
-
-    var now = new Date();
-    var ctx = {
-      dateStr: now,
-      timeStr: formatTime_(now),
-      address: store[cfg.addressAlias],
-      shortAddress: shortenAddress_(store[cfg.addressAlias]),
-      route: store[cfg.routeAlias || 'route'] || store.route || '',
-      store: store
-    };
-
-    var values = lines.map(function (p) { return cfg.rawRow(ctx, p); });
-
-    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-    if (!sh) throw new Error('Не знайдено лист "' + rawSheetName_(cfg) +
-      '" у таблиці напрямку "' + cfg.title + '". Створіть його або перевірте назву в Config.gs.');
-
-    var startRow = Math.max(sh.getLastRow() + 1, 2);
-    var width = values[0].length;
-    sh.getRange(startRow, 1, values.length, width).setValues(values);
-
-    sh.getRange(startRow, 1, values.length, 1).setNumberFormat('dd.MM.yyyy');
-    if (cfg.hasBarcodes) {
-      var bcCol = (dirKey === 'bread' || dirKey === 'nbhz') ? 4 : 5;
-      sh.getRange(startRow, bcCol, values.length, 1).setNumberFormat('@');
+    if (!approvedNow) {
+      if (props.getProperty(markKey) === todayStr)
+        throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
+          (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
+      props.setProperty(markKey, todayStr);
+      claimed = true;
     }
-    SpreadsheetApp.flush();
-
-    try { props.setProperty(markKey, todayStr); } catch (e) {}
-    CacheService.getScriptCache().remove('status_v3');
-
-    var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;
-    console.log((TEST_MODE ? '[ТЕСТ] ' : '') + 'Замовлення ' + dirKey + ' / ' + store.label +
-      ': ' + lines.length + ' позицій, ' + totalShown + ' грн');
-
-    var result = {
-      ok: true, positions: lines.length, total: totalShown,
-      time: formatTime_(now), date: formatDateDMY_(now),
-      direction: cfg.title, store: store.label, test: TEST_MODE
-    };
-    rememberOrder_(orderId, result);
-    return result;
   } finally {
-    dirLockRelease_(dirKey, lockToken);
+    try { g.releaseLock(); } catch (e) {}
   }
+
+  // Запис - БЕЗ замка. Sheets API дописує атомарно на своєму боці.
+  var now = new Date();
+  var ctx = {
+    dateStr: now,
+    timeStr: formatTime_(now),
+    address: store[cfg.addressAlias],
+    shortAddress: shortenAddress_(store[cfg.addressAlias]),
+    route: store[cfg.routeAlias || 'route'] || store.route || '',
+    store: store
+  };
+  var values = lines.map(function (p) { return cfg.rawRow(ctx, p); });
+
+  try {
+    appendRows_(cfg, dirKey, values);
+  } catch (e) {
+    if (claimed) { try { props.deleteProperty(markKey); } catch (e2) {} }
+    throw e;
+  }
+
+  CacheService.getScriptCache().remove('status_v3');
+
+  var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;
+  console.log((TEST_MODE ? '[ТЕСТ] ' : '') + 'Замовлення ' + dirKey + ' / ' + store.label +
+    ': ' + lines.length + ' позицій, ' + totalShown + ' грн');
+
+  var result = {
+    ok: true, positions: lines.length, total: totalShown,
+    time: formatTime_(now), date: formatDateDMY_(now),
+    direction: cfg.title, store: store.label, test: TEST_MODE
+  };
+  rememberOrder_(orderId, result);
+  return result;
 }
