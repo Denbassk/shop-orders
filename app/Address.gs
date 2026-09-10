@@ -24,6 +24,7 @@ function shortenAddress_(address) {
 function addrKey_(address) {
   var s = String(address || '').toLowerCase()
     .replace(/[\u2019''`"]/g, '')
+    .replace(/пр[\-\s]*т(?=[\s.,]|$)/g, 'прт')
     .replace(/[^a-zа-яіїєґё0-9\/]+/gi, ' ')
     .replace(/\s+/g, ' ').trim();
   if (!s) return '';
