@@ -195,6 +195,47 @@ function matchNbhzRoutes() {
               '. Незіставлені - у листі "_Сверка_НБХЗ" таблиці НБХЗ');
 }
 
+// --- Діагностика: чому НБХЗ не видно в застосунку ---
+function whyNoNbhz() {
+  invalidateAppCache();
+
+  var reg = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  var n = reg.getLastRow() - 1;
+  if (n < 1) { console.log('Довідник ТТ порожній'); return; }
+
+  var rows = reg.getRange(2, 1, n, 16).getValues();
+  var active = 0, flagged = 0, withAddr = 0, noRoute = 0;
+  rows.forEach(function (r) {
+    if (r[0] !== true || !String(r[2]).trim()) return;
+    active++;
+    if (r[13] !== true) return;
+    flagged++;
+    if (!String(r[14]).trim()) noRoute++;
+    if (String(r[15]).trim()) withAddr++;
+  });
+
+  console.log('1. Активних ТТ у Довіднику: ' + active);
+  console.log('2. З галочкою "Хліб НБХЗ" (кол. N): ' + flagged +
+              (flagged ? '' : '   <- запустіть matchNbhzRoutes()'));
+  console.log('3. З адресою НБХЗ (кол. P): ' + withAddr);
+  if (noRoute) console.log('   без маршруту (кол. O): ' + noRoute);
+
+  var prods = 0;
+  try { prods = loadProducts_('nbhz').length; }
+  catch (e) { console.log('4. Ассортимент: ПОМИЛКА ' + e.message); }
+  if (prods !== null) console.log('4. Позицій в асортименті: ' + prods +
+              (prods ? '' : '   <- запустіть rebuildNbhzProducts()'));
+
+  var seen = [];
+  loadStores_().forEach(function (s) { if (s.directions.indexOf('nbhz') >= 0) seen.push(s.label); });
+  console.log('5. Точок, де застосунок покаже НБХЗ: ' + seen.length);
+  if (seen.length) console.log('   напр.: ' + seen.slice(0, 5).join(' | '));
+
+  console.log('6. Версія коду: ' + APP_VERSION + ', дедлайн ' + dirCfg_('nbhz').deadline +
+              ', зараз ' + (deadlinePassed_('nbhz') ? 'ЗАКРИТО' : 'відкрито'));
+  console.log('Якщо тут усе гаразд, а на телефоні НБХЗ немає - потрібен НОВИЙ ДЕПЛОЙ.');
+}
+
 // Ключ, стійкий до рос/укр написання адреси
 function fuzzyKey_(s) {
   return addrKey_(s)
