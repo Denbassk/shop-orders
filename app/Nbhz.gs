@@ -236,6 +236,35 @@ function whyNoNbhz() {
   console.log('Якщо тут усе гаразд, а на телефоні НБХЗ немає - потрібен НОВИЙ ДЕПЛОЙ.');
 }
 
+// --- Що саме записано в Довіднику по НБХЗ (колонки N, O, P) ---
+function showNbhzInRegistry() {
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  var n = sh.getLastRow() - 1;
+  if (n < 1) { console.log('Довідник порожній'); return; }
+  var rows = sh.getRange(2, 1, n, 16).getValues();
+
+  var out = [], byRoute = {}, noRoute = 0;
+  rows.forEach(function (r) {
+    if (r[13] !== true) return;
+    var route = String(r[14] || '').trim();
+    if (!route) { route = '(порожньо)'; noRoute++; }
+    out.push([route, String(r[1] || '').trim(), String(r[15] || '').trim()]);
+    byRoute[route] = (byRoute[route] || 0) + 1;
+  });
+  out.sort(function (a, b) {
+    return a[0].localeCompare(b[0], 'uk') || a[1].localeCompare(b[1], 'uk');
+  });
+
+  console.log('У Довіднику ТТ: N = "Хліб НБХЗ", O = "Маршрут НБХЗ", P = "Адреса НБХЗ".');
+  console.log('Це 14-16 колонки - ПРАВОРУЧ від "Примітка" і трьох колонок адрес, треба прокрутити лист.');
+  console.log('Точок НБХЗ: ' + out.length + ', маршрутів: ' +
+              Object.keys(byRoute).length + (noRoute ? ', без маршруту: ' + noRoute : ''));
+  Object.keys(byRoute).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+    .forEach(function (k) { console.log('   ' + k + ' - ' + byRoute[k] + ' точок'); });
+  console.log('--- маршрут | ТТ | адреса для заводу ---');
+  out.forEach(function (r) { console.log(r[0] + '  |  ' + r[1] + '  |  ' + r[2]); });
+}
+
 // Ключ, стійкий до рос/укр написання адреси
 function fuzzyKey_(s) {
   return addrKey_(s)
