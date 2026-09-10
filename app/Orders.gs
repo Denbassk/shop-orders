@@ -36,6 +36,7 @@ function apiProducts_(payload) {
     minOrder: Math.round(cfg.minOrder * cfg.markup * 100) / 100,
     categories: cats,
     products: products,
+    closed: deadlinePassed_(dirKey),
     alreadyOrdered: isOrderedToday_(dirKey, store)
   };
 }
@@ -106,6 +107,9 @@ function apiSubmitOrder_(payload) {
 
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
+  if (deadlinePassed_(dirKey))
+    throw new Error('Прийом замовлень на "' + cfg.title + '" на сьогодні закрито (до ' +
+      cfg.deadline + '). Замовлення можна передати телефоном закупниці.');
   if (!items.length) throw new Error('Замовлення порожнє');
   if (items.length > 500) throw new Error('Занадто багато позицій');
 
@@ -191,3 +195,4 @@ function apiSubmitOrder_(payload) {
     lock.releaseLock();
   }
 }
+

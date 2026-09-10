@@ -213,7 +213,7 @@ function openStore(s){
       '<div class="ic">' + icon(k) + '</div>' +
       '<div class="t"><div class="a">' + esc(d.title) + '</div><div class="b">' +
       esc(d.subtitle) + (d.deadline ? ' · до ' + d.deadline : '') + '</div></div>' +
-      '<div class="tag">' + (done ? 'Готово' : 'Замовити') + '</div></div>';
+      '<div class="tag">' + (done ? 'Відправлено' : (d.closed ? 'Закрито' : 'Замовити')) + '</div></div>';
   });
   h += '<div class="legend">Напрямки незалежні: можна замовити зараз одне, ' +
        'а решту — пізніше.</div>' +
@@ -242,6 +242,8 @@ function drawProd(){
   });
   var h='';
   if (d.alreadyOrdered) h += '<div class="err">Замовлення на сьогодні вже відправлено</div>';
+  if (d.closed) h += '<div class="err">Прийом на сьогодні закрито (до ' + esc(dir.deadline) +
+    '). Якщо потрібно терміново — зателефонуйте закупниці.</div>';
   h += '<input class="search" id="q" placeholder="Пошук товару…" value="' + esc(S.q) + '">';
   if (d.categories && d.categories.length){
     h += '<div class="chips"><div class="chip' + (S.cat?'':' act') +
@@ -297,7 +299,7 @@ function drawBot(){
   el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum"><b>' + money(t) +
     ' грн</b>' + n + ' поз.' + (low ? ' · <span class="warn">мінімум ' + money(min) +
     ' грн</span>' : '') + '</div><button class="btn" id="send"' +
-    (!n||low ? ' disabled' : '') + ' onclick="send()">Відправити</button></div></div>';
+    (!n||low||S.prod.closed ? ' disabled' : '') + ' onclick="send()">Відправити</button></div></div>';
 }
 function send(){
   var items = Object.keys(S.cart).map(function(id){ return { id:id, qty:S.cart[id] }; });
@@ -330,5 +332,6 @@ start();
 </script>
 </body>
 </html>
+
 
 

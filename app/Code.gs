@@ -51,7 +51,7 @@ function apiBootstrap_() {
       key: c.key, title: c.title, subtitle: c.subtitle,
       color: c.color, unit: c.unit, deadline: c.deadline, step: c.step,
       minOrder: Math.round(c.minOrder * c.markup * 100) / 100,
-      hasCategories: c.hasCategories
+      hasCategories: c.hasCategories, closed: deadlinePassed_(k)
     };
   });
 
@@ -71,3 +71,4 @@ function apiBootstrap_() {
     today: formatDateDMY_(new Date()), testMode: TEST_MODE
   };
 }
+
