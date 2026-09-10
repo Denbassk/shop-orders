@@ -5,6 +5,7 @@
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.ok) return lateApprovePage_(p);   // кнопка "Дозволити" з листа закупниці
+  if (p.load) return loadProbe_(p);       // навантажувальний тест, Maintenance.gs
 
   return HtmlService.createTemplateFromFile('ui/Index')
     .evaluate()
