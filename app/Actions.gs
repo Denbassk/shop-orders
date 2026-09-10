@@ -220,6 +220,31 @@ function d03_storeLinks() {
   writeStoreLinksSheet();
 }
 
+/** Поставити розклад: чистка щодня о 3:00, архівування щопонеділка о 4:00.
+ *  Запустити ОДИН РАЗ. Повторний запуск просто перестворює ті самі тригери. */
+function d06_installTriggers() {
+  var mine = { d01_archive: 1, d02_cleanupProps: 1 };
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (mine[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
+  });
+
+  ScriptApp.newTrigger('d02_cleanupProps').timeBased().everyDays(1).atHour(3).create();
+  ScriptApp.newTrigger('d01_archive').timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(4).create();
+
+  console.log('Розклад поставлено:');
+  d07_showTriggers();
+}
+
+/** Що зараз стоїть у розкладі. */
+function d07_showTriggers() {
+  var all = ScriptApp.getProjectTriggers();
+  if (!all.length) { console.log('Тригерів немає. Запустіть d06_installTriggers().'); return; }
+  all.forEach(function (t) {
+    console.log('   ' + t.getHandlerFunction() + '  (' + t.getEventType() + ')');
+  });
+}
+
 /** Прибрати тестові листи і старі листи "Дозволи". Разово. */
 function d04_dropOldSheets() {
   dropTestSheets();
