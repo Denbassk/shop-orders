@@ -14,10 +14,10 @@
 // Кому слати листи. Кілька адрес - через кому.
 // Порожньо = запит зафіксується, але нікого не сповістить.
 var LATE_MAIL = {
-  bread: '',
-  nbhz:  '',
-  bakery: '',
-  veg:   ''
+  bread:  'svetlanalesakor@gmail.com',
+  nbhz:   'svetlanalesakor@gmail.com',
+  veg:    'svetlanalesakor@gmail.com',
+  bakery: 'haikora1004@gmail.com'
 };
 
 // --- сховище: одна властивість на напрямок ---
