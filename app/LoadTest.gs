@@ -41,16 +41,16 @@ function loadProbe_(p) {
       if (typeof Sheets === 'undefined') throw new Error('Sheets API не увімкнено');
       var row = [[formatDateDMY_(new Date()), out.dir, out.n, out.waitMs]];
       out.quota = 0;
-      for (var att = 0; att < 3; att++) {
+      for (var att = 0; att < 2; att++) {
         try { apiAppend_(cfg.spreadsheetId, LOAD_SHEET, row); break; }
         catch (e) {
           if (!isQuotaError_(e)) throw e;
           out.quota++;
-          if (att < 2) { Utilities.sleep(1500 + Math.floor(Math.random() * 4000)); continue; }
+          if (att === 0) { Utilities.sleep(700 + Math.floor(Math.random() * 1500)); continue; }
           out.fallback = 1;
           var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(LOAD_SHEET);
           var gg = LockService.getScriptLock();
-          if (gg.tryLock(30000)) {
+          if (gg.tryLock(20000)) {
             try { sh.getRange(sh.getLastRow() + 1, 1, 1, 4).setValues(row); SpreadsheetApp.flush(); }
             finally { try { gg.releaseLock(); } catch (e2) {} }
           } else { out.error = 'BUSY'; }
@@ -72,9 +72,18 @@ function loadProbeToken_() {
 }
 
 // --- сам залп ---
-function loadTest(perDir) {
-  perDir = perDir || 39;                      // скільки "магазинів" на напрямок
-  var keys = Object.keys(DIRECTIONS);
+// perDir  - скільки "магазинів" на напрямок
+// onlyDir - якщо вказано, стріляємо лише по цьому напрямку
+//
+// РЕАЛЬНИЙ ПІК: усі 39 точок одного напрямку в одну секунду -> loadTest(39, 'bread').
+// СУДНИЙ ДЕНЬ:  39 точок одразу по всіх чотирьох -> loadTest(39).
+//   Такого не буває: дедлайни рознесені 13:00 / 16:00 / 17:30 / 18:00.
+//   Цей режим упреться у квоту Sheets API (60 записів за хвилину) і піде
+//   запасним шляхом через замок - тобто триватиме кілька хвилин. Це не
+//   зависання, це і є поведінка під немислимим навантаженням.
+function loadTest(perDir, onlyDir) {
+  perDir = perDir || 39;
+  var keys = onlyDir ? [onlyDir] : Object.keys(DIRECTIONS);
   var url = appUrl_().replace(/\/dev$/, '/exec');
   var token = loadProbeToken_();
   if (url.indexOf('/exec') < 0) {
@@ -135,7 +144,10 @@ function loadTest(perDir) {
   }
 
   console.log('Залп: ' + reqs.length + ' одночасних запитів (' +
-              perDir + ' точок x ' + keys.length + ' напрямки)');
+              perDir + ' точок x ' + keys.length + ' напрямк(и))');
+  if (reqs.length > 60)
+    console.log('УВАГА: більше 60 записів за хвилину - частина впреться у квоту ' +
+                'Sheets API і піде через замок. Залп триватиме кілька хвилин.');
   console.log('Адреса: ' + url);
 
   var t0 = Date.now();

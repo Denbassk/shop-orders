@@ -150,17 +150,24 @@ function appendRows_(cfg, dirKey, values) {
     return out;
   });
 
-  for (var attempt = 0; attempt < 3; attempt++) {
-    try {
-      apiAppend_(cfg.spreadsheetId, sheetName, rows);
-      return;
-    } catch (e) {
-      if (!isQuotaError_(e)) throw e;
-      if (attempt < 2) { Utilities.sleep(1500 + Math.floor(Math.random() * 4000)); continue; }
-      console.log('Квота Sheets API вичерпана - пишемо через замок');
-      return appendRowsLocked_(cfg, dirKey, sheetName, values);
-    }
+  try {
+    apiAppend_(cfg.spreadsheetId, sheetName, rows);
+    return;
+  } catch (e) {
+    if (!isQuotaError_(e)) throw e;
   }
+
+  // Одна коротка пауза - раптом квота вивільнилась - і одразу запасний шлях.
+  // Довгі повтори тут неприпустимі: продавець чекає на екрані.
+  Utilities.sleep(700 + Math.floor(Math.random() * 1500));
+  try {
+    apiAppend_(cfg.spreadsheetId, sheetName, rows);
+    return;
+  } catch (e2) {
+    if (!isQuotaError_(e2)) throw e2;
+  }
+  console.log('Квота Sheets API вичерпана - пишемо через замок');
+  appendRowsLocked_(cfg, dirKey, sheetName, values);
 }
 
 // Старий шлях - на випадок, якщо треба вимкнути Sheets API
