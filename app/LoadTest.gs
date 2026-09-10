@@ -39,12 +39,23 @@ function loadProbe_(p) {
 
       var t1 = Date.now();
       if (typeof Sheets === 'undefined') throw new Error('Sheets API не увімкнено');
-      Sheets.Spreadsheets.Values.append(
-        { values: [[formatDateDMY_(new Date()), out.dir, out.n, out.waitMs]] },
-        cfg.spreadsheetId,
-        "'" + LOAD_SHEET + "'!A1",
-        { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' }
-      );
+      var row = [[formatDateDMY_(new Date()), out.dir, out.n, out.waitMs]];
+      out.quota = 0;
+      for (var att = 0; att < 3; att++) {
+        try { apiAppend_(cfg.spreadsheetId, LOAD_SHEET, row); break; }
+        catch (e) {
+          if (!isQuotaError_(e)) throw e;
+          out.quota++;
+          if (att < 2) { Utilities.sleep(1500 + Math.floor(Math.random() * 4000)); continue; }
+          out.fallback = 1;
+          var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(LOAD_SHEET);
+          var gg = LockService.getScriptLock();
+          if (gg.tryLock(30000)) {
+            try { sh.getRange(sh.getLastRow() + 1, 1, 1, 4).setValues(row); SpreadsheetApp.flush(); }
+            finally { try { gg.releaseLock(); } catch (e2) {} }
+          } else { out.error = 'BUSY'; }
+        }
+      }
       out.writeMs = Date.now() - t1;
     }
   } catch (e) {
@@ -133,7 +144,9 @@ function loadTest(perDir) {
 
   // --- розбір ---
   var byDir = {}, http = {}, parsed = 0, busy = 0, errs = {};
-  keys.forEach(function (k) { byDir[k] = { wait: [], write: [], total: [], busy: 0, err: 0 }; });
+  keys.forEach(function (k) {
+    byDir[k] = { wait: [], write: [], total: [], busy: 0, err: 0, quota: 0, fallback: 0 };
+  });
 
   res.forEach(function (r) {
     var code = r.getResponseCode();
@@ -152,6 +165,8 @@ function loadTest(perDir) {
     b.wait.push(o.waitMs || 0);
     b.write.push(o.writeMs || 0);
     b.total.push(o.totalMs || 0);
+    if (o.quota) b.quota += o.quota;
+    if (o.fallback) b.fallback++;
   });
 
   function stat(a) {
@@ -175,7 +190,9 @@ function loadTest(perDir) {
     console.log(dirCfg_(k).title + ' | ' + w.n + ' | ' +
       w.p50 + ' / ' + w.p90 + ' / ' + w.max + ' мс | ' +
       wr.p50 + ' / ' + wr.max + ' мс' +
-      (b.busy ? '  ВІДМОВ: ' + b.busy : ''));
+      (b.busy ? '  ВІДМОВ: ' + b.busy : '') +
+      (b.quota ? '  впертись у квоту: ' + b.quota : '') +
+      (b.fallback ? ', з них пішли через замок: ' + b.fallback : ''));
   });
 
   var allTotal = [];

@@ -114,6 +114,27 @@ var USE_SHEETS_API = true;     // false - повернутись до старо
 var SUBMIT_WAIT_MS = 75000;    // скільки чекати свою чергу на коротку перевірку
 var DIR_LOCK_TTL_MS = 45000;   // для archiveRawSheets, див. нижче
 
+// Одне замовлення = один виклик append, скільки б у ньому не було позицій.
+// У Sheets API є квота: 60 запитів на запис за хвилину на користувача.
+// Реально це 60 замовлень за хвилину - більше за будь-який реальний пік
+// (148 замовлень на добу). Але якщо квота таки скінчилась, ми не відмовляємо
+// продавцю: чекаємо і пробуємо ще раз, а потім пишемо старим шляхом із
+// замком - у нього своєї квоти немає.
+function apiAppend_(spreadsheetId, sheetName, rows) {
+  Sheets.Spreadsheets.Values.append(
+    { values: rows },
+    spreadsheetId,
+    "'" + sheetName + "'!A1",
+    { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' }
+  );
+}
+
+function isQuotaError_(e) {
+  var m = String((e && e.message) || e);
+  return m.indexOf('Quota exceeded') >= 0 || m.indexOf('RATE_LIMIT') >= 0 ||
+         m.indexOf('rateLimitExceeded') >= 0;
+}
+
 function appendRows_(cfg, dirKey, values) {
   var sheetName = rawSheetName_(cfg);
   if (!USE_SHEETS_API || typeof Sheets === 'undefined')
@@ -129,12 +150,17 @@ function appendRows_(cfg, dirKey, values) {
     return out;
   });
 
-  Sheets.Spreadsheets.Values.append(
-    { values: rows },
-    cfg.spreadsheetId,
-    "'" + sheetName + "'!A1",
-    { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' }
-  );
+  for (var attempt = 0; attempt < 3; attempt++) {
+    try {
+      apiAppend_(cfg.spreadsheetId, sheetName, rows);
+      return;
+    } catch (e) {
+      if (!isQuotaError_(e)) throw e;
+      if (attempt < 2) { Utilities.sleep(1500 + Math.floor(Math.random() * 4000)); continue; }
+      console.log('Квота Sheets API вичерпана - пишемо через замок');
+      return appendRowsLocked_(cfg, dirKey, sheetName, values);
+    }
+  }
 }
 
 // Старий шлях - на випадок, якщо треба вимкнути Sheets API
