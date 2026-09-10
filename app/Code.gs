@@ -13,8 +13,6 @@ function include(file) {
   return HtmlService.createHtmlOutputFromFile(file).getContent();
 }
 
-// Єдина точка входу для клієнта.
-// Формат відповіді: { ok: true, data } або { ok: false, error }
 function api(action, payload) {
   payload = payload || {};
   try {
@@ -23,6 +21,8 @@ function api(action, payload) {
       case 'bootstrap':   data = apiBootstrap_(); break;
       case 'products':    data = apiProducts_(payload); break;
       case 'submitOrder': data = apiSubmitOrder_(payload); break;
+      case 'requestLate': data = apiRequestLate_(payload); break;
+      case 'refresh':     data = apiRefresh_(payload); break;
       default: throw new Error('Невідома дія: ' + action);
     }
     return { ok: true, data: data };
@@ -32,7 +32,6 @@ function api(action, payload) {
   }
 }
 
-// Той самий роутер по HTTP - для майбутнього переїзду на Cloudflare
 function doPost(e) {
   var body = {};
   try { body = JSON.parse(e.postData.contents); } catch (err) {}
@@ -61,14 +60,37 @@ function apiBootstrap_() {
       const map = status[k];
       ordered[k] = map ? !!map[statusKey_(k, s)] : false;
     });
-    // route і code навмисно НЕ віддаємо на телефон - вони потрібні лише
-    // постачальнику у вивантаженні закупниці
     return { id: s.id, label: s.label, directions: s.directions, ordered: ordered };
   });
 
   return {
-    stores: list, directions: dirs,
+    stores: list, directions: dirs, version: APP_VERSION,
     today: formatDateDMY_(new Date()), testMode: TEST_MODE
   };
 }
 
+// Легкий пінг для автооновлення телефонів
+function apiRefresh_(payload) {
+  payload = payload || {};
+  const status = loadTodayStatus_();
+  const ordered = {};
+  loadStores_().forEach(function (s) {
+    const o = {};
+    s.directions.forEach(function (k) {
+      const m = status[k];
+      o[k] = m ? !!m[statusKey_(k, s)] : false;
+    });
+    ordered[s.id] = o;
+  });
+
+  const closed = {};
+  Object.keys(DIRECTIONS).forEach(function (k) { closed[k] = deadlinePassed_(k); });
+
+  return {
+    version: APP_VERSION,
+    today: formatDateDMY_(new Date()),
+    ordered: ordered,
+    closed: closed,
+    late: (payload.dir && payload.storeId) ? lateRequestStatus_(payload.dir, payload.storeId) : 'none'
+  };
+}

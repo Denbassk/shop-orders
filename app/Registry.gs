@@ -1,15 +1,19 @@
 // ============================================================
 // ДОВІДНИК ТТ + СТАТУС ЗАМОВЛЕНЬ
+// A Активна | B Назва | C Адреса | D Обл.номер | E Маршрут (Рома)
+// F Тип | G Хліб | H Випічка | I Овочі | J Примітка
+// K Адреса Хліб | L Адреса Випічка | M Адреса Овочі
+// N Хліб НБХЗ | O Маршрут НБХЗ | P Адреса НБХЗ
 // ============================================================
 
 function loadStores_() {
-  const cached = cacheGet_('registry_v2');
+  const cached = cacheGet_('registry_v3');
   if (cached) return cached;
 
   const sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
   if (!sh || sh.getLastRow() < 2) return [];
 
-  const stores = sh.getRange(2, 1, sh.getLastRow() - 1, 13).getValues()
+  const stores = sh.getRange(2, 1, sh.getLastRow() - 1, 16).getValues()
     .filter(function (r) { return r[0] === true && String(r[2]).trim(); })
     .map(function (r) {
       const addr = String(r[2]).trim();
@@ -18,19 +22,21 @@ function loadStores_() {
         label: String(r[1] || '').trim() || addr,
         address: addr,
         code: String(r[3] || '').trim(),
-        route: String(r[4] || '').trim(),   // тільки для запису в таблицю постачальника
+        route: String(r[4] || '').trim(),
         type: String(r[5] || 'Магазин').trim(),
         addrBread: String(r[10] || '').trim() || addr,
         addrBakery: String(r[11] || '').trim() || addr,
         addrVeg: String(r[12] || '').trim() || addr,
-        directions: [r[6] === true && 'bread', r[7] === true && 'bakery', r[8] === true && 'veg']
-          .filter(Boolean)
+        addrNbhz: String(r[15] || '').trim() || addr,
+        routeNbhz: String(r[14] || '').trim(),
+        directions: [r[6] === true && 'bread', r[13] === true && 'nbhz',
+                     r[7] === true && 'bakery', r[8] === true && 'veg'].filter(Boolean)
       };
     })
     .filter(function (s) { return s.directions.length; })
     .sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
 
-  cachePut_('registry_v2', stores, 600);
+  cachePut_('registry_v3', stores, 600);
   return stores;
 }
 
@@ -40,10 +46,8 @@ function findStore_(storeId) {
   throw new Error('Торгову точку не знайдено. Оновіть сторінку.');
 }
 
-// Статус на сьогодні окремо по кожному напрямку.
-// Точка може замовити хліб зранку, овочі ввечері - напрямки незалежні.
 function loadTodayStatus_() {
-  const cached = cacheGet_('status_v2');
+  const cached = cacheGet_('status_v3');
   if (cached) return cached;
 
   const today = formatDateDMY_(new Date());
@@ -55,21 +59,20 @@ function loadTodayStatus_() {
     try {
       const sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
       if (!sh || sh.getLastRow() < 2) return;
-      // A = дата, C = адреса - однаково в усіх трьох листах
       sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().forEach(function (r) {
         const d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
         if (d === today) {
           const a = String(r[2]).trim();
-          if (a) status[k][addrKey_(a)] = true;   // addrKey_ зрівнює повну і скорочену адресу
+          if (a) status[k][addrKey_(a)] = true;
         }
       });
     } catch (e) {
       console.error('Статус ' + k + ': ' + e.message);
-      status[k] = null;   // не змогли перевірити - НЕ блокуємо замовлення
+      status[k] = null;
     }
   });
 
-  cachePut_('status_v2', status, 60);
+  cachePut_('status_v3', status, 60);
   return status;
 }
 
@@ -86,7 +89,7 @@ function formatTime_(d) {
 
 function canonKey_(s) {
   return String(s || '').toLowerCase()
-    .replace(/[\u2019''`]/g, '')
+    .replace(/[\u2019\u0027\u0060]/g, '')
     .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ')
     .replace(/\s+/g, ' ').trim();
 }
@@ -104,7 +107,7 @@ function cachePut_(k, data, sec) {
 }
 
 function invalidateAppCache() {
-  CacheService.getScriptCache().removeAll(['registry_v1', 'registry_v2', 'status_v1', 'status_v2',
-    'products_bread', 'products_bakery', 'products_veg']);
+  CacheService.getScriptCache().removeAll(['registry_v2', 'registry_v3', 'status_v2', 'status_v3',
+    'prod_bread', 'prod_nbhz', 'prod_bakery', 'prod_veg']);
   console.log('Кеш очищено');
 }

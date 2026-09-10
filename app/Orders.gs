@@ -14,7 +14,7 @@ function apiProducts_(payload) {
     return {
       id: p.id,
       name: p.name,
-      price: Math.round(p.price * cfg.markup * 100) / 100,   // те, що бачить продавець
+      price: Math.round(p.price * cfg.markup * 100) / 100,
       category: p.category || null,
       availability: p.availability || null,
       box: p.box || null
@@ -36,7 +36,9 @@ function apiProducts_(payload) {
     minOrder: Math.round(cfg.minOrder * cfg.markup * 100) / 100,
     categories: cats,
     products: products,
-    closed: deadlinePassed_(dirKey),
+    closed: deadlinePassed_(dirKey, store.id),
+    canRequestLate: !!cfg.lateRequest,
+    lateRequest: cfg.lateRequest ? lateRequestStatus_(dirKey, store.id) : null,
     alreadyOrdered: isOrderedToday_(dirKey, store)
   };
 }
@@ -61,9 +63,7 @@ function isOrderedToday_(dirKey, store) {
   return false;
 }
 
-// --- Захист від повторної відправки при обриві зв'язку ---
-// Телефон генерує orderId один раз. Якщо відповідь не дійшла і продавець
-// натиснув ще раз - сервер віддає збережений результат, а не пише дублі.
+// --- Захист від повторної відправки при обриві зв язку ---
 function seenOrder_(orderId) {
   if (!orderId) return null;
   try {
@@ -81,7 +81,6 @@ function rememberOrder_(orderId, result) {
   } catch (e) {}
 }
 
-// Прибираємо ключі старші за сьогодні, щоб не переповнити сховище
 function cleanupOrderIds_(props) {
   try {
     var today = formatDateDMY_(new Date());
@@ -103,17 +102,23 @@ function apiSubmitOrder_(payload) {
   var orderId = String(payload.orderId || '').slice(0, 60);
 
   var prev = seenOrder_(orderId);
-  if (prev) { prev.duplicate = true; return prev; }   // повтор тієї ж відправки
+  if (prev) { prev.duplicate = true; return prev; }
 
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
-  if (deadlinePassed_(dirKey))
-    throw new Error('Прийом замовлень на "' + cfg.title + '" на сьогодні закрито (до ' +
-      cfg.deadline + '). Замовлення можна передати телефоном закупниці.');
+
+  if (deadlinePassed_(dirKey, store.id)) {
+    throw new Error(cfg.lateRequest
+      ? 'Прийом на "' + cfg.title + '" закрито (до ' + cfg.deadline +
+        '). Натисніть "Попросити дозвіл" або зателефонуйте закупниці.'
+      : 'Прийом замовлень на "' + cfg.title + '" на сьогодні закрито (до ' + cfg.deadline +
+        '). Замовлення можна передати телефоном закупниці.');
+  }
+
   if (!items.length) throw new Error('Замовлення порожнє');
   if (items.length > 500) throw new Error('Занадто багато позицій');
 
-  // Ціни беремо ЛИШЕ з сервера - клієнту не довіряємо
+  // Ціни беремо ЛИШЕ з сервера
   var priceMap = {};
   loadProducts_(dirKey).forEach(function (p) { priceMap[String(p.id)] = p; });
 
@@ -144,7 +149,6 @@ function apiSubmitOrder_(payload) {
   if (!lock.tryLock(30000)) throw new Error('Сервер зайнятий, спробуйте через 10 секунд');
 
   try {
-    // Друга перевірка вже під блокуванням - на випадок двох телефонів одночасно
     var again = seenOrder_(orderId);
     if (again) { again.duplicate = true; return again; }
 
@@ -153,10 +157,11 @@ function apiSubmitOrder_(payload) {
 
     var now = new Date();
     var ctx = {
-      dateStr: now,                                   // у листах дата зберігається як Date
+      dateStr: now,
       timeStr: formatTime_(now),
       address: store[cfg.addressAlias],
       shortAddress: shortenAddress_(store[cfg.addressAlias]),
+      route: store[cfg.routeAlias || 'route'] || store.route || '',
       store: store
     };
 
@@ -164,21 +169,20 @@ function apiSubmitOrder_(payload) {
 
     var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
     if (!sh) throw new Error('Не знайдено лист "' + rawSheetName_(cfg) +
-      '". Запустіть setupTestSheets().');
+      '". Запустіть setupTestSheets() або setupNbhz().');
 
     var startRow = Math.max(sh.getLastRow() + 1, 2);
     var width = values[0].length;
     sh.getRange(startRow, 1, values.length, width).setValues(values);
 
-    // Формати - щоб нові рядки виглядали як існуючі
     sh.getRange(startRow, 1, values.length, 1).setNumberFormat('dd.MM.yyyy');
     if (cfg.hasBarcodes) {
-      var bcCol = (dirKey === 'bread') ? 4 : 5;
+      var bcCol = (dirKey === 'bread' || dirKey === 'nbhz') ? 4 : 5;
       sh.getRange(startRow, bcCol, values.length, 1).setNumberFormat('@');
     }
     SpreadsheetApp.flush();
 
-    CacheService.getScriptCache().remove('status_v2');
+    CacheService.getScriptCache().remove('status_v3');
 
     var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;
     console.log((TEST_MODE ? '[ТЕСТ] ' : '') + 'Замовлення ' + dirKey + ' / ' + store.label +
@@ -195,4 +199,3 @@ function apiSubmitOrder_(payload) {
     lock.releaseLock();
   }
 }
-

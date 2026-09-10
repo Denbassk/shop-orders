@@ -37,13 +37,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
 .cell .nm{font-size:17px;font-weight:700;line-height:1.25}
 .cell .dots{display:flex;gap:5px;margin-top:10px}
 .dot{width:11px;height:11px;border-radius:50%;background:#d7dae0}
-.dot.b{background:#8D6E63}.dot.n{background:#5D4037}.dot.k{background:#E65100}.dot.v{background:#2E7D32}
-.upd{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#16181d;color:#fff;
-     text-align:center;padding:13px;font-size:15px;font-weight:700;cursor:pointer}
-.lt{background:#fff8e1;border:2px solid #ffb300;color:#7a5200;padding:14px;border-radius:13px;
-    margin-bottom:11px;font-size:15px;font-weight:600;line-height:1.45}
-.lt button{margin-top:10px;width:100%;background:#ffb300;color:#16181d;border:0;
-           border-radius:11px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
+.dot.b{background:#8D6E63}.dot.k{background:#E65100}.dot.v{background:#2E7D32}
 .dot.done{background:#c7cbd1;box-shadow:inset 0 0 0 2px #fff}
 .legend{font-size:12px;color:#6b7280;text-align:center;padding:14px 4px 0;line-height:1.6}
 
@@ -137,7 +131,6 @@ var ICONS = {
   bakery:'<svg viewBox="0 0 24 24"><path d="M6.2 12h11.6l-1.3 6.6a1.5 1.5 0 0 1-1.5 1.2H9a1.5 1.5 0 0 1-1.5-1.2L6.2 12Z"/><path d="M8.6 12a2.9 2.9 0 0 1-.5-5.7 3.4 3.4 0 0 1 6.4-1.4A2.9 2.9 0 0 1 18 7.7a2.9 2.9 0 0 1-2.2 4.3"/><path d="M12 12v7.8"/></svg>',
   veg:'<svg viewBox="0 0 24 24"><path d="M10.8 9.6 4.7 18.4a1 1 0 0 0 1.3 1.4l9.6-4.6a3.8 3.8 0 0 0 1.3-6l-.6-.6a3.8 3.8 0 0 0-5.5 1Z"/><path d="M14.6 7.4 16.2 4M17.2 9.2 20.4 8"/></svg>'
 };
-ICONS.nbhz = '<svg viewBox="0 0 24 24"><path d="M4.2 14.2c0-3.6 3.5-6.3 7.8-6.3s7.8 2.7 7.8 6.3c0 1-.8 1.8-1.8 1.8H6c-1 0-1.8-.8-1.8-1.8Z"/><path d="M6 18.6h12"/><path d="M9.4 10.8 8.3 12.7M12.3 10.8 11.2 12.7M15.2 10.8 14.1 12.7"/><path d="M12 7.9V5.4"/></svg>';
 function icon(k){ return ICONS[k] || ICONS.bread; }
 
 function call(action, payload){
@@ -156,7 +149,7 @@ function uuid(){ return 'o' + Date.now().toString(36) + Math.random().toString(3
 
 function start(){
   call('bootstrap').then(function(d){
-    S.boot = d; S.ver = d.version;
+    S.boot = d;
     if (d.testMode) el('test-bar').innerHTML =
       '<div class="test">ТЕСТОВИЙ РЕЖИМ — замовлення не потраплять у роботу</div>';
     el('dt').textContent = d.today;
@@ -184,9 +177,9 @@ function screenStore(){
   h += '<div class="grid">';
   if (!list.length) h += '<div class="msg">Нічого не знайдено</div>';
   list.forEach(function(s, i){
-    var dots = ['bread','nbhz','bakery','veg'].map(function(k){
+    var dots = ['bread','bakery','veg'].map(function(k){
       if (s.directions.indexOf(k) < 0) return '';
-      var cls = {bread:'b',nbhz:'n',bakery:'k',veg:'v'}[k] || 'b';
+      var cls = k==='bread'?'b':(k==='bakery'?'k':'v');
       return '<div class="dot ' + (s.ordered[k] ? 'done' : cls) + '"></div>';
     }).join('');
     h += '<div class="cell" onclick="pick(' + i + ')"><div class="nm">' + esc(s.label) +
@@ -335,84 +328,6 @@ function goBack(){
   if (S.screen==='prod') openStore(S.store);
   else if (S.screen==='dir') { S.q=''; screenStore(); }
 }
-/* ---------- автооновлення: продавець нічого не натискає ---------- */
-var HB_MS = 45000;
-
-function beat(){
-  if (!S.boot) return;
-  call('refresh', { storeId: S.store ? S.store.id : '', dir: S.dir || '' }).then(function(d){
-    if (S.ver && d.version !== S.ver) return needReload();
-    if (d.today !== S.boot.today) return needReload();
-
-    S.boot.stores.forEach(function(s){ if (d.ordered[s.id]) s.ordered = d.ordered[s.id]; });
-    Object.keys(d.closed).forEach(function(k){
-      if (S.boot.directions[k]) S.boot.directions[k].closed = d.closed[k];
-    });
-
-    if (S.screen==='store' && document.activeElement !== el('q')) screenStore();
-    else if (S.screen==='dir') openStore(S.store);
-    else if (S.screen==='prod' && S.prod && S.prod.canRequestLate){
-      var was = S.prod.lateRequest;
-      S.prod.lateRequest = d.late;
-      if (d.late === 'approved') S.prod.closed = false;
-      if (was !== d.late) drawProd();
-    }
-  }).catch(function(){});
-}
-function needReload(){
-  if (S.cart && Object.keys(S.cart).length) return showUpd();
-  location.reload();
-}
-function showUpd(){
-  if (el('updbar')) return;
-  var b = document.createElement('div');
-  b.id = 'updbar'; b.className = 'upd';
-  b.textContent = 'Є нова версія - натисніть, щоб оновити';
-  b.onclick = function(){ location.reload(); };
-  document.body.appendChild(b);
-}
-document.addEventListener('visibilitychange', function(){ if (!document.hidden) beat(); });
-setInterval(beat, HB_MS);
-
-/* ---------- дозамовлення після дедлайну ---------- */
-function askLate(){
-  var b = el('askbtn');
-  if (b){ b.disabled = true; b.textContent = 'Надсилаємо...'; }
-  call('requestLate', { dir: S.dir, storeId: S.store.id }).then(function(r){
-    S.prod.lateRequest = r.status;
-    drawProd();
-  }).catch(function(e){
-    alert(e.message || e);
-    if (b){ b.disabled = false; b.textContent = 'Попросити дозвіл'; }
-  });
-}
-/* Малюємо плашку поверх звичайного екрана товарів,
-   не влазячи в саму drawProd. */
-var _drawProd_orig = drawProd;
-drawProd = function(){
-  _drawProd_orig.apply(null, arguments);
-  try { injectLate(); } catch (e) {}
-};
-function injectLate(){
-  var d = S.prod;
-  if (!d || S.screen !== 'prod' || !d.canRequestLate) return;
-  if (el('ltbox')) return;
-  var box = document.createElement('div');
-  box.id = 'ltbox'; box.className = 'lt';
-  if (d.lateRequest === 'approved'){
-    box.innerHTML = 'Закупниця дозволила дозамовлення на сьогодні.';
-  } else if (d.lateRequest === 'pending'){
-    box.innerHTML = 'Запит надіслано закупниці. Щойно вона дозволить - кнопка ' +
-                    '"Відправити" увімкнеться сама, сторінку оновлювати не треба.';
-  } else if (d.closed){
-    box.innerHTML = 'Прийом на сьогодні закрито (до ' + esc(d.deadline) + '). ' +
-                    'Можна попросити дозвіл на дозамовлення.' +
-                    '<button id="askbtn" onclick="askLate()">Попросити дозвіл</button>';
-  } else { return; }
-  var w = el('wrap');
-  w.insertBefore(box, w.firstChild);
-}
-
 start();
 </script>
 </body>
