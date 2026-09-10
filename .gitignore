@@ -6,3 +6,4 @@ node_modules/
 Thumbs.db
 ~$*
 *.tmp
+_to_delete/
