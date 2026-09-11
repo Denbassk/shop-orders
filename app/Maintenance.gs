@@ -164,6 +164,46 @@ function whyNoProducts(dirKey) {
     (dirKey === 'bakery' ? 'наявність' : 'шт в ящику'));
 }
 
+// --- Перейменувати торгову точку ---
+// Міняє ЛИШЕ колонку B "Назва для продавця" - те, що видно на плитці.
+// Адреса в колонці C не чіпається, тому замовлення, статуси і дозволи
+// не ламаються: вони прив'язані до адреси, а не до назви.
+function renameStore(part, newLabel) {
+  newLabel = String(newLabel || '').trim();
+  if (!part || !newLabel) { console.log('Вкажіть частину старої назви і нову назву'); return; }
+
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  var n = sh.getLastRow() - 1;
+  if (n < 1) { console.log('Довідник порожній'); return; }
+
+  var names = sh.getRange(2, 2, n, 1).getValues();
+  var addrs = sh.getRange(2, 3, n, 1).getValues();
+  var q = String(part).toLowerCase();
+
+  var hits = [];
+  for (var i = 0; i < n; i++) {
+    var lbl = String(names[i][0] || '').trim();
+    if (lbl && lbl.toLowerCase().indexOf(q) >= 0)
+      hits.push({ row: i + 2, label: lbl, addr: String(addrs[i][0] || '').trim() });
+  }
+
+  if (!hits.length) { console.log('Не знайдено точку з назвою, що містить "' + part + '"'); return; }
+  if (hits.length > 1) {
+    console.log('Знайдено кілька - уточніть:');
+    hits.forEach(function (h) { console.log('   рядок ' + h.row + ': ' + h.label); });
+    return;
+  }
+
+  var h = hits[0];
+  sh.getRange(h.row, 2).setValue(newLabel);
+  SpreadsheetApp.flush();
+  invalidateAppCache();
+
+  console.log('Рядок ' + h.row + ': "' + h.label + '"  ->  "' + newLabel + '"');
+  console.log('Адреса лишилась: ' + h.addr);
+  console.log('Кеш очищено - нова назва з\'явиться на телефонах протягом хвилини.');
+}
+
 // --- Прибрати чорний фон із рядків замовлень ---
 // Наслідок старого insertDataOption: INSERT_ROWS. Разова процедура.
 function fixRawFormat() {
