@@ -325,7 +325,7 @@ function f05_lateLinkHere() {
  *  Впишіть частину старої назви і нову назву. */
 function f08_renameStoreHere() {
   var OLD = 'Полевая';              // частина назви, яку шукаємо
-  var NEW = 'Полевая-магазин';      // нова назва
+  var NEW = 'Полевая,83 (магазин)'; // нова назва
   renameStore(OLD, NEW);
 }
 
