@@ -164,6 +164,41 @@ function whyNoProducts(dirKey) {
     (dirKey === 'bakery' ? 'наявність' : 'шт в ящику'));
 }
 
+// --- Увімкнути або вимкнути напрямок для торгової точки ---
+// Ставить або знімає галочку у відповідній колонці Довідника.
+var DIR_COL = { bread: 7, bakery: 8, veg: 9, nbhz: 14 };
+
+function setStoreDirection(part, dirKey, on) {
+  var col = DIR_COL[dirKey];
+  if (!col) { console.log('Напрямок: ' + Object.keys(DIR_COL).join(', ')); return; }
+
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  var n = sh.getLastRow() - 1;
+  var labels = sh.getRange(2, 2, n, 1).getValues();
+  var q = String(part || '').toLowerCase();
+
+  var hits = [];
+  for (var i = 0; i < n; i++) {
+    var lbl = String(labels[i][0] || '').trim();
+    if (lbl && lbl.toLowerCase().indexOf(q) >= 0) hits.push({ row: i + 2, label: lbl });
+  }
+  if (!hits.length) { console.log('Не знайдено точку: ' + part); return; }
+  if (hits.length > 1) {
+    console.log('Знайдено кілька - уточніть:');
+    hits.forEach(function (h) { console.log('   ' + h.label); });
+    return;
+  }
+
+  var h = hits[0];
+  sh.getRange(h.row, col).setValue(on === true);
+  if (dirKey === 'veg' && on !== true) sh.getRange(h.row, VEG_DAYS_COL).setValue('');
+  SpreadsheetApp.flush();
+  invalidateAppCache();
+
+  console.log(h.label + ': напрямок "' + dirCfg_(dirKey).title + '" ' +
+              (on === true ? 'УВІМКНЕНО' : 'вимкнено'));
+}
+
 // --- Перейменувати торгову точку ---
 // Міняє ЛИШЕ колонку B "Назва для продавця" - те, що видно на плитці.
 // Адреса в колонці C не чіпається, тому замовлення, статуси і дозволи

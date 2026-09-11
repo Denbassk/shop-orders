@@ -332,6 +332,15 @@ function f05_lateLinkHere() {
   lateLinkFor(DIR, STORE);
 }
 
+/** Увімкнути або вимкнути напрямок для точки (галочка в Довіднику).
+ *  Для овочів вимкнення заодно чистить день у колонці Q. */
+function f09_setDirectionHere() {
+  var STORE = 'Полевая';    // частина назви ТТ
+  var DIR   = 'veg';        // bread | nbhz | bakery | veg
+  var ON    = false;        // true - увімкнути, false - вимкнути
+  setStoreDirection(STORE, DIR, ON);
+}
+
 /** Перейменувати торгову точку (тільки напис на плитці).
  *  Впишіть частину старої назви і нову назву. */
 function f08_renameStoreHere() {
