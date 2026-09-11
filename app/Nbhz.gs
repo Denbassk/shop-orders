@@ -15,11 +15,6 @@
 //   'registry' - правильна адреса з Довідника
 var NBHZ_EXPORT_ADDR = 'factory';
 
-// Нахил назв товарів у шапці вивантаження:
-//   45 - навскіс, компактно (за замовчуванням)
-//    0 - горизонтально, у два рядки, колонки ширші
-//   90 - вертикально, як було у файлі заводу
-var NBHZ_HEAD_ROTATION = 45;
 
 function installNbhz() {
   setupNbhz();
@@ -370,34 +365,113 @@ function buildNbhzExport() {
   // 3. Лист вивантаження
   var name = 'Вивантаження ' + today;
   var out = ss.getSheetByName(name);
-  if (out) out.clear(); else out = ss.insertSheet(name);
+  if (out) {
+    var oldFilter = out.getFilter();
+    if (oldFilter) oldFilter.remove();
+    out.clear();
+    out.clearConditionalFormatRules();
+  } else out = ss.insertSheet(name);
 
-  var rot = NBHZ_HEAD_ROTATION;
-  out.getRange(1, 1, 1, head.length).setValues([head])
-    .setFontWeight('bold').setBackground('#f1f3f4')
-    .setVerticalAlignment('bottom');
-  out.getRange(1, 3, 1, prods.length).setTextRotation(rot).setWrap(rot === 0);
-  out.getRange(1, 1, 1, 2).setTextRotation(0).setVerticalAlignment('middle');
-  out.setRowHeight(1, rot === 0 ? 62 : (rot === 45 ? 150 : 200));
+  var nCols = head.length, nRows = body.length;
+  var firstProd = 3;
 
-  out.getRange(2, 1, body.length, head.length).setValues(body);
-  out.getRange(2, 1, body.length, head.length)
-     .setBackground('#ffffff').setFontColor('#000000').setFontWeight('normal');
-  out.getRange(2, 3, body.length, prods.length).setHorizontalAlignment('center');
-  out.getRange(1, 1, body.length + 1, head.length)
-     .setBorder(true, true, true, true, true, true, '#c8ccd1', SpreadsheetApp.BorderStyle.SOLID);
+  out.getRange(1, 1, 1, nCols).setValues([head]);
+  out.getRange(2, 1, nRows, nCols).setValues(body);
 
-  out.setColumnWidth(1, 120); out.setColumnWidth(2, 210);
-  var colW = (rot === 0) ? 96 : 44;
-  for (var i = 0; i < prods.length; i++) out.setColumnWidth(3 + i, colW);
-  out.setFrozenRows(1); out.setFrozenColumns(2);
+  // --- шапка: горизонтальний текст, перенос, по центру ---
+  var headRange = out.getRange(1, 1, 1, nCols);
+  headRange.setFontWeight('bold').setFontSize(10)
+           .setBackground('#e8eaed').setFontColor('#16181d')
+           .setTextRotation(0).setWrap(true)
+           .setVerticalAlignment('middle').setHorizontalAlignment('center');
+  out.getRange(1, 1, 1, 2).setHorizontalAlignment('left');
+
+  // --- тіло ---
+  var bodyRange = out.getRange(2, 1, nRows, nCols);
+  bodyRange.setFontSize(10).setFontWeight('normal').setWrap(false)
+           .setVerticalAlignment('middle');
+  out.getRange(2, 1, nRows, 2).setHorizontalAlignment('left');
+  out.getRange(2, firstProd, nRows, prods.length).setHorizontalAlignment('center');
+
+  // смужки через рядок + нулі блідим, замовлене - чорним жирним
+  var bg = [], fc = [], fw = [];
+  for (var r = 0; r < nRows; r++) {
+    var stripe = (r % 2) ? '#f6f7f9' : '#ffffff';
+    var bgRow = [], fcRow = [], fwRow = [];
+    for (var c = 0; c < nCols; c++) {
+      bgRow.push(stripe);
+      if (c < 2) { fcRow.push('#16181d'); fwRow.push(c === 0 ? 'bold' : 'normal'); }
+      else {
+        var v = body[r][c];
+        fcRow.push(v > 0 ? '#16181d' : '#c3c7cd');
+        fwRow.push(v > 0 ? 'bold' : 'normal');
+      }
+    }
+    bg.push(bgRow); fc.push(fcRow); fw.push(fwRow);
+  }
+  bodyRange.setBackgrounds(bg).setFontColors(fc).setFontWeights(fw);
+
+  // --- сітка ---
+  out.getRange(1, 1, nRows + 1, nCols)
+     .setBorder(true, true, true, true, true, true, '#9aa0a6', SpreadsheetApp.BorderStyle.SOLID);
+  out.getRange(1, 1, nRows + 1, 2)
+     .setBorder(null, null, null, true, null, null, '#5f6368', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+  out.getRange(1, 1, 1, nCols)
+     .setBorder(null, null, true, null, null, null, '#5f6368', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+  // --- ширини: маршрут і адреса по вмісту, товари однакові ---
+  out.autoResizeColumns(1, 2);
+  out.setColumnWidth(1, Math.min(Math.max(out.getColumnWidth(1) + 14, 96), 170));
+  out.setColumnWidth(2, Math.min(Math.max(out.getColumnWidth(2) + 14, 170), 300));
+  for (var q = 0; q < prods.length; q++) out.setColumnWidth(firstProd + q, 92);
+
+  // висота шапки - під перенесений текст
+  out.autoResizeRows(1, 1);
+  if (out.getRowHeight(1) < 48) out.setRowHeight(1, 48);
+
+  out.setFrozenRows(1);
+  out.setFrozenColumns(2);
+  out.getRange(1, 1, nRows + 1, nCols).createFilter();
+
+  // прибрати зайві порожні колонки і рядки справа-знизу
+  if (out.getMaxColumns() > nCols) out.deleteColumns(nCols + 1, out.getMaxColumns() - nCols);
+  if (out.getMaxRows() > nRows + 1) out.deleteRows(nRows + 2, out.getMaxRows() - (nRows + 1));
+
+  // 4. Посилання, що завантажує ЛИШЕ цей лист у Excel
+  var xlsx = 'https://docs.google.com/spreadsheets/d/' + NBHZ_ID +
+             '/export?format=xlsx&gid=' + out.getSheetId();
+  writeExportLinkSheet_(ss, today, xlsx, out.getSheetId());
 
   var ordered = order.filter(function (k) { return rowsByStore[k].got; }).length;
   console.log('Готово: лист "' + name + '"');
-  console.log('   точок у списку: ' + body.length + ', з них замовили сьогодні: ' + ordered);
+  console.log('   точок у списку: ' + nRows + ', з них замовили сьогодні: ' + ordered);
   console.log('   позицій: ' + prods.length);
-  console.log('   ' + ss.getUrl() + '#gid=' + out.getSheetId());
-  console.log('---');
-  console.log('Щоб надіслати заводу: відкрийте лист -> Файл -> Завантажити -> Excel,');
-  console.log('у діалозі вибору аркушів лишіть тільки "' + name + '".');
+  console.log('   лист: ' + ss.getUrl() + '#gid=' + out.getSheetId());
+  console.log('   ЗАВАНТАЖИТИ ТІЛЬКИ ЦЕЙ ЛИСТ: ' + xlsx);
 }
+
+// Окремий лист із постійним посиланням - його зручно покласти в закладки.
+// Посилання веде на завантаження САМЕ листа вивантаження, а не всієї книги.
+function writeExportLinkSheet_(ss, today, xlsx, gid) {
+  var sh = ss.getSheetByName('Завантаження');
+  if (!sh) sh = ss.insertSheet('Завантаження', 0);
+  sh.clear();
+
+  sh.getRange(1, 1).setValue('ЗАМОВЛЕННЯ ДЛЯ ЗАВОДУ')
+    .setFontSize(16).setFontWeight('bold');
+  sh.getRange(2, 1).setValue('за ' + today).setFontColor('#6b7280');
+
+  sh.getRange(4, 1).setFormula(
+    '=HYPERLINK("' + xlsx + '"; "⬇  ЗАВАНТАЖИТИ EXCEL за ' + today + '")');
+  sh.getRange(4, 1).setFontSize(14).setFontWeight('bold').setFontColor('#1a73e8');
+
+  sh.getRange(6, 1).setValue(
+    'Файл міститиме ТІЛЬКИ таблицю замовлення - решта листів у нього не потрапляє.');
+  sh.getRange(7, 1).setValue(
+    'Посилання оновлюється щодня само. Можна покласти цей лист у закладки.');
+  sh.getRange(6, 1, 2, 1).setFontColor('#6b7280').setFontSize(10);
+
+  sh.setColumnWidth(1, 620);
+  sh.setHiddenGridlines(true);
+}
+
