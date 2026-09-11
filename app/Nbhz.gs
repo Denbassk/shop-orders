@@ -15,6 +15,12 @@
 //   'registry' - правильна адреса з Довідника
 var NBHZ_EXPORT_ADDR = 'factory';
 
+// У вивантаження потрапляє тільки те, що справді замовили:
+//   рядки точок без жодної позиції і колонки, які ніхто не взяв, вирізаються.
+// false - лишати повний список точок і весь асортимент, з нулями.
+var NBHZ_EXPORT_SKIP_EMPTY_ROWS = true;
+var NBHZ_EXPORT_SKIP_EMPTY_COLS = true;
+
 
 function installNbhz() {
   setupNbhz();
@@ -356,10 +362,29 @@ function buildNbhzExport() {
     return A.route.localeCompare(B.route, 'uk') || A.addr.localeCompare(B.addr, 'uk');
   });
 
-  var head = ['Маршрут', 'Адрес Магазина'].concat(prods.map(function (p) { return p.name; }));
-  var body = order.map(function (k) {
+  // --- лишаємо лише те, що замовили ---
+  var keepCols = [];
+  for (var ci = 0; ci < prods.length; ci++) {
+    var used = false;
+    for (var oi = 0; oi < order.length; oi++) {
+      if (rowsByStore[order[oi]].qty[ci] > 0) { used = true; break; }
+    }
+    if (used || !NBHZ_EXPORT_SKIP_EMPTY_COLS) keepCols.push(ci);
+  }
+
+  var keepRows = NBHZ_EXPORT_SKIP_EMPTY_ROWS
+    ? order.filter(function (k) {
+        var q = rowsByStore[k].qty;
+        for (var i = 0; i < q.length; i++) if (q[i] > 0) return true;
+        return false;
+      })
+    : order;
+
+  var head = ['Маршрут', 'Адрес Магазина']
+    .concat(keepCols.map(function (ci) { return prods[ci].name; }));
+  var body = keepRows.map(function (k) {
     var s = rowsByStore[k];
-    return [s.route, s.addr].concat(s.qty);
+    return [s.route, s.addr].concat(keepCols.map(function (ci) { return s.qty[ci]; }));
   });
 
   // 3. Лист вивантаження
@@ -374,6 +399,17 @@ function buildNbhzExport() {
 
   var nCols = head.length, nRows = body.length;
   var firstProd = 3;
+  var nProd = keepCols.length;
+
+  if (!nRows) {
+    out.getRange(1, 1).setValue('Замовлень на ' + today + ' немає')
+       .setFontSize(14).setFontWeight('bold').setFontColor('#b3261e');
+    out.setColumnWidth(1, 420);
+    writeExportLinkSheet_(ss, today, 'https://docs.google.com/spreadsheets/d/' + NBHZ_ID +
+      '/export?format=xlsx&gid=' + out.getSheetId(), out.getSheetId());
+    console.log('На ' + today + ' замовлень немає - лист порожній');
+    return;
+  }
 
   out.getRange(1, 1, 1, nCols).setValues([head]);
   out.getRange(2, 1, nRows, nCols).setValues(body);
@@ -391,7 +427,7 @@ function buildNbhzExport() {
   bodyRange.setFontSize(10).setFontWeight('normal').setWrap(false)
            .setVerticalAlignment('middle');
   out.getRange(2, 1, nRows, 2).setHorizontalAlignment('left');
-  out.getRange(2, firstProd, nRows, prods.length).setHorizontalAlignment('center');
+  out.getRange(2, firstProd, nRows, nProd).setHorizontalAlignment('center');
 
   // смужки через рядок + нулі блідим, замовлене - чорним жирним
   var bg = [], fc = [], fw = [];
@@ -423,7 +459,7 @@ function buildNbhzExport() {
   out.autoResizeColumns(1, 2);
   out.setColumnWidth(1, Math.min(Math.max(out.getColumnWidth(1) + 14, 96), 170));
   out.setColumnWidth(2, Math.min(Math.max(out.getColumnWidth(2) + 14, 170), 300));
-  for (var q = 0; q < prods.length; q++) out.setColumnWidth(firstProd + q, 92);
+  for (var q = 0; q < nProd; q++) out.setColumnWidth(firstProd + q, 92);
 
   // висота шапки - під перенесений текст
   out.autoResizeRows(1, 1);
@@ -442,10 +478,9 @@ function buildNbhzExport() {
              '/export?format=xlsx&gid=' + out.getSheetId();
   writeExportLinkSheet_(ss, today, xlsx, out.getSheetId());
 
-  var ordered = order.filter(function (k) { return rowsByStore[k].got; }).length;
   console.log('Готово: лист "' + name + '"');
-  console.log('   точок у списку: ' + nRows + ', з них замовили сьогодні: ' + ordered);
-  console.log('   позицій: ' + prods.length);
+  console.log('   точок із замовленням: ' + nRows + ' з ' + order.length);
+  console.log('   позицій у вивантаженні: ' + nProd + ' з ' + prods.length);
   console.log('   лист: ' + ss.getUrl() + '#gid=' + out.getSheetId());
   console.log('   ЗАВАНТАЖИТИ ТІЛЬКИ ЦЕЙ ЛИСТ: ' + xlsx);
 }
