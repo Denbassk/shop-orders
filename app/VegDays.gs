@@ -14,7 +14,9 @@
 
 var VEG_DAYS_COL = 17;              // колонка Q
 
-// [ адреса як у Довіднику, дні, (необов'язково) мітка рядка виробництва ]
+// [ адреса як у Довіднику, дні, (необов'язково) частина НАЗВИ точки ]
+// Якщо адреса порожня - рядок шукається за назвою. Це потрібно там,
+// де адреса в Довіднику записана інакше, ніж у графіку.
 var VEG_DAYS = [
   ['м. Харків вул. Амосова, 5А',                'Пн'],
   ['м. Харків вул. Богдана Хмельницького, 8',   'Пн'],
@@ -57,9 +59,10 @@ var VEG_DAYS = [
   ['м. Харків пл. Героїв Небесної Сотні, 14/1', 'Ср, Нд'],
   ['м. Харків пров. Іскринський, 19 В',         'Ср, Нд'],
 
-  // за адресою Семенка 17 два рядки: магазин і виробництво
+  // Семенка 17: магазин і виробництво - два різні рядки Довідника.
+  // Виробництво шукаємо за НАЗВОЮ, бо адреса в нього своя.
   ['м. Харків вул. Михайля Семенка 17',         'Пн, Ср'],
-  ['м. Харків вул. Михайля Семенка 17',         'Пн, Нд', 'виробництво']
+  ['',                                          'Пн, Нд', 'виробництво']
 ];
 
 var DAY_KEYS = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];   // індекс = getDay()
@@ -130,22 +133,54 @@ function setupVegDays() {
 
   var done = {}, notFound = [];
 
-  VEG_DAYS.forEach(function (e) {
-    var addr = e[0], days = e[1], mark = (e[2] || '').toLowerCase();
-    var cand = byAddr[addrKey_(addr)];
-    if (!cand || !cand.length) { notFound.push(addr + '  ->  ' + days); return; }
+  // усі рядки, щоб шукати за назвою
+  var allRows = [];
+  Object.keys(byAddr).forEach(function (k) {
+    byAddr[k].forEach(function (c) { allRows.push(c); });
+  });
 
+  VEG_DAYS.forEach(function (e) {
+    var addr = String(e[0] || '').trim();
+    var days = e[1];
+    var mark = String(e[2] || '').trim().toLowerCase();
+    var what = addr || ('назва містить "' + mark + '"');
     var pick = null;
-    if (cand.length === 1) pick = cand[0];
-    else {
-      // кілька рядків з однією адресою: магазин чи виробництво
-      var isProd = function (c) {
-        var L = c.label.toLowerCase();
-        return L.indexOf('вироб') >= 0 || L.indexOf('произв') >= 0;
-      };
-      var want = cand.filter(function (c) { return mark ? isProd(c) : !isProd(c); });
-      pick = want.length ? want[0] : null;
-      if (!pick) { notFound.push(addr + (mark ? ' (' + mark + ')' : '') + '  ->  ' + days); return; }
+
+    if (!addr) {
+      // шукаємо за назвою точки
+      var byName = allRows.filter(function (c) {
+        return c.label.toLowerCase().indexOf(mark) >= 0;
+      });
+      if (byName.length === 1) pick = byName[0];
+      else if (byName.length > 1) {
+        notFound.push(what + '  ->  ' + days + '  (знайдено кілька: ' +
+          byName.map(function (c) { return c.label; }).join(' / ') + ')');
+        return;
+      }
+    } else {
+      var cand = byAddr[addrKey_(addr)] || [];
+      if (cand.length === 1) pick = cand[0];
+      else if (cand.length > 1 && mark) {
+        var want = cand.filter(function (c) {
+          return c.label.toLowerCase().indexOf(mark) >= 0;
+        });
+        if (want.length === 1) pick = want[0];
+      } else if (cand.length > 1) {
+        // кілька рядків з однією адресою і без уточнення - беремо той,
+        // що НЕ виробництво
+        var plain = cand.filter(function (c) {
+          var L = c.label.toLowerCase();
+          return L.indexOf('вироб') < 0 && L.indexOf('произв') < 0;
+        });
+        if (plain.length === 1) pick = plain[0];
+      }
+    }
+
+    if (!pick) { notFound.push(what + '  ->  ' + days); return; }
+    if (done[pick.row]) {
+      notFound.push(what + '  ->  ' + days + '  (цей рядок уже зайнятий: ' +
+        pick.label + ' = ' + values[pick.idx][0] + ')');
+      return;
     }
 
     values[pick.idx] = [days];
