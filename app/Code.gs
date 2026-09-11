@@ -11,6 +11,9 @@ function doGet(e) {
   return HtmlService.createTemplateFromFile('ui/Index')
     .evaluate()
     .setTitle('Замовлення Фемелі Маркет')
+    .setFaviconUrl(PWA_URL ? PWA_URL + 'icon-192.png' : '')
+    // дозволяємо вбудовування: оболонка-застосунок тримає нас в iframe
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
 }
 

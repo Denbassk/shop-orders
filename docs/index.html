@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Замовлення Фемелі Маркет</title>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16181d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Замовлення">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
+<style>
+html,body{margin:0;padding:0;height:100%;background:#eceef1;overflow:hidden;
+          font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
+#app{position:fixed;inset:0;width:100%;height:100%;border:0;display:block}
+#boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;background:#eceef1;z-index:2;transition:opacity .3s}
+#boot.hide{opacity:0;pointer-events:none}
+#boot img{width:96px;height:96px}
+#boot .t{margin-top:18px;font-size:16px;font-weight:600;color:#16181d}
+#boot .s{margin-top:5px;font-size:13px;color:#8b9098}
+#err{display:none;padding:34px 24px;text-align:center;color:#16181d}
+#err b{color:#b3261e}
+#err a{display:inline-block;margin-top:16px;background:#e11b22;color:#fff;text-decoration:none;
+       padding:14px 24px;border-radius:12px;font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <img src="icon-192.png" alt="">
+  <div class="t">Замовлення</div>
+  <div class="s">Хвилинку, відкриваємо…</div>
+  <div id="err">
+    <b>Не вдалося відкрити застосунок.</b><br>
+    Перевірте інтернет і спробуйте ще раз.
+    <br><a href="" id="again">Спробувати ще раз</a>
+  </div>
+</div>
+
+<iframe id="app" allow="clipboard-write"></iframe>
+
+<script src="app-url.js"></script>
+<script>
+(function () {
+  var url = window.APP_EXEC_URL || '';
+  var boot = document.getElementById('boot');
+  var frame = document.getElementById('app');
+
+  document.getElementById('again').href = location.href;
+
+  if (!url) {
+    document.getElementById('err').style.display = 'block';
+    return;
+  }
+
+  // ?tt=... з персонального посилання прокидуємо всередину
+  frame.src = url + location.search;
+
+  var done = false;
+  frame.addEventListener('load', function () {
+    done = true;
+    boot.classList.add('hide');
+    setTimeout(function () { boot.style.display = 'none'; }, 350);
+  });
+
+  setTimeout(function () {
+    if (!done) document.getElementById('err').style.display = 'block';
+  }, 20000);
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>

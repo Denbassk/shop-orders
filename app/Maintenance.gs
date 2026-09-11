@@ -9,11 +9,12 @@
 // і екран вибору точки більше не показується. Найнадійніший захист
 // від "натиснув сусідню Бучму".
 function storeLinks() {
-  var base = appUrl_();
+  // для продавців - адреса оболонки, яка ставиться як застосунок
+  var base = PWA_URL || appUrl_();
   var rows = loadStores_().map(function (s) {
     return [s.label, s.code, base + '?tt=' + encodeURIComponent(s.id)];
   });
-  console.log('Точок: ' + rows.length);
+  console.log('Точок: ' + rows.length + ', база: ' + base);
   console.log('назва | обліковий номер | посилання');
   rows.forEach(function (r) { console.log(r[0] + ' | ' + r[1] + ' | ' + r[2]); });
   return rows;

@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-11-2';
+const APP_VERSION = '2026-09-11-3';
 
 // true - замовлення падають у тестові листи і нікуди не йдуть
 const TEST_MODE = false;
@@ -14,6 +14,10 @@ const TEST_MODE = false;
 // Архівування (Archive.gs) лишає в робочому листі лише останній тиждень,
 // тож цей хвіст - просто страховка на випадок, якщо архів не відпрацював.
 const RAW_TAIL_ROWS = 5000;
+
+// Оболонка на GitHub Pages: саме її продавці ставлять на телефон як застосунок.
+// Порожньо - у storeLinks() будуть звичайні посилання на /exec.
+const PWA_URL = 'https://denbassk.github.io/shop-orders/';
 
 const REGISTRY_ID = '1noOXYRRdxIuY6gd9kicI2OxGU0vJ_kfvLbcVTyqXi6o';
 const REGISTRY_SHEET = 'ТТ';
