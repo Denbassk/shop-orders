@@ -271,12 +271,18 @@ function openStore(s){
   var h = '';
   s.directions.forEach(function(k){
     var d = S.boot.directions[k], done = s.ordered[k];
-    h += '<div class="dir' + (done?' done':'') + '" style="background:' + d.color +
+    var offday = s.dayOk && s.dayOk[k] === false;
+    var sub = offday && s.days
+      ? 'ваш день: ' + esc(s.days)
+      : esc(d.subtitle) + (d.deadline ? ' · до ' + d.deadline : '');
+    var tag = offday ? 'Не ваш день'
+                     : (done ? 'Відправлено' : (d.closed ? 'Закрито' : 'Замовити'));
+    h += '<div class="dir' + (done||offday?' done':'') + '" style="background:' + d.color +
       '" onclick="openDir(\'' + k + '\')">' +
       '<div class="ic">' + icon(k) + '</div>' +
       '<div class="t"><div class="a">' + esc(d.title) + '</div><div class="b">' +
-      esc(d.subtitle) + (d.deadline ? ' · до ' + d.deadline : '') + '</div></div>' +
-      '<div class="tag">' + (done ? 'Відправлено' : (d.closed ? 'Закрито' : 'Замовити')) + '</div></div>';
+      sub + '</div></div>' +
+      '<div class="tag">' + tag + '</div></div>';
   });
   h += '<div class="legend">Напрямки незалежні: можна замовити зараз одне, ' +
        'а решту — пізніше.</div>' +
@@ -287,6 +293,11 @@ function openStore(s){
 
 /* ---------- екран 3: товари ---------- */
 function openDir(k){
+  if (S.store.dayOk && S.store.dayOk[k] === false){
+    alert('Вибачте, не ваш день для замовлення.' +
+          (S.store.days ? '\n\nВаш день: ' + S.store.days + '.' : ''));
+    return;
+  }
   if (S.store.ordered[k] && !confirm('Замовлення на сьогодні вже відправлено.\n\n' +
       'Відкрити, щоб переглянути або попросити дозвіл на добавку?')) return;
   S.dir=k; S.screen='prod'; S.cart={}; S.q=''; S.cat=null; S.oid=uuid(); S.mode='add';

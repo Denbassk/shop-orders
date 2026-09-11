@@ -63,13 +63,15 @@ function apiBootstrap_() {
   });
 
   const list = stores.map(function (s) {
-    const ordered = {};
+    const ordered = {}, dayOk = {};
     s.directions.forEach(function (k) {
       const map = status[k];
       ordered[k] = map ? !!map[statusKey_(k, s)] : false;
+      dayOk[k] = dayAllowed_(k, s);
     });
     return { id: s.id, label: s.label, code: s.code,
-             directions: s.directions, ordered: ordered };
+             directions: s.directions, ordered: ordered,
+             dayOk: dayOk, days: dayNamesOf_(s) };
   });
 
   return {

@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-11-4';
+const APP_VERSION = '2026-09-11-5';
 
 // true - замовлення падають у тестові листи і нікуди не йдуть
 const TEST_MODE = false;
@@ -14,6 +14,10 @@ const TEST_MODE = false;
 // Архівування (Archive.gs) лишає в робочому листі лише останній тиждень,
 // тож цей хвіст - просто страховка на випадок, якщо архів не відпрацював.
 const RAW_TAIL_ROWS = 5000;
+
+// Чи знімає дозвіл закупниці обмеження по дню тижня (див. VegDays.gs).
+// false - день тижня це логістика маршруту, його дозволом не обходять.
+const LATE_OVERRIDES_DAY = false;
 
 // Оболонка на GitHub Pages: саме її продавці ставлять на телефон як застосунок.
 // Порожньо - у storeLinks() будуть звичайні посилання на /exec.
@@ -84,6 +88,7 @@ const DIRECTIONS = {
     priceSpreadsheetId: '1WnxkoU_aHZg6WjrkT4cdCFrk6tMlbIsdYDGkvlaDV7w',
     unit: 'кг', minOrder: 500, markup: 1.5,
     hasCategories: false, hasBarcodes: false,
+    orderDays: true,                    // графік по днях тижня, колонка Q Довідника
     addressAlias: 'addrVeg', routeAlias: 'route', shortAddr: false,
     lateRequest: true,
     rawRow: function (ctx, p) {
