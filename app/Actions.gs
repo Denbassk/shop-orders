@@ -278,6 +278,17 @@ function e02_matchNbhzRoutes() {
   matchNbhzRoutes();
 }
 
+/** Заповнити колонку Q Довідника графіком овочів по днях. Разово.
+ *  Далі графік редагується прямо в Довіднику. */
+function e05_setupVegDays() {
+  setupVegDays();
+}
+
+/** Показати графік овочів так, як його бачить застосунок. */
+function e06_showVegDays() {
+  showVegDays();
+}
+
 /** Зібрати лист вивантаження ПРЯМО ЗАРАЗ, у будь-якому разі. */
 function e03_nbhzExport() {
   buildNbhzExport();
