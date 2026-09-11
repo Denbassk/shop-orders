@@ -116,9 +116,20 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
          line-height:82px;margin:0 auto}
 .ok h2{margin:16px 0 8px;font-size:23px}
 .ok p{color:#5d626b;margin:6px 0;font-size:16px}
-.spin{width:30px;height:30px;border:4px solid #e3e5e9;border-top-color:#e11b22;border-radius:50%;
-      animation:sp .8s linear infinite;margin:40px auto}
-@keyframes sp{to{transform:rotate(360deg)}}
+.load{padding:60px 20px;text-align:center}
+.ld{width:54px;height:54px;animation:ldrot 1.5s linear infinite}
+.ld circle{fill:none;stroke-width:5;stroke-linecap:round}
+.ld-bg{stroke:#e1e4e8}
+.ld-fg{stroke:#e11b22}
+@keyframes ldrot{to{transform:rotate(360deg)}}
+@keyframes lddash{
+  0%  {stroke-dasharray:10 116;stroke-dashoffset:0}
+  50% {stroke-dasharray:84 42;stroke-dashoffset:-26}
+  100%{stroke-dasharray:10 116;stroke-dashoffset:-125}
+}
+.ld-fg{animation:lddash 1.5s ease-in-out infinite}
+.ld-t{margin-top:18px;font-size:16px;font-weight:600;color:#16181d}
+.ld-s{margin-top:5px;font-size:13px;color:#8b9098}
 </style>
 </head>
 <body>
@@ -137,7 +148,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
   </div>
 </div>
 
-<div class="wrap" id="wrap"><div class="spin"></div></div>
+<div class="wrap" id="wrap"></div>
 <div id="bot"></div>
 
 <script>
@@ -151,6 +162,21 @@ var ICONS = {
 };
 ICONS.nbhz = '<svg viewBox="0 0 24 24"><path d="M4.2 14.2c0-3.6 3.5-6.3 7.8-6.3s7.8 2.7 7.8 6.3c0 1-.8 1.8-1.8 1.8H6c-1 0-1.8-.8-1.8-1.8Z"/><path d="M6 18.6h12"/><path d="M9.4 10.8 8.3 12.7M12.3 10.8 11.2 12.7M15.2 10.8 14.1 12.7"/><path d="M12 7.9V5.4"/></svg>';
 function icon(k){ return ICONS[k] || ICONS.bread; }
+
+var WAIT_MSG = ['Гріємо булочки…', 'Розкладаємо по полицях…',
+                'Дістаємо свіжий прайс…', 'Майже готово…'];
+
+function loader(title, sub){
+  return '<div class="load">' +
+    '<svg class="ld" viewBox="0 0 50 50">' +
+      '<circle class="ld-bg" cx="25" cy="25" r="20"></circle>' +
+      '<circle class="ld-fg" cx="25" cy="25" r="20"></circle>' +
+    '</svg>' +
+    '<div class="ld-t">' + esc(title || 'Хвилинку…') + '</div>' +
+    (sub ? '<div class="ld-s">' + esc(sub) + '</div>' : '') +
+  '</div>';
+}
+function showLoader(title, sub){ el('wrap').innerHTML = loader(title, sub); }
 
 function call(action, payload){
   return new Promise(function(res, rej){
@@ -167,6 +193,7 @@ function el(id){ return document.getElementById(id); }
 function uuid(){ return 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2,10); }
 
 function start(){
+  showLoader('Хвилинку…', 'Готуємо ваші замовлення');
   call('bootstrap').then(function(d){
     S.boot = d; S.ver = d.version;
     if (d.testMode) el('test-bar').innerHTML =
@@ -263,7 +290,8 @@ function openDir(k){
   if (S.store.ordered[k] && !confirm('Замовлення на сьогодні вже відправлено.\n\n' +
       'Відкрити, щоб переглянути або попросити дозвіл на добавку?')) return;
   S.dir=k; S.screen='prod'; S.cart={}; S.q=''; S.cat=null; S.oid=uuid(); S.mode='add';
-  el('wrap').innerHTML='<div class="spin"></div>'; el('bot').innerHTML='';
+  showLoader(WAIT_MSG[Math.floor(Math.random() * WAIT_MSG.length)], 'Секунду, вантажимо товари');
+  el('bot').innerHTML='';
   call('products', { dir:k, storeId:S.store.id }).then(function(d){
     d.products.forEach(function(p,i){ p._i = i; });
     S.prod = d; drawProd();
