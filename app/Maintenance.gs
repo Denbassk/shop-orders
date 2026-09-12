@@ -164,6 +164,37 @@ function whyNoProducts(dirKey) {
     (dirKey === 'bakery' ? 'наявність' : 'шт в ящику'));
 }
 
+// --- Прибрати замовлення, зроблені у неробочий для точки день ---
+// Проходить по всіх точках напрямку і видаляє сьогоднішні рядки там,
+// де сьогодні замовляти не можна. Позначка "вже замовляли" знімається.
+function clearOffDayOrders(dirKey) {
+  if (!dirKey) { console.log('Вкажіть напрямок: ' + Object.keys(DIRECTIONS).join(', ')); return; }
+  var cfg = dirCfg_(dirKey);
+  if (!cfg.orderDays) { console.log(cfg.title + ': графіка по днях немає'); return; }
+
+  var props = PropertiesService.getScriptProperties();
+  var hit = 0, rows = 0;
+
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf(dirKey) < 0) return;
+    if (dayAllowed_(dirKey, s)) return;
+
+    var g = LockService.getScriptLock();
+    if (!g.tryLock(30000)) { console.log('Зайнято, пропускаю: ' + s.label); return; }
+    var n = 0;
+    try { n = deleteTodayRows_(cfg, dirKey, s); }
+    finally { try { g.releaseLock(); } catch (e) {} }
+
+    props.deleteProperty(orderMarkKey_(dirKey, s));
+    if (n) { hit++; rows += n; console.log('   ' + s.label + ': прибрано рядків ' + n); }
+  });
+
+  invalidateAppCache();
+  console.log(cfg.title + ': сьогодні неробочий день у частини точок.');
+  console.log('Замовлень прибрано: ' + hit + ', рядків: ' + rows);
+  if (!hit) console.log('Нічого прибирати не довелось.');
+}
+
 // --- Увімкнути або вимкнути напрямок для торгової точки ---
 // Ставить або знімає галочку у відповідній колонці Довідника.
 var DIR_COL = { bread: 7, bakery: 8, veg: 9, nbhz: 14 };

@@ -272,10 +272,10 @@ function openStore(s){
   s.directions.forEach(function(k){
     var d = S.boot.directions[k], done = s.ordered[k];
     var offday = s.dayOk && s.dayOk[k] === false;
-    var sub = offday && s.days
-      ? 'ваш день: ' + esc(s.days)
+    var sub = offday && s.dayOff && s.dayOff[k]
+      ? esc(s.dayOff[k])
       : esc(d.subtitle) + (d.deadline ? ' · до ' + d.deadline : '');
-    var tag = offday ? 'Не ваш день'
+    var tag = offday ? esc(d.dayOffTag || 'Не ваш день')
                      : (done ? 'Відправлено' : (d.closed ? 'Закрито' : 'Замовити'));
     h += '<div class="dir' + (done||offday?' done':'') + '" style="background:' + d.color +
       '" onclick="openDir(\'' + k + '\')">' +
@@ -294,8 +294,8 @@ function openStore(s){
 /* ---------- екран 3: товари ---------- */
 function openDir(k){
   if (S.store.dayOk && S.store.dayOk[k] === false){
-    alert('Вибачте, не ваш день для замовлення.' +
-          (S.store.days ? '\n\nВаш день: ' + S.store.days + '.' : ''));
+    alert((S.store.dayOff && S.store.dayOff[k]) ||
+          'Сьогодні цей напрямок не приймає замовлень.');
     return;
   }
   if (S.store.ordered[k] && !confirm('Замовлення на сьогодні вже відправлено.\n\n' +

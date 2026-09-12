@@ -289,6 +289,16 @@ function e06_showVegDays() {
   showVegDays();
 }
 
+/** Проставити дні кулінарії всім точкам: Пн-Пт, вихідні Сб і Нд. Разово. */
+function e07_setupBakeryDays() {
+  setupBakeryDays();
+}
+
+/** Показати графік кулінарії так, як його бачить застосунок. */
+function e08_showBakeryDays() {
+  showBakeryDays();
+}
+
 /** Зібрати лист вивантаження ПРЯМО ЗАРАЗ, у будь-якому разі. */
 function e03_nbhzExport() {
   buildNbhzExport();
@@ -330,6 +340,12 @@ function f05_lateLinkHere() {
   var DIR = 'nbhz';         // bread | nbhz | bakery | veg
   var STORE = 'амосова';    // частина назви ТТ
   lateLinkFor(DIR, STORE);
+}
+
+/** Прибрати замовлення, зроблені у неробочий день. Впишіть напрямок. */
+function f10_clearOffDayOrders() {
+  var DIR = 'bakery';       // bread | nbhz | bakery | veg
+  clearOffDayOrders(DIR);
 }
 
 /** Увімкнути або вимкнути напрямок для точки (галочка в Довіднику).

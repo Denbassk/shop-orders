@@ -14,6 +14,12 @@
 
 var VEG_DAYS_COL = 17;              // колонка Q
 
+// Кулінарія не працює у суботу та неділю - однаково для всіх магазинів.
+// Записується в колонку R, щоб графік був видно в Довіднику і його
+// можна було правити там без коду.
+var BAKERY_DAYS_COL = 18;           // колонка R
+var BAKERY_DAYS = 'Пн, Вт, Ср, Чт, Пт';
+
 // [ адреса як у Довіднику, дні, (необов'язково) частина НАЗВИ точки ]
 // Якщо адреса порожня - рядок шукається за назвою. Це потрібно там,
 // де адреса в Довіднику записана інакше, ніж у графіку.
@@ -81,22 +87,35 @@ function todayDow_() {
   return new Date(+s[0], +s[1] - 1, +s[2]).getDay();
 }
 
+// Дні прийому цієї точки по цьому напрямку
+function storeDays_(dirKey, store) {
+  return ((store.days || {})[dirKey]) || [];
+}
+
 // Чи можна цій точці замовляти цей напрямок сьогодні
 function dayAllowed_(dirKey, store) {
   var cfg = dirCfg_(dirKey);
   if (!cfg.orderDays) return true;
-  var days = store.orderDays || [];
+  var days = storeDays_(dirKey, store);
   if (!days.length) return true;              // день не заданий - не обмежуємо
   if (LATE_OVERRIDES_DAY && cfg.lateRequest &&
       lateRequestStatus_(dirKey, store.id) === 'approved') return true;
   return days.indexOf(todayDow_()) >= 0;
 }
 
-function dayNamesOf_(store) {
-  return (store.orderDays || []).map(function (d) {
-    return ({ 0: 'неділя', 1: 'понеділок', 2: 'вівторок', 3: 'середа',
-              4: 'четвер', 5: 'пʼятниця', 6: 'субота' })[d];
-  }).join(' і ');
+var DAY_FULL = { 0: 'неділя', 1: 'понеділок', 2: 'вівторок', 3: 'середа',
+                 4: 'четвер', 5: 'пʼятниця', 6: 'субота' };
+
+function dayNamesOf_(dirKey, store) {
+  return storeDays_(dirKey, store).map(function (d) { return DAY_FULL[d]; }).join(', ');
+}
+
+// Текст, який бачить продавець у чужий день
+function dayOffText_(dirKey, store) {
+  var cfg = dirCfg_(dirKey);
+  var base = cfg.dayOffText || 'Сьогодні цей напрямок не приймає замовлень.';
+  var days = dayNamesOf_(dirKey, store);
+  return days ? base + ' Ваші дні: ' + days + '.' : base;
 }
 
 // ============================================================
@@ -215,13 +234,42 @@ function setupVegDays() {
   console.log('Далі графік редагується прямо в Довіднику, колонка Q.');
 }
 
+// --- Проставити дні кулінарії всім точкам ---
+function setupBakeryDays() {
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  var n = sh.getLastRow() - 1;
+  if (n < 1) throw new Error('Довідник порожній');
+
+  sh.getRange(1, BAKERY_DAYS_COL).setValue('Дні випічки')
+    .setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
+  sh.setColumnWidth(BAKERY_DAYS_COL, 150);
+
+  var on = sh.getRange(2, 8, n, 1).getValues();        // H - Випічка
+  var vals = [], cnt = 0;
+  for (var i = 0; i < n; i++) {
+    if (on[i][0] === true) { vals.push([BAKERY_DAYS]); cnt++; }
+    else vals.push(['']);
+  }
+  sh.getRange(2, BAKERY_DAYS_COL, n, 1).setValues(vals);
+  SpreadsheetApp.flush();
+  invalidateAppCache();
+
+  console.log('Дні кулінарії проставлено: ' + cnt + ' точок, "' + BAKERY_DAYS + '"');
+  console.log('Субота і неділя - вихідні. Міняється прямо в Довіднику, колонка R.');
+}
+
 // Показати графік так, як його бачить застосунок
-function showVegDays() {
+function showVegDays() { showDaysFor_('veg'); }
+function showBakeryDays() { showDaysFor_('bakery'); }
+
+function showDaysFor_(dirKey) {
+  console.log('=== ' + dirCfg_(dirKey).title + ' ===');
   var byDay = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 0: [] }, free = [];
   loadStores_().forEach(function (s) {
-    if (s.directions.indexOf('veg') < 0) return;
-    if (!s.orderDays || !s.orderDays.length) { free.push(s.label); return; }
-    s.orderDays.forEach(function (d) { byDay[d].push(s.label); });
+    if (s.directions.indexOf(dirKey) < 0) return;
+    var d = storeDays_(dirKey, s);
+    if (!d.length) { free.push(s.label); return; }
+    d.forEach(function (x) { byDay[x].push(s.label); });
   });
   var names = { 1: 'Понеділок', 2: 'Вівторок', 3: 'Середа', 4: 'Четвер',
                 5: 'Пʼятниця', 6: 'Субота', 0: 'Неділя' };

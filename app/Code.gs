@@ -58,20 +58,22 @@ function apiBootstrap_() {
       key: c.key, title: c.title, subtitle: c.subtitle,
       color: c.color, unit: c.unit, deadline: c.deadline, step: c.step,
       minOrder: Math.round(c.minOrder * c.markup * 100) / 100,
-      hasCategories: c.hasCategories, closed: deadlinePassed_(k)
+      hasCategories: c.hasCategories, closed: deadlinePassed_(k),
+      dayOffTag: c.dayOffTag || 'Не ваш день'
     };
   });
 
   const list = stores.map(function (s) {
-    const ordered = {}, dayOk = {};
+    const ordered = {}, dayOk = {}, dayOff = {};
     s.directions.forEach(function (k) {
       const map = status[k];
       ordered[k] = map ? !!map[statusKey_(k, s)] : false;
       dayOk[k] = dayAllowed_(k, s);
+      if (!dayOk[k]) dayOff[k] = dayOffText_(k, s);
     });
     return { id: s.id, label: s.label, code: s.code,
              directions: s.directions, ordered: ordered,
-             dayOk: dayOk, days: dayNamesOf_(s) };
+             dayOk: dayOk, dayOff: dayOff };
   });
 
   return {

@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-11-7';
+const APP_VERSION = '2026-09-12-1';
 
 // true - замовлення падають у тестові листи і нікуди не йдуть
 const TEST_MODE = false;
@@ -74,6 +74,10 @@ const DIRECTIONS = {
     hasCategories: true, hasBarcodes: true,
     addressAlias: 'addrBakery', routeAlias: 'route', shortAddr: false,
     lateRequest: true,
+    // дні прийому - колонка R Довідника, порожньо = без обмежень
+    orderDays: true, dayCol: 18,
+    dayOffTag: 'Вихідний',
+    dayOffText: 'Кулінарія у суботу та неділю не працює.',
     rawRow: function (ctx, p) {
       return [ctx.dateStr, ctx.timeStr, ctx.address,
               p.category, p.barcode, p.name, p.price, p.qty];
@@ -88,7 +92,10 @@ const DIRECTIONS = {
     priceSpreadsheetId: '1WnxkoU_aHZg6WjrkT4cdCFrk6tMlbIsdYDGkvlaDV7w',
     unit: 'кг', minOrder: 500, markup: 1.5,
     hasCategories: false, hasBarcodes: false,
-    orderDays: true,                    // графік по днях тижня, колонка Q Довідника
+    // графік по днях тижня - колонка Q Довідника
+    orderDays: true, dayCol: 17,
+    dayOffTag: 'Не ваш день',
+    dayOffText: 'Вибачте, не ваш день для замовлення.',
     addressAlias: 'addrVeg', routeAlias: 'route', shortAddr: false,
     lateRequest: true,
     rawRow: function (ctx, p) {

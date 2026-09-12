@@ -10,10 +10,7 @@ function apiProducts_(payload) {
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
-  if (!dayAllowed_(dirKey, store))
-    throw new Error('Вибачте, не ваш день для замовлення.' +
-      (store.orderDays && store.orderDays.length
-        ? ' Ваш день: ' + dayNamesOf_(store) + '.' : ''));
+  if (!dayAllowed_(dirKey, store)) throw new Error(dayOffText_(dirKey, store));
 
   var products = loadProducts_(dirKey).map(function (p) {
     return {
@@ -317,10 +314,7 @@ function apiSubmitOrder_(payload) {
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
-  if (!dayAllowed_(dirKey, store))
-    throw new Error('Вибачте, не ваш день для замовлення.' +
-      (store.orderDays && store.orderDays.length
-        ? ' Ваш день: ' + dayNamesOf_(store) + '.' : ''));
+  if (!dayAllowed_(dirKey, store)) throw new Error(dayOffText_(dirKey, store));
 
   // Дозвіл закупниці = зміни. Знімає ТРИ замки: дедлайн, повторне
   // замовлення на сьогодні і мінімальну суму.
