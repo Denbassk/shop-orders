@@ -446,3 +446,6 @@ function g09_bakeryLostOrders() {
 function g10_clearBakeryLostMarks() {
   clearBakeryLostMarks();
 }
+// Опис сьогоднішніх відправок із властивостей скрипта:
+// показує, у кого рядки в листі є, а в кого затерто.
+function g11_bakeryOrderTrace() { bakeryOrderTrace(); }

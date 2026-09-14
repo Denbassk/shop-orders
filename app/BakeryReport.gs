@@ -655,3 +655,69 @@ function clearBakeryLostMarks() {
   CacheService.getScriptCache().remove('status_v3');
   console.log('Знято позначок: ' + n + '. Ці точки можуть відправити замовлення заново.');
 }
+// ============================================================
+// СЛІД ЗАМОВЛЕНЬ У ВЛАСТИВОСТЯХ СКРИПТА
+// rememberOrder_ зберігає результат кожної відправки під ключем oid_<id>.
+// cleanupOldOrderIds чистить лише записи за минулі дні, тож сьогоднішні
+// живі. Позицій там немає - є точка, час, кількість позицій і сума.
+// ============================================================
+function bakeryOrderTrace() {
+  var cfg = dirCfg_('bakery');
+  var today = formatDateDMY_(new Date());
+  var props = PropertiesService.getScriptProperties().getProperties();
+
+  var traces = [];
+  Object.keys(props).forEach(function (k) {
+    if (k.indexOf('oid_') !== 0) return;
+    var r = null;
+    try { r = JSON.parse(props[k]); } catch (e) { return; }
+    if (!r || r.direction !== cfg.title) return;
+    traces.push({ date: r.date || '', time: String(r.time || ''),
+                  store: r.store || '', pos: r.positions || 0,
+                  total: r.total || 0 });
+  });
+  traces.sort(function (a, b) { return a.time < b.time ? -1 : 1; });
+
+  var inSheet = {};
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (sh && sh.getLastRow() > 1) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().forEach(function (r) {
+      var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
+      if (d !== today) return;
+      inSheet[addrKey_(String(r[2]).trim())] = true;
+    });
+  }
+
+  var keyByLabel = {};
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf('bakery') < 0) return;
+    keyByLabel[s.label] = statusKey_('bakery', s);
+  });
+
+  console.log('=== слід замовлень випічки (' + traces.length + ' записів) ===');
+  console.log('дата | час | точка | позицій | сума | рядки в листі');
+  var lost = [];
+  traces.forEach(function (t) {
+    var key = keyByLabel[t.store];
+    var ok = key ? !!inSheet[key] : false;
+    console.log(t.date + ' | ' + t.time + ' | ' + t.store + ' | ' +
+                t.pos + ' | ' + t.total + ' | ' + (ok ? 'є' : 'НЕМА'));
+    if (t.date === today && !ok) lost.push(t);
+  });
+
+  if (!lost.length) {
+    console.log('---');
+    console.log('Усі сьогоднішні відправки мають рядки в листі. Втрат немає.');
+    return;
+  }
+
+  console.log('---');
+  console.log('ЗАТЕРТО, але слід зберігся (' + lost.length + '):');
+  lost.forEach(function (t) {
+    console.log('   ' + t.store + ' - ' + t.time + ', позицій ' + t.pos +
+                ', сума ' + t.total + ' грн');
+  });
+  console.log('---');
+  console.log('Позицій у властивостях немає - лише кількість і сума.');
+  console.log('Склад замовлення бере або з Історії версій листа, або у продавця.');
+}
