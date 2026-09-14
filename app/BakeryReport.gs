@@ -427,6 +427,17 @@ function fixBakeryRawSheet() {
   sh.setColumnWidth(3, 280); sh.setColumnWidth(4, 110);
   sh.setColumnWidth(5, 140); sh.setColumnWidth(6, 330);
   sh.setColumnWidth(7, 80);  sh.setColumnWidth(8, 90);
+
+  // Орієнтація. Задаємо на ВСЮ колонку до кінця листа, щоб нові
+  // рядки від append успадкували вирівнювання, а не отримали
+  // випадкове від сусіда.
+  //   дата, час, ціна, кіл-ть - по центру
+  //   адреса, категорія, штрихкод, назва - по лівому краю
+  sh.getRange(2, 1, maxR - 1, 2).setHorizontalAlignment('center');
+  sh.getRange(2, 3, maxR - 1, 4).setHorizontalAlignment('left');
+  sh.getRange(2, 7, maxR - 1, 2).setHorizontalAlignment('center');
+  sh.getRange(1, 1, 1, 8).setHorizontalAlignment('center');
+  sh.getRange(2, 1, maxR - 1, 8).setVerticalAlignment('middle');
   SpreadsheetApp.flush();
 
   console.log('Стало: ' + head.join(' | '));
