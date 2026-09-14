@@ -21,6 +21,7 @@
 //   Nbhz.gs         - НБХЗ: листи, зіставлення маршрутів, вивантаження
 //   Nbhz_Seed.gs    - дані НБХЗ: асортимент і маршрути
 //   Archive.gs      - архівування сирих листів
+//   BakeryReport.gs - звіти випічки: Заказы ВК, Сводная ВК
 //   Maintenance.gs  - перевірки, заміри, посилання на ТТ, прибирання
 //   LoadTest.gs     - навантажувальний тест
 //   Logo.gs         - логотип у base64
@@ -228,7 +229,7 @@ function d03_storeLinks() {
  *  Запустити ОДИН РАЗ. Повторний запуск просто перестворює ті самі тригери. */
 function d06_installTriggers() {
   var mine = { d01_archive: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
-               e04_refreshExport: 1 };
+               e04_refreshExport: 1, refreshBakeryReports: 1 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (mine[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
   });
@@ -240,6 +241,9 @@ function d06_installTriggers() {
   ScriptApp.newTrigger('e04_refreshExport').timeBased().everyMinutes(5).create();
   // і гарантована повна збірка ввечері, після 17:30 плюс 30 хв на зміни
   ScriptApp.newTrigger('e03_nbhzExport').timeBased().everyDays(1).atHour(18).create();
+
+  // звіти випічки перезбираються самі, як тільки в сирому листі щось змінилось
+  ScriptApp.newTrigger('refreshBakeryReports').timeBased().everyMinutes(5).create();
 
   console.log('Розклад поставлено:');
   d07_showTriggers();
@@ -379,4 +383,28 @@ function f06_clearOrderMarkHere() {
   var DIR = 'bread';        // bread | nbhz | bakery | veg
   var STORE = 'амосова';    // частина назви ТТ
   clearOrderMark(DIR, STORE);
+}
+
+// ============ 7. ЗВІТИ ВИПІЧКИ ============
+
+/** Зібрати "Заказы ВК" і "Сводная ВК" ПРЯМО ЗАРАЗ, у будь-якому разі.
+ *  Саме це замінює запуск generateFormattedOrdersReport() у старому проєкті. */
+function g01_bakeryReport() {
+  buildBakeryReports();
+}
+
+/** Перезібрати, лише якщо в сирому листі щось змінилось.
+ *  Стоїть на тригері кожні 5 хвилин - руками не потрібне. */
+function g02_refreshBakeryReport() {
+  refreshBakeryReports();
+}
+
+/** Чому звіт порожній: що бачить у сирому листі, скільки ТТ і позицій. */
+function g03_whyNoBakeryReport() {
+  whyNoBakeryReport();
+}
+
+/** Прибрати зі сирого листа рядки старого формату (без дати). Разово. */
+function g04_cleanBakeryRaw() {
+  cleanBakeryRawJunk();
 }
