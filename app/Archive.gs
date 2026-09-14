@@ -157,14 +157,27 @@ function archiveOneRebuild_(dirKey, cutoff) {
     var at = arch.getLastRow() + 1;
     arch.getRange(at, 1, old.length, width).setValues(old);
     arch.getRange(at, 1, old.length, 1).setNumberFormat('dd.MM.yyyy');
-
-    sh.getRange(2, 1, values.length, width).clearContent();
-    if (keep.length) {
-      sh.getRange(2, 1, keep.length, width).setValues(keep);
-      sh.getRange(2, 1, keep.length, 1).setNumberFormat('dd.MM.yyyy');
-    }
     SpreadsheetApp.flush();
-    console.log(cfg.title + ': в архів ' + old.length + ', лишилось ' + keep.length);
+
+    // Старі рядки ВИДАЛЯЄМО, а не перезаписуємо лист цілком.
+    // Перезапис (clearContent + setValues) затирав би замовлення,
+    // яке прийде саме в цю мить: apiAppend_ замка не бере.
+    var hits = [];
+    values.forEach(function (r, i) {
+      var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
+      if (d && d < cutoff) hits.push(i + 2);
+    });
+    var ranges = [], start = hits[0], prev = hits[0];
+    for (var j = 1; j < hits.length; j++) {
+      if (hits[j] === prev + 1) { prev = hits[j]; continue; }
+      ranges.push([start, prev]); start = hits[j]; prev = hits[j];
+    }
+    if (hits.length) ranges.push([start, prev]);
+    ranges.reverse();
+    ranges.forEach(function (x) { sh.deleteRows(x[0], x[1] - x[0] + 1); });
+    SpreadsheetApp.flush();
+    console.log(cfg.title + ': в архів ' + old.length + ', лишилось ' + keep.length +
+                ' (видалено відрізків ' + ranges.length + ')');
   } finally {
     dirLockRelease_(dirKey, tok);
   }

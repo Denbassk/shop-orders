@@ -229,7 +229,8 @@ function d03_storeLinks() {
  *  Запустити ОДИН РАЗ. Повторний запуск просто перестворює ті самі тригери. */
 function d06_installTriggers() {
   var mine = { d01_archive: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
-               e04_refreshExport: 1, refreshBakeryReports: 1 };
+               e04_refreshExport: 1, refreshBakeryReports: 1,
+               refreshBreadReports: 1, refreshVegReports: 1 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (mine[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
   });
@@ -242,8 +243,10 @@ function d06_installTriggers() {
   // і гарантована повна збірка ввечері, після 17:30 плюс 30 хв на зміни
   ScriptApp.newTrigger('e03_nbhzExport').timeBased().everyDays(1).atHour(18).create();
 
-  // звіти випічки перезбираються самі, як тільки в сирому листі щось змінилось
+  // звіти напрямків перезбираються самі, як тільки в сирому листі щось змінилось
   ScriptApp.newTrigger('refreshBakeryReports').timeBased().everyMinutes(5).create();
+  ScriptApp.newTrigger('refreshBreadReports').timeBased().everyMinutes(5).create();
+  ScriptApp.newTrigger('refreshVegReports').timeBased().everyMinutes(5).create();
 
   console.log('Розклад поставлено:');
   d07_showTriggers();
@@ -449,3 +452,56 @@ function g10_clearBakeryLostMarks() {
 // Опис сьогоднішніх відправок із властивостей скрипта:
 // показує, у кого рядки в листі є, а в кого затерто.
 function g11_bakeryOrderTrace() { bakeryOrderTrace(); }
+
+
+/** Разово: проставити зони доставки (Салтовка / Новые дома / Центр)
+ *  у колонку S Довідника. Далі зона редагується прямо в Довіднику. */
+function g12_setupBakeryZones() {
+  setupBakeryZones();
+}
+
+/** Показати зони так, як їх бачить застосунок. */
+function g13_showBakeryZones() {
+  showBakeryZones();
+}
+
+/** Впорядкувати сирий лист: дата, потім назва товару.
+ *  Робиться саме по собі перед кожним перезбиранням звітів. */
+function g14_sortBakeryRaw() {
+  sortBakeryRawByProduct_();
+  showBakeryRawTail(15);
+}
+
+/** РАЗОВО після відновлення листа з історії версій: повернути
+ *  8 колонок (маршрут із Довідника, штрихкод із Ассортимента),
+ *  поправити шапку і зібрати звіти. Запускати, коли ніхто не замовляє. */
+function g15_repairBakeryRawColumns() {
+  repairBakeryRawColumns();
+}
+
+
+// ============ 8. ЗВІТИ ХЛІБА І ОВОЧІВ ============
+
+/** Зібрати "Заказы" і "Данные Заказов" ПРЯМО ЗАРАЗ, у будь-якому разі.
+ *  Саме це замінює старий проєкт legacy/bread усередині таблиці хліба. */
+function h01_breadReport() {
+  buildBreadReports();
+}
+
+/** Перезібрати звіти хліба, лише якщо в сирому листі щось змінилось.
+ *  Стоїть на тригері кожні 5 хвилин - руками не потрібне. */
+function h02_refreshBreadReport() {
+  refreshBreadReports();
+}
+
+/** Зібрати "Замовлення Овочі" і "Зведена Овочі" ПРЯМО ЗАРАЗ.
+ *  Саме це замінює autoMaintenance у старому проєкті legacy/veg. */
+function h03_vegReport() {
+  buildVegReports();
+}
+
+/** Перезібрати звіти овочів, лише якщо щось змінилось.
+ *  Стоїть на тригері кожні 5 хвилин - руками не потрібне. */
+function h04_refreshVegReport() {
+  refreshVegReports();
+}

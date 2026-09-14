@@ -64,7 +64,8 @@ function refreshBakeryReports() {
   var props = PropertiesService.getScriptProperties();
 
   var ss = SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
-  var have = ss.getSheetByName(BAKERY_ORDERS_SHEET) && ss.getSheetByName(BAKERY_SUMMARY_SHEET);
+  var have = ss.getSheetByName(BAKERY_ORDERS_SHEET) && ss.getSheetByName(BAKERY_SUMMARY_SHEET) &&
+             ss.getSheetByName(BAKERY_ROUTE_SHEET);
 
   if (have && props.getProperty('bakery_report_sig') === sig) return;
 
@@ -73,9 +74,13 @@ function refreshBakeryReports() {
 
 // --- Зібрати обидва звіти ПРЯМО ЗАРАЗ, у будь-якому разі ---
 function buildBakeryReports() {
+  // спершу впорядковуємо сирий лист (дата, потім назва товару),
+  // далі читаємо вже впорядковані рядки
+  sortBakeryRawByProduct_();
   var rows = bakeryTodayRows_();
   buildBakeryOrdersSheet_(rows);
   buildBakerySummarySheet_(rows);
+  buildBakeryRouteSheet_(rows);
   PropertiesService.getScriptProperties()
     .setProperty('bakery_report_sig', bakerySignature_(rows));
 }
@@ -110,7 +115,7 @@ function buildBakeryOrdersSheet_(rows) {
   rows.forEach(function (r) {
     var addr = String(r[2] || '').trim();
     if (!addr) return;
-    var cat = String(r[3] || '').trim() || 'Інше';
+    var cat = bakeryCatOf_(r);
     byStore[addr] = byStore[addr] || {};
     byStore[addr][cat] = byStore[addr][cat] || [];
     byStore[addr][cat].push({
@@ -250,7 +255,7 @@ function buildBakerySummarySheet_(rows) {
 
   var sum = {}, grandQty = 0, grandSum = 0;
   rows.forEach(function (r) {
-    var cat = String(r[3] || '').trim() || 'Інше';
+    var cat = bakeryCatOf_(r);
     var name = String(r[5] || '').trim();
     var qty = Number(r[7]) || 0;
     var price = Number(r[6]) || 0;
@@ -415,7 +420,7 @@ function fixBakeryRawSheet() {
   sh.showColumns(1, maxC);
   console.log('Розкрито рядки 1-' + maxR + ' і колонки 1-' + maxC);
 
-  var head = ['Дата', 'Час', 'Адреса ТТ', 'Категорія',
+  var head = ['Дата', 'Час', 'Адреса ТТ', 'Маршрут',
               'Штрих-код', 'Номенклатура', 'Ціна', 'Кількість'];
   sh.getRange(1, 1, 1, 8).setValues([head])
     .setFontWeight('bold').setBackground('#1565C0').setFontColor('#ffffff')

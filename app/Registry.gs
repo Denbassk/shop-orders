@@ -2,19 +2,20 @@
 // ДОВІДНИК ТТ + СТАТУС ЗАМОВЛЕНЬ
 // A Активна | B Назва | C Адреса | D Обл.номер | E Маршрут (Рома)
 // Q Дні овочів | R Дні випічки  (формат "Пн, Ср")
+// S Зона доставки випічки: Салтовка | Новые дома | Центр | не возится
 // F Тип | G Хліб | H Випічка | I Овочі | J Примітка
 // K Адреса Хліб | L Адреса Випічка | M Адреса Овочі
 // N Хліб НБХЗ | O Маршрут НБХЗ | P Адреса НБХЗ
 // ============================================================
 
 function loadStores_() {
-  const cached = cacheGet_('registry_v5');
+  const cached = cacheGet_('registry_v6');
   if (cached) return cached;
 
   const sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
   if (!sh || sh.getLastRow() < 2) return [];
 
-  const stores = sh.getRange(2, 1, sh.getLastRow() - 1, 18).getValues()
+  const stores = sh.getRange(2, 1, sh.getLastRow() - 1, 19).getValues()
     .filter(function (r) { return r[0] === true && String(r[2]).trim(); })
     .map(function (r) {
       const addr = String(r[2]).trim();
@@ -30,6 +31,8 @@ function loadStores_() {
         addrVeg: String(r[12] || '').trim() || addr,
         addrNbhz: String(r[15] || '').trim() || addr,
         routeNbhz: String(r[14] || '').trim(),
+        // зона доставки випічки - її закупниця бачить у сирому листі
+        zone: String(r[18] || '').trim(),
         // дні прийому по напрямках: Q овочі, R випічка
         days: { veg: parseDays_(r[16]), bakery: parseDays_(r[17]) },
         directions: [r[6] === true && 'bread', r[13] === true && 'nbhz',
@@ -39,7 +42,7 @@ function loadStores_() {
     .filter(function (s) { return s.directions.length; })
     .sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
 
-  cachePut_('registry_v5', stores, 600);
+  cachePut_('registry_v6', stores, 600);
   return stores;
 }
 
@@ -113,7 +116,7 @@ function cachePut_(k, data, sec) {
 
 function invalidateAppCache() {
   CacheService.getScriptCache().removeAll(['registry_v2', 'registry_v3', 'registry_v4',
-    'registry_v5', 'status_v2', 'status_v3',
+    'registry_v5', 'registry_v6', 'status_v2', 'status_v3',
     'prod_bread', 'prod_nbhz', 'prod_bakery', 'prod_veg']);
   console.log('Кеш очищено');
 }

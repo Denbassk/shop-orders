@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-14-10';
+const APP_VERSION = '2026-09-14-11';
 
 // true - замовлення падають у тестові листи і нікуди не йдуть
 const TEST_MODE = false;
@@ -78,9 +78,13 @@ const DIRECTIONS = {
     orderDays: true, dayCol: 18,
     dayOffTag: 'Вихідний',
     dayOffText: 'Кулінарія у суботу та неділю не працює.',
+    // У колонці D - ЗОНА ДОСТАВКИ (Салтовка / Новые дома / Центр),
+    // колонка S Довідника. Так закупниця бачить маршрут прямо в сирому
+    // листі. Категорію (Випічка / Кулінарія) звіти беруть з листа
+    // "Ассортимент" по штрихкоду - див. bakeryCatByBarcode_.
     rawRow: function (ctx, p) {
       return [ctx.dateStr, ctx.timeStr, ctx.address,
-              p.category, p.barcode, p.name, p.price, p.qty];
+              (ctx.store && ctx.store.zone) || '', p.barcode, p.name, p.price, p.qty];
     }
   },
 
