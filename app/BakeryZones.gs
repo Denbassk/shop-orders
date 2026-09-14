@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // ЗОНИ ДОСТАВКИ ВИПІЧКИ + ЛИСТ ПО МАРШРУТАХ
 //
 // Закупниця дивиться в сирий лист і має бачити, на який маршрут
@@ -128,75 +128,66 @@ function bakeryZoneList_(obj) {
 }
 
 // ============================================================
-// ЛИСТ "Маршрути ВК": блоки по маршрутах, усередині товари,
-// під кожним товаром - точки, куди він їде
+// ЛИСТ "Маршрути ВК" - для машини розвозки
+//
+// Проста таблиця, яку можна роздрукувати і везти з собою:
+//   Торгова точка | Найменування продукції | Кількість | Маршрут
+// Порядок: маршрут -> вид товару -> адреса. Після кожного товару
+// рядок "Разом", після кожного маршруту - підсумок маршруту.
 // ============================================================
 function buildBakeryRouteSheet_(rows) {
   var today = formatDateDMY_(new Date());
   var zoneByAddr = bakeryZoneByAddr_();
 
-  // зона -> товар -> { qty, sum, byStore: { адреса: {qty, sum} } }
+  // зона -> товар -> адреса -> кількість
   var z = {};
   rows.forEach(function (r) {
     var zone = bakeryZoneOf_(r, zoneByAddr);
     var name = String(r[5] || '').trim();
     var addr = String(r[2] || '').trim();
     var qty = Number(r[7]) || 0;
-    var sum = Math.round((Number(r[6]) || 0) * qty * 100) / 100;
-    if (!name || !addr) return;
+    if (!name || !addr || qty <= 0) return;
 
     z[zone] = z[zone] || {};
-    z[zone][name] = z[zone][name] || { qty: 0, sum: 0, byStore: {} };
-    z[zone][name].qty += qty;
-    z[zone][name].sum = Math.round((z[zone][name].sum + sum) * 100) / 100;
-    z[zone][name].byStore[addr] = z[zone][name].byStore[addr] || { qty: 0, sum: 0 };
-    z[zone][name].byStore[addr].qty += qty;
-    z[zone][name].byStore[addr].sum =
-      Math.round((z[zone][name].byStore[addr].sum + sum) * 100) / 100;
+    z[zone][name] = z[zone][name] || {};
+    z[zone][name][addr] = (z[zone][name][addr] || 0) + qty;
   });
 
-  var data = [], g = { title: [], sub: [], head: [], zone: [],
-                       item: [], store: [], total: [], grand: [], empty: [] };
+  var data = [], g = { title: [], head: [], row: [], item: [], zone: [], empty: [] };
   function push(v, t) { data.push(v); if (t) g[t].push(data.length); }
 
-  push(['Замовлення по маршрутах - ' + today, '', '', ''], 'title');
-  push(['оновлено ' + formatTime_(new Date()), '', '', ''], 'sub');
-  push(['', '', '', ''], null);
-  push(['Товар / ТТ', 'Кіл-ть', 'Сума, грн', 'Маршрут'], 'head');
+  push(['Розвозка випічки і кулінарії - ' + today +
+        '   (оновлено ' + formatTime_(new Date()) + ')', '', '', ''], 'title');
+  push(['Торгова точка', 'Найменування продукції', 'Кількість', 'Маршрут'], 'head');
 
-  var grandQty = 0, grandSum = 0;
+  var grand = 0;
 
   bakeryZoneList_(z).forEach(function (zone) {
-    var items = z[zone];
-    var zQty = 0, zSum = 0, zStores = {};
-    Object.keys(items).forEach(function (nm) {
-      zQty += items[nm].qty;
-      zSum = Math.round((zSum + items[nm].sum) * 100) / 100;
-      Object.keys(items[nm].byStore).forEach(function (a) { zStores[a] = 1; });
-    });
-
-    push([zone, zQty, zSum, 'ТТ: ' + Object.keys(zStores).length], 'zone');
+    var items = z[zone], zoneQty = 0;
 
     Object.keys(items).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
-      .forEach(function (nm) {
-        var it = items[nm];
-        push([nm, it.qty, it.sum, ''], 'item');
-        Object.keys(it.byStore).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
-          .forEach(function (a) {
-            push(['      ' + a, it.byStore[a].qty, it.byStore[a].sum, zone], 'store');
+      .forEach(function (name) {
+        var byAddr = items[name], itemQty = 0;
+
+        Object.keys(byAddr).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+          .forEach(function (addr) {
+            push([shortenAddress_(addr), name, byAddr[addr], zone], 'row');
+            itemQty += byAddr[addr];
           });
+
+        push(['Разом', name, itemQty, zone], 'item');
+        zoneQty += itemQty;
       });
 
-    push(['РАЗОМ ' + zone, zQty, zSum, ''], 'total');
+    push(['ВСЬОГО ' + zone, '', zoneQty, zone], 'zone');
     push(['', '', '', ''], null);
-    grandQty += zQty;
-    grandSum = Math.round((grandSum + zSum) * 100) / 100;
+    grand += zoneQty;
   });
 
   if (!Object.keys(z).length) {
     push(['Замовлень на сьогодні ще немає', '', '', ''], 'empty');
   } else {
-    push(['ЗАГАЛЬНИЙ ПІДСУМОК', grandQty, grandSum, ''], 'grand');
+    push(['ЗАГАЛОМ', '', grand, ''], 'zone');
   }
 
   var ss = SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
@@ -208,41 +199,36 @@ function buildBakeryRouteSheet_(rows) {
   var n = data.length;
   sh.getRange(1, 1, n, 4).setValues(data);
   sh.getRange(1, 1, n, 4).setFontFamily('Arial').setFontSize(10)
-    .setVerticalAlignment('middle').setFontColor('#212121').setBackground('#FFFFFF');
-  sh.setRowHeights(1, n, 24);
-
-  sh.getRange(1, 2, n, 1).setNumberFormat('0.###').setHorizontalAlignment('center');
-  sh.getRange(1, 3, n, 1).setNumberFormat('#,##0.00').setHorizontalAlignment('right');
+    .setVerticalAlignment('middle').setFontColor('#000000').setBackground('#FFFFFF');
+  sh.setRowHeights(1, n, 22);
+  sh.getRange(1, 3, n, 1).setNumberFormat('0.###').setHorizontalAlignment('center');
+  sh.getRange(1, 4, n, 1).setHorizontalAlignment('center');
 
   if (g.title.length) sh.getRangeList(bakeryRowList_(g.title, 'A', 'D'))
-    .setBackground('#1565C0').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
-  if (g.sub.length) sh.getRangeList(bakeryRowList_(g.sub, 'A', 'D'))
-    .setBackground('#E3F2FD').setFontColor('#1565C0').setFontSize(11);
+    .setBackground('#1565C0').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(12);
   if (g.head.length) sh.getRangeList(bakeryRowList_(g.head, 'A', 'D'))
-    .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold')
-    .setHorizontalAlignment('center');
-  if (g.zone.length) sh.getRangeList(bakeryRowList_(g.zone, 'A', 'D'))
-    .setBackground('#1976D2').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
+    .setFontWeight('bold').setHorizontalAlignment('center')
+    .setBorder(true, true, true, true, true, true);
+  if (g.row.length) sh.getRangeList(bakeryRowList_(g.row, 'A', 'D'))
+    .setBorder(true, true, true, true, true, true);
   if (g.item.length) sh.getRangeList(bakeryRowList_(g.item, 'A', 'D'))
-    .setBackground('#FFF8E1').setFontColor('#E65100').setFontWeight('bold');
-  if (g.store.length) sh.getRangeList(bakeryRowList_(g.store, 'A', 'D'))
-    .setFontColor('#455A64').setFontSize(9);
-  if (g.total.length) sh.getRangeList(bakeryRowList_(g.total, 'A', 'D'))
-    .setBackground('#E8F5E9').setFontColor('#2E7D32').setFontWeight('bold');
-  if (g.grand.length) sh.getRangeList(bakeryRowList_(g.grand, 'A', 'D'))
-    .setBackground('#388E3C').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
+    .setBackground('#F1F3F4').setFontWeight('bold')
+    .setBorder(true, true, true, true, true, true);
+  if (g.zone.length) sh.getRangeList(bakeryRowList_(g.zone, 'A', 'D'))
+    .setBackground('#E8F5E9').setFontColor('#1B5E20').setFontWeight('bold')
+    .setBorder(true, true, true, true, true, true);
   if (g.empty.length) sh.getRangeList(bakeryRowList_(g.empty, 'A', 'D'))
     .setBackground('#FFEBEE').setFontColor('#C62828').setFontWeight('bold');
 
-  sh.setColumnWidth(1, 430);
-  sh.setColumnWidth(2, 90);
-  sh.setColumnWidth(3, 120);
-  sh.setColumnWidth(4, 140);
-  sh.setFrozenRows(4);
+  sh.setColumnWidth(1, 220);
+  sh.setColumnWidth(2, 420);
+  sh.setColumnWidth(3, 110);
+  sh.setColumnWidth(4, 130);
+  sh.setFrozenRows(2);
   SpreadsheetApp.flush();
 
-  console.log('Маршрути ВК: зон ' + Object.keys(z).length +
-              ', разом ' + grandQty + ' шт / ' + grandSum + ' грн');
+  console.log('Маршрути ВК: маршрутів ' + Object.keys(z).length +
+              ', рядків ' + n + ', разом ' + grand + ' шт');
 }
 
 // ============================================================
