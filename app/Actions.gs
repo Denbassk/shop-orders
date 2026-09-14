@@ -435,3 +435,14 @@ function g07_repairBakeryRaw() {
 function g08_sortBakeryRaw() {
   sortBakeryRawSheet();
 }
+
+/** Показати, у кого позначка "замовляли" є, а рядків у листі немає.
+ *  Це і є затерті замовлення. */
+function g09_bakeryLostOrders() {
+  bakeryLostOrders();
+}
+
+/** Зняти позначки саме в тих точок - щоб вони переслали замовлення. */
+function g10_clearBakeryLostMarks() {
+  clearBakeryLostMarks();
+}

@@ -578,3 +578,80 @@ function bakeryStamp_(r) {
     ms += t.getHours() * 3600000 + t.getMinutes() * 60000 + t.getSeconds() * 1000;
   return ms;
 }
+
+// ============================================================
+// ХТО ЗАМОВЛЯВ, АЛЕ РЯДКІВ НЕМА = ЗАТЕРТЕ ЗАМОВЛЕННЯ
+//
+// Екран показує "можна замовити", бо статус читає сирий лист.
+// Відправка ж дивиться на позначку sub_bakery_* у властивостях
+// скрипта - вона лишається, навіть якщо рядки з листа зникли.
+// Звідси розбіжність: напрямок відкритий, а на "Відправити"
+// пише "вже сьогодні відправлено".
+//
+// Позначка = точка справді надсилала замовлення. Немає рядків -
+// значить його затерло старим OVERWRITE.
+// ============================================================
+function bakeryLostOrders() {
+  var today = formatDateDMY_(new Date());
+  var props = PropertiesService.getScriptProperties().getProperties();
+
+  var inSheet = {};
+  bakeryTodayRows_().forEach(function (r) {
+    inSheet[addrKey_(String(r[2] || '').trim())] = true;
+  });
+
+  var byKey = {};
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf('bakery') >= 0) byKey[statusKey_('bakery', s)] = s.label;
+  });
+
+  var lost = [], fine = [];
+  Object.keys(props).forEach(function (k) {
+    if (k.indexOf('sub_bakery_') !== 0 || props[k] !== today) return;
+    var key = k.substring('sub_bakery_'.length);
+    var label = byKey[key] || ('? ' + key);
+    if (inSheet[key]) fine.push(label); else lost.push(label);
+  });
+
+  console.log('Позначок "замовляли сьогодні": ' + (lost.length + fine.length));
+  console.log('З рядками в листі (усе гаразд): ' + fine.length);
+  fine.sort().forEach(function (l) { console.log('   ' + l); });
+  console.log('БЕЗ рядків - замовлення ЗАТЕРТО: ' + lost.length);
+  lost.sort().forEach(function (l) { console.log('   ' + l); });
+  if (lost.length) {
+    console.log('---');
+    console.log('Цим точкам треба переслати замовлення. Щоб застосунок їх пустив,');
+    console.log('запустіть clearBakeryLostMarks() - вона знімає саме ці позначки.');
+  }
+}
+
+// Зняти позначки лише в тих, у кого рядків немає. Точок із живими
+// рядками не торкається - інакше вони змогли б замовити двічі.
+function clearBakeryLostMarks() {
+  var today = formatDateDMY_(new Date());
+  var sp = PropertiesService.getScriptProperties();
+  var props = sp.getProperties();
+
+  var inSheet = {};
+  bakeryTodayRows_().forEach(function (r) {
+    inSheet[addrKey_(String(r[2] || '').trim())] = true;
+  });
+
+  var byKey = {};
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf('bakery') >= 0) byKey[statusKey_('bakery', s)] = s.label;
+  });
+
+  var n = 0;
+  Object.keys(props).forEach(function (k) {
+    if (k.indexOf('sub_bakery_') !== 0 || props[k] !== today) return;
+    var key = k.substring('sub_bakery_'.length);
+    if (inSheet[key]) return;
+    sp.deleteProperty(k);
+    console.log('знято: ' + (byKey[key] || key));
+    n++;
+  });
+
+  CacheService.getScriptCache().remove('status_v3');
+  console.log('Знято позначок: ' + n + '. Ці точки можуть відправити замовлення заново.');
+}
