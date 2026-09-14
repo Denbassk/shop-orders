@@ -59,6 +59,34 @@ var BAKERY_ZONES = {
   'Виробництво (Семенка)': 'не возится'
 };
 
+// Адреси, вписані в сирий лист руками. Ключ - як написали,
+// значення - назва ТТ у Довіднику. Зіставлення через addrKey_.
+var BAKERY_ADDR_ALIASES = {
+  'валентиновская50': 'Валентинівська, 50 А',
+  'валентиновская 50': 'Валентинівська, 50 А',
+  'грозненская': 'Грозненська, 38',
+  'грозненская38': 'Грозненська, 38'
+};
+
+// Адреса з сирого листа -> ТТ Довідника: { key, label, addr, zone }.
+// Повертає null, якщо такої ТТ у Довіднику немає.
+function bakeryStoreByRawAddr_() {
+  var cached = null;
+  var byKey = {};
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf('bakery') < 0) return;
+    var rec = { label: s.label, addr: s.addrBakery, zone: s.zone || '' };
+    byKey[addrKey_(s.addrBakery)] = rec;
+    byKey[addrKey_(s.label)] = rec;
+    byKey[addrKey_(shortenAddress_(s.addrBakery))] = rec;
+  });
+  Object.keys(BAKERY_ADDR_ALIASES).forEach(function (k) {
+    var target = byKey[addrKey_(BAKERY_ADDR_ALIASES[k])];
+    if (target) byKey[addrKey_(k)] = target;
+  });
+  return byKey;
+}
+
 // ============================================================
 // КАТЕГОРІЯ ТОВАРУ З ЛИСТА "Ассортимент"
 // A Статус | B Категорія | C Штрих-код | D Ціна | E Назва
@@ -137,21 +165,30 @@ function bakeryZoneList_(obj) {
 // ============================================================
 function buildBakeryRouteSheet_(rows) {
   var today = formatDateDMY_(new Date());
-  var zoneByAddr = bakeryZoneByAddr_();
+  var byRawAddr = bakeryStoreByRawAddr_();
 
-  // зона -> товар -> адреса -> кількість
-  var z = {};
+  // зона -> товар -> назва ТТ -> кількість
+  var z = {}, unknown = {};
   rows.forEach(function (r) {
-    var zone = bakeryZoneOf_(r, zoneByAddr);
     var name = String(r[5] || '').trim();
     var addr = String(r[2] || '').trim();
     var qty = Number(r[7]) || 0;
     if (!name || !addr || qty <= 0) return;
 
+    // назва ТТ і зона - з Довідника; що в листі, те лише ключ пошуку
+    var st = byRawAddr[addrKey_(addr)];
+    if (!st) unknown[addr] = 1;
+    var label = st ? st.label : addr;
+    var zone = (st && st.zone) || String(r[3] || '').trim() || 'Без маршруту';
+
     z[zone] = z[zone] || {};
     z[zone][name] = z[zone][name] || {};
-    z[zone][name][addr] = (z[zone][name][addr] || 0) + qty;
+    z[zone][name][label] = (z[zone][name][label] || 0) + qty;
   });
+
+  var unknownList = Object.keys(unknown);
+  if (unknownList.length)
+    console.log('Маршрути ВК: адреси, яких немає в Довіднику - ' + unknownList.join(', '));
 
   var data = [], g = { title: [], head: [], row: [], item: [], zone: [], empty: [] };
   function push(v, t) { data.push(v); if (t) g[t].push(data.length); }
@@ -171,16 +208,18 @@ function buildBakeryRouteSheet_(rows) {
 
         Object.keys(byAddr).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
           .forEach(function (addr) {
-            push([shortenAddress_(addr), name, byAddr[addr], zone], 'row');
+            push([addr, name, byAddr[addr], zone], 'row');
             itemQty += byAddr[addr];
           });
 
         push(['Разом', name, itemQty, zone], 'item');
+        push(['', '', '', ''], null);        // порожній рядок між товарами
         zoneQty += itemQty;
       });
 
     push(['ВСЬОГО ' + zone, '', zoneQty, zone], 'zone');
     push(['', '', '', ''], null);
+    push(['', '', '', ''], null);            // розрив між маршрутами
     grand += zoneQty;
   });
 
@@ -395,14 +434,7 @@ function repairBakeryRawColumns() {
     // ціна і кількість - дві колонки одразу після назви
     var priceCol = nameCol + 1, qtyCol = nameCol + 2;
 
-    var zoneByAddr = bakeryZoneByAddr_();
-    var labelByKey = {};
-    loadStores_().forEach(function (s) {
-      if (s.directions.indexOf('bakery') < 0) return;
-      labelByKey[addrKey_(s.addrBakery)] = s.addrBakery;
-      labelByKey[addrKey_(s.label)] = s.addrBakery;
-      labelByKey[addrKey_(shortenAddress_(s.addrBakery))] = s.addrBakery;
-    });
+    var byRawAddr = bakeryStoreByRawAddr_();
 
     var out = [], noAddr = {}, noBc = {}, kept = 0;
     vals.forEach(function (r) {
@@ -411,14 +443,14 @@ function repairBakeryRawColumns() {
       if (!name || qty <= 0) return;
 
       var addrRaw = String(r[2] || '').trim();
-      var key = addrKey_(addrRaw);
-      var addr = labelByKey[key] || addrRaw;
-      if (!labelByKey[key] && addrRaw) noAddr[addrRaw] = 1;
+      var st = byRawAddr[addrKey_(addrRaw)];
+      var addr = st ? st.addr : addrRaw;
+      if (!st && addrRaw) noAddr[addrRaw] = 1;
 
       var bc = bcByName[nameKey_(name)] || '';
       if (!bc) noBc[name] = 1;
 
-      out.push([r[0], r[1], addr, zoneByAddr[addrKey_(addr)] || '', bc, name,
+      out.push([r[0], r[1], addr, (st && st.zone) || '', bc, name,
                 Number(String(r[priceCol] == null ? '' : r[priceCol]).replace(',', '.')) || 0,
                 qty]);
       kept++;
@@ -457,4 +489,49 @@ function bakeryBarcodeByName_() {
     }
   } catch (e) { console.log('Штрихкоди з Ассортимента: ' + e.message); }
   return map;
+}
+
+// ============================================================
+// ПРИВЕСТИ АДРЕСИ І МАРШРУТИ В СИРОМУ ЛИСТІ ДО ДОВІДНИКА
+//
+// Рядки, вписані руками ("валентиновская50", "грозненская"),
+// отримують адресу з Довідника і свій маршрут. Пишемо ТІЛЬКИ
+// клітинки, які реально змінюються - лист цілком не чіпаємо.
+// ============================================================
+function fixBakeryRawAddresses() {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 2) { console.log('Лист порожній'); return; }
+
+  var byRawAddr = bakeryStoreByRawAddr_();
+  var last = sh.getLastRow();
+  var rng = sh.getRange(2, 3, last - 1, 2);      // C адреса | D маршрут
+  var vals = rng.getValues();
+
+  var changed = 0, unknown = {};
+  vals.forEach(function (r) {
+    var addr = String(r[0] || '').trim();
+    if (!addr) return;
+    var st = byRawAddr[addrKey_(addr)];
+    if (!st) { unknown[addr] = 1; return; }
+
+    if (addr !== st.addr) { r[0] = st.addr; changed++; }
+    if (st.zone && String(r[1] || '').trim() !== st.zone) { r[1] = st.zone; changed++; }
+  });
+
+  if (!changed) { console.log('Міняти нічого - адреси і маршрути вже з Довідника'); }
+  else {
+    rng.setValues(vals);
+    SpreadsheetApp.flush();
+    console.log('Поправлено клітинок: ' + changed);
+  }
+
+  var un = Object.keys(unknown);
+  if (un.length) {
+    console.log('Адреси, яких немає в Довіднику (' + un.length + '):');
+    un.forEach(function (a) { console.log('   ' + a); });
+    console.log('Якщо це ТТ - додайте написання в BAKERY_ADDR_ALIASES.');
+  }
+
+  buildBakeryReports();
 }

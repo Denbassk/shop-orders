@@ -479,6 +479,12 @@ function g15_repairBakeryRawColumns() {
   repairBakeryRawColumns();
 }
 
+/** Привести адреси в сирому листі до Довідника і проставити маршрути.
+ *  Саме це прибирає рядки на кшталт "валентиновская50". */
+function g16_fixBakeryRawAddresses() {
+  fixBakeryRawAddresses();
+}
+
 
 // ============ 8. ЗВІТИ ХЛІБА І ОВОЧІВ ============
 
