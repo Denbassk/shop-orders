@@ -460,3 +460,69 @@ function showBakeryRawTail(n) {
   console.log('--- рядки з * - сьогоднішні (' + today + ') ---');
   console.log('Архів старших замовлень - на листі "_Архів".');
 }
+
+
+// ============================================================
+// РЕМОНТ СИРОГО ЛИСТА
+//
+// Прибирає все, через що append писав не в кінець листа:
+//   - рядки СТАРОГО формату (адреса в колонці A, без дати)
+//   - порожні рядки всередині даних (саме вони і є "розрив")
+// І вирівнює формати, щоб нові рядки успадковували нормальний
+// вигляд, а не чорну шапку.
+//
+// Запускати один раз після переходу на INSERT_ROWS.
+// ============================================================
+function repairBakeryRawSheet() {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh) { console.log('Лист "' + rawSheetName_(cfg) + '" не знайдено'); return; }
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(60000)) { console.log('Лист зайнятий - спробуйте за хвилину'); return; }
+  try {
+    var last = sh.getLastRow();
+    if (last < 2) { console.log('Даних немає'); return; }
+
+    var vals = sh.getRange(2, 1, last - 1, 8).getValues();
+    var bad = [], junk = 0, empty = 0, good = 0;
+    vals.forEach(function (row, i) {
+      var blank = row.join('').trim() === '';
+      var dated = (row[0] instanceof Date) || !!parseDMY_(String(row[0]));
+      if (blank) { empty++; bad.push(i + 2); return; }
+      if (!dated) { junk++; bad.push(i + 2); return; }
+      good++;
+    });
+
+    console.log('Рядків усього ' + (last - 1) + ': робочих ' + good +
+                ', старого формату ' + junk + ', порожніх ' + empty);
+
+    if (bad.length) {
+      var ranges = [], start = bad[0], prev = bad[0];
+      for (var j = 1; j < bad.length; j++) {
+        if (bad[j] === prev + 1) { prev = bad[j]; continue; }
+        ranges.push([start, prev]); start = bad[j]; prev = bad[j];
+      }
+      ranges.push([start, prev]);
+      ranges.reverse();
+      ranges.forEach(function (x) { sh.deleteRows(x[0], x[1] - x[0] + 1); });
+      SpreadsheetApp.flush();
+      console.log('Видалено рядків: ' + bad.length + ', відрізків: ' + ranges.length);
+    } else {
+      console.log('Видаляти нічого - лист уже чистий');
+    }
+
+    var n = Math.max(sh.getLastRow() - 1, 1);
+    sh.getRange(2, 1, n, 8).setBackground(null).setFontColor('#000000')
+      .setFontWeight('normal').setFontSize(10).setFontFamily('Arial');
+    sh.getRange(2, 1, n, 1).setNumberFormat('dd.MM.yyyy');
+    sh.getRange(2, 2, n, 1).setNumberFormat('HH:mm:ss');
+    sh.getRange(2, 5, n, 1).setNumberFormat('@');
+    sh.getRange(2, 7, n, 1).setNumberFormat('0.00');
+    sh.getRange(2, 8, n, 1).setNumberFormat('0.###');
+    SpreadsheetApp.flush();
+
+    console.log('Формати вирівняно. Робочих рядків лишилось: ' + (sh.getLastRow() - 1));
+    console.log('Тепер append дописує строго в кінець листа.');
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}

@@ -421,3 +421,11 @@ function g05_fixBakeryRawSheet() {
 function g06_showBakeryRawTail() {
   showBakeryRawTail(25);
 }
+
+
+/** РЕМОНТ сирого листа: прибрати рядки старого формату і порожні
+ *  розриви, вирівняти формати. Запустити ОДИН раз після переходу
+ *  apiAppend_ на INSERT_ROWS. */
+function g07_repairBakeryRaw() {
+  repairBakeryRawSheet();
+}
