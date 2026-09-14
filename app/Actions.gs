@@ -429,3 +429,9 @@ function g06_showBakeryRawTail() {
 function g07_repairBakeryRaw() {
   repairBakeryRawSheet();
 }
+
+/** Впорядкувати сирий лист по даті і часу. Разово: рядки від 12.09
+ *  лишились посеред 14.09 після старого OVERWRITE. */
+function g08_sortBakeryRaw() {
+  sortBakeryRawSheet();
+}

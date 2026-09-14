@@ -418,7 +418,8 @@ function fixBakeryRawSheet() {
   var head = ['Дата', 'Час', 'Адреса ТТ', 'Категорія',
               'Штрих-код', 'Номенклатура', 'Ціна', 'Кількість'];
   sh.getRange(1, 1, 1, 8).setValues([head])
-    .setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
+    .setFontWeight('bold').setBackground('#1565C0').setFontColor('#ffffff')
+    .setHorizontalAlignment('center');
   sh.setFrozenRows(1);
   sh.setFrozenColumns(0);
 
@@ -454,8 +455,9 @@ function showBakeryRawTail(n) {
   console.log('рядок | дата | час | адреса | категорія | назва | ціна | кіл-ть');
   rows.forEach(function (r, i) {
     var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
+    var t = (r[1] instanceof Date) ? formatTime_(r[1]) : String(r[1]).trim();
     console.log((from + i) + (d === today ? ' * ' : ' | ') +
-                [d, r[1], r[2], r[3], r[5], r[6], r[7]].join(' | '));
+                [d, t, r[2], r[3], r[5], r[6], r[7]].join(' | '));
   });
   console.log('--- рядки з * - сьогоднішні (' + today + ') ---');
   console.log('Архів старших замовлень - на листі "_Архів".');
@@ -525,4 +527,43 @@ function repairBakeryRawSheet() {
     console.log('Формати вирівняно. Робочих рядків лишилось: ' + (sh.getLastRow() - 1));
     console.log('Тепер append дописує строго в кінець листа.');
   } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+// ============================================================
+// СОРТУВАННЯ СИРОГО ЛИСТА ПО ДАТІ І ЧАСУ
+//
+// Рядки від 12.09 лишились посеред 14.09 - так їх колись поклав
+// append із OVERWRITE. Звіту це не шкодить (він фільтрує по даті),
+// але archiveRawSheets() з Archive.gs вважає старі рядки ПРЕФІКСОМ
+// листа і ріже перший блок до першої свіжої дати. Якщо дати
+// вперемішку - архівування зупиняється з "дати вперемішку".
+//
+// Далі порядок тримається сам: append дописує в кінець.
+// ============================================================
+function sortBakeryRawSheet() {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 3) { console.log('Сортувати нічого'); return; }
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(60000)) { console.log('Лист зайнятий - спробуйте за хвилину'); return; }
+  try {
+    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues();
+    rows.sort(function (a, b) { return bakeryStamp_(a) - bakeryStamp_(b); });
+    sh.getRange(2, 1, rows.length, 8).setValues(rows);
+    SpreadsheetApp.flush();
+    console.log('Відсортовано рядків: ' + rows.length);
+    console.log('Перший: ' + rows[0][0] + ', останній: ' + rows[rows.length - 1][0]);
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+// Дата + час одним числом. Час у листі - Date від 30.12.1899,
+// тож із нього беремо лише години-хвилини-секунди.
+function bakeryStamp_(r) {
+  var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
+  if (!d) return 0;
+  var ms = d.getTime(), t = r[1];
+  if (t instanceof Date)
+    ms += t.getHours() * 3600000 + t.getMinutes() * 60000 + t.getSeconds() * 1000;
+  return ms;
 }
