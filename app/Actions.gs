@@ -408,3 +408,16 @@ function g03_whyNoBakeryReport() {
 function g04_cleanBakeryRaw() {
   cleanBakeryRawJunk();
 }
+
+
+/** Поправити сирий лист: шапка на 8 колонок, зняти фільтр,
+ *  розкрити приховані рядки. Разово. */
+function g05_fixBakeryRawSheet() {
+  fixBakeryRawSheet();
+}
+
+/** Показати останні 25 рядків сирого листа в лог.
+ *  Коли здається, що замовлень немає - запускати це. */
+function g06_showBakeryRawTail() {
+  showBakeryRawTail(25);
+}

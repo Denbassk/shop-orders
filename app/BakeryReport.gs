@@ -146,8 +146,7 @@ function buildBakeryOrdersSheet_(rows) {
       var sQty = 0, sSum = 0;
 
       bakeryCats_(byStore[store]).forEach(function (cat) {
-        push([(BAKERY_CAT_ICONS[cat] || (cat + ': ')) + '', '', '', ''], 'cat');
-        data[data.length - 1][0] = (BAKERY_CAT_ICONS[cat] ? cat : cat);
+        push([cat, '', '', ''], 'cat');
         byStore[store][cat].forEach(function (it) {
           var sum = Math.round(it.price * it.qty * 100) / 100;
           sQty += it.qty;
@@ -212,14 +211,20 @@ function buildBakeryOrdersSheet_(rows) {
   if (g.total.length) {
     sh.getRangeList(bakeryRowList_(g.total, 'A', 'D'))
       .setBackground('#E8F5E9').setFontColor('#2E7D32').setFontWeight('bold');
-    sh.getRangeList(bakeryRowList_(g.total, 'C', 'C')).setHorizontalAlignment('center');
+    // 0.### - щоб кількість була "11", а не "11,00": формат
+    // підтягувався від попереднього вмісту листа
+    sh.getRangeList(bakeryRowList_(g.total, 'C', 'C'))
+      .setHorizontalAlignment('center').setNumberFormat('0.###');
     sh.getRangeList(bakeryRowList_(g.total, 'D', 'D'))
       .setHorizontalAlignment('right').setNumberFormat('#,##0.00');
   }
   if (g.grand.length) {
     sh.getRangeList(bakeryRowList_(g.grand, 'A', 'D'))
       .setBackground('#388E3C').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
-    sh.getRangeList(bakeryRowList_(g.grand, 'D', 'D')).setNumberFormat('#,##0.00');
+    sh.getRangeList(bakeryRowList_(g.grand, 'C', 'C'))
+      .setHorizontalAlignment('center').setNumberFormat('0.###');
+    sh.getRangeList(bakeryRowList_(g.grand, 'D', 'D'))
+      .setHorizontalAlignment('right').setNumberFormat('#,##0.00');
   }
   if (g.missHead.length) sh.getRangeList(bakeryRowList_(g.missHead, 'A', 'D'))
     .setBackground('#FFEBEE').setFontColor('#C62828').setFontWeight('bold');
@@ -375,4 +380,83 @@ function whyNoBakeryReport() {
   console.log('Підпис стану: ' + bakerySignature_(rows));
   console.log('Записаний підпис: ' +
     PropertiesService.getScriptProperties().getProperty('bakery_report_sig'));
+}
+
+
+// ============================================================
+// СИРИЙ ЛИСТ: ПРИВЕСТИ ДО ЛАДУ
+//
+// У листі лишилась шапка СТАРОГО формату на 4 колонки
+// ("Адрес ТТ | | Назва | Кількість"), хоча застосунок пише 8 -
+// див. rawRow для bakery у Config.gs:
+//   A дата | B час | C адреса | D категорія
+//   E штрихкод | F назва | G ціна | H кіл-ть
+// Дані від цього не страдають (звіт читає за позицією колонки),
+// але дивитись на лист неможливо: підписи не від тих колонок.
+//
+// Заодно знімаємо фільтр і розкриваємо все приховане. Фільтр на
+// сирому листі тільки шкодить: append дописує рядки НИЖЧЕ його
+// діапазону, і свіжі замовлення просто не показуються.
+// ============================================================
+function fixBakeryRawSheet() {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh) { console.log('Лист "' + rawSheetName_(cfg) + '" не знайдено'); return; }
+
+  console.log('Було в шапці: ' + sh.getRange(1, 1, 1, 8).getValues()[0].join(' | '));
+
+  try {
+    var f = sh.getFilter();
+    if (f) { f.remove(); console.log('Фільтр знято'); }
+  } catch (e) { console.log('Фільтр: ' + e.message); }
+
+  var maxR = sh.getMaxRows(), maxC = Math.max(sh.getMaxColumns(), 8);
+  sh.showRows(1, maxR);
+  sh.showColumns(1, maxC);
+  console.log('Розкрито рядки 1-' + maxR + ' і колонки 1-' + maxC);
+
+  var head = ['Дата', 'Час', 'Адреса ТТ', 'Категорія',
+              'Штрих-код', 'Номенклатура', 'Ціна', 'Кількість'];
+  sh.getRange(1, 1, 1, 8).setValues([head])
+    .setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
+  sh.setFrozenRows(1);
+  sh.setFrozenColumns(0);
+
+  sh.setColumnWidth(1, 95);  sh.setColumnWidth(2, 75);
+  sh.setColumnWidth(3, 280); sh.setColumnWidth(4, 110);
+  sh.setColumnWidth(5, 140); sh.setColumnWidth(6, 330);
+  sh.setColumnWidth(7, 80);  sh.setColumnWidth(8, 90);
+  SpreadsheetApp.flush();
+
+  console.log('Стало: ' + head.join(' | '));
+  console.log('Останній рядок з даними: ' + sh.getLastRow() +
+              ' (рядків з замовленнями ' + (sh.getLastRow() - 1) + ')');
+  console.log('Усе, що нижче - порожній хвіст листа. Ctrl+Home - на початок.');
+}
+
+// --- Показати хвіст сирого листа прямо в лог ---
+// Найнадійніший спосіб переконатись, що замовлення на місці:
+// не залежить ні від прокрутки, ні від фільтрів, ні від шапки.
+function showBakeryRawTail(n) {
+  n = n || 25;
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 2) { console.log('Лист порожній'); return; }
+
+  var last = sh.getLastRow();
+  var take = Math.min(last - 1, n);
+  var from = last - take + 1;
+  var rows = sh.getRange(from, 1, take, 8).getValues();
+  var today = formatDateDMY_(new Date());
+
+  console.log('Лист "' + rawSheetName_(cfg) + '": рядків з даними ' + (last - 1) +
+              ', показую останні ' + take + ' (рядки ' + from + '-' + last + ')');
+  console.log('рядок | дата | час | адреса | категорія | назва | ціна | кіл-ть');
+  rows.forEach(function (r, i) {
+    var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
+    console.log((from + i) + (d === today ? ' * ' : ' | ') +
+                [d, r[1], r[2], r[3], r[5], r[6], r[7]].join(' | '));
+  });
+  console.log('--- рядки з * - сьогоднішні (' + today + ') ---');
+  console.log('Архів старших замовлень - на листі "_Архів".');
 }
