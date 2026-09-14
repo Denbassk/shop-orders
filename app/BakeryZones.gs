@@ -535,3 +535,54 @@ function fixBakeryRawAddresses() {
 
   buildBakeryReports();
 }
+
+// ============================================================
+// РЯДКИ БЕЗ ДАТИ - ПРОСТАВИТИ СЬОГОДНІШНЮ
+//
+// Замовлення, повернуті в лист руками, лишились без колонок
+// A (дата) і B (час). Звіт бере рядки за сьогоднішньою датою,
+// тому такі рядки для нього не існують - саме через це в
+// звітах не було "Новые дома" і "Центр".
+//
+// Чіпаємо ТІЛЬКИ колонки A і B і ТІЛЬКИ там, де дати немає,
+// а рядок робочий: є адреса, назва і кількість.
+// ============================================================
+function fillMissingBakeryDates(timeStr) {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 2) { console.log('Лист порожній'); return; }
+
+  var last = sh.getLastRow();
+  var all = sh.getRange(2, 1, last - 1, 8).getValues();
+  var ab = sh.getRange(2, 1, last - 1, 2);
+  var vals = ab.getValues();
+
+  var today = formatDateDMY_(new Date());
+  var t = String(timeStr || '00:00:00');
+  var n = 0, skipped = 0;
+
+  all.forEach(function (r, i) {
+    var hasDate = (r[0] instanceof Date) || !!parseDMY_(String(r[0]));
+    if (hasDate) return;
+
+    var ok = String(r[2] || '').trim() && String(r[5] || '').trim() &&
+             (Number(r[7]) || 0) > 0;
+    if (!ok) { skipped++; return; }
+
+    vals[i][0] = today;
+    if (!String(vals[i][1] || '').trim()) vals[i][1] = t;
+    n++;
+  });
+
+  if (!n) { console.log('Рядків без дати немає (пропущено сміттєвих: ' + skipped + ')'); }
+  else {
+    ab.setValues(vals);
+    sh.getRange(2, 1, last - 1, 1).setNumberFormat('dd.MM.yyyy');
+    SpreadsheetApp.flush();
+    console.log('Проставлено дату ' + today + ' рядкам: ' + n +
+                ' (сміттєвих без дати пропущено: ' + skipped + ')');
+  }
+
+  buildBakeryReports();
+  whyNoBakeryReport();
+}

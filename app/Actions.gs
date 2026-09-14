@@ -485,6 +485,13 @@ function g16_fixBakeryRawAddresses() {
   fixBakeryRawAddresses();
 }
 
+/** Рядкам без дати проставити сьогоднішню. Саме через порожню
+ *  колонку A замовлення, повернуті в лист руками, не потрапляли
+ *  у звіти. Чіпає лише колонки A і B. */
+function g17_fillMissingBakeryDates() {
+  fillMissingBakeryDates('00:00:00');
+}
+
 
 // ============ 8. ЗВІТИ ХЛІБА І ОВОЧІВ ============
 
