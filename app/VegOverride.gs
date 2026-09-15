@@ -167,3 +167,73 @@ function vegBackupWrite_(rows, today) {
   sh.getRange(sh.getLastRow() + 1, 1, out.length, 9).setValues(out);
   SpreadsheetApp.flush();
 }
+// ============================================================
+// ФОРМАТ СИРОГО ЛИСТА ОВОЧІВ
+// Рядок 2 успадкував зелену шапку разом із ЧИСЛОВИМ форматом,
+// далі INSERT_ROWS розтягнув це на всі нові рядки. Через це
+// getValues() віддавав число, а не Date - і застосунок
+// перестав бачити ці замовлення взагалі.
+// ============================================================
+function v07_fixVegRawFormat() {
+  var cfg = dirCfg_('veg');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 2) { console.log('Порожньо'); return; }
+
+  var last = sh.getLastRow();
+  var n = last - 1;
+  var data = sh.getRange(2, 1, n, 7);
+
+  // прибираємо успадковану шапку
+  data.setBackground(null).setFontColor('#000000')
+      .setFontWeight('normal').setFontSize(9)
+      .setHorizontalAlignment('left');
+
+  // повертаємо правильні формати
+  sh.getRange(2, 1, n, 1).setNumberFormat('dd.MM.yyyy').setHorizontalAlignment('center');
+  sh.getRange(2, 2, n, 1).setNumberFormat('HH:mm:ss').setHorizontalAlignment('center');
+  sh.getRange(2, 5, n, 1).setNumberFormat('0.00').setHorizontalAlignment('center');
+  sh.getRange(2, 6, n, 1).setNumberFormat('0.###').setHorizontalAlignment('center');
+  sh.getRange(2, 7, n, 1).setNumberFormat('0.00').setHorizontalAlignment('center');
+
+  // шапка лишається зеленою
+  sh.getRange(1, 1, 1, 7).setFontWeight('bold')
+    .setBackground('#2E7D32').setFontColor('#FFFFFF')
+    .setHorizontalAlignment('center');
+  sh.setFrozenRows(1);
+  SpreadsheetApp.flush();
+
+  // тепер перевіряємо, скільки рядків застосунок БАЧИТЬ за сьогодні
+  var today = formatDateDMY_(new Date());
+  var vals = sh.getRange(2, 1, n, 3).getValues();
+  var seen = 0, addrs = {};
+  vals.forEach(function (r) {
+    var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
+    if (d !== today) return;
+    seen++;
+    addrs[String(r[2]).trim()] = 1;
+  });
+
+  console.log('Формат виправлено: рядків ' + n);
+  console.log('За сьогодні (' + today + ') застосунок бачить: ' + seen +
+              ' рядків, точок ' + Object.keys(addrs).length);
+  Object.keys(addrs).forEach(function (a) { console.log('   ' + a); });
+
+  // змушуємо звіти перезібратись і кладемо знімок у бекап
+  PropertiesService.getScriptProperties().deleteProperty('veg_report_sig');
+  invalidateAppCache();
+  try { buildVegReports(); } catch (e) { console.error('звіт: ' + e.message); }
+  try { v05_vegBackupNow(); } catch (e) { console.error('бекап: ' + e.message); }
+}
+
+// Що саме лежить у листі: типи значень по датах
+function v08_checkVegTypes() {
+  var cfg = dirCfg_('veg');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  var last = sh.getLastRow();
+  var take = Math.min(last - 1, 15);
+  sh.getRange(last - take + 1, 1, take, 4).getValues().forEach(function (r, i) {
+    var kind = (r[0] instanceof Date) ? 'Date' : (typeof r[0]);
+    console.log('рядок ' + (last - take + 1 + i) + ' | ' + r[0] +
+                ' (' + kind + ') | ' + r[2] + ' | ' + r[3]);
+  });
+}
