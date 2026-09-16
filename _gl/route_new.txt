@@ -1,0 +1,104 @@
+
+// ============================================================
+// ЛИСТ "Маршрути ВК" - для машини розвозки
+//
+// Проста таблиця, яку можна роздрукувати і везти з собою:
+//   Торгова точка | Найменування продукції | Кількість | Маршрут
+// Порядок: маршрут -> вид товару -> адреса. Після кожного товару
+// рядок "Разом", після кожного маршруту - підсумок маршруту.
+// ============================================================
+function buildBakeryRouteSheet_(rows) {
+  var today = formatDateDMY_(new Date());
+  var zoneByAddr = bakeryZoneByAddr_();
+
+  // зона -> товар -> адреса -> кількість
+  var z = {};
+  rows.forEach(function (r) {
+    var zone = bakeryZoneOf_(r, zoneByAddr);
+    var name = String(r[5] || '').trim();
+    var addr = String(r[2] || '').trim();
+    var qty = Number(r[7]) || 0;
+    if (!name || !addr || qty <= 0) return;
+
+    z[zone] = z[zone] || {};
+    z[zone][name] = z[zone][name] || {};
+    z[zone][name][addr] = (z[zone][name][addr] || 0) + qty;
+  });
+
+  var data = [], g = { title: [], head: [], row: [], item: [], zone: [], empty: [] };
+  function push(v, t) { data.push(v); if (t) g[t].push(data.length); }
+
+  push(['Розвозка випічки і кулінарії - ' + today +
+        '   (оновлено ' + formatTime_(new Date()) + ')', '', '', ''], 'title');
+  push(['Торгова точка', 'Найменування продукції', 'Кількість', 'Маршрут'], 'head');
+
+  var grand = 0;
+
+  bakeryZoneList_(z).forEach(function (zone) {
+    var items = z[zone], zoneQty = 0;
+
+    Object.keys(items).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+      .forEach(function (name) {
+        var byAddr = items[name], itemQty = 0;
+
+        Object.keys(byAddr).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+          .forEach(function (addr) {
+            push([shortenAddress_(addr), name, byAddr[addr], zone], 'row');
+            itemQty += byAddr[addr];
+          });
+
+        push(['Разом', name, itemQty, zone], 'item');
+        zoneQty += itemQty;
+      });
+
+    push(['ВСЬОГО ' + zone, '', zoneQty, zone], 'zone');
+    push(['', '', '', ''], null);
+    grand += zoneQty;
+  });
+
+  if (!Object.keys(z).length) {
+    push(['Замовлень на сьогодні ще немає', '', '', ''], 'empty');
+  } else {
+    push(['ЗАГАЛОМ', '', grand, ''], 'zone');
+  }
+
+  var ss = SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
+  var sh = ss.getSheetByName(BAKERY_ROUTE_SHEET) || ss.insertSheet(BAKERY_ROUTE_SHEET);
+  sh.clear();
+  sh.clearConditionalFormatRules();
+  try { sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).breakApart(); } catch (e) {}
+
+  var n = data.length;
+  sh.getRange(1, 1, n, 4).setValues(data);
+  sh.getRange(1, 1, n, 4).setFontFamily('Arial').setFontSize(10)
+    .setVerticalAlignment('middle').setFontColor('#000000').setBackground('#FFFFFF');
+  sh.setRowHeights(1, n, 22);
+  sh.getRange(1, 3, n, 1).setNumberFormat('0.###').setHorizontalAlignment('center');
+  sh.getRange(1, 4, n, 1).setHorizontalAlignment('center');
+
+  if (g.title.length) sh.getRangeList(bakeryRowList_(g.title, 'A', 'D'))
+    .setBackground('#1565C0').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(12);
+  if (g.head.length) sh.getRangeList(bakeryRowList_(g.head, 'A', 'D'))
+    .setFontWeight('bold').setHorizontalAlignment('center')
+    .setBorder(true, true, true, true, true, true);
+  if (g.row.length) sh.getRangeList(bakeryRowList_(g.row, 'A', 'D'))
+    .setBorder(true, true, true, true, true, true);
+  if (g.item.length) sh.getRangeList(bakeryRowList_(g.item, 'A', 'D'))
+    .setBackground('#F1F3F4').setFontWeight('bold')
+    .setBorder(true, true, true, true, true, true);
+  if (g.zone.length) sh.getRangeList(bakeryRowList_(g.zone, 'A', 'D'))
+    .setBackground('#E8F5E9').setFontColor('#1B5E20').setFontWeight('bold')
+    .setBorder(true, true, true, true, true, true);
+  if (g.empty.length) sh.getRangeList(bakeryRowList_(g.empty, 'A', 'D'))
+    .setBackground('#FFEBEE').setFontColor('#C62828').setFontWeight('bold');
+
+  sh.setColumnWidth(1, 220);
+  sh.setColumnWidth(2, 420);
+  sh.setColumnWidth(3, 110);
+  sh.setColumnWidth(4, 130);
+  sh.setFrozenRows(2);
+  SpreadsheetApp.flush();
+
+  console.log('Маршрути ВК: маршрутів ' + Object.keys(z).length +
+              ', рядків ' + n + ', разом ' + grand + ' шт');
+}
