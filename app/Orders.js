@@ -146,7 +146,7 @@ var DIR_LOCK_TTL_MS = 45000;   // для archiveRawSheets, див. нижче
 // ламає атомарність: межу таблиці Google перераховує у себе, тому
 // навіть якщо якір трохи застарів через одночасну відправку,
 // рядки все одно стануть у кінець.
-function apiAppend_OLD_(spreadsheetId, sheetName, rows) {
+function apiAppend_(spreadsheetId, sheetName, rows) {
   var anchor = 1;
   try {
     var sh = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
@@ -183,10 +183,9 @@ function appendRows_(cfg, dirKey, values) {
   });
 
   try {
-    apiAppend_(cfg.spreadsheetId, sheetName, rows, dirKey, bcCol);
+    apiAppend_(cfg.spreadsheetId, sheetName, rows);
     return;
   } catch (e) {
-    if (isAppendLost_(e)) { appendRowsLocked_(cfg, dirKey, sheetName, values); return; }
     if (!isQuotaError_(e)) throw e;
   }
 
@@ -194,10 +193,9 @@ function appendRows_(cfg, dirKey, values) {
   // Довгі повтори тут неприпустимі: продавець чекає на екрані.
   Utilities.sleep(700 + Math.floor(Math.random() * 1500));
   try {
-    apiAppend_(cfg.spreadsheetId, sheetName, rows, dirKey, bcCol);
+    apiAppend_(cfg.spreadsheetId, sheetName, rows);
     return;
   } catch (e2) {
-    if (isAppendLost_(e2)) { appendRowsLocked_(cfg, dirKey, sheetName, values); return; }
     if (!isQuotaError_(e2)) throw e2;
   }
   console.log('Квота Sheets API вичерпана - пишемо через замок');

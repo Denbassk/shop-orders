@@ -1,0 +1,520 @@
+// ============================================================
+// ПАНЕЛЬ ЗАПУСКУ
+//
+// Усе, що треба запускати руками - тут, і БЕЗ АРГУМЕНТІВ.
+// Вибрали функцію у списку зверху, натиснули "Виконати", читаєте лог.
+//
+// Функції з аргументами (whyNoProducts('bakery') і подібні) з редактора
+// не запускаються - Google передає undefined. Тому всі обгортки тут.
+//
+// ------------------------------------------------------------
+// ДЕ ЩО ЛЕЖИТЬ
+//   Actions.gs      - цей файл, точки входу без аргументів
+//   Config.gs       - напрямки, дедлайни, ID таблиць, APP_VERSION
+//   Code.gs         - doGet / doPost, bootstrap, heartbeat
+//   Orders.gs       - асортимент для клієнта, приймання замовлень, замки
+//   Products.gs     - читання листів "Ассортимент"
+//   Registry.gs     - Довідник ТТ, статуси, кеш
+//   Address.gs      - нормалізація адрес
+//   Deadline.gs     - дедлайни, ручне відкриття прийому
+//   LateRequest.gs  - дозвіл на дозамовлення, листи закупницям
+//   Nbhz.gs         - НБХЗ: листи, зіставлення маршрутів, вивантаження
+//   Nbhz_Seed.gs    - дані НБХЗ: асортимент і маршрути
+//   Archive.gs      - архівування сирих листів
+//   BakeryReport.gs - звіти випічки: Заказы ВК, Сводная ВК
+//   Maintenance.gs  - перевірки, заміри, посилання на ТТ, прибирання
+//   LoadTest.gs     - навантажувальний тест
+//   Logo.gs         - логотип у base64
+//   ui/Index.html   - весь інтерфейс
+// ------------------------------------------------------------
+// ============================================================
+
+
+// ============ 1. ПІСЛЯ КОЖНОГО ДЕПЛОЮ ============
+
+/** Видати дозволи і перевірити, що все підключено. Запустити після кожного push. */
+function a01_authorize() {
+  authorizeMail();
+  try {
+    UrlFetchApp.fetch(appUrl_(), { muteHttpExceptions: true });
+    console.log('Зовнішні запити: OK');
+  } catch (e) { console.log('Зовнішні запити: ' + e.message); }
+
+  // Sheets API працює на тому самому дозволі "spreadsheets", тож нового
+  // вікна згоди не буде. Але сам сервіс має бути увімкнений у проєкті.
+  console.log('---');
+  if (typeof Sheets === 'undefined') {
+    console.log('ПРОБЛЕМА: Sheets API не увімкнено - замовлення писатимуться');
+    console.log('старим шляхом із чергою.');
+    console.log('Полагодити: у редакторі зліва "Служби" -> + -> Google Sheets API -> Додати,');
+    console.log('ідентифікатор має лишитись "Sheets". Або перевірити, що clasp push');
+    console.log('залив appsscript.json з enabledAdvancedServices.');
+    return;
+  }
+  try {
+    var cfg = dirCfg_('bread');
+    var meta = Sheets.Spreadsheets.get(cfg.spreadsheetId, { fields: 'properties.title' });
+    console.log('Sheets API: OK, бачить таблицю "' + meta.properties.title + '"');
+    console.log('Замовлення пишуться без черги.');
+  } catch (e) {
+    console.log('Sheets API увімкнено, але виклик не пройшов: ' + e.message);
+  }
+}
+
+/** Скинути кеш - після правок у Довіднику чи асортименті. */
+function a02_clearCache() {
+  invalidateAppCache();
+}
+
+/** Запам'ятати РОБОЧУ адресу застосунку. Впишіть її нижче і запустіть.
+ *  Взяти: Розгорнути -> Керувати розгортаннями -> копіювати "Веб-додаток".
+ *  Має закінчуватись на /exec. Потрібно один раз і після кожного
+ *  СТВОРЕННЯ нового розгортання (не після зміни версії). */
+function a03_setWebAppUrl() {
+  var URL = 'ВСТАВТЕ_СЮДИ_АДРЕСУ_ЩО_ЗАКІНЧУЄТЬСЯ_НА_EXEC';
+
+  if (URL.indexOf('/exec') < 0) {
+    console.log('Адреса має закінчуватись на /exec. Зараз: ' + URL);
+    console.log('Розгорнути -> Керувати розгортаннями -> копіювати посилання веб-додатка.');
+    return;
+  }
+  PropertiesService.getScriptProperties().setProperty('WEB_APP_URL', URL);
+  console.log('Записано: ' + URL);
+  a04_checkWebApp();
+}
+
+/** Перевірити, що робоча адреса жива і відкрита для всіх. */
+function a04_checkWebApp() {
+  var url = appUrl_();
+  console.log('Адреса застосунку: ' + url);
+  if (url.indexOf('/dev') >= 0) {
+    console.log('Це адреса ЧЕРНЕТКИ. Продавці нею користуватись не зможуть.');
+    console.log('Запустіть a03_setWebAppUrl() з робочою адресою.');
+    return;
+  }
+  var r = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+  var body = r.getContentText();
+  var code = r.getResponseCode();
+  console.log('Код відповіді: ' + code);
+
+  if (code === 404) {
+    console.log('ПРОБЛЕМА: за цією адресою нічого немає - розгортання видалено');
+    console.log('або створено НОВЕ, з іншою адресою.');
+    console.log('Полагодити найпростіше так: відкрийте застосунок у браузері');
+    console.log('за актуальним посиланням - адреса запишеться сама.');
+    console.log('Або впишіть її руками в a03_setWebAppUrl().');
+    PropertiesService.getScriptProperties().deleteProperty('WEB_APP_URL');
+    console.log('Стару адресу прибрано зі сховища.');
+    return;
+  }
+
+  if (body.indexOf('accounts.google.com') >= 0 || body.indexOf('/v3/signin') >= 0) {
+    console.log('ПРОБЛЕМА: Google вимагає входу в акаунт.');
+    console.log('Розгортання закрите. Розгорнути -> Керувати розгортаннями -> олівець ->');
+    console.log('   "Хто має доступ" = УСІ.');
+    console.log('Поки так - продавець на телефоні побачить сторінку входу Google,');
+    console.log('а кнопка "Дозволити" в листі закупниці не спрацює.');
+    return;
+  }
+  if (body.indexOf('Фемелі') >= 0 || body.indexOf('Оберіть торгову точку') >= 0) {
+    console.log('OK: застосунок відкривається без входу в акаунт.');
+  } else {
+    console.log('Відповідь незрозуміла, початок:');
+    console.log(body.slice(0, 300));
+  }
+}
+
+
+// ============ 2. ПЕРЕВІРКИ ============
+
+/** Чому напрямок показує нуль позицій. Розбір усіх чотирьох листів. */
+function b01_checkProducts() {
+  whyNoProducts();
+}
+
+/** Скільки рядків у роботі і скільки в архіві. */
+function b02_showSizes() {
+  showRawSizes();
+}
+
+/** Стан НБХЗ: галочки, маршрути, адреси в Довіднику. */
+function b03_checkNbhz() {
+  whyNoNbhz();
+  console.log('');
+  showNbhzInRegistry();
+}
+
+/** Дедлайни: що зараз відкрито, що закрито. */
+function b04_checkDeadlines() {
+  deadlineStatus();
+}
+
+/** Активні дозволи на дозамовлення і хто чекає. */
+function b05_showLate() {
+  showLateToday();
+}
+
+/** Дублі в сьогоднішніх замовленнях. */
+function b06_auditToday() {
+  auditToday();
+}
+
+
+// ============ 3. ЗАМІРИ ============
+
+/** Загальні заміри швидкості: bootstrap, heartbeat, асортимент. */
+function c01_benchmark() {
+  benchmarkApp();
+}
+
+/** Реальна вартість одного запису в таблицю - по всіх напрямках. */
+function c02_measureWrite() {
+  measureWriteAll();
+}
+
+/** РЕАЛЬНИЙ ПІК: усі 39 точок одного напрямку тиснуть "Відправити"
+ *  в одну секунду. Це найгірше, що може статись насправді.
+ *  Триває секунд 20. Потрібні: a03_setWebAppUrl + свіже розгортання. */
+function c03_loadTest() {
+  loadTest(39, 'bread');
+}
+
+/** СУДНИЙ ДЕНЬ: 39 точок одразу по всіх чотирьох напрямках = 156 запитів.
+ *  У житті неможливо - дедлайни рознесені. Впреться у квоту Sheets API
+ *  і піде запасним шляхом через замок, тому ТРИВАТИМЕ КІЛЬКА ХВИЛИН.
+ *  Це не зависання. Мета - переконатись, що жодне замовлення не втрачено. */
+function c05_loadTestMax() {
+  loadTest(39);
+}
+
+/** Прибрати службові листи після залпу. */
+function c04_loadTestCleanup() {
+  loadTestCleanup();
+}
+
+
+// ============ 4. ОБСЛУГОВУВАННЯ ============
+
+/** Архівувати все старше тижня. Повісити тригером раз на тиждень. */
+function d01_archive() {
+  archiveRawSheets();
+  console.log('');
+  showRawSizes();
+}
+
+/** Повне перезбирання архіву одного напрямку - якщо дати переплутані.
+ *  Звичайний d01_archive викликає це сам, коли бачить потребу. */
+function d05_archiveRebuildHere() {
+  var DIR = 'bakery';       // bread | nbhz | bakery | veg
+  archiveRebuild(DIR);
+  console.log('');
+  showRawSizes();
+}
+
+/** Прибрати старі ключі у властивостях. Тригером раз на добу. */
+function d02_cleanupProps() {
+  cleanupOldOrderIds();
+}
+
+/** Лист "Посилання" в Довіднику: персональне посилання на кожну ТТ. */
+function d03_storeLinks() {
+  writeStoreLinksSheet();
+}
+
+/** Поставити розклад:
+ *    чистка властивостей - щодня о 3:00
+ *    архівування         - щопонеділка о 4:00
+ *    оновлення вивантаження НБХЗ - кожні 5 хвилин удень
+ *    повна збірка вивантаження   - щодня після 18:00
+ *  Запустити ОДИН РАЗ. Повторний запуск просто перестворює ті самі тригери. */
+function d06_installTriggers() {
+  var mine = { d01_archive: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
+               e04_refreshExport: 1, refreshBakeryReports: 1,
+               refreshBreadReports: 1, refreshVegReports: 1 };
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (mine[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
+  });
+
+  ScriptApp.newTrigger('d02_cleanupProps').timeBased().everyDays(1).atHour(3).create();
+  ScriptApp.newTrigger('d01_archive').timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(4).create();
+  // лист вивантаження підтягується сам протягом дня
+  ScriptApp.newTrigger('e04_refreshExport').timeBased().everyMinutes(5).create();
+  // і гарантована повна збірка ввечері, після 17:30 плюс 30 хв на зміни
+  ScriptApp.newTrigger('e03_nbhzExport').timeBased().everyDays(1).atHour(18).create();
+
+  // звіти напрямків перезбираються самі, як тільки в сирому листі щось змінилось
+  ScriptApp.newTrigger('refreshBakeryReports').timeBased().everyMinutes(5).create();
+  ScriptApp.newTrigger('refreshBreadReports').timeBased().everyMinutes(5).create();
+  ScriptApp.newTrigger('refreshVegReports').timeBased().everyMinutes(5).create();
+
+  console.log('Розклад поставлено:');
+  d07_showTriggers();
+}
+
+/** Що зараз стоїть у розкладі. */
+function d07_showTriggers() {
+  var all = ScriptApp.getProjectTriggers();
+  if (!all.length) { console.log('Тригерів немає. Запустіть d06_installTriggers().'); return; }
+  all.forEach(function (t) {
+    console.log('   ' + t.getHandlerFunction() + '  (' + t.getEventType() + ')');
+  });
+}
+
+/** Прибрати чорний фон із рядків замовлень. Разово, після оновлення. */
+function d08_fixRawFormat() {
+  fixRawFormat();
+}
+
+/** Прибрати тестові листи і старі листи "Дозволи". Разово. */
+function d04_dropOldSheets() {
+  dropTestSheets();
+  dropLateSheets();
+}
+
+
+// ============ 5. НБХЗ ============
+
+/** Повне встановлення НБХЗ: листи, асортимент, маршрути, Довідник. */
+function e01_installNbhz() {
+  installNbhz();
+}
+
+/** Перезібрати зіставлення маршрутів з Довідником. */
+function e02_matchNbhzRoutes() {
+  matchNbhzRoutes();
+}
+
+/** Заповнити колонку Q Довідника графіком овочів по днях. Разово.
+ *  Далі графік редагується прямо в Довіднику. */
+function e05_setupVegDays() {
+  setupVegDays();
+}
+
+/** Показати графік овочів так, як його бачить застосунок. */
+function e06_showVegDays() {
+  showVegDays();
+}
+
+/** Проставити дні кулінарії всім точкам: Пн-Пт, вихідні Сб і Нд. Разово. */
+function e07_setupBakeryDays() {
+  setupBakeryDays();
+}
+
+/** Показати графік кулінарії так, як його бачить застосунок. */
+function e08_showBakeryDays() {
+  showBakeryDays();
+}
+
+/** Зібрати лист вивантаження ПРЯМО ЗАРАЗ, у будь-якому разі. */
+function e03_nbhzExport() {
+  buildNbhzExport();
+}
+
+/** Перезібрати, якщо були нові замовлення або листа немає.
+ *  Стоїть на тригері кожні 5 хвилин - руками не потрібне. */
+function e04_refreshExport() {
+  refreshNbhzExport();
+}
+
+
+// ============ 6. АВАРІЙНЕ ============
+
+/** Зняти замки напрямків, якщо щось зависло. */
+function f01_clearLocks() {
+  clearDirLocks();
+}
+
+/** Скасувати всі активні дозволи на дозамовлення. */
+function f02_resetLate() {
+  resetLateToday();
+}
+
+/** Відкрити прийом ВСІМ точкам до кінця дня. Впишіть напрямок нижче. */
+function f03_openAllToday() {
+  var DIR = 'bread';        // bread | nbhz | bakery | veg
+  allowLate_(DIR);
+}
+
+/** Повернути звичайний режим після f03. Впишіть напрямок нижче. */
+function f04_closeAllToday() {
+  var DIR = 'bread';        // bread | nbhz | bakery | veg
+  closeLate_(DIR);
+}
+
+/** Посилання "Дозволити" вручну. Впишіть напрямок і частину назви точки. */
+function f05_lateLinkHere() {
+  var DIR = 'nbhz';         // bread | nbhz | bakery | veg
+  var STORE = 'амосова';    // частина назви ТТ
+  lateLinkFor(DIR, STORE);
+}
+
+/** Прибрати замовлення, зроблені у неробочий день. Впишіть напрямок. */
+function f10_clearOffDayOrders() {
+  var DIR = 'bakery';       // bread | nbhz | bakery | veg
+  clearOffDayOrders(DIR);
+}
+
+/** Увімкнути або вимкнути напрямок для точки (галочка в Довіднику).
+ *  Для овочів вимкнення заодно чистить день у колонці Q. */
+function f09_setDirectionHere() {
+  var STORE = 'Полевая';    // частина назви ТТ
+  var DIR   = 'veg';        // bread | nbhz | bakery | veg
+  var ON    = false;        // true - увімкнути, false - вимкнути
+  setStoreDirection(STORE, DIR, ON);
+}
+
+/** Перейменувати торгову точку (тільки напис на плитці).
+ *  Впишіть частину старої назви і нову назву. */
+function f08_renameStoreHere() {
+  var OLD = 'Полевая';              // частина назви, яку шукаємо
+  var NEW = 'Полевая,83 (магазин)'; // нова назва
+  renameStore(OLD, NEW);
+}
+
+/** Прибрати сьогоднішнє замовлення точки повністю - і рядки, і позначку.
+ *  Точка зможе замовити наново. Впишіть напрямок і частину назви. */
+function f07_cancelOrderHere() {
+  var DIR = 'nbhz';         // bread | nbhz | bakery | veg
+  var STORE = 'амосова';    // частина назви ТТ
+  cancelTodayOrder(DIR, STORE);
+}
+
+/** Зняти позначку "точка вже замовляла сьогодні".
+ *  Потрібно лише якщо рядки замовлення видалили з листа руками. */
+function f06_clearOrderMarkHere() {
+  var DIR = 'bread';        // bread | nbhz | bakery | veg
+  var STORE = 'амосова';    // частина назви ТТ
+  clearOrderMark(DIR, STORE);
+}
+
+// ============ 7. ЗВІТИ ВИПІЧКИ ============
+
+/** Зібрати "Заказы ВК" і "Сводная ВК" ПРЯМО ЗАРАЗ, у будь-якому разі.
+ *  Саме це замінює запуск generateFormattedOrdersReport() у старому проєкті. */
+function g01_bakeryReport() {
+  buildBakeryReports();
+}
+
+/** Перезібрати, лише якщо в сирому листі щось змінилось.
+ *  Стоїть на тригері кожні 5 хвилин - руками не потрібне. */
+function g02_refreshBakeryReport() {
+  refreshBakeryReports();
+}
+
+/** Чому звіт порожній: що бачить у сирому листі, скільки ТТ і позицій. */
+function g03_whyNoBakeryReport() {
+  whyNoBakeryReport();
+}
+
+/** Прибрати зі сирого листа рядки старого формату (без дати). Разово. */
+function g04_cleanBakeryRaw() {
+  cleanBakeryRawJunk();
+}
+
+
+/** Поправити сирий лист: шапка на 8 колонок, зняти фільтр,
+ *  розкрити приховані рядки. Разово. */
+function g05_fixBakeryRawSheet() {
+  fixBakeryRawSheet();
+}
+
+/** Показати останні 25 рядків сирого листа в лог.
+ *  Коли здається, що замовлень немає - запускати це. */
+function g06_showBakeryRawTail() {
+  showBakeryRawTail(25);
+}
+
+
+/** РЕМОНТ сирого листа: прибрати рядки старого формату і порожні
+ *  розриви, вирівняти формати. Запустити ОДИН раз після переходу
+ *  apiAppend_ на INSERT_ROWS. */
+function g07_repairBakeryRaw() {
+  repairBakeryRawSheet();
+}
+
+/** Впорядкувати сирий лист по даті і часу. Разово: рядки від 12.09
+ *  лишились посеред 14.09 після старого OVERWRITE. */
+function g08_sortBakeryRaw() {
+  sortBakeryRawSheet();
+}
+
+/** Показати, у кого позначка "замовляли" є, а рядків у листі немає.
+ *  Це і є затерті замовлення. */
+function g09_bakeryLostOrders() {
+  bakeryLostOrders();
+}
+
+/** Зняти позначки саме в тих точок - щоб вони переслали замовлення. */
+function g10_clearBakeryLostMarks() {
+  clearBakeryLostMarks();
+}
+// Опис сьогоднішніх відправок із властивостей скрипта:
+// показує, у кого рядки в листі є, а в кого затерто.
+function g11_bakeryOrderTrace() { bakeryOrderTrace(); }
+
+
+/** Разово: проставити зони доставки (Салтовка / Новые дома / Центр)
+ *  у колонку S Довідника. Далі зона редагується прямо в Довіднику. */
+function g12_setupBakeryZones() {
+  setupBakeryZones();
+}
+
+/** Показати зони так, як їх бачить застосунок. */
+function g13_showBakeryZones() {
+  showBakeryZones();
+}
+
+/** Впорядкувати сирий лист: дата, потім назва товару.
+ *  Робиться саме по собі перед кожним перезбиранням звітів. */
+function g14_sortBakeryRaw() {
+  sortBakeryRawByProduct_();
+  showBakeryRawTail(15);
+}
+
+/** РАЗОВО після відновлення листа з історії версій: повернути
+ *  8 колонок (маршрут із Довідника, штрихкод із Ассортимента),
+ *  поправити шапку і зібрати звіти. Запускати, коли ніхто не замовляє. */
+function g15_repairBakeryRawColumns() {
+  repairBakeryRawColumns();
+}
+
+/** Привести адреси в сирому листі до Довідника і проставити маршрути.
+ *  Саме це прибирає рядки на кшталт "валентиновская50". */
+function g16_fixBakeryRawAddresses() {
+  fixBakeryRawAddresses();
+}
+
+/** Рядкам без дати проставити сьогоднішню. Саме через порожню
+ *  колонку A замовлення, повернуті в лист руками, не потрапляли
+ *  у звіти. Чіпає лише колонки A і B. */
+function g17_fillMissingBakeryDates() {
+  fillMissingBakeryDates('00:00:00');
+}
+
+
+// ============ 8. ЗВІТИ ХЛІБА І ОВОЧІВ ============
+
+/** Зібрати "Заказы" і "Данные Заказов" ПРЯМО ЗАРАЗ, у будь-якому разі.
+ *  Саме це замінює старий проєкт legacy/bread усередині таблиці хліба. */
+function h01_breadReport() {
+  buildBreadReports();
+}
+
+/** Перезібрати звіти хліба, лише якщо в сирому листі щось змінилось.
+ *  Стоїть на тригері кожні 5 хвилин - руками не потрібне. */
+function h02_refreshBreadReport() {
+  refreshBreadReports();
+}
+
+/** Зібрати "Замовлення Овочі" і "Зведена Овочі" ПРЯМО ЗАРАЗ.
+ *  Саме це замінює autoMaintenance у старому проєкті legacy/veg. */
+function h03_vegReport() {
+  buildVegReports();
+}
+
+/** Перезібрати звіти овочів, лише якщо щось змінилось.
+ *  Стоїть на тригері кожні 5 хвилин - руками не потрібне. */
+function h04_refreshVegReport() {
+  refreshVegReports();
+}
