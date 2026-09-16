@@ -76,7 +76,7 @@ function refreshBakeryReports() {
 function buildBakeryReports() {
   // спершу впорядковуємо сирий лист (дата, потім назва товару),
   // далі читаємо вже впорядковані рядки
-  sortBakeryRawByAddress_();
+  sortBakeryRawByProduct_();
   var rows = bakeryTodayRows_();
   buildBakeryOrdersSheet_(rows);
   buildBakerySummarySheet_(rows);
@@ -725,53 +725,4 @@ function bakeryOrderTrace() {
   console.log('---');
   console.log('Позицій у властивостях немає - лише кількість і сума.');
   console.log('Склад замовлення бере або з Історії версій листа, або у продавця.');
-}
-// ============================================================
-// СОРТУВАННЯ СИРОГО ЛИСТА: ДАТА -> АДРЕСА -> КАТЕГОРІЯ -> ТОВАР
-//
-// Так рядки однієї ТТ стоять разом, а не розкидані по всьому
-// листу через однаковий товар. Дата лишається ПЕРШИМ ключем -
-// інакше архівування вважає дати "вперемішку" і зупиняється.
-//
-// Замок напрямку той самий, що чекає apiAppend_ (AppendGuard.gs),
-// тому замовлення, яке прийде під час сортування, зачекає і ляже
-// в кінець, а не буде затерте.
-// ============================================================
-function sortBakeryRawByAddress_() {
-  var cfg = dirCfg_('bakery');
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (!sh || sh.getLastRow() < 3) return;
-
-  var token = dirLockAcquire_('bakery', 30000);
-  if (!token) { console.log('Лист зайнятий - сортування пропущено'); return; }
-  try {
-    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues();
-    var catRank = function (r) {
-      var i = BAKERY_CAT_ORDER.indexOf(bakeryCatOf_(r));
-      return i < 0 ? 99 : i;
-    };
-    var dayOf = function (r) {
-      var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
-      return d ? d.getTime() : 0;
-    };
-
-    rows.sort(function (a, b) {
-      var d = dayOf(a) - dayOf(b);
-      if (d) return d;
-      var aa = String(a[2] || '').trim(), ba = String(b[2] || '').trim();
-      if (aa !== ba) return aa.localeCompare(ba, 'uk');
-      var c = catRank(a) - catRank(b);
-      if (c) return c;
-      return String(a[5] || '').localeCompare(String(b[5] || ''), 'uk');
-    });
-
-    sh.getRange(2, 1, rows.length, 8).setValues(rows);
-    SpreadsheetApp.flush();
-    console.log('Сирий лист ВК впорядковано по адресах: рядків ' + rows.length);
-  } finally { dirLockRelease_('bakery', token); }
-}
-
-/** Впорядкувати сирий лист ВК по адресах просто зараз. */
-function g18_sortBakeryByAddress() {
-  sortBakeryRawByAddress_();
 }
