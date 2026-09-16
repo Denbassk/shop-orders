@@ -175,7 +175,7 @@ function c02_measureWrite() {
 /** РЕАЛЬНИЙ ПІК: усі 39 точок одного напрямку тиснуть "Відправити"
  *  в одну секунду. Це найгірше, що може статись насправді.
  *  Триває секунд 20. Потрібні: a03_setWebAppUrl + свіже розгортання. */
-function zz_DANGER_loadTest() {
+function c03_loadTest() {
   loadTest(39, 'bread');
 }
 
@@ -183,7 +183,7 @@ function zz_DANGER_loadTest() {
  *  У житті неможливо - дедлайни рознесені. Впреться у квоту Sheets API
  *  і піде запасним шляхом через замок, тому ТРИВАТИМЕ КІЛЬКА ХВИЛИН.
  *  Це не зависання. Мета - переконатись, що жодне замовлення не втрачено. */
-function zz_DANGER_loadTestMax() {
+function c05_loadTestMax() {
   loadTest(39);
 }
 
@@ -196,15 +196,15 @@ function c04_loadTestCleanup() {
 // ============ 4. ОБСЛУГОВУВАННЯ ============
 
 /** Архівувати все старше тижня. Повісити тригером раз на тиждень. */
-function zz_DANGER_archiveNow() {
+function d01_archive() {
   archiveRawSheets();
   console.log('');
   showRawSizes();
 }
 
 /** Повне перезбирання архіву одного напрямку - якщо дати переплутані.
- *  Звичайний zz_DANGER_archiveNow викликає це сам, коли бачить потребу. */
-function zz_DANGER_archiveRebuild() {
+ *  Звичайний d01_archive викликає це сам, коли бачить потребу. */
+function d05_archiveRebuildHere() {
   var DIR = 'bakery';       // bread | nbhz | bakery | veg
   archiveRebuild(DIR);
   console.log('');
@@ -228,7 +228,7 @@ function d03_storeLinks() {
  *    повна збірка вивантаження   - щодня після 18:00
  *  Запустити ОДИН РАЗ. Повторний запуск просто перестворює ті самі тригери. */
 function d06_installTriggers() {
-  var mine = { zz_DANGER_archiveNow: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
+  var mine = { d01_archive: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
                e04_refreshExport: 1, refreshBakeryReports: 1,
                refreshBreadReports: 1, refreshVegReports: 1 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
@@ -236,7 +236,7 @@ function d06_installTriggers() {
   });
 
   ScriptApp.newTrigger('d02_cleanupProps').timeBased().everyDays(1).atHour(3).create();
-  ScriptApp.newTrigger('nightlyArchive').timeBased()
+  ScriptApp.newTrigger('d01_archive').timeBased()
     .onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(4).create();
   // лист вивантаження підтягується сам протягом дня
   ScriptApp.newTrigger('e04_refreshExport').timeBased().everyMinutes(5).create();
@@ -287,7 +287,7 @@ function e02_matchNbhzRoutes() {
 
 /** Заповнити колонку Q Довідника графіком овочів по днях. Разово.
  *  Далі графік редагується прямо в Довіднику. */
-function zz_DANGER_setupVegDays() {
+function e05_setupVegDays() {
   setupVegDays();
 }
 
@@ -297,7 +297,7 @@ function e06_showVegDays() {
 }
 
 /** Проставити дні кулінарії всім точкам: Пн-Пт, вихідні Сб і Нд. Разово. */
-function zz_DANGER_setupBakeryDays() {
+function e07_setupBakeryDays() {
   setupBakeryDays();
 }
 
@@ -350,7 +350,7 @@ function f05_lateLinkHere() {
 }
 
 /** Прибрати замовлення, зроблені у неробочий день. Впишіть напрямок. */
-function zz_DANGER_clearOffDay() {
+function f10_clearOffDayOrders() {
   var DIR = 'bakery';       // bread | nbhz | bakery | veg
   clearOffDayOrders(DIR);
 }
@@ -475,7 +475,7 @@ function g14_sortBakeryRaw() {
 /** РАЗОВО після відновлення листа з історії версій: повернути
  *  8 колонок (маршрут із Довідника, штрихкод із Ассортимента),
  *  поправити шапку і зібрати звіти. Запускати, коли ніхто не замовляє. */
-function zz_DANGER_repairBakeryCols() {
+function g15_repairBakeryRawColumns() {
   repairBakeryRawColumns();
 }
 

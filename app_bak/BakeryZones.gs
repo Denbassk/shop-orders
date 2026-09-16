@@ -1,0 +1,588 @@
+﻿// ============================================================
+// ЗОНИ ДОСТАВКИ ВИПІЧКИ + ЛИСТ ПО МАРШРУТАХ
+//
+// Закупниця дивиться в сирий лист і має бачити, на який маршрут
+// їде замовлення. Тому в колонці D сирого листа тепер ЗОНА
+// (Салтовка / Новые дома / Центр / не возится), а не категорія:
+// категорія і так є на початку назви ("Випічка ...", "Кулінарія ..."),
+// а для звітів вона береться з листа "Ассортимент" по штрихкоду.
+//
+// Джерело зони - колонка S Довідника ТТ. Заповнити разово:
+// g12_setupBakeryZones(), подивитись - g13_showBakeryZones().
+// ============================================================
+
+var BAKERY_ROUTE_SHEET = 'Маршрути ВК';
+var BAKERY_ZONE_COL = 19;            // S Довідника
+var BAKERY_ZONE_ORDER = ['Салтовка', 'Новые дома', 'Центр', 'не возится'];
+
+// Зони по адресах. Ключ - адреса або назва ТТ, як у Довіднику;
+// зіставлення йде через addrKey_, тож регістр і розділові не важливі.
+var BAKERY_ZONES = {
+  'Амосова, 5А': 'Салтовка',
+  'Астрономічна, 44 Г': 'Салтовка',
+  'Богдана Хмельницького, 8': 'Новые дома',
+  'Бучми, 32': 'Салтовка',
+  'Бучми, 32Б1': 'Салтовка',
+  'Бучми, 52': 'Салтовка',
+  'Валентинівська, 24 Б': 'Салтовка',
+  'Валентинівська, 50 А': 'Салтовка',
+  'Гарібальді, 1': 'Салтовка',
+  'Гвардій Широнінців, 54': 'Салтовка',
+  'Нескорених, 4 Д': 'Салтовка',
+  'Нескорених, 33': 'Салтовка',
+  'Грозненська, 38': 'Новые дома',
+  'Зубенка, 23': 'Салтовка',
+  'Зубенка, 31В5': 'Салтовка',
+  'Качанівська, 19': 'Новые дома',
+  'Краснодарська, 171/З': 'Салтовка',
+  'Михайля Семенка, 17': 'Центр',
+  'Ньютона, 102': 'Салтовка',
+  'Ньютона, 111': 'Салтовка',
+  'Олімпійська, 9А': 'Новые дома',
+  'Переяславська, 23': 'Салтовка',
+  'Роганська, 130/4': 'Новые дома',
+  'Роганська, 148': 'Новые дома',
+  'Салтівське Шосе, 264 В': 'Салтовка',
+  'Танкопія, 16': 'Новые дома',
+  'Шевченко, 341': 'Салтовка',
+  'Героїв Небесної Сотні, 14/1': 'Новые дома',
+  'Іскринський, 19 В': 'Салтовка',
+  'Байрона, 138/1': 'Новые дома',
+  'Байрона, 156': 'Новые дома',
+  'Байрона, 163 А': 'Новые дома',
+  'Героїв Харкова, 160': 'Новые дома',
+  'Петра Григоренка, 37': 'Новые дома',
+  'Ювілейний, 67': 'Салтовка',
+  'Тракторобудівників, 95': 'Салтовка',
+  'Зернова, 6/5': 'Новые дома',
+  'Полевая, 83 (Магазин)': 'Салтовка',
+  'Виробництво (Семенка)': 'не возится'
+};
+
+// Адреси, вписані в сирий лист руками. Ключ - як написали,
+// значення - назва ТТ у Довіднику. Зіставлення через addrKey_.
+var BAKERY_ADDR_ALIASES = {
+  'валентиновская50': 'Валентинівська, 50 А',
+  'валентиновская 50': 'Валентинівська, 50 А',
+  'грозненская': 'Грозненська, 38',
+  'грозненская38': 'Грозненська, 38'
+};
+
+// Адреса з сирого листа -> ТТ Довідника: { key, label, addr, zone }.
+// Повертає null, якщо такої ТТ у Довіднику немає.
+function bakeryStoreByRawAddr_() {
+  var cached = null;
+  var byKey = {};
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf('bakery') < 0) return;
+    var rec = { label: s.label, addr: s.addrBakery, zone: s.zone || '' };
+    byKey[addrKey_(s.addrBakery)] = rec;
+    byKey[addrKey_(s.label)] = rec;
+    byKey[addrKey_(shortenAddress_(s.addrBakery))] = rec;
+  });
+  Object.keys(BAKERY_ADDR_ALIASES).forEach(function (k) {
+    var target = byKey[addrKey_(BAKERY_ADDR_ALIASES[k])];
+    if (target) byKey[addrKey_(k)] = target;
+  });
+  return byKey;
+}
+
+// ============================================================
+// КАТЕГОРІЯ ТОВАРУ З ЛИСТА "Ассортимент"
+// A Статус | B Категорія | C Штрих-код | D Ціна | E Назва
+// ============================================================
+function bakeryCatByBarcode_() {
+  var cached = cacheGet_('bakery_cat_v1');
+  if (cached) return cached;
+
+  var map = {};
+  try {
+    var cfg = dirCfg_('bakery');
+    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
+    if (sh && sh.getLastRow() > 1) {
+      sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues().forEach(function (r) {
+        var bc = String(r[2] || '').trim();
+        var cat = String(r[1] || '').trim();
+        if (bc && cat) map[bc] = cat;
+        var nm = String(r[4] || '').trim();
+        if (nm && cat) map['n:' + nameKey_(nm)] = cat;
+      });
+    }
+  } catch (e) { console.log('Категорії з Ассортимента: ' + e.message); }
+
+  cachePut_('bakery_cat_v1', map, 600);
+  return map;
+}
+
+// Категорія рядка сирого листа: спершу за штрихкодом, далі за назвою,
+// в останню чергу - за першим словом назви ("Випічка ...", "Кулінарія ...").
+function bakeryCatOf_(r) {
+  var map = bakeryCatByBarcode_();
+  var bc = String(r[4] || '').trim();
+  if (map[bc]) return map[bc];
+
+  var name = String(r[5] || '').trim();
+  var byName = map['n:' + nameKey_(name)];
+  if (byName) return byName;
+
+  var first = name.split(' ')[0];
+  if (BAKERY_CAT_ORDER.indexOf(first) >= 0) return first;
+  return 'Інше';
+}
+
+// Зона рядка сирого листа: колонка D. Якщо там порожньо (рядок
+// написаний до переходу), беремо з Довідника по адресі.
+function bakeryZoneOf_(r, zoneByAddr) {
+  var z = String(r[3] || '').trim();
+  if (z) return z;
+  return zoneByAddr[addrKey_(String(r[2] || '').trim())] || 'Без маршруту';
+}
+
+function bakeryZoneByAddr_() {
+  var map = {};
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf('bakery') < 0) return;
+    if (s.zone) map[addrKey_(s.addrBakery)] = s.zone;
+  });
+  return map;
+}
+
+// Порядок зон: спершу відомі, далі решта за абеткою
+function bakeryZoneList_(obj) {
+  var out = BAKERY_ZONE_ORDER.filter(function (z) { return obj[z]; });
+  Object.keys(obj).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+    .forEach(function (z) { if (out.indexOf(z) < 0) out.push(z); });
+  return out;
+}
+
+// ============================================================
+// ЛИСТ "Маршрути ВК" - для машини розвозки
+//
+// Проста таблиця, яку можна роздрукувати і везти з собою:
+//   Торгова точка | Найменування продукції | Кількість | Маршрут
+// Порядок: маршрут -> вид товару -> адреса. Після кожного товару
+// рядок "Разом", після кожного маршруту - підсумок маршруту.
+// ============================================================
+function buildBakeryRouteSheet_(rows) {
+  var today = formatDateDMY_(new Date());
+  var byRawAddr = bakeryStoreByRawAddr_();
+
+  // зона -> товар -> назва ТТ -> кількість
+  var z = {}, unknown = {};
+  rows.forEach(function (r) {
+    var name = String(r[5] || '').trim();
+    var addr = String(r[2] || '').trim();
+    var qty = Number(r[7]) || 0;
+    if (!name || !addr || qty <= 0) return;
+
+    // назва ТТ і зона - з Довідника; що в листі, те лише ключ пошуку
+    var st = byRawAddr[addrKey_(addr)];
+    if (!st) unknown[addr] = 1;
+    var label = st ? st.label : addr;
+    var zone = (st && st.zone) || String(r[3] || '').trim() || 'Без маршруту';
+
+    z[zone] = z[zone] || {};
+    z[zone][name] = z[zone][name] || {};
+    z[zone][name][label] = (z[zone][name][label] || 0) + qty;
+  });
+
+  var unknownList = Object.keys(unknown);
+  if (unknownList.length)
+    console.log('Маршрути ВК: адреси, яких немає в Довіднику - ' + unknownList.join(', '));
+
+  var data = [], g = { title: [], head: [], row: [], item: [], zone: [], empty: [] };
+  function push(v, t) { data.push(v); if (t) g[t].push(data.length); }
+
+  push(['Розвозка випічки і кулінарії - ' + today +
+        '   (оновлено ' + formatTime_(new Date()) + ')', '', '', ''], 'title');
+  push(['Торгова точка', 'Найменування продукції', 'Кількість', 'Маршрут'], 'head');
+
+  var grand = 0;
+
+  bakeryZoneList_(z).forEach(function (zone) {
+    var items = z[zone], zoneQty = 0;
+
+    Object.keys(items).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+      .forEach(function (name) {
+        var byAddr = items[name], itemQty = 0;
+
+        Object.keys(byAddr).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+          .forEach(function (addr) {
+            push([addr, name, byAddr[addr], zone], 'row');
+            itemQty += byAddr[addr];
+          });
+
+        push(['Разом', name, itemQty, zone], 'item');
+        push(['', '', '', ''], null);        // порожній рядок між товарами
+        zoneQty += itemQty;
+      });
+
+    push(['ВСЬОГО ' + zone, '', zoneQty, zone], 'zone');
+    push(['', '', '', ''], null);
+    push(['', '', '', ''], null);            // розрив між маршрутами
+    grand += zoneQty;
+  });
+
+  if (!Object.keys(z).length) {
+    push(['Замовлень на сьогодні ще немає', '', '', ''], 'empty');
+  } else {
+    push(['ЗАГАЛОМ', '', grand, ''], 'zone');
+  }
+
+  var ss = SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
+  var sh = ss.getSheetByName(BAKERY_ROUTE_SHEET) || ss.insertSheet(BAKERY_ROUTE_SHEET);
+  sh.clear();
+  sh.clearConditionalFormatRules();
+  try { sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).breakApart(); } catch (e) {}
+
+  var n = data.length;
+  sh.getRange(1, 1, n, 4).setValues(data);
+  sh.getRange(1, 1, n, 4).setFontFamily('Arial').setFontSize(10)
+    .setVerticalAlignment('middle').setFontColor('#000000').setBackground('#FFFFFF');
+  sh.setRowHeights(1, n, 22);
+  sh.getRange(1, 3, n, 1).setNumberFormat('0.###').setHorizontalAlignment('center');
+  sh.getRange(1, 4, n, 1).setHorizontalAlignment('center');
+
+  if (g.title.length) sh.getRangeList(bakeryRowList_(g.title, 'A', 'D'))
+    .setBackground('#1565C0').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(12);
+  if (g.head.length) sh.getRangeList(bakeryRowList_(g.head, 'A', 'D'))
+    .setFontWeight('bold').setHorizontalAlignment('center')
+    .setBorder(true, true, true, true, true, true);
+  if (g.row.length) sh.getRangeList(bakeryRowList_(g.row, 'A', 'D'))
+    .setBorder(true, true, true, true, true, true);
+  if (g.item.length) sh.getRangeList(bakeryRowList_(g.item, 'A', 'D'))
+    .setBackground('#F1F3F4').setFontWeight('bold')
+    .setBorder(true, true, true, true, true, true);
+  if (g.zone.length) sh.getRangeList(bakeryRowList_(g.zone, 'A', 'D'))
+    .setBackground('#E8F5E9').setFontColor('#1B5E20').setFontWeight('bold')
+    .setBorder(true, true, true, true, true, true);
+  if (g.empty.length) sh.getRangeList(bakeryRowList_(g.empty, 'A', 'D'))
+    .setBackground('#FFEBEE').setFontColor('#C62828').setFontWeight('bold');
+
+  sh.setColumnWidth(1, 220);
+  sh.setColumnWidth(2, 420);
+  sh.setColumnWidth(3, 110);
+  sh.setColumnWidth(4, 130);
+  sh.setFrozenRows(2);
+  SpreadsheetApp.flush();
+
+  console.log('Маршрути ВК: маршрутів ' + Object.keys(z).length +
+              ', рядків ' + n + ', разом ' + grand + ' шт');
+}
+
+// ============================================================
+// СОРТУВАННЯ СИРОГО ЛИСТА: спершу дата, далі назва товару
+//
+// Сортуємо НЕ читанням-записом, а запитом sortRange до Sheets API:
+// Google переставляє рядки у себе, одним кроком. Замовлення, що
+// прийде в цю ж мить, стане в кінець листа і просто дочекається
+// наступного сортування - затерти його нічим.
+//
+// Дата першим ключем навмисно: архівування вважає старі рядки
+// префіксом листа, і якщо перемішати дати - воно щоразу піде
+// довгим шляхом повного перезбирання.
+// ============================================================
+function sortBakeryRawByProduct_() {
+  if (typeof Sheets === 'undefined') { console.log('Sheets API вимкнено - не сортую'); return; }
+
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 3) return;
+
+  try {
+    Sheets.Spreadsheets.batchUpdate({
+      requests: [{
+        sortRange: {
+          range: { sheetId: sh.getSheetId(), startRowIndex: 1,
+                   endRowIndex: sh.getLastRow(), startColumnIndex: 0, endColumnIndex: 8 },
+          sortSpecs: [
+            { dimensionIndex: 0, sortOrder: 'ASCENDING' },   // дата
+            { dimensionIndex: 5, sortOrder: 'ASCENDING' }    // назва товару
+          ]
+        }
+      }]
+    }, cfg.spreadsheetId);
+  } catch (e) {
+    console.log('Сортування сирого листа: ' + e.message);
+  }
+}
+
+// ============================================================
+// ЗАПОВНИТИ КОЛОНКУ S ДОВІДНИКА ЗОНАМИ. Разово.
+// Далі зона редагується прямо в Довіднику.
+// ============================================================
+function setupBakeryZones() {
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  if (!sh || sh.getLastRow() < 2) { console.log('Довідник порожній'); return; }
+
+  var want = {};
+  Object.keys(BAKERY_ZONES).forEach(function (k) { want[addrKey_(k)] = BAKERY_ZONES[k]; });
+
+  var last = sh.getLastRow();
+  var rows = sh.getRange(2, 1, last - 1, 3).getValues();      // A активна | B назва | C адреса
+  var cur = sh.getRange(2, BAKERY_ZONE_COL, last - 1, 1).getValues();
+
+  var out = [], set = 0, keep = 0, miss = [], used = {};
+  rows.forEach(function (r, i) {
+    var label = String(r[1] || '').trim();
+    var addr = String(r[2] || '').trim();
+    var zone = want[addrKey_(addr)] || want[addrKey_(label)] ||
+               want[addrKey_(shortenAddress_(addr))] || '';
+    if (zone) {
+      out.push([zone]); set++;
+      used[addrKey_(addr)] = 1; used[addrKey_(label)] = 1;
+      used[addrKey_(shortenAddress_(addr))] = 1;
+    } else {
+      out.push([String(cur[i][0] || '').trim()]);             // не чіпаємо, що вже стоїть
+      if (addr) { keep++; miss.push(label || addr); }
+    }
+  });
+
+  sh.getRange(1, BAKERY_ZONE_COL, 1, 1).setValue('Зона ВК')
+    .setFontWeight('bold').setBackground('#1565C0').setFontColor('#ffffff')
+    .setHorizontalAlignment('center');
+  sh.getRange(2, BAKERY_ZONE_COL, out.length, 1).setValues(out);
+  sh.setColumnWidth(BAKERY_ZONE_COL, 130);
+  SpreadsheetApp.flush();
+  invalidateAppCache();
+
+  console.log('Проставлено зон: ' + set + ', без зони лишилось ТТ: ' + keep);
+  if (miss.length) {
+    console.log('Без зони (перевірте написання адреси в Довіднику):');
+    miss.forEach(function (m) { console.log('   ' + m); });
+  }
+
+  var unmatched = Object.keys(want).filter(function (k) { return !used[k]; });
+  if (unmatched.length) {
+    console.log('У списку є адреси, яких немає в Довіднику: ' + unmatched.length);
+    Object.keys(BAKERY_ZONES).forEach(function (k) {
+      if (unmatched.indexOf(addrKey_(k)) >= 0) console.log('   ' + k);
+    });
+  }
+}
+
+// --- Показати зони так, як їх бачить застосунок ---
+function showBakeryZones() {
+  var byZone = {};
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf('bakery') < 0) return;
+    var z = s.zone || '(порожньо)';
+    byZone[z] = byZone[z] || [];
+    byZone[z].push(s.label);
+  });
+
+  Object.keys(byZone).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+    .forEach(function (z) {
+      console.log(z + ' - ТТ ' + byZone[z].length);
+      byZone[z].sort(function (a, b) { return a.localeCompare(b, 'uk'); })
+        .forEach(function (n) { console.log('   ' + n); });
+    });
+}
+
+// ============================================================
+// РАЗОВИЙ РЕМОНТ КОЛОНОК СИРОГО ЛИСТА (14.09.2026)
+//
+// Після ручних правок у листі лишилось 7 колонок:
+//   A дата | B час | C адреса | D сміття | E назва | F ціна | G кіл-ть
+// Треба вісім:
+//   A дата | B час | C адреса | D маршрут | E штрихкод | F назва | G ціна | H кіл-ть
+//
+// Маршрут беремо з Довідника по адресі, штрихкод - з "Ассортимента"
+// по назві. Адреси, написані від руки ("валентиновская50"), заодно
+// приводимо до вигляду з Довідника.
+//
+// Запускати, коли ніхто не замовляє: функція перезаписує лист цілком.
+// ============================================================
+function repairBakeryRawColumns() {
+  var cfg = dirCfg_('bakery');
+  var ss = SpreadsheetApp.openById(cfg.spreadsheetId);
+  var sh = ss.getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 2) { console.log('Лист порожній'); return; }
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(60000)) { console.log('Лист зайнятий - спробуйте за хвилину'); return; }
+  try {
+    var last = sh.getLastRow();
+    var width = Math.max(sh.getLastColumn(), 7);
+    var vals = sh.getRange(2, 1, last - 1, width).getValues();
+
+    // де лежить назва товару: беремо колонку, яка найчастіше збігається
+    // з "Ассортиментом" (або хоча б починається з назви категорії)
+    var catMap = bakeryCatByBarcode_();
+    var bcByName = bakeryBarcodeByName_();
+    var score = [];
+    for (var c = 0; c < width; c++) score[c] = 0;
+    vals.slice(0, 200).forEach(function (r) {
+      for (var c = 0; c < width; c++) {
+        var v = String(r[c] || '').trim();
+        if (!v) continue;
+        if (bcByName[nameKey_(v)] || catMap['n:' + nameKey_(v)]) score[c]++;
+        else if (BAKERY_CAT_ORDER.indexOf(v.split(' ')[0]) >= 0) score[c] += 0.5;
+      }
+    });
+    var nameCol = 0;
+    for (var c2 = 1; c2 < width; c2++) if (score[c2] > score[nameCol]) nameCol = c2;
+
+    if (!score[nameCol]) {
+      console.log('Не знайшов колонку з назвами товарів - нічого не міняю.');
+      console.log('Шапка: ' + sh.getRange(1, 1, 1, width).getValues()[0].join(' | '));
+      return;
+    }
+    console.log('Назви товарів у колонці ' + String.fromCharCode(65 + nameCol) +
+                ' (збігів ' + score[nameCol] + ')');
+
+    // ціна і кількість - дві колонки одразу після назви
+    var priceCol = nameCol + 1, qtyCol = nameCol + 2;
+
+    var byRawAddr = bakeryStoreByRawAddr_();
+
+    var out = [], noAddr = {}, noBc = {}, kept = 0;
+    vals.forEach(function (r) {
+      var name = String(r[nameCol] || '').trim();
+      var qty = Number(String(r[qtyCol] == null ? '' : r[qtyCol]).replace(',', '.')) || 0;
+      if (!name || qty <= 0) return;
+
+      var addrRaw = String(r[2] || '').trim();
+      var st = byRawAddr[addrKey_(addrRaw)];
+      var addr = st ? st.addr : addrRaw;
+      if (!st && addrRaw) noAddr[addrRaw] = 1;
+
+      var bc = bcByName[nameKey_(name)] || '';
+      if (!bc) noBc[name] = 1;
+
+      out.push([r[0], r[1], addr, (st && st.zone) || '', bc, name,
+                Number(String(r[priceCol] == null ? '' : r[priceCol]).replace(',', '.')) || 0,
+                qty]);
+      kept++;
+    });
+
+    if (!out.length) { console.log('Робочих рядків не знайшов - нічого не міняю.'); return; }
+
+    sh.getRange(2, 1, Math.max(sh.getMaxRows() - 1, 1), Math.max(width, 8)).clearContent();
+    sh.getRange(2, 1, out.length, 8).setValues(out);
+    SpreadsheetApp.flush();
+
+    console.log('Перезібрано рядків: ' + kept);
+    var na = Object.keys(noAddr), nb = Object.keys(noBc);
+    if (na.length) { console.log('Адреси, яких немає в Довіднику (лишив як є):');
+                     na.forEach(function (a) { console.log('   ' + a); }); }
+    if (nb.length) { console.log('Товари без штрихкоду в Ассортименті:');
+                     nb.forEach(function (a) { console.log('   ' + a); }); }
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+
+  fixBakeryRawSheet();
+  buildBakeryReports();
+}
+
+// Штрихкод за назвою з листа "Ассортимент"
+function bakeryBarcodeByName_() {
+  var map = {};
+  try {
+    var cfg = dirCfg_('bakery');
+    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
+    if (sh && sh.getLastRow() > 1) {
+      sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues().forEach(function (r) {
+        var bc = String(r[2] || '').trim();
+        var nm = String(r[4] || '').trim();
+        if (bc && nm) map[nameKey_(nm)] = bc;
+      });
+    }
+  } catch (e) { console.log('Штрихкоди з Ассортимента: ' + e.message); }
+  return map;
+}
+
+// ============================================================
+// ПРИВЕСТИ АДРЕСИ І МАРШРУТИ В СИРОМУ ЛИСТІ ДО ДОВІДНИКА
+//
+// Рядки, вписані руками ("валентиновская50", "грозненская"),
+// отримують адресу з Довідника і свій маршрут. Пишемо ТІЛЬКИ
+// клітинки, які реально змінюються - лист цілком не чіпаємо.
+// ============================================================
+function fixBakeryRawAddresses() {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 2) { console.log('Лист порожній'); return; }
+
+  var byRawAddr = bakeryStoreByRawAddr_();
+  var last = sh.getLastRow();
+  var rng = sh.getRange(2, 3, last - 1, 2);      // C адреса | D маршрут
+  var vals = rng.getValues();
+
+  var changed = 0, unknown = {};
+  vals.forEach(function (r) {
+    var addr = String(r[0] || '').trim();
+    if (!addr) return;
+    var st = byRawAddr[addrKey_(addr)];
+    if (!st) { unknown[addr] = 1; return; }
+
+    if (addr !== st.addr) { r[0] = st.addr; changed++; }
+    if (st.zone && String(r[1] || '').trim() !== st.zone) { r[1] = st.zone; changed++; }
+  });
+
+  if (!changed) { console.log('Міняти нічого - адреси і маршрути вже з Довідника'); }
+  else {
+    rng.setValues(vals);
+    SpreadsheetApp.flush();
+    console.log('Поправлено клітинок: ' + changed);
+  }
+
+  var un = Object.keys(unknown);
+  if (un.length) {
+    console.log('Адреси, яких немає в Довіднику (' + un.length + '):');
+    un.forEach(function (a) { console.log('   ' + a); });
+    console.log('Якщо це ТТ - додайте написання в BAKERY_ADDR_ALIASES.');
+  }
+
+  buildBakeryReports();
+}
+
+// ============================================================
+// РЯДКИ БЕЗ ДАТИ - ПРОСТАВИТИ СЬОГОДНІШНЮ
+//
+// Замовлення, повернуті в лист руками, лишились без колонок
+// A (дата) і B (час). Звіт бере рядки за сьогоднішньою датою,
+// тому такі рядки для нього не існують - саме через це в
+// звітах не було "Новые дома" і "Центр".
+//
+// Чіпаємо ТІЛЬКИ колонки A і B і ТІЛЬКИ там, де дати немає,
+// а рядок робочий: є адреса, назва і кількість.
+// ============================================================
+function fillMissingBakeryDates(timeStr) {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (!sh || sh.getLastRow() < 2) { console.log('Лист порожній'); return; }
+
+  var last = sh.getLastRow();
+  var all = sh.getRange(2, 1, last - 1, 8).getValues();
+  var ab = sh.getRange(2, 1, last - 1, 2);
+  var vals = ab.getValues();
+
+  var today = formatDateDMY_(new Date());
+  var t = String(timeStr || '00:00:00');
+  var n = 0, skipped = 0;
+
+  all.forEach(function (r, i) {
+    var hasDate = (r[0] instanceof Date) || !!parseDMY_(String(r[0]));
+    if (hasDate) return;
+
+    var ok = String(r[2] || '').trim() && String(r[5] || '').trim() &&
+             (Number(r[7]) || 0) > 0;
+    if (!ok) { skipped++; return; }
+
+    vals[i][0] = today;
+    if (!String(vals[i][1] || '').trim()) vals[i][1] = t;
+    n++;
+  });
+
+  if (!n) { console.log('Рядків без дати немає (пропущено сміттєвих: ' + skipped + ')'); }
+  else {
+    ab.setValues(vals);
+    sh.getRange(2, 1, last - 1, 1).setNumberFormat('dd.MM.yyyy');
+    SpreadsheetApp.flush();
+    console.log('Проставлено дату ' + today + ' рядкам: ' + n +
+                ' (сміттєвих без дати пропущено: ' + skipped + ')');
+  }
+
+  buildBakeryReports();
+  whyNoBakeryReport();
+}

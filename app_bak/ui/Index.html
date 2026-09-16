@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<? var LOGO = ''; try { LOGO = LOGO_DATA_URI; } catch (e) { LOGO = ''; } ?>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+     background:#eceef1;color:#16181d;font-size:16px}
+.hdr{position:sticky;top:0;z-index:20;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.10)}
+.logo{display:block;width:92%;max-width:560px;height:auto;margin:0 auto;padding:7px 0 6px}
+.logotext{text-align:center;padding:9px;font-size:23px;font-weight:900;color:#e11b22;letter-spacing:1px;line-height:1}
+.logotext span{display:block;font-size:10px;color:#16181d;letter-spacing:3px;
+               font-weight:700;margin-top:4px}
+.navbar{display:flex;align-items:center;gap:10px;padding:9px 13px;
+        background:#16181d;color:#fff;font-size:14px}
+.navbar .ttl{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navbar .dt{font-size:12px;color:#a9adb5;flex:none}
+.back{border:0;background:#2c2f36;color:#fff;width:34px;height:34px;border-radius:9px;
+      font-size:20px;line-height:1;cursor:pointer;flex:none}
+.test{background:#e11b22;color:#fff;text-align:center;font-size:12px;font-weight:700;
+      padding:5px;letter-spacing:.4px}
+.wrap{max-width:760px;margin:0 auto;padding:12px 12px 130px}
+.search{width:100%;padding:15px 16px;border:2px solid #dfe1e6;border-radius:14px;
+        font-size:17px;background:#fff;outline:none;margin-bottom:12px}
+.search:focus{border-color:#e11b22}
+
+/* --- сітка торгових точок --- */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:560px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:820px){.grid{grid-template-columns:repeat(4,1fr)}}
+.cell{background:#fff;border-radius:15px;padding:15px 13px 12px;cursor:pointer;
+      box-shadow:0 2px 5px rgba(0,0,0,.07);border-left:5px solid #e11b22;
+      min-height:104px;display:flex;flex-direction:column;justify-content:space-between}
+.cell:active{background:#fafafa;transform:scale(.98)}
+.cell .nm{font-size:17px;font-weight:700;line-height:1.25}
+.mine{background:#fff;border:2px solid #16181d;border-radius:14px;padding:12px 14px;
+      margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.mine .t{flex:1;min-width:0}
+.mine .t i{display:block;font-style:normal;font-size:12px;color:#6b7280;margin-bottom:2px}
+.mine .t b{font-size:17px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mine button{flex:none;background:#16181d;color:#fff;border:0;border-radius:10px;
+             padding:11px 16px;font-size:15px;font-weight:700;cursor:pointer}
+.cell .dots{display:flex;gap:5px;margin-top:10px}
+.dot{width:11px;height:11px;border-radius:50%;background:#d7dae0}
+.dot.b{background:#8D6E63}.dot.n{background:#5D4037}.dot.k{background:#E65100}.dot.v{background:#2E7D32}
+.upd{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#16181d;color:#fff;
+     text-align:center;padding:13px;font-size:15px;font-weight:700;cursor:pointer}
+.lt{background:#fff8e1;border:2px solid #ffb300;color:#7a5200;padding:14px;border-radius:13px;
+    margin-bottom:11px;font-size:15px;font-weight:600;line-height:1.45}
+.lt button{margin-top:10px;width:100%;background:#ffb300;color:#16181d;border:0;
+           border-radius:11px;padding:14px;font-size:16px;font-weight:800;cursor:pointer}
+.lt .modes{display:flex;gap:8px;margin:12px 0 10px}
+.lt .modes button{flex:1;margin:0;background:#fff;border:2px solid #e6c67e;color:#7a5200;
+                  border-radius:10px;padding:11px 6px;font-size:14px;font-weight:700;line-height:1.25}
+.lt .modes button.on{background:#ffb300;border-color:#ffb300;color:#16181d}
+.dot.done{background:#c7cbd1;box-shadow:inset 0 0 0 2px #fff}
+.legend{font-size:12px;color:#6b7280;text-align:center;padding:14px 4px 0;line-height:1.6}
+
+/* --- напрямки --- */
+.dir{display:flex;align-items:center;gap:14px;padding:18px 16px;border-radius:16px;
+     margin-bottom:11px;cursor:pointer;color:#fff;box-shadow:0 3px 8px rgba(0,0,0,.13)}
+.dir:active{transform:scale(.99)}
+.dir .ic{width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.22);
+         display:flex;align-items:center;justify-content:center;flex:none}
+.dir .ic svg{width:29px;height:29px;fill:none;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.dir .t{flex:1}
+.dir .t .a{font-weight:800;font-size:19px}
+.dir .t .b{font-size:13px;opacity:.9;margin-top:3px}
+.dir.done{background:#c9ccd2 !important;color:#5d626b}
+.dir.done .ic{background:rgba(255,255,255,.5)}
+.dir.done .ic svg{stroke:#5d626b}
+.tag{font-size:12px;font-weight:800;padding:7px 12px;border-radius:9px;
+     background:rgba(255,255,255,.25);white-space:nowrap}
+.dir.done .tag{background:#fff;color:#2e7d32}
+
+/* --- товари --- */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;-webkit-overflow-scrolling:touch}
+.chip{flex:none;padding:10px 17px;border-radius:22px;background:#fff;border:2px solid #dfe1e6;
+      font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap}
+.chip.act{background:#16181d;color:#fff;border-color:#16181d}
+.card{background:#fff;border-radius:15px;overflow:hidden;box-shadow:0 2px 5px rgba(0,0,0,.07)}
+.row{display:flex;align-items:center;gap:11px;padding:13px 14px;border-bottom:1px solid #f0f1f3}
+.row:last-child{border-bottom:0}
+.row .info{flex:1;min-width:0}
+.row .nm{font-size:16px;line-height:1.3;font-weight:500}
+.row .pr{font-size:14px;color:#6b7280;margin-top:4px}
+.row.off{opacity:.4}
+.row.has{background:#fff6f6;box-shadow:inset 4px 0 0 #e11b22}
+.qty{display:flex;align-items:center;gap:8px;flex:none}
+.qty button{width:44px;height:44px;border:2px solid #dfe1e6;background:#fff;border-radius:12px;
+            font-size:22px;line-height:1;cursor:pointer;color:#16181d;font-weight:700}
+.qty button:active{background:#f2f3f5}
+.qty button.plus{border-color:#e11b22;color:#fff;background:#e11b22}
+.qty input{width:62px;height:44px;text-align:center;border:2px solid #dfe1e6;border-radius:12px;
+           font-size:17px;font-weight:600;outline:none}
+.qty input:focus{border-color:#e11b22}
+
+.bot{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #e3e5e9;
+     padding:11px 14px calc(11px + env(safe-area-inset-bottom));z-index:30;
+     box-shadow:0 -3px 14px rgba(0,0,0,.12)}
+.bot .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.bot .sum{flex:1;font-size:13px;color:#6b7280;line-height:1.4}
+.bot .sum b{display:block;font-size:23px;color:#16181d}
+.bot .sum .warn{color:#e11b22;font-weight:700}
+.btn{background:#e11b22;color:#fff;border:0;border-radius:13px;padding:16px 28px;font-size:17px;
+     font-weight:800;cursor:pointer}
+.btn:disabled{background:#c9ccd2}
+.btn.gray{background:#16181d}
+.msg{padding:40px 20px;text-align:center;color:#6b7280;font-size:15px}
+.err{background:#fdecec;color:#b3261e;padding:13px 15px;border-radius:13px;margin-bottom:11px;
+     font-size:15px;font-weight:600}
+.ok{text-align:center;padding:40px 20px}
+.ok .big{width:82px;height:82px;border-radius:50%;background:#2e7d32;color:#fff;font-size:46px;
+         line-height:82px;margin:0 auto}
+.ok h2{margin:16px 0 8px;font-size:23px}
+.ok p{color:#5d626b;margin:6px 0;font-size:16px}
+.load{padding:60px 20px;text-align:center}
+.ld{width:54px;height:54px;animation:ldrot 1.5s linear infinite}
+.ld circle{fill:none;stroke-width:5;stroke-linecap:round}
+.ld-bg{stroke:#e1e4e8}
+.ld-fg{stroke:#e11b22}
+@keyframes ldrot{to{transform:rotate(360deg)}}
+@keyframes lddash{
+  0%  {stroke-dasharray:10 116;stroke-dashoffset:0}
+  50% {stroke-dasharray:84 42;stroke-dashoffset:-26}
+  100%{stroke-dasharray:10 116;stroke-dashoffset:-125}
+}
+.ld-fg{animation:lddash 1.5s ease-in-out infinite}
+.ld-t{margin-top:18px;font-size:16px;font-weight:600;color:#16181d}
+.ld-s{margin-top:5px;font-size:13px;color:#8b9098}
+</style>
+</head>
+<body>
+
+<div id="test-bar"></div>
+<div class="hdr">
+  <? if (LOGO) { ?>
+    <img class="logo" src="<?!= LOGO ?>" alt="Фемелі Маркет">
+  <? } else { ?>
+    <div class="logotext">ФЕМЕЛІ МАРКЕТ<span>МЕРЕЖА ПРОДУКТОВИХ МАГАЗИНІВ</span></div>
+  <? } ?>
+  <div class="navbar">
+    <button class="back" id="back" style="display:none" onclick="goBack()">&#8249;</button>
+    <div class="ttl" id="ttl">Оберіть торгову точку</div>
+    <div class="dt" id="dt"></div>
+  </div>
+</div>
+
+<div class="wrap" id="wrap"></div>
+<div id="bot"></div>
+
+<script>
+var S = { boot:null, store:null, dir:null, prod:null, cart:{}, oid:null, screen:'store',
+          q:'', cat:null, mode:'add' };
+
+var ICONS = {
+  bread:'<svg viewBox="0 0 24 24"><path d="M3.5 10.4C3.5 7.6 7.3 6 12 6s8.5 1.6 8.5 4.4c0 1.4-1.1 2.3-2.4 2.5V18a1.5 1.5 0 0 1-1.5 1.5H7.4A1.5 1.5 0 0 1 5.9 18v-5.1c-1.3-.2-2.4-1.1-2.4-2.5Z"/><path d="M9 9.2 7.6 11M12 9.2 10.6 11M15 9.2 13.6 11"/></svg>',
+  bakery:'<svg viewBox="0 0 24 24"><path d="M6.2 12h11.6l-1.3 6.6a1.5 1.5 0 0 1-1.5 1.2H9a1.5 1.5 0 0 1-1.5-1.2L6.2 12Z"/><path d="M8.6 12a2.9 2.9 0 0 1-.5-5.7 3.4 3.4 0 0 1 6.4-1.4A2.9 2.9 0 0 1 18 7.7a2.9 2.9 0 0 1-2.2 4.3"/><path d="M12 12v7.8"/></svg>',
+  veg:'<svg viewBox="0 0 24 24"><path d="M10.8 9.6 4.7 18.4a1 1 0 0 0 1.3 1.4l9.6-4.6a3.8 3.8 0 0 0 1.3-6l-.6-.6a3.8 3.8 0 0 0-5.5 1Z"/><path d="M14.6 7.4 16.2 4M17.2 9.2 20.4 8"/></svg>'
+};
+ICONS.nbhz = '<svg viewBox="0 0 24 24"><path d="M4.2 14.2c0-3.6 3.5-6.3 7.8-6.3s7.8 2.7 7.8 6.3c0 1-.8 1.8-1.8 1.8H6c-1 0-1.8-.8-1.8-1.8Z"/><path d="M6 18.6h12"/><path d="M9.4 10.8 8.3 12.7M12.3 10.8 11.2 12.7M15.2 10.8 14.1 12.7"/><path d="M12 7.9V5.4"/></svg>';
+function icon(k){ return ICONS[k] || ICONS.bread; }
+
+var WAIT_MSG = ['Гріємо булочки…', 'Розкладаємо по полицях…',
+                'Дістаємо свіжий прайс…', 'Майже готово…'];
+
+function loader(title, sub){
+  return '<div class="load">' +
+    '<svg class="ld" viewBox="0 0 50 50">' +
+      '<circle class="ld-bg" cx="25" cy="25" r="20"></circle>' +
+      '<circle class="ld-fg" cx="25" cy="25" r="20"></circle>' +
+    '</svg>' +
+    '<div class="ld-t">' + esc(title || 'Хвилинку…') + '</div>' +
+    (sub ? '<div class="ld-s">' + esc(sub) + '</div>' : '') +
+  '</div>';
+}
+function showLoader(title, sub){ el('wrap').innerHTML = loader(title, sub); }
+
+function call(action, payload){
+  return new Promise(function(res, rej){
+    google.script.run
+      .withSuccessHandler(function(r){ r && r.ok ? res(r.data) : rej(new Error(r ? r.error : 'Помилка')); })
+      .withFailureHandler(function(e){ rej(e); })
+      .api(action, payload || {});
+  });
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function money(n){ return (Math.round(n*100)/100).toFixed(2).replace(/\.00$/,''); }
+function el(id){ return document.getElementById(id); }
+function uuid(){ return 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2,10); }
+
+function start(){
+  showLoader('Хвилинку…', 'Готуємо ваші замовлення');
+  call('bootstrap').then(function(d){
+    S.boot = d; S.ver = d.version;
+    if (d.testMode) el('test-bar').innerHTML =
+      '<div class="test">ТЕСТОВИЙ РЕЖИМ — замовлення не потраплять у роботу</div>';
+    el('dt').textContent = d.today;
+    var m = new URLSearchParams(location.search).get('tt');
+    var s = m && d.stores.filter(function(x){ return x.id === m; })[0];
+    s ? openStore(s) : screenStore();
+  }).catch(fail);
+}
+function fail(e){
+  el('wrap').innerHTML = '<div class="err">' + esc(e.message || e) + '</div>' +
+    '<div class="msg">Оновіть сторінку. Якщо помилка повториться — повідомте керівника.</div>';
+  el('bot').innerHTML = '';
+}
+
+/* ---------- екран 1: сітка ТТ ---------- */
+function screenStore(){
+  S.screen='store'; S.store=null; S.dir=null; S.cart={};
+  el('back').style.display='none';
+  el('ttl').textContent='Оберіть торгову точку';
+  el('bot').innerHTML='';
+  var list = S.boot.stores.filter(function(s){
+    return !S.q || s.label.toLowerCase().indexOf(S.q.toLowerCase()) >= 0;
+  });
+  var h = '';
+  var mine = myStore();
+  if (mine && !S.q) h += '<div class="mine"><div class="t"><i>Ваша торгова точка</i><b>' +
+    esc(mine.label) + '</b></div><button onclick="openMine()">Відкрити</button></div>';
+  h += '<input class="search" id="q" placeholder="Пошук точки…" value="' + esc(S.q) + '">';
+  h += '<div class="grid">';
+  if (!list.length) h += '<div class="msg">Нічого не знайдено</div>';
+  list.forEach(function(s, i){
+    var dots = ['bread','nbhz','bakery','veg'].map(function(k){
+      if (s.directions.indexOf(k) < 0) return '';
+      var cls = {bread:'b',nbhz:'n',bakery:'k',veg:'v'}[k] || 'b';
+      return '<div class="dot ' + (s.ordered[k] ? 'done' : cls) + '"></div>';
+    }).join('');
+    h += '<div class="cell" onclick="pick(' + i + ')"><div class="nm">' + esc(s.label) +
+         '</div><div class="dots">' + dots + '</div></div>';
+  });
+  h += '</div><div class="legend">Кольорові кружечки — доступні напрямки.<br>' +
+       'Сірий кружечок означає, що замовлення на сьогодні вже відправлено.</div>';
+  el('wrap').innerHTML = h;
+  S._view = list;
+  var q = el('q');
+  q.oninput = function(){ S.q=this.value; var p=this.selectionStart; screenStore();
+    var n=el('q'); n.focus(); n.setSelectionRange(p,p); };
+}
+function pick(i){
+  var s = S._view[i];
+  S.q = '';
+  openStore(s);
+}
+
+/* Телефон пам'ятає свою точку - щоб щоразу не шукати її в списку
+   і не тицьнути сусідню з такою самою назвою. */
+function rememberStore(id){ try { localStorage.setItem('tt', id); } catch(e){} }
+function myStore(){
+  try {
+    var id = localStorage.getItem('tt');
+    if (!id || !S.boot) return null;
+    return S.boot.stores.filter(function(x){ return x.id === id; })[0] || null;
+  } catch(e){ return null; }
+}
+function openMine(){ var s = myStore(); if (s) openStore(s); }
+
+/* ---------- екран 2: напрямки ---------- */
+function openStore(s){
+  rememberStore(s.id);
+  S.store=s; S.screen='dir'; S.dir=null; S.cart={};
+  el('back').style.display='';
+  el('ttl').textContent = s.label;
+  el('bot').innerHTML='';
+  var h = '';
+  s.directions.forEach(function(k){
+    var d = S.boot.directions[k], done = s.ordered[k];
+    var offday = s.dayOk && s.dayOk[k] === false;
+    var sub = offday && s.dayOff && s.dayOff[k]
+      ? esc(s.dayOff[k])
+      : esc(d.subtitle) + (d.deadline ? ' · до ' + d.deadline : '');
+    var tag = offday ? esc(d.dayOffTag || 'Не ваш день')
+                     : (done ? 'Відправлено' : (d.closed ? 'Закрито' : 'Замовити'));
+    h += '<div class="dir' + (done||offday?' done':'') + '" style="background:' + d.color +
+      '" onclick="openDir(\'' + k + '\')">' +
+      '<div class="ic">' + icon(k) + '</div>' +
+      '<div class="t"><div class="a">' + esc(d.title) + '</div><div class="b">' +
+      sub + '</div></div>' +
+      '<div class="tag">' + tag + '</div></div>';
+  });
+  h += '<div class="legend">Напрямки незалежні: можна замовити зараз одне, ' +
+       'а решту — пізніше.</div>' +
+       '<div style="text-align:center;padding-top:14px">' +
+       '<button class="chip" onclick="screenStore()">← Інша торгова точка</button></div>';
+  el('wrap').innerHTML = h;
+}
+
+/* ---------- екран 3: товари ---------- */
+function openDir(k){
+  if (S.store.dayOk && S.store.dayOk[k] === false){
+    alert((S.store.dayOff && S.store.dayOff[k]) ||
+          'Сьогодні цей напрямок не приймає замовлень.');
+    return;
+  }
+  if (S.store.ordered[k] && !confirm('Замовлення на сьогодні вже відправлено.\n\n' +
+      'Відкрити, щоб переглянути або попросити дозвіл на добавку?')) return;
+  S.dir=k; S.screen='prod'; S.cart={}; S.q=''; S.cat=null; S.oid=uuid(); S.mode='add';
+  showLoader(WAIT_MSG[Math.floor(Math.random() * WAIT_MSG.length)], 'Секунду, вантажимо товари');
+  el('bot').innerHTML='';
+  call('products', { dir:k, storeId:S.store.id }).then(function(d){
+    d.products.forEach(function(p,i){ p._i = i; });
+    S.prod = d; drawProd();
+  }).catch(fail);
+}
+function drawProd(){
+  var d=S.prod, dir=S.boot.directions[S.dir];
+  el('ttl').textContent = dir.title + ' · ' + S.store.label;
+  var list = d.products.filter(function(p){
+    if (S.cat && p.category !== S.cat) return false;
+    return !S.q || p.name.toLowerCase().indexOf(S.q.toLowerCase()) >= 0;
+  });
+  var h='';
+  if (!d.products.length)
+    h += '<div class="err">Асортимент порожній: усі позиції на стопі або лист ще не ' +
+         'заповнено. Замовити не вийде - повідомте закупницю.</div>';
+  if (d.alreadyOrdered && d.lateRequest !== 'approved')
+    h += '<div class="err">Замовлення на сьогодні вже відправлено</div>';
+  if (d.closed)
+    h += '<div class="err">Прийом на сьогодні закрито (до ' + esc(dir.deadline) + ')</div>';
+  h += '<input class="search" id="q" placeholder="Пошук товару…" value="' + esc(S.q) + '">';
+  if (d.categories && d.categories.length){
+    h += '<div class="chips"><div class="chip' + (S.cat?'':' act') +
+         '" onclick="setCat(-1)">Усі</div>';
+    d.categories.forEach(function(c,ci){
+      h += '<div class="chip' + (S.cat===c?' act':'') + '" onclick="setCat(' + ci + ')">' +
+           esc(c) + '</div>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="card">';
+  if (!list.length) h += '<div class="msg">Нічого не знайдено</div>';
+  list.forEach(function(p){
+    var off = p.availability === 'немає' || p.availability === false;
+    var q = S.cart[p.id] || 0;
+    var meta = d.hidePrice
+      ? (p.box ? 'ящик ' + esc(p.box) : '')
+      : money(p.price) + ' грн / ' + esc(d.unit) + (p.box ? ' · ящик ' + esc(p.box) : '');
+    if (off) meta = meta ? meta + ' · немає' : 'немає';
+    h += '<div class="row' + (off?' off':'') + (q?' has':'') + '" id="r' + p._i + '">' +
+      '<div class="info"><div class="nm">' + esc(p.name) + '</div><div class="pr">' +
+      meta + '</div></div>';
+    if (!off) h += '<div class="qty"><button onclick="chg(' + p._i + ',-1)">−</button>' +
+      '<input type="number" inputmode="decimal" id="i' + p._i + '" value="' + (q||'') +
+      '" onchange="setQ(' + p._i + ',this.value)"><button class="plus" onclick="chg(' +
+      p._i + ',1)">+</button></div>';
+    h += '</div>';
+  });
+  el('wrap').innerHTML = h + '</div>';
+  var q = el('q');
+  q.oninput = function(){ S.q=this.value; var p=this.selectionStart; drawProd();
+    var n=el('q'); n.focus(); n.setSelectionRange(p,p); };
+  drawBot();
+}
+function setCat(ci){ S.cat = ci < 0 ? null : S.prod.categories[ci]; drawProd(); }
+function chg(i, sign){
+  var p = S.prod.products[i], step = S.prod.step || 1;
+  var v = (S.cart[p.id] || 0) + sign * step;
+  setQ(i, v < 0 ? 0 : v);
+}
+function setQ(i, v){
+  var p = S.prod.products[i];
+  v = parseFloat(String(v).replace(',', '.'));
+  if (!(v > 0)) delete S.cart[p.id]; else S.cart[p.id] = Math.round(v*1000)/1000;
+  var inp = el('i' + i); if (inp) inp.value = S.cart[p.id] || '';
+  var row = el('r' + i); if (row) row.className = 'row' + (S.cart[p.id] ? ' has' : '');
+  drawBot();
+}
+function total(){
+  var t=0; S.prod.products.forEach(function(p){ if (S.cart[p.id]) t += p.price * S.cart[p.id]; });
+  return Math.round(t*100)/100;
+}
+function drawBot(){
+  var n=Object.keys(S.cart).length, t=total();
+  // добавка з дозволу закупниці мінімалкою не обмежена
+  var min = (S.prod.lateRequest === 'approved') ? 0 : (S.prod.minOrder || 0);
+  var low = min > 0 && t < min - 0.01;
+  var sum = S.prod.hidePrice
+    ? '<b>' + n + '</b>позицій у замовленні'
+    : '<b>' + money(t) + ' грн</b>' + n + ' поз.' +
+      (low ? ' · <span class="warn">мінімум ' + money(min) + ' грн</span>' : '');
+  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum">' + sum +
+    '</div><button class="btn" id="send"' +
+    (!n||low||S.prod.locked ? ' disabled' : '') + ' onclick="send()">' +
+    (S.mode === 'replace' ? 'Замінити' : 'Відправити') + '</button></div></div>';
+}
+function send(){
+  var items = Object.keys(S.cart).map(function(id){ return { id:id, qty:S.cart[id] }; });
+  if (!items.length) return;
+  var who = S.store.label;
+  var what = S.prod.hidePrice
+    ? items.length + ' позицій'
+    : money(total()) + ' грн, ' + items.length + ' поз.';
+  var head = (S.mode === 'replace')
+    ? 'УВАГА: попереднє замовлення за сьогодні буде ВИДАЛЕНО\nі замінене на це.\n\n'
+    : '';
+  if (!confirm(head + 'ТОРГОВА ТОЧКА:\n' + who + '\n\n' +
+               S.boot.directions[S.dir].title + '\n' + what +
+               '\n\nВідправити?')) return;
+  var b=el('send'); b.disabled=true; b.textContent='Відправка…';
+  trySend(items, 0);
+}
+
+/* Якщо саме зараз пишеться інше замовлення на цей самий напрямок -
+   чекаємо і повторюємо самі, продавець нічого не помічає.
+   Безпечно: orderId той самий, тож дубль не створиться навіть якщо
+   перша спроба насправді дійшла до таблиці. */
+function trySend(items, attempt){
+  call('submitOrder', { dir:S.dir, storeId:S.store.id, items:items,
+                        orderId:S.oid, mode:S.mode })
+    .then(done)
+    .catch(function(e){
+      var b = el('send');
+      var msg = String((e && e.message) || e);
+      if (msg.indexOf('BUSY') >= 0 && attempt < 3){
+        if (b) b.textContent = 'Черга…';
+        setTimeout(function(){ trySend(items, attempt + 1); }, 5000 + attempt * 10000);
+        return;
+      }
+      alert(msg.replace(/^BUSY:\s*/, 'Сервер зайнятий. '));
+      if (b){ b.disabled=false; b.textContent='Відправити'; }
+    });
+}
+function done(r){
+  S.screen='done'; S.store.ordered[S.dir]=true;
+  el('bot').innerHTML=''; el('back').style.display='none';
+  el('ttl').textContent = S.store.label;
+  el('wrap').innerHTML = '<div class="ok"><div class="big">&#10003;</div>' +
+    '<h2>Замовлення прийнято</h2><p><b>' + esc(r.direction) + '</b> · ' + esc(r.store) + '</p>' +
+    '<p>' + r.positions + ' позицій' +
+      ((S.prod && S.prod.hidePrice) ? '' : ' на ' + money(r.total) + ' грн') + '</p>' +
+    (r.replaced ? '<p style="color:#7a5200">Попереднє замовлення замінено' +
+                  (r.removed ? ' (прибрано рядків: ' + r.removed + ')' : '') + '</p>' : '') +
+    '<p>' + esc(r.date||'') + ' ' + esc(r.time) + '</p>' +
+    (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
+    '<div style="height:22px"></div>' +
+    '<button class="btn gray" onclick="openStore(S.store)">Замовити ще для цієї точки</button>' +
+    '<div style="height:12px"></div>' +
+    '<button class="chip" onclick="screenStore()">Інша торгова точка</button></div>';
+}
+function goBack(){
+  if (S.screen==='prod') openStore(S.store);
+  else if (S.screen==='dir') { S.q=''; screenStore(); }
+}
+/* ---------- автооновлення: продавець нічого не натискає ---------- */
+/* Розкид 40-55 с, щоб 37 телефонів не били по серверу в одну й ту саму
+   секунду і не збивали кеш статусів усі разом. */
+function hbDelay(){ return 40000 + Math.floor(Math.random() * 15000); }
+
+function beat(){
+  if (!S.boot) return;
+  call('refresh', { storeId: S.store ? S.store.id : '', dir: S.dir || '' }).then(function(d){
+    if (S.ver && d.version !== S.ver) return needReload();
+    if (d.today !== S.boot.today) return needReload();
+
+    S.boot.stores.forEach(function(s){ if (d.ordered[s.id]) s.ordered = d.ordered[s.id]; });
+    Object.keys(d.closed).forEach(function(k){
+      if (S.boot.directions[k]) S.boot.directions[k].closed = d.closed[k];
+    });
+
+    if (S.screen==='store' && document.activeElement !== el('q')) screenStore();
+    else if (S.screen==='dir') openStore(S.store);
+    else if (S.screen==='prod' && S.prod && S.prod.canRequestLate){
+      var was = S.prod.lateRequest;
+      S.prod.lateRequest = d.late;
+      S.prod.lateLeftMin = d.lateLeft || 0;
+      if (typeof d.locked === 'boolean') S.prod.locked = d.locked;
+      if (d.late === 'approved') S.prod.closed = false;
+      if (was !== d.late) drawProd();
+      else { injectLate(); drawBot(); }
+    }
+  }).catch(function(){});
+}
+function needReload(){
+  if (S.cart && Object.keys(S.cart).length) return showUpd();
+  location.reload();
+}
+function showUpd(){
+  if (el('updbar')) return;
+  var b = document.createElement('div');
+  b.id = 'updbar'; b.className = 'upd';
+  b.textContent = 'Є нова версія - натисніть, щоб оновити';
+  b.onclick = function(){ location.reload(); };
+  document.body.appendChild(b);
+}
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) beat(); });
+(function tick(){ setTimeout(function(){ beat(); tick(); }, hbDelay()); })();
+
+/* ---------- дозамовлення після дедлайну ---------- */
+function askLate(){
+  var b = el('askbtn');
+  if (b){ b.disabled = true; b.textContent = 'Надсилаємо...'; }
+  call('requestLate', { dir: S.dir, storeId: S.store.id }).then(function(r){
+    S.prod.lateRequest = r.status;
+    S.prod.lateMailed = (r.mailed !== false);
+    S.prod.lateLeftMin = r.leftMin || 0;
+    if (r.status === 'approved') S.prod.locked = false;
+    drawProd();
+  }).catch(function(e){
+    alert(e.message || e);
+    if (b){ b.disabled = false; b.textContent = 'Попросити дозвіл'; }
+  });
+}
+/* Малюємо плашку поверх звичайного екрана товарів,
+   не влазячи в саму drawProd. */
+var _drawProd_orig = drawProd;
+drawProd = function(){
+  _drawProd_orig.apply(null, arguments);
+  try { injectLate(); } catch (e) {}
+};
+function lateHtml(d){
+  if (!d || !d.canRequestLate) return '';
+  if (d.lateRequest === 'approved'){
+    var add = (S.mode !== 'replace');
+    return 'Закупниця дозволила зміни' +
+      (d.lateLeftMin ? ' - ще <b>' + d.lateLeftMin + ' хв</b>' : '') + '.' +
+      '<div class="modes">' +
+        '<button class="' + (add ? 'on' : '') + '" onclick="setMode(\'add\')">' +
+        'Дозамовити</button>' +
+        '<button class="' + (add ? '' : 'on') + '" onclick="setMode(\'replace\')">' +
+        'Переробити все</button>' +
+      '</div>' +
+      (add
+        ? 'Вкажіть <b>лише те, що додаєте</b>. Попереднє замовлення лишається.'
+        : 'Вкажіть <b>усе замовлення заново</b>. Попереднє за сьогодні буде видалено — ' +
+          'так прибирають зайву позицію або міняють кількість.');
+  }
+  if (d.lateRequest === 'pending')
+    return 'Запит надіслано закупниці. Щойно вона дозволить - кнопка "Відправити" ' +
+           'увімкнеться сама, сторінку оновлювати не треба.' +
+           (d.lateMailed === false
+             ? '<br><br>Сповіщення ще не налаштоване - зателефонуйте закупниці.' : '');
+  if (d.closed || d.alreadyOrdered)
+    return (d.closed ? 'Прийом на сьогодні закрито (до ' + esc(d.deadline) + '). '
+                     : 'Замовлення на сьогодні вже відправлено. ') +
+           'Можна попросити дозвіл на дозамовлення.' +
+           '<button id="askbtn" onclick="askLate()">Попросити дозвіл</button>';
+  return '';
+}
+
+function setMode(m){
+  S.mode = m;
+  injectLate();
+  drawBot();
+}
+
+function injectLate(){
+  if (S.screen !== 'prod') return;
+  var html = lateHtml(S.prod);
+  var box = el('ltbox');
+  if (!html){ if (box && box.parentNode) box.parentNode.removeChild(box); return; }
+  if (!box){
+    box = document.createElement('div');
+    box.id = 'ltbox'; box.className = 'lt';
+    var w = el('wrap');
+    w.insertBefore(box, w.firstChild);
+  }
+  box.innerHTML = html;
+}
+
+start();
+</script>
+</body>
+</html>
+
+
+
