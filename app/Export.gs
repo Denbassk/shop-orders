@@ -106,8 +106,10 @@ function nbhzExportDate_(name) {
   return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
 }
 
-// Повертає кількість перенесених листів
-function archiveOldNbhzExports() {
+// Повертає кількість перенесених листів.
+// keepDays - скільки днів лишити (1 = тільки сьогодні); без аргументу NBHZ_EXPORT_KEEP_DAYS
+function archiveOldNbhzExports(keepDays) {
+  var keep = (typeof keepDays === 'number' && keepDays >= 1) ? keepDays : NBHZ_EXPORT_KEEP_DAYS;
   var ss = nbhzSS_();
   var now = new Date();
   var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -117,7 +119,7 @@ function archiveOldNbhzExports() {
     var d = nbhzExportDate_(sh.getName());
     if (!d) return;
     var age = Math.round((today - d) / 86400000);
-    if (age >= NBHZ_EXPORT_KEEP_DAYS) old.push({ sh: sh, d: d });
+    if (age >= keep) old.push({ sh: sh, d: d });
   });
   if (!old.length) { console.log('Старих вивантажень НБХЗ немає'); return 0; }
 

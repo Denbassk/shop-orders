@@ -324,6 +324,12 @@ function e09_archiveNbhzExports() {
   archiveOldNbhzExports();
 }
 
+/** Прибрати ВСІ старі вивантаження НБХЗ зараз - лишити тільки сьогоднішнє.
+ *  Листи переносяться в архів (копія -> звірка -> видалення), не губляться. */
+function e11_archiveNbhzExportsKeepToday() {
+  archiveOldNbhzExports(1);
+}
+
 /** Посилання на архів вивантажень НБХЗ і список листів у ньому. */
 function e10_showNbhzExportArchive() {
   showNbhzExportArchive_();
