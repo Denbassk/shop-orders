@@ -237,3 +237,45 @@ function v08_checkVegTypes() {
                 ' (' + kind + ') | ' + r[2] + ' | ' + r[3]);
   });
 }
+
+// Відкрити овочі СЬОГОДНІ вівторковим точкам (замовлення сьогодні,
+// доставка наступного дня). Графік повернеться сам уночі.
+function v11_openVegToday() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(VEG_OVR_KEY)) {
+    console.log('Відкриття вже діє. Спершу v02_restoreVegDays().');
+    return;
+  }
+
+  var t = new Date();
+  var until = formatDateDMY_(t);
+  var wd = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'][t.getDay()];
+
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  var vals = sh.getRange(2, 1, sh.getLastRow() - 1, 19).getValues();
+
+  var backup = {}, n = 0;
+  for (var i = 0; i < vals.length; i++) {
+    if (vals[i][0] !== true) continue;          // A - не активна
+    if (vals[i][8] !== true) continue;          // I - без овочів
+    var q = String(vals[i][16] || '').trim();
+    if (!q) continue;                           // порожньо = і так без обмежень
+    if (q.indexOf('Вт') < 0) continue;          // не вівторкова точка
+    if (q.indexOf(wd) >= 0) continue;           // вже може цього дня
+
+    var row = i + 2;
+    backup[row] = q;
+    sh.getRange(row, VEG_Q_COL).setValue(q + ', ' + wd);
+    console.log('   ' + (vals[i][1] || vals[i][2]) + ': "' + q + '" -> "' + q + ', ' + wd + '"');
+    n++;
+  }
+
+  if (!n) { console.log('Нікого не змінено - перевірте колонку Q.'); return; }
+
+  props.setProperty(VEG_OVR_KEY, JSON.stringify(backup));
+  props.setProperty(VEG_OVR_UNTIL, until);
+  SpreadsheetApp.flush();
+  invalidateAppCache();
+  console.log('Відкрито точок: ' + n + ' на СЬОГОДНІ ' + until + ' (' + wd + ')');
+  console.log('Графік повернеться сам уночі.');
+}
