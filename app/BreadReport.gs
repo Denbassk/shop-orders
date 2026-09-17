@@ -67,7 +67,8 @@ function refreshBreadReports() {
   var props = PropertiesService.getScriptProperties();
 
   var ss = SpreadsheetApp.openById(dirCfg_('bread').spreadsheetId);
-  var have = ss.getSheetByName(BREAD_ORDERS_SHEET) && ss.getSheetByName(BREAD_SUMMARY_SHEET);
+  var have = ss.getSheetByName(BREAD_ORDERS_SHEET) && ss.getSheetByName(BREAD_SUMMARY_SHEET) &&
+             ss.getSheetByName(BREAD_DOWNLOAD_SHEET);
 
   if (have && props.getProperty('bread_report_sig') === sig) return;
 
@@ -79,6 +80,9 @@ function buildBreadReports() {
   var rows = breadTodayRows_();
   buildBreadOrdersSheet_(rows);
   buildBreadSummarySheet_(rows);
+  // лист "Завантаження" з посиланням на Excel тільки листа "Заказы" (Export.gs)
+  try { writeBreadDownloadSheet_(false); }
+  catch (e) { console.error('Завантаження (хліб): ' + e.message); }
   PropertiesService.getScriptProperties()
     .setProperty('bread_report_sig', breadSignature_(rows));
 }

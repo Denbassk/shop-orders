@@ -45,6 +45,9 @@ function refreshNbhzExport() {
   var dirty = props.getProperty('nbhz_export_dirty') === today;
   var sheet = nbhzSS_().getSheetByName('Вивантаження ' + today);
 
+  // старі "Вивантаження дд.мм.рррр" -> окрема таблиця-архів (Export.gs), раз на день
+  archiveNbhzExportsDaily_();
+
   if (!dirty && sheet) return;
 
   buildNbhzExport();

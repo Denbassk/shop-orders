@@ -317,6 +317,18 @@ function e04_refreshExport() {
   refreshNbhzExport();
 }
 
+/** Перенести старі листи "Вивантаження дд.мм.рррр" в таблицю
+ *  "АРХІВ Вивантаження НБХЗ" ПРЯМО ЗАРАЗ. У робочій лишаються
+ *  останні NBHZ_EXPORT_KEEP_DAYS днів. Саме робиться раз на день. */
+function e09_archiveNbhzExports() {
+  archiveOldNbhzExports();
+}
+
+/** Посилання на архів вивантажень НБХЗ і список листів у ньому. */
+function e10_showNbhzExportArchive() {
+  showNbhzExportArchive_();
+}
+
 
 // ============ 6. АВАРІЙНЕ ============
 
@@ -517,4 +529,11 @@ function h03_vegReport() {
  *  Стоїть на тригері кожні 5 хвилин - руками не потрібне. */
 function h04_refreshVegReport() {
   refreshVegReports();
+}
+
+/** Лист "Завантаження" у таблиці хліба: посилання на Excel ТІЛЬКИ
+ *  листа "Заказы" (і окремо "Данные Заказов"). Перезаписати зараз.
+ *  Далі оновлюється сам разом зі звітами хліба. */
+function h05_breadDownloadSheet() {
+  writeBreadDownloadSheet_(true);
 }
