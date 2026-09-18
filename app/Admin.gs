@@ -131,6 +131,7 @@ function adminApi(action, payload, token) {
       case 'closeAll':       data = admCloseAll_(payload); break;
       case 'restoreScan':    data = admRestoreScan_(payload); break;
       case 'restoreApply':   data = admRestoreApply_(payload); break;
+      case 'report':         data = admReport_(payload); break;
       case 'log':            data = admLogRead_(); break;
       default: throw new Error('Невідома дія: ' + action);
     }
@@ -249,7 +250,44 @@ function admDirStores_(payload) {
                                      a.label.localeCompare(b.label, 'uk'); });
   wait.sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
 
-  return { dir: dir, title: cfg.title, unit: cfg.unit, done: done, wait: wait };
+  return { dir: dir, title: cfg.title, unit: cfg.unit, done: done, wait: wait,
+           xlsx: admXlsxUrl_(dir), sheetUrl: admSheetUrl_(dir) };
+}
+
+// Посилання, що качає ТІЛЬКИ лист звіту цього напрямку
+function admXlsxUrl_(dir) {
+  var names = {
+    bread:  'Заказы',
+    bakery: 'Заказы ВК',
+    veg:    'Замовлення Овочі',
+    nbhz:   'Вивантаження ' + formatDateDMY_(new Date())
+  };
+  try {
+    var cfg = dirCfg_(dir);
+    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(names[dir]);
+    if (!sh) return '';
+    return 'https://docs.google.com/spreadsheets/d/' + cfg.spreadsheetId +
+           '/export?format=xlsx&gid=' + sh.getSheetId();
+  } catch (e) { return ''; }
+}
+
+function admSheetUrl_(dir) {
+  try {
+    return 'https://docs.google.com/spreadsheets/d/' + dirCfg_(dir).spreadsheetId + '/edit';
+  } catch (e) { return ''; }
+}
+
+// Зібрати звіт напрямку просто зараз
+function admReport_(payload) {
+  var dir = String(payload.dir || '');
+  var cfg = dirCfg_(dir);
+  if (dir === 'bread') buildBreadReports();
+  else if (dir === 'bakery') buildBakeryReports();
+  else if (dir === 'veg') buildVegReports();
+  else if (dir === 'nbhz') buildNbhzExport();
+  else throw new Error('Невідомий напрямок');
+  adminLog_('Зібрано звіт', cfg.title);
+  return { at: reportAt_(dir), xlsx: admXlsxUrl_(dir) };
 }
 
 // --- картка точки ---

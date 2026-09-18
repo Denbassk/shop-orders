@@ -240,6 +240,16 @@ function loadDir(k) {
       item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\'restore\',{dir:\'' + k + '\'})') +
       '</div>');
 
+    var files = item('Собрать отчёт сейчас', 'не дожидаясь пятиминутного триггера', '',
+                     'askReport(\'' + k + '\')');
+    if (ds.xlsx) files += '<a class="item" href="' + attr(ds.xlsx) + '" target="_blank" rel="noopener" ' +
+      'style="text-decoration:none;color:inherit"><span class="grow"><span class="t">Скачать Excel</span>' +
+      '<span class="s">только лист отчёта, без остальных листов</span></span>' + CHEV + '</a>';
+    if (ds.sheetUrl) files += '<a class="item" href="' + attr(ds.sheetUrl) + '" target="_blank" rel="noopener" ' +
+      'style="text-decoration:none;color:inherit"><span class="grow"><span class="t">Открыть таблицу</span>' +
+      '<span class="s">в Google Таблицах</span></span>' + CHEV + '</a>';
+    h += section('Отчёты и файлы', '<div class="card">' + files + '</div>');
+
     if (ds.done.length) {
       h += section('Заказали (' + ds.done.length + ')', '<div class="card">' +
         ds.done.map(function (s) {
@@ -427,6 +437,18 @@ function askOpenAll(dir) {
   });
 }
 
+function askReport(dir) {
+  confirmSheet({
+    title: 'Собрать отчёт сейчас?', sub: DIRS[dir].t,
+    what: ['Листы отчёта пересоберутся по текущим строкам сырого листа',
+           'Сырой лист не меняется',
+           'Занимает несколько секунд'],
+    yes: 'Собрать',
+    run: function () { return call('report', { dir: dir }); },
+    done: function (r) { toast('Отчёт собран' + (r.at ? ' в ' + r.at : '')); apply('dir', { dir: dir }); }
+  });
+}
+
 function askCloseAll(dir) {
   confirmSheet({
     title: 'Вернуть обычный режим?', sub: DIRS[dir].t,
@@ -528,13 +550,14 @@ function loadLog() {
   setHead('Журнал', 'последние действия');
   spin();
   call('log').then(function (list) {
-    if (!list.length) return view('<div class="info">Пока пусто. Здесь появится всё, что меняли через пульт.</div>');
-    view('<div class="card">' + list.map(function (r) {
+    var out = '<div class="card">' + list.map(function (r) {
       return '<div class="item"><span class="grow"><span class="t">' + esc(r.what) + '</span>' +
         '<span class="s">' + esc(r.details) + '</span></span>' +
         '<span class="right" style="font-size:12.5px;color:#7A828E;font-weight:500">' +
         esc(r.when).replace(' ', '<br>') + '</span></div>';
-    }).join('') + '</div>');
+    }).join('') + '</div>';
+    if (!list.length) out = '<div class="info">Пока пусто. Здесь появится всё, что меняли через пульт.</div>';
+    view(out + '<div><button class="btn ghost" onclick="logout()">Выйти из пульта</button></div>');
   }).catch(fail);
 }
 
