@@ -2,21 +2,24 @@
 var TOKEN = '';
 try { TOKEN = localStorage.getItem('adm_token') || ''; } catch (e) {}
 
-var S = { screen: 'today', dir: '', store: null, data: null, busy: false };
+var S = { screen: 'today', dir: '', store: null, q: '', today: '', busy: false };
+var HIST = [];
 
 var DIRS = {
-  bakery: { t: 'Выпечка и кулинария', s: 'В', c: '#E65100' },
-  bread:  { t: 'Хлеб Рома',           s: 'Р', c: '#8D6E63' },
-  nbhz:   { t: 'Хлеб НБХЗ',           s: 'Н', c: '#5D4037' },
-  veg:    { t: 'Овощи и фрукты',      s: 'О', c: '#2E7D32' }
+  bakery: { t: 'Выпечка и кулинария', short: 'Выпечка', s: 'В', c: '#E65100' },
+  bread:  { t: 'Хлеб Рома',           short: 'Рома',    s: 'Р', c: '#8D6E63' },
+  nbhz:   { t: 'Хлеб НБХЗ',           short: 'НБХЗ',    s: 'Н', c: '#5D4037' },
+  veg:    { t: 'Овощи и фрукты',      short: 'Овощи',   s: 'О', c: '#2E7D32' }
 };
 var ORDER = ['bakery', 'bread', 'nbhz', 'veg'];
+var CHEV = '<span class="chev"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>';
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
 }
+function attr(s) { return esc(s).replace(/\|/g, ''); }
 
 function call(action, payload) {
   return new Promise(function (res, rej) {
@@ -24,13 +27,14 @@ function call(action, payload) {
       .withSuccessHandler(function (r) {
         if (r && r.ok) return res(r.data);
         if (r && r.error === 'AUTH') { logout(); return rej(new Error('Нужно войти заново')); }
-        rej(new Error((r && r.error) || 'Ошибка'));
+        rej(new Error((r && r.error) || 'Ошибка связи'));
       })
       .withFailureHandler(function (e) { rej(e); })
       .adminApi(action, payload || {}, TOKEN);
   });
 }
 
+// ================= ВХОД =================
 function logout() {
   TOKEN = '';
   try { localStorage.removeItem('adm_token'); } catch (e) {}
@@ -41,10 +45,11 @@ function logout() {
 function doLogin() {
   var pin = document.getElementById('pin').value;
   var err = document.getElementById('pinerr');
-  err.textContent = '';
+  err.textContent = 'Проверяю…';
   google.script.run
     .withSuccessHandler(function (r) {
       if (!r || !r.ok) { err.textContent = (r && r.error) || 'Ошибка'; return; }
+      err.textContent = '';
       TOKEN = r.data.token;
       try { localStorage.setItem('adm_token', TOKEN); } catch (e) {}
       start();
@@ -60,153 +65,201 @@ document.getElementById('pin').addEventListener('keydown', function (e) {
 function start() {
   document.getElementById('login').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  go('today');
+  HIST = [];
+  armBack();
+  tabGo('today');
 }
 
-function setHead(title, sub, back) {
+// ================= НАВИГАЦИЯ =================
+// Системная кнопка "назад" на телефоне не должна закрывать приложение:
+// держим в истории браузера запасной шаг и перехватываем popstate.
+function armBack() {
+  try {
+    history.replaceState({ adm: 0 }, '');
+    history.pushState({ adm: 1 }, '');
+    window.addEventListener('popstate', function () {
+      history.pushState({ adm: 1 }, '');
+      goBack();
+    });
+  } catch (e) {}
+}
+
+function snap() { return { screen: S.screen, dir: S.dir, store: S.store, q: S.q }; }
+
+function go(screen, opts) {
+  HIST.push(snap());
+  if (HIST.length > 20) HIST.shift();
+  apply(screen, opts);
+}
+
+function tabGo(screen) {          // переход по нижним вкладкам обнуляет историю
+  HIST = [];
+  apply(screen, {});
+}
+
+function apply(screen, opts) {
+  opts = opts || {};
+  S.screen = screen;
+  if (opts.dir !== undefined) S.dir = opts.dir;
+  if (opts.store !== undefined) S.store = opts.store;
+  if (opts.q !== undefined) S.q = opts.q;
+  tabs(screen);
+  load();
+}
+
+function goBack() {
+  var prev = HIST.pop();
+  if (!prev) { if (S.screen !== 'today') apply('today', {}); return; }
+  S.dir = prev.dir; S.store = prev.store; S.q = prev.q;
+  S.screen = prev.screen;
+  tabs(prev.screen);
+  load();
+}
+
+function load() {
+  if (S.screen === 'today') return loadToday();
+  if (S.screen === 'dir') return loadDir(S.dir);
+  if (S.screen === 'stores') return loadStores(S.q);
+  if (S.screen === 'store') return loadStore(S.store, S.dir);
+  if (S.screen === 'restore') return loadRestore(S.dir || 'bakery');
+  if (S.screen === 'log') return loadLog();
+}
+
+// ================= ОБЩЕЕ =================
+function setHead(title, sub) {
   document.getElementById('title').textContent = title;
   document.getElementById('subtitle').textContent = sub || '';
-  document.getElementById('back').style.display = back ? 'flex' : 'none';
+  document.getElementById('back').style.display = HIST.length ? 'flex' : 'none';
 }
 
 function tabs(name) {
+  var map = { today: 'today', dir: 'today', stores: 'stores', store: 'stores',
+              restore: 'restore', log: 'log' };
+  var on = map[name] || 'today';
   ['today', 'stores', 'restore', 'log'].forEach(function (k) {
     var el = document.getElementById('t-' + k);
-    if (el) el.className = 'tab' + (k === name ? ' on' : '');
+    if (el) el.className = 'tab' + (k === on ? ' on' : '');
   });
 }
 
 function view(html) { document.getElementById('view').innerHTML = html; }
-function spin(text) { view('<div class="spin">' + esc(text || 'Загрузка…') + '</div>'); }
+function spin(t) { view('<div class="spin">' + esc(t || 'Загрузка…') + '</div>'); }
+function fail(e) { view('<div class="bad">' + esc(e && e.message ? e.message : e) + '</div>'); }
 
-function fail(e) {
-  view('<div class="bad">' + esc(e && e.message ? e.message : e) + '</div>');
+function section(title, inner) {
+  return '<div>' + (title ? '<div class="sec">' + esc(title) + '</div>' : '') + inner + '</div>';
 }
 
-function go(screen, arg) {
-  S.screen = screen;
-  if (screen === 'today' || screen === 'stores' || screen === 'restore' || screen === 'log') tabs(screen);
-  load(arg);
+function item(title, sub, right, onclick) {
+  var tag = onclick ? 'button' : 'div';
+  return '<' + tag + ' class="item"' + (onclick ? ' onclick="' + onclick + '"' : '') + '>' +
+    '<span class="grow"><span class="t">' + esc(title) + '</span>' +
+    (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' +
+    (right ? '<span class="right">' + right + '</span>' : '') +
+    (onclick ? CHEV : '') + '</' + tag + '>';
 }
 </script>
 <script>
-function load(arg) {
-  if (S.screen === 'today') return loadToday();
-  if (S.screen === 'stores') return loadStores(typeof arg === 'string' ? arg : '');
-  if (S.screen === 'store') return loadStore(S.store, S.dir);
-  if (S.screen === 'restore') return loadRestore(S.dir || 'bakery');
-  if (S.screen === 'dir') return loadDir(S.dir);
-  if (S.screen === 'log') return loadLog();
-}
-
-function goBack() {
-  if (S.screen === 'store') return go('stores');
-  if (S.screen === 'dir') return go('today');
-  go('today');
-}
-
 // ================= СЕГОДНЯ =================
 function loadToday() {
-  setHead('Сегодня', '', false);
+  setHead('Сегодня', '');
   spin();
   call('today').then(function (d) {
-    S.data = d;
-    setHead('Сегодня', d.today + ' · ' + d.time, false);
-    var h = '';
+    S.today = d.today;
+    setHead('Сегодня', d.today + ', ' + d.time);
 
+    var h = '';
     var alerts = d.dirs.filter(function (x) {
       return !x.closed && x.minLeft !== null && x.minLeft > 0 && x.minLeft <= 60 && x.waiting.length;
     });
     if (alerts.length) {
       h += '<div class="note">' + alerts.map(function (x) {
-        return 'Дедлайн «' + esc(DIRS[x.key].t) + '» через <b>' + x.minLeft +
-               ' мин</b>. Не заказали ' + x.waiting.length + ' точек.';
-      }).join('<br>') + '</div>';
+        return 'До дедлайна «' + esc(DIRS[x.key].t) + '» ' + x.minLeft +
+               ' мин. Не заказали ' + x.waiting.length + ' точек.';
+      }).join('<br><br>') + '</div>';
     }
 
-    h += '<div><div class="sec">Направления</div>';
+    var cards = '';
     ORDER.forEach(function (k) {
       var x = null;
       d.dirs.forEach(function (y) { if (y.key === k) x = y; });
       if (!x) return;
-      var meta = DIRS[k];
+      var m = DIRS[k];
       var pill = x.openedAll ? '<span class="pill warn">Открыто всем</span>'
                : (x.closed ? '<span class="pill closed">Закрыто</span>'
                            : '<span class="pill open">Открыто</span>');
       var pct = x.total ? Math.round(x.ordered / x.total * 100) : 0;
-      h += '<button class="dir" onclick="openDir(\'' + k + '\')">' +
-             '<div class="dirtop">' +
-               '<span class="sq" style="background:' + meta.c + '">' + meta.s + '</span>' +
-               '<span class="grow"><span class="nm">' + esc(meta.t) + '</span>' +
-               '<span class="mut">дедлайн ' + esc(x.deadline || '—') +
-                 (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') + '</span></span>' +
-               pill +
-             '</div>' +
-             '<div style="display:flex;align-items:center;gap:10px;margin-top:12px">' +
-               '<span class="bar"><i style="width:' + pct + '%;background:' + meta.c + '"></i></span>' +
-               '<span style="font-size:13px;font-weight:600">' + x.ordered + ' из ' + x.total + '</span>' +
-             '</div></button>';
+      cards += '<button class="dir" onclick="go(\'dir\',{dir:\'' + k + '\'})">' +
+        '<span class="dirtop">' +
+          '<span class="sq" style="background:' + m.c + '">' + m.s + '</span>' +
+          '<span class="grow"><span class="t" style="font-size:17px;font-weight:700;display:block">' +
+            esc(m.t) + '</span>' +
+            '<span class="s" style="display:block">до ' + esc(x.deadline || '—') +
+            (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') + '</span></span>' +
+          pill + '</span>' +
+        '<span style="display:flex;align-items:center;gap:12px;margin-top:16px">' +
+          '<span class="bar"><i style="width:' + pct + '%;background:' + m.c + '"></i></span>' +
+          '<span style="font-size:14px;font-weight:700;white-space:nowrap">' +
+            x.ordered + ' из ' + x.total + '</span></span>' +
+        '</button>';
     });
-    h += '</div>';
+    h += section('Направления', cards);
 
-    h += '<div><div class="sec">Быстрые действия</div>' +
-         '<div class="card">' +
-           '<button class="row" style="width:100%;border:0;background:#fff;text-align:left;cursor:pointer" onclick="go(\'stores\')">' +
-             '<span class="grow"><span class="nm">Заказы точки</span>' +
-             '<span class="mut">посмотреть, отменить, снять метку, открыть приём</span></span></button>' +
-           '<button class="row" style="width:100%;border:0;background:#fff;text-align:left;cursor:pointer" onclick="go(\'restore\')">' +
-             '<span class="grow"><span class="nm">Восстановить из бэкапа</span>' +
-             '<span class="mut">вернуть строки, которых нет в рабочем листе</span></span></button>' +
-         '</div></div>';
+    h += section('Быстрые действия', '<div class="card">' +
+      item('Заказы точки', 'посмотреть, отменить, снять метку', '', 'tabGo(\'stores\')') +
+      item('Восстановить из бэкапа', 'вернуть строки, которых нет в листе', '', 'tabGo(\'restore\')') +
+      item('Журнал действий', 'что и когда нажимали', '', 'tabGo(\'log\')') +
+      '</div>');
 
     view(h);
   }).catch(fail);
 }
 
-function openDir(k) { S.dir = k; go('dir'); }
-
 // ================= НАПРАВЛЕНИЕ =================
 function loadDir(k) {
-  var meta = DIRS[k];
-  setHead(meta.t, '', true);
+  var m = DIRS[k];
+  setHead(m.t, '');
   spin();
-  call('today').then(function (d) {
+  Promise.all([call('today'), call('dirStores', { dir: k })]).then(function (r) {
+    var d = r[0], ds = r[1];
     var x = null;
     d.dirs.forEach(function (y) { if (y.key === k) x = y; });
     if (!x) return fail(new Error('Направление не найдено'));
 
-    var h = '<div class="card pad">' +
-      '<div style="font-size:15px;line-height:1.5">' +
-        'Дедлайн <b>' + esc(x.deadline || '—') + '</b>, сейчас ' + esc(d.time) + '.<br>' +
-        'Заказали <b>' + x.ordered + '</b> из <b>' + x.total + '</b> точек' +
-        (x.reportAt ? ', отчёт собран в ' + esc(x.reportAt) : '') + '.' +
-        (x.openedAll ? '<br>Приём открыт всем до конца дня.' : '') +
-      '</div></div>';
+    var h = '<div class="info">' +
+      'Дедлайн <b>' + esc(x.deadline || '—') + '</b>, сейчас ' + esc(d.time) + '.<br>' +
+      'Заказали <b>' + ds.done.length + '</b> из <b>' + (ds.done.length + ds.wait.length) + '</b> точек' +
+      (x.reportAt ? ', отчёт собран в ' + esc(x.reportAt) : '') + '.' +
+      (x.openedAll ? '<br>Приём открыт всем до конца дня.' : '') + '</div>';
 
-    h += '<div class="card">' +
+    h += section('Управление приёмом', '<div class="card">' +
       (x.openedAll
-        ? '<button class="row" style="width:100%;border:0;background:#fff;text-align:left;cursor:pointer" onclick="askCloseAll(\'' + k + '\')">' +
-            '<span class="grow"><span class="nm">Вернуть обычный режим</span>' +
-            '<span class="mut">дедлайн снова действует</span></span></button>'
-        : '<button class="row" style="width:100%;border:0;background:#fff;text-align:left;cursor:pointer" onclick="askOpenAll(\'' + k + '\')">' +
-            '<span class="grow"><span class="nm">Открыть приём всем до конца дня</span>' +
-            '<span class="mut">дедлайн ' + esc(x.deadline || '—') + ' сегодня не действует</span></span></button>') +
-      '<button class="row" style="width:100%;border:0;background:#fff;text-align:left;cursor:pointer" onclick="S.dir=\'' + k + '\';go(\'restore\')">' +
-        '<span class="grow"><span class="nm">Проверить бэкап</span>' +
-        '<span class="mut">сравнить с рабочим листом</span></span></button>' +
-      '</div>';
+        ? item('Вернуть обычный режим', 'дедлайн снова действует', '', 'askCloseAll(\'' + k + '\')')
+        : item('Открыть приём всем до конца дня', 'дедлайн ' + esc(x.deadline || '—') + ' сегодня не действует',
+               '', 'askOpenAll(\'' + k + '\')')) +
+      item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\'restore\',{dir:\'' + k + '\'})') +
+      '</div>');
 
-    if (x.waiting.length) {
-      h += '<div><div class="sec">Ещё не заказали (' + x.waiting.length + ')</div><div class="card">' +
-        x.waiting.map(function (label) {
-          return '<button class="row" style="width:100%;border:0;background:#fff;text-align:left;cursor:pointer" onclick="findStore(' +
-            JSON.stringify(label).replace(/"/g, '&quot;') + ',\'' + k + '\')">' +
-            '<span class="grow"><span style="font-size:15px">' + esc(label) + '</span></span>' +
-            '<span class="mut">открыть</span></button>';
-        }).join('') + '</div></div>';
-    } else {
-      h += '<div class="ok">Заказали все точки этого направления.</div>';
+    if (ds.done.length) {
+      h += section('Заказали (' + ds.done.length + ')', '<div class="card">' +
+        ds.done.map(function (s) {
+          var sub = s.n + ' позиций · ' + s.qty + ' ' + esc(ds.unit) +
+                    (s.time ? ' · в ' + esc(s.time) : '') +
+                    (s.code ? ' · № ' + esc(s.code) : '');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})');
+        }).join('') + '</div>');
     }
+
+    if (ds.wait.length) {
+      h += section('Ещё не заказали (' + ds.wait.length + ')', '<div class="card">' +
+        ds.wait.map(function (s) {
+          var sub = (s.code ? '№ ' + esc(s.code) : '') + (s.route ? ' · маршрут ' + esc(s.route) : '');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})');
+        }).join('') + '</div>');
+    } else {
+      h += '<div class="ok">Заказали все точки направления.</div>';
+    }
+
     view(h);
   }).catch(fail);
 }
@@ -214,209 +267,184 @@ function loadDir(k) {
 <script>
 // ================= ТОЧКИ =================
 function loadStores(q) {
-  setHead('Точки', '', false);
-  var html = '<input id="q" type="search" placeholder="Адрес, название или номер точки" value="' + esc(q || '') + '">' +
-             '<div id="list"><div class="spin">Загрузка…</div></div>';
-  view(html);
+  setHead('Точки', 'поиск по адресу или номеру');
+  view('<div><input id="q" type="search" placeholder="Например: Валентиновская или 14" value="' +
+       esc(q || '') + '"></div><div id="list"><div class="spin">Загрузка…</div></div>');
   var inp = document.getElementById('q');
   inp.addEventListener('input', function () {
     clearTimeout(S.t);
-    S.t = setTimeout(function () { fillStores(inp.value); }, 250);
+    S.q = inp.value;
+    S.t = setTimeout(function () { fillStores(inp.value); }, 300);
   });
   fillStores(q || '');
 }
 
 function fillStores(q) {
-  call('stores', { q: q, dir: S.dir || '' }).then(function (list) {
+  call('stores', { q: q, dir: '' }).then(function (list) {
     var el = document.getElementById('list');
     if (!el) return;
     if (!list.length) { el.innerHTML = '<div class="note">Ничего не найдено</div>'; return; }
     el.innerHTML = '<div class="card">' + list.map(function (s) {
       var dots = s.directions.map(function (k) {
-        return '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' +
-               (DIRS[k] ? DIRS[k].c : '#ccc') + ';margin-right:4px"></span>';
+        return '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;' +
+               'background:' + (DIRS[k] ? DIRS[k].c : '#ccc') + ';margin-right:5px"></span>';
       }).join('');
-      return '<button class="row" style="width:100%;border:0;background:#fff;text-align:left;cursor:pointer" onclick="openStore(\'' +
-        esc(s.id) + '\')"><span class="grow"><span class="nm">' + esc(s.label) + '</span>' +
-        '<span class="mut">' + dots + (s.code ? '№ ' + esc(s.code) : '') +
-        (s.route ? ' · маршрут ' + esc(s.route) : '') + '</span></span></button>';
+      var sub = dots + (s.code ? '№ ' + esc(s.code) : '') + (s.route ? ' · маршрут ' + esc(s.route) : '');
+      return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'\'})');
     }).join('') + '</div>';
   }).catch(fail);
 }
 
-function findStore(label, dir) {
-  S.dir = dir || '';
-  call('stores', { q: label, dir: dir || '' }).then(function (list) {
-    if (!list.length) return fail(new Error('Точка не найдена'));
-    openStore(list[0].id);
-  }).catch(fail);
-}
-
-function openStore(id) { S.store = id; S.screen = 'store'; loadStore(id, S.dir); }
-
 function loadStore(id, dir) {
-  setHead('Точка', '', true);
+  setHead('Точка', '');
   spin();
   call('store', { storeId: id, dir: dir || '' }).then(function (d) {
     S.dir = d.dir;
-    setHead(d.label, (d.code ? '№ ' + d.code : '') + (d.route ? ' · маршрут ' + d.route : ''), true);
+    setHead(d.label, (d.code ? '№ ' + d.code : '') + (d.route ? ' · маршрут ' + d.route : ''));
 
     var h = '<div class="chips">' + d.directions.map(function (k) {
-      return '<button class="chip' + (k === d.dir ? ' on' : '') + '" onclick="S.dir=\'' + k +
-             '\';loadStore(\'' + esc(d.id) + '\',\'' + k + '\')">' + esc(DIRS[k] ? DIRS[k].t : k) + '</button>';
+      return '<button class="chip' + (k === d.dir ? ' on' : '') + '" onclick="apply(\'store\',{store:\'' +
+        attr(d.id) + '\',dir:\'' + k + '\'})">' + esc(DIRS[k] ? DIRS[k].short : k) + '</button>';
     }).join('') + '</div>';
 
     if (!d.dayOk) h += '<div class="note">Сегодня не день приёма по этому направлению.</div>';
-
-    if (d.rows.length) {
-      h += '<div class="card">' +
-        '<div class="row"><span class="grow nm">Заказ на ' + esc(S.data && S.data.today || '') + '</span>' +
-        '<span class="pill open">Есть</span></div>' +
-        d.rows.map(function (r) {
-          return '<div class="row"><span class="grow" style="font-size:15px">' + esc(r.name) +
-                 '</span><span style="font-size:15px;font-weight:600">' + r.qty + '</span></div>';
-        }).join('') +
-        '<div class="row" style="background:#FAFBFC"><span class="grow mut">' + d.rows.length +
-        ' позиций · ' + d.qty + ' ' + esc(d.unit) + ' · лист «' + esc(d.sheet) + '»' +
-        (d.firstRow ? ', с ' + d.firstRow + '-й строки' : '') + '</span></div></div>';
-    } else {
-      h += '<div class="card pad"><div style="font-size:15px">Сегодня заказа нет.' +
-           (d.marked ? ' Но метка «уже заказывали» стоит — значит строки потерялись.' : '') + '</div></div>';
-    }
-
     if (d.lateLeft) h += '<div class="ok">Приём открыт ещё ' + d.lateLeft + ' мин.</div>';
 
-    h += '<div><div class="sec">Действия</div><div class="card">';
-    if (d.rows.length) h += actRow('Отменить заказ', 'убрать строки и метку — точка закажет заново',
-      'askCancel(\'' + esc(d.id) + '\',\'' + d.dir + '\',' + d.rows.length + ')');
-    if (d.marked) h += actRow('Снять метку «уже заказывали»', 'строки остаются на месте',
-      'askClearMark(\'' + esc(d.id) + '\',\'' + d.dir + '\')');
-    h += actRow('Открыть приём этой точке', 'на 30 минут, даже после дедлайна',
-      'askOpenStore(\'' + esc(d.id) + '\',\'' + d.dir + '\')');
-    h += '</div></div>';
+    if (d.rows.length) {
+      var rows = d.rows.map(function (r) {
+        return '<div class="item" style="min-height:52px;padding:13px 16px">' +
+          '<span class="grow"><span style="font-size:15px">' + esc(r.name) + '</span></span>' +
+          '<span class="right">' + r.qty + '</span></div>';
+      }).join('');
+      h += section('Заказ на ' + esc(S.today || d.today || ''), '<div class="card">' + rows +
+        '<div class="item" style="background:#FAFBFC;min-height:52px">' +
+        '<span class="grow"><span class="s" style="margin:0">' + d.rows.length + ' позиций · ' +
+        d.qty + ' ' + esc(d.unit) + ' · лист «' + esc(d.sheet) + '»' +
+        (d.firstRow ? ', с ' + d.firstRow + '-й строки' : '') + '</span></span></div></div>');
+    } else {
+      h += section('Заказ на ' + esc(S.today || ''), '<div class="info">Сегодня заказа нет.' +
+        (d.marked ? '<br><b>Но метка «уже заказывали» стоит</b> — значит строки потерялись. ' +
+                    'Снимите метку или проверьте бэкап.' : '') + '</div>');
+    }
+
+    var acts = '';
+    if (d.rows.length) acts += item('Отменить заказ', 'убрать строки и метку — точка закажет заново',
+      '', 'askCancel(\'' + attr(d.id) + '\',\'' + d.dir + '\',' + d.rows.length + ')');
+    if (d.marked) acts += item('Снять метку «уже заказывали»', 'строки остаются на месте',
+      '', 'askClearMark(\'' + attr(d.id) + '\',\'' + d.dir + '\')');
+    acts += item('Открыть приём этой точке', 'на 30 минут, даже после дедлайна',
+      '', 'askOpenStore(\'' + attr(d.id) + '\',\'' + d.dir + '\')');
+    acts += item('Проверить бэкап направления', 'что потерялось из рабочего листа',
+      '', 'go(\'restore\',{dir:\'' + d.dir + '\'})');
+    h += section('Действия', '<div class="card">' + acts + '</div>');
 
     view(h);
   }).catch(fail);
 }
-
-function actRow(title, sub, onclick) {
-  return '<button class="row" style="width:100%;border:0;background:#fff;text-align:left;cursor:pointer" onclick="' +
-    onclick + '"><span class="grow"><span class="nm">' + esc(title) + '</span><span class="mut">' +
-    esc(sub) + '</span></span></button>';
-}
 </script>
 <script>
 // ================= ПОДТВЕРЖДЕНИЕ =================
-function confirmSheet(opts) {
+function confirmSheet(o) {
   var m = document.getElementById('modal');
   m.innerHTML = '<div class="mask" onclick="if(event.target===this)closeSheet()"><div class="sheet">' +
-    '<div class="grip"></div><h2>' + esc(opts.title) + '</h2>' +
-    '<div style="font-size:15px;line-height:1.45;color:#5A626D">' + esc(opts.sub || '') + '</div>' +
-    '<div class="what">' + opts.what.map(function (t) { return '• ' + esc(t); }).join('<br>') + '</div>' +
-    '<button class="btn" id="yes">' + esc(opts.yes || 'Подтвердить') + '</button>' +
-    '<button class="btn ghost" style="margin-top:10px" onclick="closeSheet()">Отмена</button>' +
-    '</div></div>';
+    '<div class="grip"></div><h2>' + esc(o.title) + '</h2>' +
+    '<div class="sub">' + esc(o.sub || '') + '</div>' +
+    '<div class="what">' + o.what.map(function (t) {
+      return '<div><span style="flex:none;color:#7A828E">—</span><span>' + esc(t) + '</span></div>';
+    }).join('') + '</div>' +
+    '<button class="btn" id="yes">' + esc(o.yes || 'Подтвердить') + '</button>' +
+    '<button class="btn ghost" onclick="closeSheet()">Отмена</button></div></div>';
+
   document.getElementById('yes').onclick = function () {
     var b = this;
     if (S.busy) return;
-    S.busy = true;
-    b.disabled = true;
-    b.textContent = 'Выполняю…';
-    opts.run().then(function (res) {
-      S.busy = false;
-      closeSheet();
-      if (opts.done) opts.done(res);
+    S.busy = true; b.disabled = true; b.textContent = 'Выполняю…';
+    o.run().then(function (res) {
+      S.busy = false; closeSheet();
+      if (o.done) o.done(res);
     }).catch(function (e) {
-      S.busy = false;
-      b.disabled = false;
-      b.textContent = esc(opts.yes || 'Подтвердить');
-      alert(e && e.message ? e.message : e);
+      S.busy = false; b.disabled = false; b.textContent = o.yes || 'Подтвердить';
+      toast(e && e.message ? e.message : String(e));
     });
   };
 }
 
 function closeSheet() { document.getElementById('modal').innerHTML = ''; }
 
+function toast(text) {
+  var m = document.getElementById('modal');
+  m.innerHTML = '<div style="position:fixed;left:16px;right:16px;bottom:104px;z-index:60;background:#16181D;' +
+    'color:#fff;border-radius:16px;padding:16px;font-size:15px;text-align:center;max-width:528px;margin:0 auto">' +
+    esc(text) + '</div>';
+  setTimeout(function () { if (m.firstChild && !m.querySelector('.mask')) m.innerHTML = ''; }, 3000);
+}
+
 function askCancel(id, dir, n) {
   confirmSheet({
-    title: 'Отменить заказ?',
-    sub: DIRS[dir].t,
+    title: 'Отменить заказ?', sub: DIRS[dir].t,
     what: ['Из рабочего листа удалятся ' + n + ' строк сегодняшнего заказа',
            'Снимется метка «уже заказывали» — точка сможет заказать заново',
-           'Запись в «Журнал дій»'],
+           'Действие попадёт в журнал'],
     yes: 'Да, отменить',
     run: function () { return call('cancelOrder', { storeId: id, dir: dir }); },
-    done: function (r) { toast('Удалено строк: ' + r.removed); loadStore(id, dir); }
+    done: function (r) { toast('Удалено строк: ' + r.removed); apply('store', { store: id, dir: dir }); }
   });
 }
 
 function askClearMark(id, dir) {
   confirmSheet({
-    title: 'Снять метку?',
-    sub: DIRS[dir].t,
+    title: 'Снять метку?', sub: DIRS[dir].t,
     what: ['Строки в листе остаются как есть',
            'Точка сможет отправить заказ ещё раз',
-           'Запись в «Журнал дій»'],
+           'Действие попадёт в журнал'],
     yes: 'Снять метку',
     run: function () { return call('clearMark', { storeId: id, dir: dir }); },
-    done: function () { toast('Метка снята'); loadStore(id, dir); }
+    done: function () { toast('Метка снята'); apply('store', { store: id, dir: dir }); }
   });
 }
 
 function askOpenStore(id, dir) {
   confirmSheet({
-    title: 'Открыть приём точке?',
-    sub: DIRS[dir].t,
+    title: 'Открыть приём точке?', sub: DIRS[dir].t,
     what: ['Точка сможет отправить заказ ближайшие 30 минут',
            'На остальные точки это не влияет',
            'Метку «уже заказывали» не трогаем — дубля не будет'],
     yes: 'Открыть на 30 минут',
     run: function () { return call('openStore', { storeId: id, dir: dir }); },
-    done: function (r) { toast('Открыто на ' + (r.left || 30) + ' мин'); loadStore(id, dir); }
+    done: function (r) { toast('Открыто на ' + (r.left || 30) + ' мин'); apply('store', { store: id, dir: dir }); }
   });
 }
 
 function askOpenAll(dir) {
   confirmSheet({
-    title: 'Открыть всем до конца дня?',
-    sub: DIRS[dir].t,
+    title: 'Открыть всем до конца дня?', sub: DIRS[dir].t,
     what: ['Дедлайн сегодня не действует ни для одной точки',
-           'Те, кто уже заказал, останутся заблокированы — дублей не будет',
-           'Вернуть режим можно этой же кнопкой'],
+           'Кто уже заказал — останется заблокирован, дублей не будет',
+           'Вернуть обычный режим можно этой же кнопкой'],
     yes: 'Открыть всем',
     run: function () { return call('openAll', { dir: dir }); },
-    done: function () { toast('Открыто до конца дня'); loadDir(dir); }
+    done: function () { toast('Открыто до конца дня'); apply('dir', { dir: dir }); }
   });
 }
 
 function askCloseAll(dir) {
   confirmSheet({
-    title: 'Вернуть обычный режим?',
-    sub: DIRS[dir].t,
-    what: ['Дедлайн ' + DIRS[dir].t + ' снова действует',
-           'Заказы, которые уже приняты, остаются'],
+    title: 'Вернуть обычный режим?', sub: DIRS[dir].t,
+    what: ['Дедлайн снова действует', 'Принятые заказы остаются на месте'],
     yes: 'Вернуть',
     run: function () { return call('closeAll', { dir: dir }); },
-    done: function () { toast('Обычный режим'); loadDir(dir); }
+    done: function () { toast('Обычный режим'); apply('dir', { dir: dir }); }
   });
-}
-
-function toast(text) {
-  var m = document.getElementById('modal');
-  m.innerHTML = '<div style="position:fixed;left:16px;right:16px;bottom:96px;z-index:60;background:#16181D;color:#fff;' +
-    'border-radius:14px;padding:14px 16px;font-size:15px;text-align:center;max-width:488px;margin:0 auto">' +
-    esc(text) + '</div>';
-  setTimeout(function () { m.innerHTML = ''; }, 2600);
 }
 </script>
 <script>
 // ================= БЭКАП =================
 function loadRestore(dir) {
   S.dir = dir;
-  setHead('Бэкап', '', false);
+  setHead('Бэкап', 'сравнение с рабочим листом');
   var chips = '<div class="chips">' + ORDER.map(function (k) {
-    return '<button class="chip' + (k === dir ? ' on' : '') + '" onclick="loadRestore(\'' + k + '\')">' +
-           esc(DIRS[k].t.split(' ')[0]) + '</button>';
+    return '<button class="chip' + (k === dir ? ' on' : '') + '" onclick="apply(\'restore\',{dir:\'' +
+      k + '\'})">' + esc(DIRS[k].short) + '</button>';
   }).join('') + '</div>';
   view(chips + '<div id="res"><div class="spin">Сравниваю бэкап с рабочим листом…</div></div>');
 
@@ -424,87 +452,88 @@ function loadRestore(dir) {
     var el = document.getElementById('res');
     if (!el) return;
     S.scan = d;
-    var h = '<div class="card pad"><div style="font-size:15px;line-height:1.5">' +
-      esc(d.dirTitle) + ', ' + esc(d.date) + '<br>' +
-      'В бэкапе <b>' + d.backupRows + '</b> строк, в рабочем листе <b>' + d.liveRows + '</b>.' +
-      '</div></div>';
+
+    var h = '<div class="info">' + esc(d.dirTitle) + ', ' + esc(d.date) + '<br>' +
+      'В бэкапе <b>' + d.backupRows + '</b> строк, в рабочем листе <b>' + d.liveRows + '</b>.</div>';
 
     if (!d.stores.length) {
-      h += '<div class="ok">Всё на месте — пропавших строк нет.</div>';
-      el.innerHTML = h;
+      el.innerHTML = h + '<div class="ok" style="margin-top:20px">Всё на месте — пропавших строк нет.</div>';
       return;
     }
 
-    h += '<div class="bad">Не хватает <b>' + d.missingRows + '</b> строк от ' + d.stores.length +
-         ' точек. Отметьте, что вернуть.</div>';
+    h += '<div class="bad" style="margin-top:20px">Не хватает <b>' + d.missingRows + '</b> строк от ' +
+         d.stores.length + ' точек. Отметьте, что вернуть.</div>';
 
-    h += '<div><div class="sec">Что вернуть</div><div class="card">' + d.stores.map(function (s, i) {
-      return '<label class="pick"><input type="checkbox" checked data-key="' + esc(s.key) + '">' +
-        '<span class="grow"><span class="nm">' + esc(s.label) + '</span><span class="mut">' +
-        s.missing + ' строк · ' + s.qty + ' ' + esc(d.unit) + ' · снимок ' + esc(s.stamp) + '</span></span>' +
-        '<span class="mut" onclick="event.preventDefault();toggleItems(' + i + ')" style="cursor:pointer">что именно</span>' +
-        '</label><div id="it' + i + '" style="display:none;padding:0 15px 12px 49px">' +
-        s.items.map(function (it) {
-          return '<div style="display:flex;gap:10px;font-size:14px;padding:3px 0"><span class="grow">' +
-                 esc(it.name) + '</span><span style="font-weight:600">' + it.qty + '</span></div>';
-        }).join('') + '</div>';
-    }).join('') + '</div></div>';
+    h += '<div style="margin-top:22px">' + '<div class="sec">Что вернуть</div><div class="card">' +
+      d.stores.map(function (s, i) {
+        return '<label class="pick"><input type="checkbox" checked data-key="' + attr(s.key) + '">' +
+          '<span class="grow"><span class="t">' + esc(s.label) + '</span>' +
+          '<span class="s">' + s.missing + ' строк · ' + s.qty + ' ' + esc(d.unit) +
+          ' · снимок ' + esc(s.stamp) + '</span></span>' +
+          '<span class="right" style="color:#E11B22;font-size:13.5px" ' +
+          'onclick="event.preventDefault();event.stopPropagation();toggleItems(' + i + ')">что именно</span>' +
+          '</label>' +
+          '<div id="it' + i + '" style="display:none;padding:4px 16px 14px 54px;background:#FAFBFC">' +
+          s.items.map(function (it) {
+            return '<div style="display:flex;gap:12px;font-size:14.5px;padding:5px 0">' +
+              '<span class="grow">' + esc(it.name) + '</span>' +
+              '<span style="font-weight:600">' + it.qty + '</span></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div></div>';
 
-    h += '<div class="card pad"><div class="sec">Как это работает</div>' +
-      '<div style="font-size:14px;line-height:1.5;color:#3D434C">' +
-      'Строки только дописываются в конец листа — ничего не стирается и не перезаписывается.<br>' +
-      'Дубли отсеиваются: то, что уже есть в листе, повторно не ляжет.<br>' +
+    h += '<div style="margin-top:22px"><div class="sec">Как это работает</div><div class="info">' +
+      'Строки только дописываются в конец листа — ничего не стирается и не перезаписывается.<br><br>' +
+      'Дубли отсеиваются: то, что уже есть в листе, повторно не ляжет.<br><br>' +
       'После возврата отчёт и выгрузка пересобираются сами.</div></div>';
 
-    h += '<button class="btn" onclick="askRestore()">Вернуть отмеченные строки</button>';
+    h += '<div style="margin-top:22px"><button class="btn" onclick="askRestore()">' +
+         'Вернуть отмеченные строки</button></div>';
     el.innerHTML = h;
   }).catch(fail);
 }
 
 function toggleItems(i) {
   var el = document.getElementById('it' + i);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-function pickedKeys() {
-  var out = [];
-  Array.prototype.forEach.call(document.querySelectorAll('input[data-key]'), function (c) {
-    if (c.checked) out.push(c.getAttribute('data-key'));
-  });
-  return out;
+  if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
 }
 
 function askRestore() {
-  var keys = pickedKeys();
-  if (!keys.length) return alert('Ничего не отмечено');
+  var keys = [];
+  Array.prototype.forEach.call(document.querySelectorAll('input[data-key]'), function (c) {
+    if (c.checked) keys.push(c.getAttribute('data-key'));
+  });
+  if (!keys.length) return toast('Ничего не отмечено');
+
   var d = S.scan, n = 0, names = [];
   d.stores.forEach(function (s) {
     if (keys.indexOf(s.key) < 0) return;
-    n += s.missing;
-    names.push(s.label);
+    n += s.missing; names.push(s.label);
   });
+
   confirmSheet({
     title: 'Вернуть ' + n + ' строк?',
     sub: d.dirTitle + ', ' + d.date + ' · ' + names.join(', '),
     what: ['Добавится ' + n + ' строк в конец листа «' + d.sheet + '»',
            'Ничего не удаляется и не перезаписывается',
-           'Запись в «Журнал дій»'],
+           'Дубли отсеиваются автоматически',
+           'Действие попадёт в журнал'],
     yes: 'Да, вернуть',
     run: function () { return call('restoreApply', { dir: d.dir, date: d.date, keys: keys }); },
-    done: function (r) { toast('Возвращено строк: ' + r.added); loadRestore(d.dir); }
+    done: function (r) { toast('Возвращено строк: ' + r.added); apply('restore', { dir: d.dir }); }
   });
 }
 
 // ================= ЖУРНАЛ =================
 function loadLog() {
-  setHead('Журнал', 'последние действия', false);
+  setHead('Журнал', 'последние действия');
   spin();
   call('log').then(function (list) {
-    if (!list.length) return view('<div class="note">Пока пусто</div>');
+    if (!list.length) return view('<div class="info">Пока пусто. Здесь появится всё, что меняли через пульт.</div>');
     view('<div class="card">' + list.map(function (r) {
-      return '<div class="row"><span class="grow"><span style="font-size:15px;font-weight:600">' +
-        esc(r.what) + '</span><span class="mut">' + esc(r.details) + '</span></span>' +
-        '<span class="mut" style="flex:none">' + esc(r.when) + '</span></div>';
+      return '<div class="item"><span class="grow"><span class="t">' + esc(r.what) + '</span>' +
+        '<span class="s">' + esc(r.details) + '</span></span>' +
+        '<span class="right" style="font-size:12.5px;color:#7A828E;font-weight:500">' +
+        esc(r.when).replace(' ', '<br>') + '</span></div>';
     }).join('') + '</div>');
   }).catch(fail);
 }

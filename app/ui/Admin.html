@@ -3,99 +3,149 @@
 <head>
 <base target="_top">
 <meta charset="utf-8">
-<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#F2F3F5;color:#16181D;font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;-webkit-font-smoothing:antialiased}
-h1,h2,h3{font-family:'Golos Text','IBM Plex Sans',sans-serif;letter-spacing:-.01em;margin:0}
-button{font-family:inherit}
-.wrap{max-width:520px;margin:0 auto;padding-bottom:96px}
-.hdr{position:sticky;top:0;z-index:20;background:#16181D;color:#fff;padding:16px 16px 18px;display:flex;align-items:flex-start;gap:12px}
-.hdr h1{font-size:24px;font-weight:800}
-.hdr .sub{font-size:13px;color:#A6ACB6;margin-top:3px}
-.icobtn{flex:none;width:44px;height:44px;border:0;border-radius:14px;background:#2C2F36;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.body{padding:16px 16px 0;display:flex;flex-direction:column;gap:18px}
-.sec{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#77808C;margin-bottom:10px}
-.card{background:#fff;border-radius:18px;box-shadow:0 1px 2px rgba(22,24,29,.08);overflow:hidden}
-.pad{padding:14px 15px}
-.dir{display:block;width:100%;text-align:left;border:0;background:#fff;border-radius:18px;padding:14px 15px;box-shadow:0 1px 2px rgba(22,24,29,.08);cursor:pointer;margin-bottom:10px}
-.dirtop{display:flex;align-items:center;gap:12px}
-.sq{flex:none;width:42px;height:42px;border-radius:13px;color:#fff;font-family:'Golos Text',sans-serif;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center}
-.nm{font-size:17px;font-weight:600}
-.mut{font-size:13px;color:#77808C;margin-top:2px}
-.pill{flex:none;font-size:12px;font-weight:600;border-radius:9px;padding:6px 10px}
-.pill.open{color:#17703F;background:#E7F4EC}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:#F1F2F4;color:#16181D;font-size:16px;line-height:1.45;
+  font-family:'Golos Text',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2{margin:0;letter-spacing:-.015em}
+button{font-family:inherit;font-size:inherit;color:inherit}
+
+/* --- шапка --- */
+.hdr{position:sticky;top:0;z-index:20;background:#16181D;color:#fff;
+  padding:14px 16px 18px;display:flex;align-items:center;gap:12px}
+.hdr h1{font-size:23px;font-weight:800;line-height:1.2}
+.hdr .sub{font-size:13px;color:#A6ACB6;margin-top:5px}
+.icobtn{flex:none;width:46px;height:46px;border:0;border-radius:15px;background:#2C2F36;color:#fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.icobtn:active{background:#3A3E47}
+
+/* --- каркас --- */
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 120px}
+.grid{display:flex;flex-direction:column;gap:26px}
+.sec{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:#7A828E;margin:0 0 12px 4px}
+.card{background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(22,24,29,.09);overflow:hidden}
+.card + .card{margin-top:12px}
+
+/* --- строка списка --- */
+.item{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;
+  padding:15px 16px;border:0;background:#fff;text-align:left;cursor:pointer;position:relative}
+.item + .item::before{content:'';position:absolute;left:16px;right:0;top:0;height:1px;background:#EEF0F3}
+.item:active{background:#F7F8FA}
+.item .t{font-size:16px;font-weight:600;line-height:1.3}
+.item .s{font-size:13.5px;color:#7A828E;margin-top:5px;line-height:1.35}
+.grow{flex-grow:1;min-width:0}
+.chev{flex:none;color:#C2C7CE}
+.right{flex:none;font-size:15px;font-weight:600;text-align:right}
+
+/* --- направление --- */
+.dir{display:block;width:100%;border:0;background:#fff;border-radius:20px;padding:16px;
+  box-shadow:0 1px 3px rgba(22,24,29,.09);cursor:pointer;text-align:left}
+.dir + .dir{margin-top:12px}
+.dir:active{background:#F7F8FA}
+.dirtop{display:flex;align-items:center;gap:14px}
+.sq{flex:none;width:46px;height:46px;border-radius:14px;color:#fff;font-size:19px;font-weight:800;
+  display:flex;align-items:center;justify-content:center}
+.bar{flex-grow:1;height:8px;border-radius:5px;background:#EDEFF2;overflow:hidden;display:block}
+.bar i{display:block;height:8px;border-radius:5px}
+
+.pill{flex:none;font-size:12px;font-weight:600;border-radius:10px;padding:7px 11px;white-space:nowrap}
+.pill.open{color:#166B3A;background:#E6F4EC}
 .pill.closed{color:#8E1418;background:#FDECEC}
-.pill.warn{color:#6B4A00;background:#FFF4DE}
-.bar{flex-grow:1;height:7px;border-radius:4px;background:#EDEFF2;overflow:hidden;display:block}
-.bar i{display:block;height:7px;border-radius:4px}
-.row{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid #F3F4F6}
-.row:last-child{border-bottom:0}
-.grow{flex-grow:1}
-.btn{display:flex;align-items:center;justify-content:center;height:54px;border:0;border-radius:15px;background:#E11B22;color:#fff;font-size:17px;font-weight:600;width:100%;cursor:pointer}
+.pill.warn{color:#6B4A00;background:#FFF3DC}
+
+/* --- кнопки --- */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:56px;
+  border:0;border-radius:16px;background:#E11B22;color:#fff;font-size:17px;font-weight:600;cursor:pointer}
+.btn:active{background:#C4161C}
 .btn.dark{background:#16181D}
-.btn.ghost{background:#F2F3F5;color:#16181D;height:50px;font-size:16px;font-weight:500}
+.btn.ghost{background:#fff;color:#16181D;box-shadow:0 1px 3px rgba(22,24,29,.09);height:52px;font-weight:600}
 .btn[disabled]{background:#C9CCD2;cursor:default}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{border:1px solid #DDE0E5;border-radius:22px;padding:11px 16px;font-size:14px;font-weight:500;background:#fff;color:#16181D;cursor:pointer}
+.btn + .btn{margin-top:12px}
+
+/* --- поля и чипы --- */
+.chips{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px}
+.chip{border:1px solid #DCE0E5;border-radius:24px;padding:12px 17px;font-size:14.5px;font-weight:500;
+  background:#fff;cursor:pointer}
 .chip.on{background:#16181D;color:#fff;border-color:#16181D;font-weight:600}
-input[type=search],input[type=text],input[type=tel]{width:100%;padding:14px 15px;border:1px solid #DDE0E5;border-radius:14px;background:#fff;font-family:inherit;font-size:16px;color:#16181D;outline:none}
+input[type=search],input[type=text],input[type=tel]{width:100%;padding:16px;border:1px solid #DCE0E5;
+  border-radius:16px;background:#fff;font-family:inherit;font-size:16px;color:#16181D;outline:none}
 input:focus{border-color:#16181D}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid #E4E6EA;padding:8px 6px 12px;display:flex;max-width:520px;margin:0 auto}
-.tab{flex-grow:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 0;color:#77808C;font-size:11px;font-weight:500;cursor:pointer}
+
+/* --- плашки --- */
+.note,.bad,.ok{border-radius:18px;padding:16px;font-size:14.5px;line-height:1.5}
+.note{background:#FFF7E6;border:1px solid #F0D49A;color:#6B4A00}
+.bad{background:#FDF2F2;border:1px solid #F3C3C5;color:#8E1418}
+.ok{background:#E6F4EC;border:1px solid #B5DCC4;color:#14602F}
+.info{background:#fff;border-radius:20px;padding:18px 16px;font-size:15px;line-height:1.55;
+  box-shadow:0 1px 3px rgba(22,24,29,.09)}
+.spin{padding:56px 16px;text-align:center;color:#7A828E;font-size:15px}
+
+/* --- нижние вкладки --- */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid #E4E6EA;
+  padding:9px 6px calc(12px + env(safe-area-inset-bottom));display:flex;max-width:560px;margin:0 auto}
+.tab{flex-grow:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:6px 0;color:#7A828E;font-size:11.5px;font-weight:500;cursor:pointer}
 .tab.on{color:#E11B22;font-weight:600}
-.note{background:#FFF7E6;border:1px solid #F0D49A;color:#6B4A00;border-radius:16px;padding:13px 15px;font-size:14px;line-height:1.4}
-.bad{background:#FDF2F2;border:1px solid #F3C3C5;color:#8E1418;border-radius:16px;padding:13px 15px;font-size:14px;line-height:1.4}
-.ok{background:#E7F4EC;border:1px solid #B5DCC4;color:#14602F;border-radius:16px;padding:13px 15px;font-size:14px;line-height:1.4}
+
+/* --- подтверждение --- */
 .mask{position:fixed;inset:0;z-index:50;background:rgba(12,14,18,.62);display:flex;align-items:flex-end;justify-content:center}
-.sheet{width:100%;max-width:520px;background:#fff;border-radius:26px 26px 0 0;padding:12px 20px 22px;box-shadow:0 -8px 30px rgba(12,14,18,.28)}
-.grip{width:44px;height:5px;border-radius:3px;background:#DDE0E5;margin:0 auto 16px}
+.sheet{width:100%;max-width:560px;background:#fff;border-radius:28px 28px 0 0;
+  padding:12px 20px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(12,14,18,.3)}
+.grip{width:46px;height:5px;border-radius:3px;background:#DCE0E5;margin:0 auto 18px}
 .sheet h2{font-size:22px;font-weight:800;margin-bottom:8px}
-.sheet .what{background:#F7F8FA;border-radius:16px;padding:14px 15px;margin:14px 0 16px;font-size:15px;line-height:1.45}
-.spin{display:flex;align-items:center;justify-content:center;padding:40px;color:#77808C;font-size:15px}
-label.pick{display:flex;align-items:center;gap:12px;padding:14px 15px;border-bottom:1px solid #EDEFF2;cursor:pointer}
-label.pick:last-child{border-bottom:0}
-label.pick input{width:22px;height:22px;accent-color:#E11B22;flex:none}
-.login{max-width:380px;margin:0 auto;padding:64px 20px}
-.login h1{font-size:28px;font-weight:800;margin-bottom:8px}
-.pin{letter-spacing:.35em;text-align:center;font-size:24px;font-weight:600}
+.sheet .sub{font-size:14.5px;color:#5A626D;margin-bottom:18px}
+.what{background:#F6F7F9;border-radius:18px;padding:16px;margin-bottom:20px}
+.what div{display:flex;gap:10px;font-size:15px;line-height:1.45}
+.what div + div{margin-top:12px;padding-top:12px;border-top:1px solid #E9EBEF}
+
+label.pick{display:flex;align-items:center;gap:14px;padding:15px 16px;cursor:pointer;position:relative}
+label.pick + label.pick::before{content:'';position:absolute;left:16px;right:0;top:0;height:1px;background:#EEF0F3}
+label.pick input{width:24px;height:24px;accent-color:#E11B22;flex:none}
+
+/* --- вход --- */
+.login{max-width:400px;margin:0 auto;padding:18vh 24px}
+.login h1{font-size:30px;font-weight:800;margin-bottom:6px}
+.pin{letter-spacing:.4em;text-align:center;font-size:26px;font-weight:600}
 </style>
 </head>
 <body>
 
 <div id="login" class="login">
   <h1>Пульт</h1>
-  <div style="color:#5A626D;font-size:15px;margin-bottom:24px">Фемели Маркет · управление заказами</div>
+  <div style="color:#5A626D;font-size:15px;margin-bottom:28px">Фемели Маркет · управление заказами</div>
   <input id="pin" class="pin" type="tel" inputmode="numeric" autocomplete="off" placeholder="····">
-  <div id="pinerr" style="color:#B3261E;font-size:14px;margin:10px 2px 0"></div>
-  <button class="btn" style="margin-top:16px" onclick="doLogin()">Войти</button>
+  <div id="pinerr" style="color:#B3261E;font-size:14px;margin:12px 4px 0;min-height:20px"></div>
+  <button class="btn" onclick="doLogin()">Войти</button>
 </div>
 
 <div id="app" style="display:none">
   <div class="hdr">
     <button id="back" class="icobtn" style="display:none" onclick="goBack()" aria-label="Назад">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
     </button>
     <div class="grow">
       <h1 id="title">Сегодня</h1>
       <div class="sub" id="subtitle"></div>
     </div>
     <button class="icobtn" onclick="load()" aria-label="Обновить">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
     </button>
   </div>
 
-  <div class="wrap"><div class="body" id="view"><div class="spin">Загрузка…</div></div></div>
+  <div class="wrap"><div class="grid" id="view"><div class="spin">Загрузка…</div></div></div>
 
   <div class="tabs">
-    <button class="tab on" id="t-today" onclick="go('today')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>Сегодня</button>
-    <button class="tab" id="t-stores" onclick="go('stores')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1 11H5z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>Точки</button>
-    <button class="tab" id="t-restore" onclick="go('restore')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Бэкап</button>
-    <button class="tab" id="t-log" onclick="go('log')">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>Журнал</button>
+    <button class="tab on" id="t-today" onclick="tabGo('today')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>Сегодня</button>
+    <button class="tab" id="t-stores" onclick="tabGo('stores')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1 11H5z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>Точки</button>
+    <button class="tab" id="t-restore" onclick="tabGo('restore')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Бэкап</button>
+    <button class="tab" id="t-log" onclick="tabGo('log')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>Журнал</button>
   </div>
 </div>
 

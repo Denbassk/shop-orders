@@ -122,6 +122,7 @@ function adminApi(action, payload, token) {
       case 'login':          data = adminLogin_(payload.pin); break;
       case 'today':          data = admToday_(); break;
       case 'stores':         data = admStores_(payload); break;
+      case 'dirStores':      data = admDirStores_(payload); break;
       case 'store':          data = admStore_(payload); break;
       case 'cancelOrder':    data = admCancelOrder_(payload); break;
       case 'clearMark':      data = admClearMark_(payload); break;
@@ -199,6 +200,58 @@ function admStores_(payload) {
   });
 }
 
+// --- хто саме замовив по напрямку, а хто ні ---
+// Один прохід по сирому листу: позиції, кількість і час по кожній точці.
+function admDirStores_(payload) {
+  var dir = String(payload.dir || '');
+  var cfg = dirCfg_(dir);
+  var today = formatDateDMY_(new Date());
+  var c = rawCols_(dir);
+  var hasTime = (dir === 'bakery' || dir === 'veg');
+
+  var agg = {};
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
+  if (sh && sh.getLastRow() > 1) {
+    var last = sh.getLastRow();
+    var take = Math.min(last - 1, RAW_TAIL_ROWS);
+    var w = Math.max(sh.getLastColumn(), 7);
+    sh.getRange(last - take + 1, 1, take, w).getValues().forEach(function (r) {
+      var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0] || '').trim();
+      if (d !== today) return;
+      var key = addrKey_(String(r[2] || '').trim());
+      if (!key) return;
+      if (!agg[key]) agg[key] = { n: 0, qty: 0, time: '' };
+      agg[key].n++;
+      agg[key].qty += Number(r[c.qty]) || 0;
+      if (hasTime) {
+        var t = (r[1] instanceof Date)
+          ? Utilities.formatDate(r[1], 'Europe/Kyiv', 'HH:mm')
+          : String(r[1] || '').trim().slice(0, 5);
+        if (t) agg[key].time = t;
+      }
+    });
+  }
+
+  var done = [], wait = [];
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf(dir) < 0) return;
+    if (!dayAllowed_(dir, s)) return;
+    var a = agg[statusKey_(dir, s)];
+    var row = {
+      id: s.id, label: s.label, code: s.code, route: s.route,
+      n: a ? a.n : 0, qty: a ? Math.round(a.qty * 1000) / 1000 : 0,
+      time: a ? a.time : ''
+    };
+    if (a) done.push(row); else wait.push(row);
+  });
+
+  done.sort(function (a, b) { return (b.time || '').localeCompare(a.time || '') ||
+                                     a.label.localeCompare(b.label, 'uk'); });
+  wait.sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
+
+  return { dir: dir, title: cfg.title, unit: cfg.unit, done: done, wait: wait };
+}
+
 // --- картка точки ---
 function admStore_(payload) {
   var store = findStore_(payload.storeId);
@@ -230,7 +283,7 @@ function admStore_(payload) {
   return {
     id: store.id, label: store.label, code: store.code,
     route: store.route, zone: store.zone, directions: store.directions,
-    dir: dir, dirTitle: cfg.title, unit: cfg.unit,
+    dir: dir, dirTitle: cfg.title, unit: cfg.unit, today: today,
     sheet: rawSheetName_(cfg), firstRow: first,
     rows: rows, qty: Math.round(qty * 1000) / 1000,
     marked: isMarked_(dir, store),
