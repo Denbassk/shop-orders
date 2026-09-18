@@ -543,3 +543,40 @@ function h04_refreshVegReport() {
 function h05_breadDownloadSheet() {
   writeBreadDownloadSheet_(true);
 }
+
+// ============ 9. ПУЛЬТ КЕРУВАННЯ (i) ============
+
+/** Задати PIN пульта. Вписати свій PIN у рядок нижче і запустити.
+ *  Мінімум 4 цифри. Після 5 невдалих спроб вхід блокується на годину. */
+function i01_setAdminPin() {
+  var PIN = '2468';
+  setAdminPin(PIN);
+}
+
+/** Показати посилання на пульт. Покласти в закладки на телефоні. */
+function i02_showAdminLink() {
+  console.log('Пульт: ' + adminUrl_());
+  console.log('PIN задано: ' + (adminPin_() ? 'так' : 'НІ - запустіть i01_setAdminPin()'));
+}
+
+/** Скинути всі активні входи в пульт (якщо телефон загубився). */
+function i03_dropAdminSessions() {
+  var props = PropertiesService.getScriptProperties();
+  var all = props.getProperties(), n = 0;
+  Object.keys(all).forEach(function (k) {
+    if (k.indexOf('adm_') === 0 && k !== ADMIN_PIN_KEY) { props.deleteProperty(k); n++; }
+  });
+  console.log('Знято сеансів: ' + n);
+}
+
+/** Що бачить пульт на екрані "Сегодня" - перевірка без браузера. */
+function i04_showToday() {
+  var d = admToday_();
+  console.log(d.today + ' ' + d.time);
+  d.dirs.forEach(function (x) {
+    console.log(x.title + ': ' + x.ordered + ' з ' + x.total +
+                ', дедлайн ' + x.deadline + (x.closed ? ' (ЗАКРИТО)' : '') +
+                (x.openedAll ? ' (відкрито всім)' : '') +
+                (x.reportAt ? ', звіт ' + x.reportAt : ''));
+  });
+}

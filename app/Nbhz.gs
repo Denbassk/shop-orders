@@ -481,6 +481,7 @@ function buildNbhzExport() {
              '/export?format=xlsx&gid=' + out.getSheetId();
   writeExportLinkSheet_(ss, today, xlsx, out.getSheetId());
 
+  markReport_('nbhz');
   console.log('Готово: лист "' + name + '"');
   console.log('   точок із замовленням: ' + nRows + ' з ' + order.length);
   console.log('   позицій у вивантаженні: ' + nProd + ' з ' + prods.length);

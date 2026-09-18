@@ -7,6 +7,7 @@ function doGet(e) {
   rememberAppUrl_();                      // адреса розгортання оновлюється сама
   if (p.ok) return lateApprovePage_(p);   // кнопка "Дозволити" з листа закупниці
   if (p.load) return loadProbe_(p);       // навантажувальний тест, Maintenance.gs
+  if (p.admin) return adminPage_();       // пульт керування, Admin.gs (вхід за PIN)
 
   return HtmlService.createTemplateFromFile('ui/Index')
     .evaluate()

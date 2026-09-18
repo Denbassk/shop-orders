@@ -81,6 +81,7 @@ function buildBakeryReports() {
   buildBakeryOrdersSheet_(rows);
   buildBakerySummarySheet_(rows);
   buildBakeryRouteSheet_(rows);
+  markReport_('bakery');
   PropertiesService.getScriptProperties()
     .setProperty('bakery_report_sig', bakerySignature_(rows));
 }

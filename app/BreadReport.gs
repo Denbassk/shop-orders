@@ -83,6 +83,7 @@ function buildBreadReports() {
   // лист "Завантаження" з посиланням на Excel тільки листа "Заказы" (Export.gs)
   try { writeBreadDownloadSheet_(false); }
   catch (e) { console.error('Завантаження (хліб): ' + e.message); }
+  markReport_('bread');
   PropertiesService.getScriptProperties()
     .setProperty('bread_report_sig', breadSignature_(rows));
 }

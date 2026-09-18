@@ -77,6 +77,7 @@ function buildVegReports() {
   var rows = vegTodayRows_();
   buildVegOrdersSheet_(rows);
   buildVegSummarySheet_(rows);
+  markReport_('veg');
   PropertiesService.getScriptProperties()
     .setProperty('veg_report_sig', vegSignature_(rows));
 }
