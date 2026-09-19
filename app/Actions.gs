@@ -572,11 +572,14 @@ function i03_dropAdminSessions() {
 /** Що бачить пульт на екрані "Сегодня" - перевірка без браузера. */
 function i04_showToday() {
   var d = admToday_();
-  console.log(d.today + ' ' + d.time);
+  console.log(d.today + ' ' + d.time + ', ' + d.dow);
   d.dirs.forEach(function (x) {
-    console.log(x.title + ': ' + x.ordered + ' з ' + x.total +
-                ', дедлайн ' + x.deadline + (x.closed ? ' (ЗАКРИТО)' : '') +
-                (x.openedAll ? ' (відкрито всім)' : '') +
+    console.log(x.title + ': замовили ' + x.ordered + ' з ' + x.total +
+                ' (за графіком сьогодні ' + x.total + ' з ' + x.all +
+                ', поза графіком ' + x.offDay + ')' +
+                ', дедлайн ' + x.deadline + (x.closed ? ' ЗАКРИТО' : '') +
+                (x.openedAll ? ' ВІДКРИТО ВСІМ' : '') +
+                (x.noDayToday ? '  <-- СЬОГОДНІ НЕ ПРИЙМАЄМО' : '') +
                 (x.reportAt ? ', звіт ' + x.reportAt : ''));
   });
 }
