@@ -132,6 +132,7 @@ function adminApi(action, payload, token) {
       case 'restoreScan':    data = admRestoreScan_(payload); break;
       case 'restoreApply':   data = admRestoreApply_(payload); break;
       case 'report':         data = admReport_(payload); break;
+      case 'schedule':       data = admSchedule_(payload); break;
       case 'log':            data = admLogRead_(); break;
       default: throw new Error('Невідома дія: ' + action);
     }
@@ -151,10 +152,11 @@ function admToday_() {
 
   var dirs = Object.keys(DIRECTIONS).map(function (k) {
     var cfg = DIRECTIONS[k];
-    var total = 0, ordered = 0, waiting = [];
+    var total = 0, ordered = 0, offDay = 0, all = 0, waiting = [];
     stores.forEach(function (s) {
       if (s.directions.indexOf(k) < 0) return;
-      if (!dayAllowed_(k, s)) return;
+      all++;
+      if (!dayAllowed_(k, s)) { offDay++; return; }       // сьогодні не їхній день
       total++;
       var map = status[k];
       if (map && map[statusKey_(k, s)]) ordered++;
@@ -164,6 +166,9 @@ function admToday_() {
       key: k, title: cfg.title, color: cfg.color, deadline: cfg.deadline || '',
       closed: deadlinePassed_(k), openedAll: lateAllowed_(k),
       total: total, ordered: ordered, waiting: waiting.slice(0, 40),
+      // графік по днях: скільки точок узагалі, скільки сьогодні не приймають
+      all: all, offDay: offDay, byDays: !!cfg.orderDays,
+      noDayToday: !!cfg.orderDays && total === 0 && all > 0,
       reportAt: reportAt_(k),
       minLeft: cfg.deadline ? deadlineLeftMin_(cfg.deadline, n) : null
     };
@@ -172,7 +177,70 @@ function admToday_() {
   return {
     today: formatDateDMY_(new Date()),
     time: ('0' + n.hh).slice(-2) + ':' + ('0' + n.mm).slice(-2),
+    dow: DAY_RU_FULL[todayDow_()],
     dirs: dirs
+  };
+}
+
+// --- графік точки по напрямку: дні, чи сьогодні, коли наступний ---
+var DAY_RU_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+var DAY_RU_FULL  = ['воскресенье', 'понедельник', 'вторник', 'среда',
+                    'четверг', 'пятница', 'суббота'];
+
+function admDays_(dirKey, store) {
+  var cfg = dirCfg_(dirKey);
+  if (!cfg.orderDays) return { free: true, label: 'каждый день', today: true, next: '' };
+
+  var days = storeDays_(dirKey, store);
+  if (!days.length) return { free: true, label: 'без ограничений', today: true, next: '' };
+
+  var dow = todayDow_();
+  var today = days.indexOf(dow) >= 0;
+  var next = '';
+  for (var i = 1; i <= 7; i++) {
+    var d = (dow + i) % 7;
+    if (days.indexOf(d) < 0) continue;
+    next = (i === 1) ? 'завтра' : ('в ' + DAY_RU_FULL[d]);
+    break;
+  }
+  return {
+    free: false,
+    label: days.map(function (d) { return DAY_RU_SHORT[d]; }).join(', '),
+    today: today,
+    next: next
+  };
+}
+
+// --- графік по всіх точках: кому що і коли доступно ---
+function admSchedule_(payload) {
+  var only = String(payload.dir || '');
+  var status = loadTodayStatus_();
+  var keys = only ? [only] : Object.keys(DIRECTIONS);
+
+  var rows = loadStores_().map(function (s) {
+    var cells = [];
+    keys.forEach(function (k) {
+      if (s.directions.indexOf(k) < 0) return;
+      var d = admDays_(k, s);
+      var map = status[k];
+      cells.push({
+        dir: k, title: dirCfg_(k).title, deadline: dirCfg_(k).deadline || '',
+        days: d.label, today: d.today, next: d.next,
+        ordered: !!(map && map[statusKey_(k, s)])
+      });
+    });
+    return { id: s.id, label: s.label, code: s.code, route: s.route, cells: cells };
+  }).filter(function (r) { return r.cells.length; });
+
+  rows.sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
+
+  return {
+    dir: only, dow: DAY_RU_FULL[todayDow_()], today: formatDateDMY_(new Date()),
+    dirs: keys.map(function (k) {
+      return { key: k, title: dirCfg_(k).title, deadline: dirCfg_(k).deadline || '',
+               byDays: !!dirCfg_(k).orderDays };
+    }),
+    rows: rows
   };
 }
 
@@ -233,24 +301,31 @@ function admDirStores_(payload) {
     });
   }
 
-  var done = [], wait = [];
+  var done = [], wait = [], off = [];
   loadStores_().forEach(function (s) {
     if (s.directions.indexOf(dir) < 0) return;
-    if (!dayAllowed_(dir, s)) return;
+    var d = admDays_(dir, s);
     var a = agg[statusKey_(dir, s)];
     var row = {
       id: s.id, label: s.label, code: s.code, route: s.route,
       n: a ? a.n : 0, qty: a ? Math.round(a.qty * 1000) / 1000 : 0,
-      time: a ? a.time : ''
+      time: a ? a.time : '',
+      days: d.label, next: d.next, dayOk: d.today
     };
+    // не їхній день: показуємо окремо, а не ховаємо - інакше незрозуміло,
+    // чи точка забула замовити, чи їй сьогодні не можна
+    if (!d.today) { off.push(row); return; }
     if (a) done.push(row); else wait.push(row);
   });
 
-  done.sort(function (a, b) { return (b.time || '').localeCompare(a.time || '') ||
-                                     a.label.localeCompare(b.label, 'uk'); });
-  wait.sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
+  var byLabel = function (a, b) { return a.label.localeCompare(b.label, 'uk'); };
+  done.sort(function (a, b) { return (b.time || '').localeCompare(a.time || '') || byLabel(a, b); });
+  wait.sort(byLabel);
+  off.sort(byLabel);
 
-  return { dir: dir, title: cfg.title, unit: cfg.unit, done: done, wait: wait,
+  return { dir: dir, title: cfg.title, unit: cfg.unit,
+           done: done, wait: wait, off: off,
+           byDays: !!cfg.orderDays, dow: DAY_RU_FULL[todayDow_()],
            xlsx: admXlsxUrl_(dir), sheetUrl: admSheetUrl_(dir) };
 }
 
@@ -326,6 +401,12 @@ function admStore_(payload) {
     rows: rows, qty: Math.round(qty * 1000) / 1000,
     marked: isMarked_(dir, store),
     dayOk: dayAllowed_(dir, store),
+    // графік по всіх напрямках точки - видно одразу, кому що і коли можна
+    schedule: store.directions.map(function (k) {
+      var d = admDays_(k, store);
+      return { dir: k, title: dirCfg_(k).title, deadline: dirCfg_(k).deadline || '',
+               days: d.label, today: d.today, next: d.next };
+    }),
     closed: deadlinePassed_(dir, store.id),
     lateLeft: lateLeftMin_(dir, store.id)
   };

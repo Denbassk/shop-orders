@@ -122,6 +122,7 @@ function load() {
   if (S.screen === 'stores') return loadStores(S.q);
   if (S.screen === 'store') return loadStore(S.store, S.dir);
   if (S.screen === 'restore') return loadRestore(S.dir || 'bakery');
+  if (S.screen === 'schedule') return loadSchedule(S.dir || '');
   if (S.screen === 'log') return loadLog();
 }
 
@@ -133,8 +134,8 @@ function setHead(title, sub) {
 }
 
 function tabs(name) {
-  var map = { today: 'today', dir: 'today', stores: 'stores', store: 'stores',
-              restore: 'restore', log: 'log' };
+  var map = { today: 'today', dir: 'today', schedule: 'today',
+              stores: 'stores', store: 'stores', restore: 'restore', log: 'log' };
   var on = map[name] || 'today';
   ['today', 'stores', 'restore', 'log'].forEach(function (k) {
     var el = document.getElementById('t-' + k);
@@ -185,9 +186,10 @@ function loadToday() {
       d.dirs.forEach(function (y) { if (y.key === k) x = y; });
       if (!x) return;
       var m = DIRS[k];
-      var pill = x.openedAll ? '<span class="pill warn">Открыто всем</span>'
+      var pill = x.noDayToday ? '<span class="pill off">Сегодня не приём</span>'
+               : (x.openedAll ? '<span class="pill warn">Открыто всем</span>'
                : (x.closed ? '<span class="pill closed">Закрыто</span>'
-                           : '<span class="pill open">Открыто</span>');
+                           : '<span class="pill open">Открыто</span>'));
       var pct = x.total ? Math.round(x.ordered / x.total * 100) : 0;
       cards += '<button class="dir" onclick="go(\'dir\',{dir:\'' + k + '\'})">' +
         '<span class="dirtop">' +
@@ -195,17 +197,22 @@ function loadToday() {
           '<span class="grow"><span class="t" style="font-size:17px;font-weight:700;display:block">' +
             esc(m.t) + '</span>' +
             '<span class="s" style="display:block">до ' + esc(x.deadline || '—') +
-            (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') + '</span></span>' +
+            (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
+            (x.byDays && x.offDay ? ' · вне графика ' + x.offDay : '') + '</span></span>' +
           pill + '</span>' +
-        '<span style="display:flex;align-items:center;gap:12px;margin-top:16px">' +
-          '<span class="bar"><i style="width:' + pct + '%;background:' + m.c + '"></i></span>' +
-          '<span style="font-size:14px;font-weight:700;white-space:nowrap">' +
-            x.ordered + ' из ' + x.total + '</span></span>' +
+        (x.noDayToday
+          ? '<span class="s" style="margin-top:14px">Сегодня (' + esc(d.dow) + ') по графику ' +
+            'не заказывает ни одна из ' + x.all + ' точек</span>'
+          : '<span style="display:flex;align-items:center;gap:12px;margin-top:16px">' +
+            '<span class="bar"><i style="width:' + pct + '%;background:' + m.c + '"></i></span>' +
+            '<span style="font-size:14px;font-weight:700;white-space:nowrap">' +
+              x.ordered + ' из ' + x.total + '</span></span>') +
         '</button>';
     });
     h += section('Направления', cards);
 
     h += section('Быстрые действия', '<div class="card">' +
+      item('График по точкам', 'кому какие дни и что доступно сегодня', '', 'go(\'schedule\',{dir:\'\'})') +
       item('Заказы точки', 'посмотреть, отменить, снять метку', '', 'tabGo(\'stores\')') +
       item('Восстановить из бэкапа', 'вернуть строки, которых нет в листе', '', 'tabGo(\'restore\')') +
       item('Журнал действий', 'что и когда нажимали', '', 'tabGo(\'log\')') +
@@ -226,9 +233,14 @@ function loadDir(k) {
     d.dirs.forEach(function (y) { if (y.key === k) x = y; });
     if (!x) return fail(new Error('Направление не найдено'));
 
+    var byDay = ds.done.length + ds.wait.length;
     var h = '<div class="info">' +
       'Дедлайн <b>' + esc(x.deadline || '—') + '</b>, сейчас ' + esc(d.time) + '.<br>' +
-      'Заказали <b>' + ds.done.length + '</b> из <b>' + (ds.done.length + ds.wait.length) + '</b> точек' +
+      (ds.byDays
+        ? 'Сегодня ' + esc(ds.dow) + ' — по графику заказывают <b>' + byDay + '</b> точек из <b>' +
+          (byDay + ds.off.length) + '</b>.<br>'
+        : '') +
+      'Заказали <b>' + ds.done.length + '</b> из <b>' + byDay + '</b>' +
       (x.reportAt ? ', отчёт собран в ' + esc(x.reportAt) : '') + '.' +
       (x.openedAll ? '<br>Приём открыт всем до конца дня.' : '') + '</div>';
 
@@ -266,11 +278,60 @@ function loadDir(k) {
           var sub = (s.code ? '№ ' + esc(s.code) : '') + (s.route ? ' · маршрут ' + esc(s.route) : '');
           return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})');
         }).join('') + '</div>');
-    } else {
-      h += '<div class="ok">Заказали все точки направления.</div>';
+    } else if (byDay) {
+      h += '<div class="ok">Заказали все точки, у которых сегодня приём.</div>';
+    }
+
+    if (ds.off.length) {
+      h += section('Сегодня не их день (' + ds.off.length + ')', '<div class="card">' +
+        ds.off.map(function (s) {
+          var sub = 'дни приёма: ' + esc(s.days || '—') + (s.next ? ' · ближайший ' + esc(s.next) : '');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})');
+        }).join('') + '</div>');
     }
 
     view(h);
+  }).catch(fail);
+}
+
+// ================= ГРАФИК ПО ТОЧКАМ =================
+function loadSchedule(dir) {
+  S.dir = dir;
+  setHead('График', 'кому что доступно сегодня');
+  var chips = '<div class="chips"><button class="chip' + (dir ? '' : ' on') +
+    '" onclick="apply(\'schedule\',{dir:\'\'})">Все</button>' +
+    ORDER.map(function (k) {
+      return '<button class="chip' + (k === dir ? ' on' : '') + '" onclick="apply(\'schedule\',{dir:\'' +
+        k + '\'})">' + esc(DIRS[k].short) + '</button>';
+    }).join('') + '</div>';
+  view(chips + '<div id="sch"><div class="spin">Загрузка…</div></div>');
+
+  call('schedule', { dir: dir }).then(function (d) {
+    var el = document.getElementById('sch');
+    if (!el) return;
+
+    var h = '<div class="info">Сегодня ' + esc(d.dow) + ', ' + esc(d.today) + '.<br>' +
+      'Зелёным — направление, по которому точка может заказать сегодня.</div>';
+
+    h += '<div style="margin-top:22px"><div class="sec">Точки (' + d.rows.length + ')</div><div class="card">' +
+      d.rows.map(function (r) {
+        var lines = r.cells.map(function (c) {
+          var color = c.today ? '#166B3A' : '#7A828E';
+          var mark = c.today ? (c.ordered ? 'заказали' : 'можно до ' + esc(c.deadline || '—'))
+                             : ('не сегодня · дни: ' + esc(c.days || '—') +
+                                (c.next ? ' · ' + esc(c.next) : ''));
+          return '<div style="display:flex;gap:10px;font-size:13.5px;line-height:1.5;color:' + color + '">' +
+            '<span style="flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px;background:' +
+            (DIRS[c.dir] ? DIRS[c.dir].c : '#ccc') + ';opacity:' + (c.today ? '1' : '.35') + '"></span>' +
+            '<span class="grow"><b style="font-weight:600">' + esc(DIRS[c.dir] ? DIRS[c.dir].short : c.dir) +
+            '</b> — ' + mark + '</span></div>';
+        }).join('');
+        return '<button class="item" style="align-items:flex-start" onclick="go(\'store\',{store:\'' +
+          attr(r.id) + '\',dir:\'\'})"><span class="grow"><span class="t">' + esc(r.label) + '</span>' +
+          '<span style="display:block;margin-top:8px">' + lines + '</span></span>' + CHEV + '</button>';
+      }).join('') + '</div></div>';
+
+    el.innerHTML = h;
   }).catch(fail);
 }
 </script>
@@ -312,13 +373,34 @@ function loadStore(id, dir) {
     S.dir = d.dir;
     setHead(d.label, (d.code ? '№ ' + d.code : '') + (d.route ? ' · маршрут ' + d.route : ''));
 
+    var sched = {};
+    (d.schedule || []).forEach(function (c) { sched[c.dir] = c; });
+
     var h = '<div class="chips">' + d.directions.map(function (k) {
-      return '<button class="chip' + (k === d.dir ? ' on' : '') + '" onclick="apply(\'store\',{store:\'' +
-        attr(d.id) + '\',dir:\'' + k + '\'})">' + esc(DIRS[k] ? DIRS[k].short : k) + '</button>';
+      var c = sched[k] || { today: true };
+      return '<button class="chip' + (k === d.dir ? ' on' : '') + '" style="' +
+        (c.today ? '' : 'opacity:.5') + '" onclick="apply(\'store\',{store:\'' +
+        attr(d.id) + '\',dir:\'' + k + '\'})">' + esc(DIRS[k] ? DIRS[k].short : k) +
+        (c.today ? '' : ' ✕') + '</button>';
     }).join('') + '</div>';
 
-    if (!d.dayOk) h += '<div class="note">Сегодня не день приёма по этому направлению.</div>';
+    var me = sched[d.dir];
+    if (!d.dayOk) h += '<div class="note">Сегодня не день приёма по этому направлению.' +
+      (me && me.days ? ' Дни точки: ' + esc(me.days) + '.' : '') +
+      (me && me.next ? ' Ближайший приём ' + esc(me.next) + '.' : '') + '</div>';
     if (d.lateLeft) h += '<div class="ok">Приём открыт ещё ' + d.lateLeft + ' мин.</div>';
+
+    if (d.schedule && d.schedule.length) {
+      h += section('График точки', '<div class="card">' + d.schedule.map(function (c) {
+        var right = c.today
+          ? '<span style="color:#166B3A;font-weight:600">сегодня можно</span>'
+          : '<span style="color:#7A828E;font-weight:500">' + esc(c.next || 'не сегодня') + '</span>';
+        return '<div class="item"><span class="grow"><span class="t">' +
+          esc(DIRS[c.dir] ? DIRS[c.dir].t : c.title) + '</span><span class="s">дни: ' +
+          esc(c.days || '—') + ' · дедлайн ' + esc(c.deadline || '—') + '</span></span>' +
+          '<span class="right" style="font-size:13.5px">' + right + '</span></div>';
+      }).join('') + '</div>');
+    }
 
     if (d.rows.length) {
       var rows = d.rows.map(function (r) {
