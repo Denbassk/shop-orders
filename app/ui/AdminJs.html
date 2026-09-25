@@ -122,6 +122,7 @@ function load() {
   if (S.screen === 'stores') return loadStores(S.q);
   if (S.screen === 'store') return loadStore(S.store, S.dir);
   if (S.screen === 'restore') return loadRestore(S.dir || 'bakery');
+  if (S.screen === 'dups') return loadDups(S.dir === 'veg' ? 'veg' : 'bakery');
   if (S.screen === 'schedule') return loadSchedule(S.dir || '');
   if (S.screen === 'log') return loadLog();
 }
@@ -134,7 +135,7 @@ function setHead(title, sub) {
 }
 
 function tabs(name) {
-  var map = { today: 'today', dir: 'today', schedule: 'today',
+  var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today',
               stores: 'stores', store: 'stores', restore: 'restore', log: 'log' };
   var on = map[name] || 'today';
   ['today', 'stores', 'restore', 'log'].forEach(function (k) {
@@ -215,6 +216,7 @@ function loadToday() {
       item('График по точкам', 'кому какие дни и что доступно сегодня', '', 'go(\'schedule\',{dir:\'\'})') +
       item('Заказы точки', 'посмотреть, отменить, снять метку', '', 'tabGo(\'stores\')') +
       item('Восстановить из бэкапа', 'вернуть строки, которых нет в листе', '', 'tabGo(\'restore\')') +
+      item('Убрать дубли', 'найти и удалить задвоенные строки заказов', '', 'go(\'dups\',{dir:\'bakery\'})') +
       item('Журнал действий', 'что и когда нажимали', '', 'tabGo(\'log\')') +
       '</div>');
 
@@ -250,6 +252,8 @@ function loadDir(k) {
         : item('Открыть приём всем до конца дня', 'дедлайн ' + esc(x.deadline || '—') + ' сегодня не действует',
                '', 'askOpenAll(\'' + k + '\')')) +
       item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\'restore\',{dir:\'' + k + '\'})') +
+      ((k === 'bakery' || k === 'veg')
+        ? item('Убрать дубли', 'задвоенные строки в рабочем листе', '', 'go(\'dups\',{dir:\'' + k + '\'})') : '') +
       '</div>');
 
     var files = item('Собрать отчёт сейчас', 'не дожидаясь пятиминутного триггера', '',
@@ -624,6 +628,84 @@ function askRestore() {
     yes: 'Да, вернуть',
     run: function () { return call('restoreApply', { dir: d.dir, date: d.date, keys: keys }); },
     done: function (r) { toast('Возвращено строк: ' + r.added); apply('restore', { dir: d.dir }); }
+  });
+}
+
+// ================= ДУБЛИ =================
+function loadDups(dir) {
+  S.dir = dir;
+  setHead('Дубли', 'задвоенные строки в рабочем листе');
+  var chips = '<div class="chips">' + ['bakery', 'veg'].map(function (k) {
+    return '<button class="chip' + (k === dir ? ' on' : '') + '" onclick="apply(\'dups\',{dir:\'' +
+      k + '\'})">' + esc(DIRS[k].short) + '</button>';
+  }).join('') + '</div>';
+  view(chips + '<div id="res"><div class="spin">Ищу дубли в листе…</div></div>');
+
+  call('dupScan', { dir: dir }).then(function (d) {
+    var el = document.getElementById('res');
+    if (!el) return;
+    S.dup = d;
+
+    var h = '<div class="info">' + esc(d.dirTitle) + '<br>Строк в листе: <b>' + d.liveRows + '</b>.<br><br>' +
+      'Дубль — строка с тем же временем, адресом, товаром и количеством. ' +
+      'В одном заказе товар не может стоять дважды.</div>';
+
+    if (!d.orders.length) {
+      el.innerHTML = h + '<div class="ok" style="margin-top:20px">Дублей нет.</div>';
+      return;
+    }
+
+    h += '<div class="bad" style="margin-top:20px">Лишних строк: <b>' + d.extraTotal + '</b>, заказов: ' +
+         d.orders.length + '. Отметьте, где убрать.</div>';
+
+    h += '<div style="margin-top:22px"><div class="sec">Где убрать</div><div class="card">' +
+      d.orders.map(function (o, i) {
+        return '<label class="pick"><input type="checkbox" checked data-i="' + i + '">' +
+          '<span class="grow"><span class="t">' + esc(o.addr) + '</span>' +
+          '<span class="s">' + esc(o.date) + ' ' + esc(o.time) + ' · лишних строк ' + o.extra +
+          ' из ' + o.total + '</span></span>' +
+          '<span class="right" style="color:#E11B22;font-size:13.5px" ' +
+          'onclick="event.preventDefault();event.stopPropagation();toggleItems(' + i + ')">что именно</span>' +
+          '</label>' +
+          '<div id="it' + i + '" style="display:none;padding:4px 16px 14px 54px;background:#FAFBFC">' +
+          o.positions.map(function (p) {
+            return '<div style="display:flex;gap:12px;font-size:14.5px;padding:5px 0">' +
+              '<span class="grow">' + esc(p.name) + '</span>' +
+              '<span style="font-weight:600">' + p.qty + ' × ' + p.n + '</span></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div></div>';
+
+    h += '<div style="margin-top:22px"><div class="sec">Как это работает</div><div class="info">' +
+      'В каждой группе одинаковых строк остаётся <b>одна</b>, остальные удаляются.<br><br>' +
+      'Другие заказы и другие товары не затрагиваются.<br><br>' +
+      'Каждое удаление попадает в журнал вместе со списком товаров. ' +
+      'Отчёт пересоберётся сам в течение 5 минут или кнопкой «Собрать отчёт».</div></div>';
+
+    h += '<div style="margin-top:22px"><button class="btn" onclick="askDups()">Убрать дубли в отмеченных</button></div>';
+    el.innerHTML = h;
+  }).catch(fail);
+}
+
+function askDups() {
+  var d = S.dup, keys = [], n = 0, names = [];
+  Array.prototype.forEach.call(document.querySelectorAll('input[data-i]'), function (c) {
+    if (!c.checked) return;
+    var o = d.orders[Number(c.getAttribute('data-i'))];
+    if (!o) return;
+    keys.push(o.key); n += o.extra; names.push(o.addr + ' (' + o.date + ' ' + o.time + ')');
+  });
+  if (!keys.length) return toast('Ничего не отмечено');
+
+  confirmSheet({
+    title: 'Удалить ' + n + ' лишних строк?',
+    sub: d.dirTitle + ' · ' + names.join(', '),
+    what: ['Из листа «' + d.sheet + '» удалится ' + n + ' повторных строк',
+           'В каждой группе одинаковых строк остаётся одна',
+           'Отменить нельзя, но что удалено, видно в журнале',
+           'Действие попадёт в журнал'],
+    yes: 'Да, удалить',
+    run: function () { return call('dupApply', { dir: d.dir, keys: keys }); },
+    done: function (r) { toast('Удалено строк: ' + r.removed); apply('dups', { dir: d.dir }); }
   });
 }
 

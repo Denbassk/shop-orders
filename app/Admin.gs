@@ -132,6 +132,8 @@ function adminApi(action, payload, token) {
       case 'restoreScan':    data = admRestoreScan_(payload); break;
       case 'restoreApply':   data = admRestoreApply_(payload); break;
       case 'report':         data = admReport_(payload); break;
+      case 'dupScan':        data = dupScan_(String(payload.dir || 'bakery')); break;
+      case 'dupApply':       data = dupApply_(String(payload.dir || ''), payload.keys || []); break;
       case 'schedule':       data = admSchedule_(payload); break;
       case 'log':            data = admLogRead_(); break;
       default: throw new Error('Невідома дія: ' + action);

@@ -167,10 +167,21 @@ function isQuotaError_(e) {
          m.indexOf('rateLimitExceeded') >= 0;
 }
 
-function appendRows_(cfg, dirKey, values) {
+// onWritten - необовʼязковий колбек: викликається ОДРАЗУ, як рядки точно
+// в таблиці (Orders запамʼятовує orderId, щоб повтор не записав удруге).
+//
+// ПОВТОРНИЙ ЗАПИС (appendRowsLocked_) допускається лише коли рядків замовлення
+// в листі точно немає - див. recoverLostAppend_ в AppendGuard.gs. Якщо
+// Sheets API підтвердив запис, а помилка виникла вже після цього, - не пишемо.
+function appendRows_(cfg, dirKey, values, onWritten) {
   var sheetName = rawSheetName_(cfg);
-  if (!USE_SHEETS_API || typeof Sheets === 'undefined')
-    return appendRowsLocked_(cfg, dirKey, sheetName, values);
+  APPEND_STATE_ = { confirmed: false, notified: false, onWritten: onWritten || null };
+
+  if (!USE_SHEETS_API || typeof Sheets === 'undefined') {
+    appendRowsLocked_(cfg, dirKey, sheetName, values);
+    appendNotifyWritten_();
+    return;
+  }
 
   var bcCol = cfg.hasBarcodes ? ((dirKey === 'bread' || dirKey === 'nbhz') ? 4 : 5) : 0;
   var rows = values.map(function (r) {
@@ -182,26 +193,41 @@ function appendRows_(cfg, dirKey, values) {
     return out;
   });
 
-  try {
-    apiAppend_(cfg.spreadsheetId, sheetName, rows, dirKey, bcCol);
-    return;
-  } catch (e) {
-    if (isAppendLost_(e)) { appendRowsLocked_(cfg, dirKey, sheetName, values); return; }
-    if (!isQuotaError_(e)) throw e;
-  }
-
-  // Одна коротка пауза - раптом квота вивільнилась - і одразу запасний шлях.
-  // Довгі повтори тут неприпустимі: продавець чекає на екрані.
-  Utilities.sleep(700 + Math.floor(Math.random() * 1500));
-  try {
-    apiAppend_(cfg.spreadsheetId, sheetName, rows, dirKey, bcCol);
-    return;
-  } catch (e2) {
-    if (isAppendLost_(e2)) { appendRowsLocked_(cfg, dirKey, sheetName, values); return; }
-    if (!isQuotaError_(e2)) throw e2;
+  for (var attempt = 0; attempt < 2; attempt++) {
+    try {
+      apiAppend_(cfg.spreadsheetId, sheetName, rows, dirKey, bcCol);
+      return;
+    } catch (e) {
+      // Помилка вже ПІСЛЯ підтвердженого запису - рядки в таблиці, нічого не повторюємо.
+      if (APPEND_STATE_.confirmed) {
+        logAppendEvent_('помилка після підтвердженого запису (проігноровано)',
+                        dirKey + ' | ' + rows[0][2] + ' | ' + e.message);
+        return;
+      }
+      if (isAppendLost_(e)) {
+        recoverLostAppend_(cfg, dirKey, sheetName, values, rows);
+        appendNotifyWritten_();
+        return;
+      }
+      if (!isQuotaError_(e)) {
+        // Не квота і не підтверджено: тайм-аут відповіді міг настати після коміту.
+        if (orderAlreadyInSheet_(cfg, dirKey, sheetName, rows)) {
+          logAppendEvent_('помилка API, але замовлення вже в листі',
+                          dirKey + ' | ' + rows[0][2] + ' | ' + e.message);
+          appendNotifyWritten_();
+          return;
+        }
+        throw e;
+      }
+      // Квота: API відхилив запит ДО запису, повторювати безпечно.
+      // Одна коротка пауза - раптом квота вивільнилась - і одразу запасний шлях.
+      // Довгі повтори тут неприпустимі: продавець чекає на екрані.
+      if (attempt === 0) Utilities.sleep(700 + Math.floor(Math.random() * 1500));
+    }
   }
   console.log('Квота Sheets API вичерпана - пишемо через замок');
   appendRowsLocked_(cfg, dirKey, sheetName, values);
+  appendNotifyWritten_();
 }
 
 // Старий шлях - на випадок, якщо треба вимкнути Sheets API
@@ -441,28 +467,31 @@ function apiSubmitOrder_(payload) {
     finally { try { gd.releaseLock(); } catch (e) {} }
   }
 
-  try {
-    appendRows_(cfg, dirKey, values);
-  } catch (e) {
-    if (claimed) { try { props.deleteProperty(markKey); } catch (e2) {} }
-    throw e;
-  }
-
-  CacheService.getScriptCache().remove('status_v3');
-  if (dirKey === 'nbhz') {
-    try { props.setProperty('nbhz_export_dirty', todayStr); } catch (e) {}
-  }
-
   var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;
-  console.log((TEST_MODE ? '[ТЕСТ] ' : '') + 'Замовлення ' + dirKey + ' / ' + store.label +
-    ': ' + lines.length + ' позицій, ' + totalShown + ' грн');
-
   var result = {
     ok: true, positions: lines.length, total: totalShown,
     time: formatTime_(now), date: formatDateDMY_(now),
     direction: cfg.title, store: store.label, test: TEST_MODE,
     replaced: replaceAll, removed: removed
   };
-  rememberOrder_(orderId, result);
+
+  // orderId запамʼятовується ОДРАЗУ після підтвердженого запису (колбек),
+  // а не в кінці виклику: якщо щось обірветься пізніше, повтор з телефона
+  // отримає "дублі не створені" замість другого запису.
+  try {
+    appendRows_(cfg, dirKey, values, function () { rememberOrder_(orderId, result); });
+  } catch (e) {
+    if (claimed) { try { props.deleteProperty(markKey); } catch (e2) {} }
+    throw e;
+  }
+  if (!APPEND_STATE_.notified) rememberOrder_(orderId, result);
+
+  CacheService.getScriptCache().remove('status_v3');
+  if (dirKey === 'nbhz') {
+    try { props.setProperty('nbhz_export_dirty', todayStr); } catch (e) {}
+  }
+
+  console.log((TEST_MODE ? '[ТЕСТ] ' : '') + 'Замовлення ' + dirKey + ' / ' + store.label +
+    ': ' + lines.length + ' позицій, ' + totalShown + ' грн');
   return result;
 }
