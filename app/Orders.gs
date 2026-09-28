@@ -41,7 +41,7 @@ function apiProducts_(payload) {
     hidePrice: !!cfg.hidePrice,
     step: cfg.step,
     deadline: cfg.deadline,
-    minOrder: approved ? 0 : Math.round(cfg.minOrder * cfg.markup * 100) / 100,
+    minOrder: approved ? 0 : Math.round(minOrderOf_(cfg) * cfg.markup * 100) / 100,
     categories: cats,
     products: products,
     closed: closed,
@@ -407,7 +407,7 @@ function apiSubmitOrder_(payload) {
 
   if (!lines.length) throw new Error('Не розпізнано жодної позиції');
 
-  var minSupplier = approvedNow ? 0 : cfg.minOrder;
+  var minSupplier = approvedNow ? 0 : minOrderOf_(cfg);
   if (minSupplier > 0 && totalSupplier < minSupplier - 0.01) {
     var shown = Math.round(minSupplier * cfg.markup * 100) / 100;
     throw new Error('Мінімальне замовлення ' + shown + ' грн. Зараз ' +

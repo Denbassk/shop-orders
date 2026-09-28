@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-24-1';
+const APP_VERSION = '2026-09-28-1';
 
 // true - замовлення падають у тестові листи і нікуди не йдуть
 const TEST_MODE = false;
@@ -35,6 +35,9 @@ const DIRECTIONS = {
     productsSheet: 'Ассортимент',
     rawSheet: '_Сырые_Заказы', testSheet: '_Тест_Заказы_Хліб',
     unit: 'шт', minOrder: 350, markup: 1,
+    // з 01.10.2026 мінімалка піднімається до 400 грн - спрацює само,
+    // нічого руками міняти не треба. Дивитись minOrderOf_() нижче.
+    minOrderChanges: [{ from: '01.10.2026', value: 400 }],
     hasCategories: false, hasBarcodes: true,
     addressAlias: 'addrBread', routeAlias: 'route', shortAddr: true,
     lateRequest: true,
@@ -148,6 +151,26 @@ function dirCfg_(key) {
 
 function rawSheetName_(cfg) {
   return TEST_MODE ? cfg.testSheet : cfg.rawSheet;
+}
+
+// Мінімальне замовлення з урахуванням запланованої зміни в майбутньому.
+// minOrderChanges: [{from: 'ДД.ММ.РРРР', value: N}, ...] - діє з 00:00 цієї
+// дати за Києвом. Дат у майбутньому - береться базовий cfg.minOrder, дата
+// настала - береться найновіша з тих, що вже настали. Нічого вмикати
+// руками не треба: значення міняється саме собою в потрібний день.
+function minOrderOf_(cfg) {
+  var v = cfg.minOrder;
+  if (cfg.minOrderChanges && cfg.minOrderChanges.length) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var best = null;
+    cfg.minOrderChanges.forEach(function (ch) {
+      var d = parseDMY_(ch.from);
+      if (d && today >= d && (!best || d > best.d)) best = { d: d, value: ch.value };
+    });
+    if (best) v = best.value;
+  }
+  return v;
 }
 
 function statusKey_(dirKey, store) {

@@ -58,7 +58,7 @@ function apiBootstrap_() {
     dirs[k] = {
       key: c.key, title: c.title, subtitle: c.subtitle,
       color: c.color, unit: c.unit, deadline: c.deadline, step: c.step,
-      minOrder: Math.round(c.minOrder * c.markup * 100) / 100,
+      minOrder: Math.round(minOrderOf_(c) * c.markup * 100) / 100,
       hasCategories: c.hasCategories, closed: deadlinePassed_(k),
       dayOffTag: c.dayOffTag || 'Не ваш день'
     };
