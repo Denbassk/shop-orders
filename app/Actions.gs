@@ -406,6 +406,24 @@ function f06_clearOrderMarkHere() {
   clearOrderMark(DIR, STORE);
 }
 
+/** Увімкнути/вимкнути напрямок ЦІЛКОМ для ВСІХ продавців одразу - зникає
+ *  з меню на телефоні (не "закрито до дедлайну", а взагалі не видно).
+ *  Те саме робить кнопка в пульті: "Сегодня" -> напрямок -> "Выключить
+ *  направление". Існуючі замовлення і звіти не чіпає. */
+function f10_toggleDirectionHere() {
+  var DIR = 'veg';          // bread | nbhz | bakery | veg
+  var ON  = false;          // true - увімкнути, false - вимкнути
+  setDirEnabled_(DIR, ON);
+  console.log(dirCfg_(DIR).title + ': ' + (ON ? 'увімкнено' : 'вимкнено'));
+}
+
+/** Які напрямки зараз вимкнені для продавців. */
+function f11_showDisabledDirections() {
+  var off = Object.keys(disabledDirections_());
+  if (!off.length) { console.log('Усі напрямки увімкнені.'); return; }
+  console.log('Вимкнено: ' + off.map(function (k) { return dirCfg_(k).title; }).join(', '));
+}
+
 // ============ 7. ЗВІТИ ВИПІЧКИ ============
 
 /** Зібрати "Заказы ВК" і "Сводная ВК" ПРЯМО ЗАРАЗ, у будь-якому разі.

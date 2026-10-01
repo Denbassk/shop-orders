@@ -7,6 +7,10 @@ function apiProducts_(payload) {
   var cfg = dirCfg_(dirKey);
   var store = findStore_(payload.storeId);
 
+  // Захист про всяк випадок: навіть якщо на телефоні лишився старий
+  // bootstrap (не оновився екран), вимкнений напрямок все одно не відкриється.
+  if (!dirEnabled_(dirKey)) throw new Error('Напрямок "' + cfg.title + '" зараз вимкнено.');
+
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
@@ -361,6 +365,10 @@ function apiSubmitOrder_(payload) {
 
   var prev = seenOrder_(orderId);
   if (prev) { prev.duplicate = true; return prev; }
+
+  // Той самий захист, що в apiProducts_: вимкнений напрямок не приймає нових
+  // замовлень, навіть якщо запит прийшов зі старого (ще не оновленого) екрана.
+  if (!dirEnabled_(dirKey)) throw new Error('Напрямок "' + cfg.title + '" зараз вимкнено.');
 
   if (store.directions.indexOf(dirKey) < 0)
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');

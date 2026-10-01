@@ -187,7 +187,8 @@ function loadToday() {
       d.dirs.forEach(function (y) { if (y.key === k) x = y; });
       if (!x) return;
       var m = DIRS[k];
-      var pill = x.noDayToday ? '<span class="pill off">Сегодня не приём</span>'
+      var pill = !x.enabled ? '<span class="pill closed">Выключено</span>'
+               : x.noDayToday ? '<span class="pill off">Сегодня не приём</span>'
                : (x.openedAll ? '<span class="pill warn">Открыто всем</span>'
                : (x.closed ? '<span class="pill closed">Закрыто</span>'
                            : '<span class="pill open">Открыто</span>'));
@@ -244,9 +245,15 @@ function loadDir(k) {
         : '') +
       'Заказали <b>' + ds.done.length + '</b> из <b>' + byDay + '</b>' +
       (x.reportAt ? ', отчёт собран в ' + esc(x.reportAt) : '') + '.' +
-      (x.openedAll ? '<br>Приём открыт всем до конца дня.' : '') + '</div>';
+      (x.openedAll ? '<br>Приём открыт всем до конца дня.' : '') +
+      (!x.enabled ? '<br><b style="color:#b3261e">Направление выключено — продавцы его не видят в меню.</b>' : '') +
+      '</div>';
 
     h += section('Управление приёмом', '<div class="card">' +
+      (x.enabled
+        ? item('Выключить направление', 'исчезнет из меню продавцов до включения обратно',
+               '', 'askDisableDir(\'' + k + '\')')
+        : item('Включить направление', 'снова появится в меню продавцов', '', 'askEnableDir(\'' + k + '\')')) +
       (x.openedAll
         ? item('Вернуть обычный режим', 'дедлайн снова действует', '', 'askCloseAll(\'' + k + '\')')
         : item('Открыть приём всем до конца дня', 'дедлайн ' + esc(x.deadline || '—') + ' сегодня не действует',
@@ -542,6 +549,29 @@ function askCloseAll(dir) {
     yes: 'Вернуть',
     run: function () { return call('closeAll', { dir: dir }); },
     done: function () { toast('Обычный режим'); apply('dir', { dir: dir }); }
+  });
+}
+
+function askDisableDir(dir) {
+  confirmSheet({
+    title: 'Выключить направление?', sub: DIRS[dir].t,
+    what: ['Исчезнет из меню на телефонах продавцов — ни точка, ни карточка',
+           'Уже принятые сегодня заказы и отчёты не трогает',
+           'Новые заказы по этому направлению принимать перестанет',
+           'Включить обратно можно этой же кнопкой в любой момент'],
+    yes: 'Выключить',
+    run: function () { return call('setDirEnabled', { dir: dir, on: false }); },
+    done: function () { toast('Направление выключено'); apply('dir', { dir: dir }); }
+  });
+}
+
+function askEnableDir(dir) {
+  confirmSheet({
+    title: 'Включить направление?', sub: DIRS[dir].t,
+    what: ['Снова появится в меню продавцов', 'Дедлайн и график дней — как обычно'],
+    yes: 'Включить',
+    run: function () { return call('setDirEnabled', { dir: dir, on: true }); },
+    done: function () { toast('Направление включено'); apply('dir', { dir: dir }); }
   });
 }
 </script>

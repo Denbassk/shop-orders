@@ -129,6 +129,7 @@ function adminApi(action, payload, token) {
       case 'openStore':      data = admOpenStore_(payload); break;
       case 'openAll':        data = admOpenAll_(payload); break;
       case 'closeAll':       data = admCloseAll_(payload); break;
+      case 'setDirEnabled':  data = admSetDirEnabled_(payload); break;
       case 'restoreScan':    data = admRestoreScan_(payload); break;
       case 'restoreApply':   data = admRestoreApply_(payload); break;
       case 'report':         data = admReport_(payload); break;
@@ -166,7 +167,7 @@ function admToday_() {
     });
     return {
       key: k, title: cfg.title, color: cfg.color, deadline: cfg.deadline || '',
-      closed: deadlinePassed_(k), openedAll: lateAllowed_(k),
+      closed: deadlinePassed_(k), openedAll: lateAllowed_(k), enabled: dirEnabled_(k),
       total: total, ordered: ordered, waiting: waiting.slice(0, 40),
       // графік по днях: скільки точок узагалі, скільки сьогодні не приймають
       all: all, offDay: offDay, byDays: !!cfg.orderDays,
@@ -480,6 +481,17 @@ function admCloseAll_(payload) {
   invalidateAppCache();
   adminLog_('Повернуто звичайний режим', dirCfg_(dir).title);
   return { ok: true };
+}
+
+// Увімкнути/вимкнути напрямок ЦІЛКОМ - зникає з меню всіх продавців.
+// Існуючі замовлення і звіти не чіпає, тільки прийом нових.
+function admSetDirEnabled_(payload) {
+  var dir = String(payload.dir || '');
+  var cfg = dirCfg_(dir);
+  var on = !!payload.on;
+  setDirEnabled_(dir, on);
+  adminLog_(on ? 'Увімкнено напрямок' : 'Вимкнено напрямок', cfg.title);
+  return { ok: true, enabled: on };
 }
 
 // --- журнал у пульті ---

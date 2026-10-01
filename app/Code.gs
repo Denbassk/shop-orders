@@ -51,9 +51,13 @@ function doPost(e) {
 function apiBootstrap_() {
   const stores = loadStores_();
   const status = loadTodayStatus_();
+  // Вимкнений напрямок (пульт -> "Выключить направление") не потрапляє
+  // сюди взагалі - ні в dirs, ні в список напрямків жодної точки.
+  const off = disabledDirections_();
 
   const dirs = {};
   Object.keys(DIRECTIONS).forEach(function (k) {
+    if (off[k]) return;
     const c = DIRECTIONS[k];
     dirs[k] = {
       key: c.key, title: c.title, subtitle: c.subtitle,
@@ -65,15 +69,16 @@ function apiBootstrap_() {
   });
 
   const list = stores.map(function (s) {
+    const dirKeys = s.directions.filter(function (k) { return !off[k]; });
     const ordered = {}, dayOk = {}, dayOff = {};
-    s.directions.forEach(function (k) {
+    dirKeys.forEach(function (k) {
       const map = status[k];
       ordered[k] = map ? !!map[statusKey_(k, s)] : false;
       dayOk[k] = dayAllowed_(k, s);
       if (!dayOk[k]) dayOff[k] = dayOffText_(k, s);
     });
     return { id: s.id, label: s.label, code: s.code,
-             directions: s.directions, ordered: ordered,
+             directions: dirKeys, ordered: ordered,
              dayOk: dayOk, dayOff: dayOff };
   });
 
@@ -87,10 +92,12 @@ function apiBootstrap_() {
 function apiRefresh_(payload) {
   payload = payload || {};
   const status = loadTodayStatus_();
+  const off = disabledDirections_();
   const ordered = {};
   loadStores_().forEach(function (s) {
     const o = {};
     s.directions.forEach(function (k) {
+      if (off[k]) return;
       const m = status[k];
       o[k] = m ? !!m[statusKey_(k, s)] : false;
     });
@@ -98,12 +105,12 @@ function apiRefresh_(payload) {
   });
 
   const closed = {};
-  Object.keys(DIRECTIONS).forEach(function (k) { closed[k] = deadlinePassed_(k); });
+  Object.keys(DIRECTIONS).forEach(function (k) { if (!off[k]) closed[k] = deadlinePassed_(k); });
 
   // стан конкретної пари "точка + напрямок", щоб телефон сам вмикав
   // і ГАСИВ кнопку, коли 30 хвилин дозволу спливли
   var late = 'none', lateLeft = 0, locked = null;
-  if (payload.dir && payload.storeId && DIRECTIONS[payload.dir]) {
+  if (payload.dir && payload.storeId && DIRECTIONS[payload.dir] && !off[payload.dir]) {
     var cfg = DIRECTIONS[payload.dir];
     late = cfg.lateRequest ? lateRequestStatus_(payload.dir, payload.storeId) : 'none';
     lateLeft = (late === 'approved') ? lateLeftMin_(payload.dir, payload.storeId) : 0;

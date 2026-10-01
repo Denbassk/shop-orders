@@ -3,7 +3,7 @@
 // ============================================================
 
 // Міняти при КОЖНОМУ деплої - телефони самі перезавантажаться.
-const APP_VERSION = '2026-09-28-1';
+const APP_VERSION = '2026-10-01-1';
 
 // true - замовлення падають у тестові листи і нікуди не йдуть
 const TEST_MODE = false;
@@ -171,6 +171,43 @@ function minOrderOf_(cfg) {
     if (best) v = best.value;
   }
   return v;
+}
+
+// ============================================================
+// УВІМКНЕННЯ / ВИМКНЕННЯ НАПРЯМКУ ЦІЛКОМ
+//
+// Вимкнений напрямок зникає з меню продавця ОДНИМ КЛІКОМ з пульта -
+// не "закрито до дедлайну", а взагалі не приходить у bootstrap, ні в
+// список напрямків, ні як цятка на плитці ТТ. Перемикається без деплою
+// коду: прапорець лежить у ScriptProperties, а не в Config.gs.
+//
+// Існуючі замовлення і звіти напрямок не чіпає - вимикається лише
+// ПРИЙОМ НОВИХ замовлень від продавців. Керування і списки пульта
+// (admStores_, admDirStores_ тощо) його так само бачать.
+// ============================================================
+var DIR_OFF_KEY = 'dirs_off';   // ScriptProperties: JSON-масив вимкнених ключів напрямків
+
+function disabledDirections_() {
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty(DIR_OFF_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    var map = {};
+    arr.forEach(function (k) { map[k] = true; });
+    return map;
+  } catch (e) { return {}; }
+}
+
+function dirEnabled_(key) {
+  return !disabledDirections_()[key];
+}
+
+// Перемкнути напрямок. Викликає пульт (одна кнопка) або f10_toggleDirectionHere.
+function setDirEnabled_(key, on) {
+  if (!DIRECTIONS[key]) throw new Error('Невідомий напрямок: "' + key + '"');
+  var off = disabledDirections_();
+  if (on) delete off[key]; else off[key] = true;
+  PropertiesService.getScriptProperties().setProperty(DIR_OFF_KEY, JSON.stringify(Object.keys(off)));
+  invalidateAppCache();
 }
 
 function statusKey_(dirKey, store) {
