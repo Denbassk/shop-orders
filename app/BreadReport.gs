@@ -20,7 +20,7 @@
 
 var BREAD_ORDERS_SHEET  = 'Заказы';
 var BREAD_SUMMARY_SHEET = 'Данные Заказов';
-var BREAD_EDRPOU = '44413718';
+var BREAD_EDRPOU = '44413718';   // за замовчуванням; своє ЄДРПОУ точки - колонка T Довідника
 
 // Колонки сирого листа хліба (див. rawRow у Config.gs):
 // A дата | B маршрут | C адреса (коротка) | D штрихкод | E назва | F ціна | G кіл-ть
@@ -99,6 +99,19 @@ function breadCodeByAddr_() {
   return map;
 }
 
+// Номер ТТ і ЄДРПОУ юрособи з Довідника за короткою адресою хліба.
+// ЄДРПОУ: колонка T, порожньо = BREAD_EDRPOU.
+function breadInfoByAddr_() {
+  var map = {};
+  loadStores_().forEach(function (s) {
+    if (s.directions.indexOf('bread') < 0) return;
+    map[addrKey_(shortenAddress_(s.addrBread))] = {
+      code: s.code, edrpou: s.edrpou || BREAD_EDRPOU
+    };
+  });
+  return map;
+}
+
 function breadRowList_(rows, c1, c2) {
   return rows.map(function (r) { return c1 + r + ':' + (c2 || c1) + r; });
 }
@@ -108,7 +121,7 @@ function breadRowList_(rows, c1, c2) {
 // ============================================================
 function buildBreadOrdersSheet_(rows) {
   var today = formatDateDMY_(new Date());
-  var codes = breadCodeByAddr_();
+  var info = breadInfoByAddr_();
 
   var byKey = {};
   rows.forEach(function (r) {
@@ -118,7 +131,8 @@ function buildBreadOrdersSheet_(rows) {
     var key = route + '|||' + store;
     if (!byKey[key]) byKey[key] = {
       route: route, store: store,
-      code: codes[addrKey_(store)] || '', items: []
+      code: (info[addrKey_(store)] || {}).code || '',
+      edrpou: (info[addrKey_(store)] || {}).edrpou || BREAD_EDRPOU, items: []
     };
     byKey[key].items.push({
       barcode: String(r[3] || '').trim(),
@@ -142,7 +156,7 @@ function buildBreadOrdersSheet_(rows) {
     o.items.sort(function (a, b) { return a.barcode.localeCompare(b.barcode); });
 
     // спершу рядок із ЄДРПОУ і номером магазину, далі його позиції
-    data.push(['', '', '', '', '', '', BREAD_EDRPOU, o.code]);
+    data.push(['', '', '', '', '', '', o.edrpou, o.code]);
     g.sep.push(data.length);
 
     o.items.forEach(function (it) {

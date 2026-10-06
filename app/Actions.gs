@@ -616,3 +616,80 @@ function s04_findDuplicatesToday() {
 function s04c_findDuplicatesTodayVeg() {
   findDuplicatesToday_('veg');
 }
+
+// ============================================================
+// ПЕРЕХІД ТТ НА НОВУ ЮРОСОБУ (ЄДРПОУ 45672783), хліб Рома
+// ЄДРПОУ точки - колонка T Довідника. Порожньо = BREAD_EDRPOU.
+// Наступні переходи: дописати в NEW_ENTITY_DONE і запустити k02,
+// або просто вписати 45672783 у колонку T руками (код не потрібен).
+// Адресу в колонці C НЕ перейменовувати - з неї будується id точки.
+// ============================================================
+var NEW_ENTITY_EDRPOU = '45672783';
+
+// [основа вулиці (варіанти через |), будинок як після canonKey_ ('6/5' -> '6 5')]
+var NEW_ENTITY_ALL = [
+  ['грозн|болград', '38'], ['байрон', '156'], ['зерн', '6 5'], ['ньютон', '111'],
+  ['байрон', '163'], ['байрон', '138 1'], ['качан', '19'], ['полев|польов', ''],
+  ['ньютон', '102']
+];
+// Ті, що вже перейшли
+var NEW_ENTITY_DONE = [['качан', '19'], ['грозн|болград', '38']];
+
+function entityMatch_(addr, street, house) {
+  var k = ' ' + canonKey_(addr) + ' ';
+  if (!k.trim()) return false;
+  var okStreet = street.split('|').some(function (st) { return k.indexOf(' ' + st) >= 0; });
+  return okStreet && (!house || k.indexOf(' ' + house + ' ') >= 0);
+}
+
+function entityRows_(street, house) {
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  var vals = sh.getRange(2, 1, sh.getLastRow() - 1, 20).getValues();
+  var out = [];
+  vals.forEach(function (r, i) {
+    if (entityMatch_(r[2], street, house) || entityMatch_(r[10], street, house))
+      out.push({ row: i + 2, r: r });
+  });
+  return out;
+}
+
+function ensureEdrpouCol_() {
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  if (sh.getMaxColumns() < 20) sh.insertColumnsAfter(sh.getMaxColumns(), 20 - sh.getMaxColumns());
+  var h = String(sh.getRange(1, 20).getValue()).trim();
+  if (!h) sh.getRange(1, 20).setValue('ЄДРПОУ юрособи');
+  else if (h.indexOf('ЄДРПОУ') < 0)
+    throw new Error('Колонка T Довідника вже зайнята: "' + h + '". Нічого не змінено.');
+  sh.getRange(2, 20, Math.max(sh.getMaxRows() - 1, 1), 1).setNumberFormat('@');
+  return sh;
+}
+
+// Показати всі 9 точок: чи знайшлись, активні, чи замовляють хліб, номер, ЄДРПОУ
+function k01_showNewEntityStores() {
+  ensureEdrpouCol_();
+  NEW_ENTITY_ALL.forEach(function (c) {
+    var found = entityRows_(c[0], c[1]);
+    if (!found.length) { console.log('НЕ ЗНАЙДЕНО: ' + c[0] + ' ' + c[1]); return; }
+    found.forEach(function (f) {
+      var r = f.r;
+      console.log('рядок ' + f.row + ' | ' + (r[0] === true ? 'активна' : 'НЕактивна') +
+        ' | ' + r[1] + ' | ' + r[2] + ' | тип: ' + r[5] + ' | номер: ' + r[3] +
+        ' | хліб Рома: ' + (r[6] === true ? 'ТАК' : 'ні') +
+        ' | ЄДРПОУ: ' + (String(r[19]).trim() || '(старе ' + BREAD_EDRPOU + ')'));
+    });
+  });
+}
+
+// Проставити нове ЄДРПОУ точкам з NEW_ENTITY_DONE і перезібрати звіт хліба
+function k02_applyNewEntity() {
+  var sh = ensureEdrpouCol_();
+  NEW_ENTITY_DONE.forEach(function (c) {
+    var found = entityRows_(c[0], c[1]);
+    if (found.length !== 1) throw new Error(c[0] + ' ' + c[1] + ': знайдено ' + found.length +
+      ' рядків, треба рівно 1 - впишіть у колонку T руками');
+    sh.getRange(found[0].row, 20).setValue(NEW_ENTITY_EDRPOU);
+    console.log('рядок ' + found[0].row + ' ' + found[0].r[2] + ' -> ' + NEW_ENTITY_EDRPOU);
+  });
+  invalidateAppCache();
+  buildBreadReports();
+}
