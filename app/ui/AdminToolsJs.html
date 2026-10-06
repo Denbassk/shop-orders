@@ -29,6 +29,11 @@ function loadHealth() {
           return { t: e.where, s: e.at + ' · ' + e.msg, lv: e.today ? 'warn' : 'off' };
         })) + '<div style="margin-top:12px"><button class="btn ghost" onclick="askHealthClear()">Очистить список</button></div>'
       : '<div class="info">Ошибок не было.</div>');
+    if (PERF.length) h += section('Скорость пульта (этот телефон, последние запросы)', hList(PERF.map(function (p) {
+      return { t: p.a + ' — ' + p.total + ' мс',
+               s: p.at + (p.srv != null ? ' · сервер ' + p.srv + ' мс · связь и запуск ' + (p.total - p.srv) + ' мс' : ' · ошибка связи'),
+               lv: p.total > 4000 ? 'bad' : (p.total > 2000 ? 'warn' : 'ok') };
+    })));
     var s = d.sys;
     h += section('Система', hList([
       { t: 'Версия', s: s.version, lv: 'off' },

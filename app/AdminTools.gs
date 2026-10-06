@@ -301,3 +301,15 @@ function admCardSave_(payload) {
     String(x.r[1] || '').trim() + ' (рядок ' + x.row + '): ' + log.join('; '));
   return { changed: log.length, row: x.row };
 }
+
+// ---------- 4. ПАКЕТНИЙ ЗАПИТ (передзавантаження пульта) ----------
+// Кілька читань за один виклик: кожен виклик google.script.run коштує 1-3 с
+// на зв'язок і запуск, незалежно від роботи сервера.
+var ADM_BATCH_OK = { today: 1, dirStores: 1, stores: 1, store: 1, schedule: 1, log: 1 };
+
+function admBatch_(payload, token) {
+  return (payload.calls || []).slice(0, 8).map(function (c) {
+    if (!c || !ADM_BATCH_OK[c.a]) return { ok: false, error: 'not allowed' };
+    return adminApi(c.a, c.p || {}, token);
+  });
+}

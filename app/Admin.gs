@@ -114,6 +114,7 @@ function reportAt_(dirKey) {
 // API пульта. Одна точка входу для ui/Admin.html
 // ============================================================
 function adminApi(action, payload, token) {
+  var t0 = Date.now();
   payload = payload || {};
   try {
     if (action !== 'login') adminCheck_(token);
@@ -142,14 +143,15 @@ function adminApi(action, payload, token) {
       case 'editOrder':      data = admEditOrder_(payload); break;
       case 'card':           data = admCard_(payload); break;
       case 'cardSave':       data = admCardSave_(payload); break;
+      case 'batch':          data = admBatch_(payload, token); break;
       default: throw new Error('Невідома дія: ' + action);
     }
-    return { ok: true, data: data };
+    return { ok: true, data: data, ms: Date.now() - t0 };
   } catch (err) {
     var msg = String((err && err.message) || err);
     if (msg !== 'AUTH') console.error('adminApi ' + action + ': ' + ((err && err.stack) || err));
     if (msg !== 'AUTH' && action !== 'login') healthNoteError_('пульт: ' + action, msg);
-    return { ok: false, error: msg };
+    return { ok: false, error: msg, ms: Date.now() - t0 };
   }
 }
 

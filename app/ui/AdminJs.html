@@ -21,15 +21,109 @@ function esc(s) {
 }
 function attr(s) { return esc(s).replace(/\|/g, ''); }
 
+// ===== БЫСТРЫЙ ПУЛЬТ: кеш экранов + фоновое обновление + предзагрузка =====
+// Каждый вызов сервера стоит 1-3 с на связь, поэтому экран показывается
+// из сохранённого сразу, а свежие данные приходят фоном.
+var SWR_READ = { today: 1, dirStores: 1, stores: 1, store: 1, schedule: 1, log: 1 };
+var SWR_MAX_AGE = 10 * 60 * 1000;   // старше - не показываем, ждём сервер
+var SWR_FRESH = 8000;               // столько после ответа сервера не переспрашиваем
+var SWR_LS = 'adm_swr_v1';
+var SWR = {}, SWR_BUSY = {}, SWR_RT = 0, SWR_PREFETCH_AT = 0;
+
+function swrDay() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function swrLoad() {
+  try {
+    var o = JSON.parse(localStorage.getItem(SWR_LS) || 'null');
+    if (o && o.day === swrDay() && o.c) SWR = o.c;
+  } catch (e) {}
+}
+function swrSave() {
+  try { localStorage.setItem(SWR_LS, JSON.stringify({ day: swrDay(), c: SWR })); }
+  catch (e) { try { localStorage.removeItem(SWR_LS); } catch (e2) {} }
+}
+function swrClear() { SWR = {}; SWR_PREFETCH_AT = 0; try { localStorage.removeItem(SWR_LS); } catch (e) {} }
+function swrKey(a, p) { return a + '|' + JSON.stringify(p || {}); }
+function swrSig() { return JSON.stringify([S.screen, S.dir, S.store, S.q, HIST.length]); }
+function swrPut(k, d) { SWR[k] = { t: Date.now(), d: d }; swrSave(); }
+
+function swrRerender(sig) {
+  clearTimeout(SWR_RT);
+  SWR_RT = setTimeout(function () {
+    var a = document.activeElement;
+    // за 150 мс могли уйти на другой экран - проверяем ещё раз
+    if (sig !== swrSig() || S.busy || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+    var y = window.scrollY || 0;
+    try { load(); } catch (e) {}
+    setTimeout(function () { try { window.scrollTo(0, y); } catch (e) {} }, 60);
+  }, 150);
+}
+
+function swrPrefetch() {
+  if (Date.now() - SWR_PREFETCH_AT < 60000) return;
+  SWR_PREFETCH_AT = Date.now();
+  var calls = ORDER.map(function (k) { return { a: 'dirStores', p: { dir: k } }; });
+  calls.push({ a: 'stores', p: { q: '' } });
+  callNet('batch', { calls: calls }).then(function (res) {
+    (res || []).forEach(function (r, i) {
+      if (r && r.ok) SWR[swrKey(calls[i].a, calls[i].p)] = { t: Date.now(), d: r.data };
+    });
+    swrSave();
+  }, function () {});
+}
+
+function swrRefresh(a, p, k, sig) {
+  if (SWR_BUSY[k]) return;
+  SWR_BUSY[k] = 1;
+  var old = JSON.stringify(SWR[k] && SWR[k].d);
+  callNet(a, p).then(function (d) {
+    delete SWR_BUSY[k];
+    swrPut(k, d);
+    if (a === 'today') swrPrefetch();
+    if (JSON.stringify(d) !== old && sig === swrSig()) swrRerender(sig);
+  }, function () { delete SWR_BUSY[k]; });
+}
+
 function call(action, payload) {
+  payload = payload || {};
+  if (!SWR_READ[action] || (action === 'store' && S.screen === 'edit')) {
+    return callNet(action, payload).then(function (d) {
+      if (!SWR_READ[action] && action !== 'health' && action !== 'batch') swrClear();
+      return d;
+    });
+  }
+  var k = swrKey(action, payload), c = SWR[k], now = Date.now();
+  if (c && now - c.t < SWR_MAX_AGE) {
+    if (now - c.t > SWR_FRESH) swrRefresh(action, payload, k, swrSig());
+    return Promise.resolve(c.d);
+  }
+  return callNet(action, payload).then(function (d) {
+    swrPut(k, d);
+    if (action === 'today') swrPrefetch();
+    return d;
+  });
+}
+swrLoad();
+
+var PERF = [];
+function perfLog(action, t0, r) {
+  var total = Date.now() - t0;
+  var srv = (r && typeof r.ms === 'number') ? r.ms : null;
+  PERF.unshift({ a: action, total: total, srv: srv, at: new Date().toTimeString().slice(0, 8) });
+  if (PERF.length > 30) PERF.length = 30;
+  try { console.log('[perf] ' + action + ': всего ' + total + ' мс' +
+    (srv != null ? ', сервер ' + srv + ', связь/запуск ' + (total - srv) : '')); } catch (e) {}
+}
+function callNet(action, payload) {
+  var t0 = Date.now();
   return new Promise(function (res, rej) {
     google.script.run
       .withSuccessHandler(function (r) {
+        perfLog(action, t0, r);
         if (r && r.ok) return res(r.data);
         if (r && r.error === 'AUTH') { logout(); return rej(new Error('Нужно войти заново')); }
         rej(new Error((r && r.error) || 'Ошибка связи'));
       })
-      .withFailureHandler(function (e) { rej(e); })
+      .withFailureHandler(function (e) { perfLog(action, t0, null); rej(e); })
       .adminApi(action, payload || {}, TOKEN);
   });
 }
