@@ -125,6 +125,9 @@ function load() {
   if (S.screen === 'dups') return loadDups(S.dir === 'veg' ? 'veg' : 'bakery');
   if (S.screen === 'schedule') return loadSchedule(S.dir || '');
   if (S.screen === 'log') return loadLog();
+  if (S.screen === 'health') return loadHealth();
+  if (S.screen === 'edit') return loadEdit(S.store, S.dir);
+  if (S.screen === 'card') return loadCard(S.store);
 }
 
 // ================= ОБЩЕЕ =================
@@ -136,7 +139,8 @@ function setHead(title, sub) {
 
 function tabs(name) {
   var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today',
-              stores: 'stores', store: 'stores', restore: 'restore', log: 'log' };
+              stores: 'stores', store: 'stores', restore: 'restore', log: 'log',
+              health: 'today', edit: 'stores', card: 'stores' };
   var on = map[name] || 'today';
   ['today', 'stores', 'restore', 'log'].forEach(function (k) {
     var el = document.getElementById('t-' + k);
@@ -211,6 +215,11 @@ function loadToday() {
               x.ordered + ' из ' + x.total + '</span></span>') +
         '</button>';
     });
+    var stale = d.dirs.filter(function (x) { return x.enabled && x.ordered > 0 && !x.reportAt; });
+    if (stale.length) h += '<button class="bad" style="display:block;width:100%;text-align:left;cursor:pointer" ' +
+      'onclick="go(\'health\',{})">Заказы есть, а отчёт сегодня не собирался: ' +
+      stale.map(function (x) { return esc(DIRS[x.key] ? DIRS[x.key].short : x.key); }).join(', ') +
+      '. Нажмите, чтобы проверить.</button>';
     h += section('Направления', cards);
 
     h += section('Быстрые действия', '<div class="card">' +
@@ -218,6 +227,7 @@ function loadToday() {
       item('Заказы точки', 'посмотреть, отменить, снять метку', '', 'tabGo(\'stores\')') +
       item('Восстановить из бэкапа', 'вернуть строки, которых нет в листе', '', 'tabGo(\'restore\')') +
       item('Убрать дубли', 'найти и удалить задвоенные строки заказов', '', 'go(\'dups\',{dir:\'bakery\'})') +
+      item('Здоровье системы', 'отчёты, триггеры, ошибки', '', 'go(\'health\',{})') +
       item('Журнал действий', 'что и когда нажимали', '', 'tabGo(\'log\')') +
       '</div>');
 
@@ -435,6 +445,10 @@ function loadStore(id, dir) {
       '', 'askCancel(\'' + attr(d.id) + '\',\'' + d.dir + '\',' + d.rows.length + ')');
     if (d.marked) acts += item('Снять метку «уже заказывали»', 'строки остаются на месте',
       '', 'askClearMark(\'' + attr(d.id) + '\',\'' + d.dir + '\')');
+    if (d.rows.length) acts += item('Изменить заказ', 'поправить количество или убрать позиции',
+      '', 'go(\'edit\',{store:\'' + attr(d.id) + '\',dir:\'' + d.dir + '\'})');
+    acts += item('Карточка точки', 'направления, дни, зона, ЄДРПОУ, номер',
+      '', 'go(\'card\',{store:\'' + attr(d.id) + '\',dir:\'' + d.dir + '\'})');
     acts += item('Открыть приём этой точке', 'на 30 минут, даже после дедлайна',
       '', 'askOpenStore(\'' + attr(d.id) + '\',\'' + d.dir + '\')');
     acts += item('Проверить бэкап направления', 'что потерялось из рабочего листа',

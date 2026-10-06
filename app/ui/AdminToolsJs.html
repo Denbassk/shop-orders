@@ -1,0 +1,210 @@
+<script>
+// ================= ЗДОРОВЬЕ СИСТЕМЫ =================
+var HC = { ok: '#2E9E5B', warn: '#E0A100', bad: '#D93025', off: '#B7BCC4' };
+
+function hList(arr) {
+  return '<div class="card">' + arr.map(function (x) {
+    return '<div class="item" style="align-items:flex-start">' +
+      '<span style="flex:none;width:12px;height:12px;border-radius:50%;margin-top:5px;background:' +
+      (HC[x.lv] || HC.off) + '"></span><span class="grow"><span class="t">' + esc(x.t) + '</span>' +
+      (x.s ? '<span class="s">' + esc(x.s) + '</span>' : '') + '</span></div>';
+  }).join('') + '</div>';
+}
+
+function loadHealth() {
+  setHead('Здоровье системы', '');
+  spin('Проверяю…');
+  call('health').then(function (d) {
+    setHead('Здоровье системы', 'проверено в ' + d.time);
+    var cls = d.level === 'ok' ? 'ok' : (d.level === 'bad' ? 'bad' : 'note');
+    var h = '<div class="' + cls + '">' + esc(d.summary) + '</div>';
+    h += section('Отчёты по направлениям', hList(d.dirs.map(function (x) {
+      return { t: DIRS[x.key] ? DIRS[x.key].t : x.title, s: x.text, lv: x.level };
+    })));
+    h += section('Триггеры', d.triggers.length ? hList(d.triggers.map(function (x) {
+      return { t: x.name, s: x.text, lv: x.level };
+    })) : '<div class="bad">Триггеров нет совсем — запустите d06_installTriggers() в редакторе.</div>');
+    h += section('Ошибки пульта', d.errors.length
+      ? hList(d.errors.map(function (e) {
+          return { t: e.where, s: e.at + ' · ' + e.msg, lv: e.today ? 'warn' : 'off' };
+        })) + '<div style="margin-top:12px"><button class="btn ghost" onclick="askHealthClear()">Очистить список</button></div>'
+      : '<div class="info">Ошибок не было.</div>');
+    var s = d.sys;
+    h += section('Система', hList([
+      { t: 'Версия', s: s.version, lv: 'off' },
+      { t: 'Тестовый режим', s: s.test ? 'ВКЛЮЧЁН — заказы уходят в тестовые листы' : 'выключен', lv: s.test ? 'bad' : 'ok' },
+      { t: 'Свойства скрипта', s: s.keys + ' ключей · примерно ' + s.pct + '% лимита',
+        lv: s.pct >= 90 ? 'bad' : (s.pct >= 70 ? 'warn' : 'ok') },
+      { t: 'Сессии пульта', s: String(s.sess), lv: 'off' }
+    ]));
+    view(h);
+  }).catch(fail);
+}
+
+function askHealthClear() {
+  confirmSheet({
+    title: 'Очистить список ошибок?', sub: 'Здоровье системы',
+    what: ['Список ошибок обнулится', 'На заказы и отчёты не влияет'],
+    yes: 'Очистить',
+    run: function () { return call('healthClear'); },
+    done: function () { toast('Очищено'); apply('health', {}); }
+  });
+}
+
+// ================= ИЗМЕНИТЬ ЗАКАЗ =================
+function loadEdit(id, dir) {
+  setHead('Изменить заказ', '');
+  spin();
+  call('store', { storeId: id, dir: dir || '' }).then(function (d) {
+    S.edit = d;
+    setHead('Изменить заказ', d.label + ' · ' + (DIRS[d.dir] ? DIRS[d.dir].short : d.dir));
+    if (!d.rows.length) return view('<div class="info">Сегодня заказа нет — менять нечего.</div>');
+    var rows = d.rows.map(function (r, i) {
+      return '<div class="item" style="min-height:58px;padding:10px 16px">' +
+        '<span class="grow"><span style="font-size:15px">' + esc(r.name) + '</span>' +
+        '<span class="s">было ' + r.qty + '</span></span>' +
+        '<input type="text" inputmode="decimal" data-i="' + i + '" value="' + r.qty + '" ' +
+        'style="flex:none;width:92px;padding:12px;text-align:center;font-weight:600"></div>';
+    }).join('');
+    view('<div class="info">Впишите новое количество. <b>0</b> — убрать позицию.<br>' +
+      'Если убрать всё — это то же, что отменить заказ: метка «уже заказывали» снимется.</div>' +
+      section('Заказ на ' + esc(d.today) + ' · ' + esc(d.unit), '<div class="card">' + rows + '</div>') +
+      '<div><button class="btn" onclick="askEdit()">Сохранить изменения</button></div>');
+  }).catch(fail);
+}
+
+function askEdit() {
+  var d = S.edit, ch = [], what = [], bad = '';
+  Array.prototype.forEach.call(document.querySelectorAll('input[data-i]'), function (inp) {
+    var r = d.rows[+inp.getAttribute('data-i')];
+    var v = String(inp.value).trim().replace(',', '.');
+    var q = v === '' ? 0 : Number(v);
+    if (!(q >= 0) || (d.dir !== 'veg' && q % 1)) { bad = r.name; return; }
+    if (q === r.qty) return;
+    ch.push({ row: r.row, name: r.name, oldQty: r.qty, qty: q });
+    what.push(r.name + ': ' + (q ? r.qty + ' → ' + q : 'убрать (было ' + r.qty + ')'));
+  });
+  if (bad) return toast('Неверное количество: ' + bad);
+  if (!ch.length) return toast('Ничего не изменено');
+  var id = d.id, dir = d.dir;
+  confirmSheet({
+    title: 'Сохранить изменения (' + ch.length + ')?', sub: d.label + ' · ' + DIRS[dir].t,
+    what: what.concat(['Каждая строка перед записью сверяется с листом', 'Действие попадёт в журнал']),
+    yes: 'Сохранить',
+    run: function () { return call('editOrder', { storeId: id, dir: dir, changes: ch }); },
+    done: function (r) {
+      toast(r.left ? 'Сохранено' : 'Заказ пуст — метка снята');
+      goBack();
+    }
+  });
+}
+
+// ================= КАРТОЧКА ТОЧКИ =================
+var CARD_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+var CARD_T = { active: 'Активна', label: 'Название', code: 'Учётный номер', route: 'Маршрут',
+  note: 'Примечание', bread: 'Хлеб Рома', nbhz: 'Хлеб НБХЗ', bakery: 'Выпечка', veg: 'Овощи',
+  routeNbhz: 'Маршрут НБХЗ', edrpou: 'ЄДРПОУ', daysBakery: 'Дни выпечки', daysVeg: 'Дни овощей',
+  zone: 'Зона' };
+
+function cardDaysNorm(s) {
+  var t = String(s || '').split(/[\s,;]+/);
+  return CARD_DAYS.filter(function (d) { return t.indexOf(d) >= 0; }).join(', ');
+}
+function cardFmt(v) { return v === true ? 'да' : v === false ? 'нет' : (String(v) === '' ? 'пусто' : String(v)); }
+
+function loadCard(id) {
+  setHead('Карточка точки', '');
+  spin();
+  call('card', { storeId: id }).then(function (c) {
+    S.card = c;
+    var f = c.f;
+    setHead(c.label, 'строка ' + c.row + ' Довідника');
+
+    function txt(k, label, mode, ph) {
+      return '<div style="margin-top:14px"><div class="s" style="margin:0 4px 8px">' + esc(label) + '</div>' +
+        '<input type="text" id="cf_' + k + '" value="' + esc(f[k]) + '"' +
+        (mode ? ' inputmode="' + mode + '"' : '') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
+    }
+    function chk(k, label, sub) {
+      return '<label class="pick"><input type="checkbox" id="cf_' + k + '"' + (f[k] ? ' checked' : '') + '>' +
+        '<span class="grow"><span class="t">' + esc(label) + '</span>' +
+        (sub ? '<span class="s">' + esc(sub) + '</span>' : '') + '</span></label>';
+    }
+    function days(k) {
+      var on = cardDaysNorm(f[k]).split(', ');
+      return '<div class="chips" id="cf_' + k + '" style="margin:0">' + CARD_DAYS.map(function (d) {
+        return '<button type="button" class="chip' + (on.indexOf(d) >= 0 ? ' on' : '') + '" data-d="' + d +
+          '" onclick="this.classList.toggle(\'on\')">' + d + '</button>';
+      }).join('') + '</div>';
+    }
+    var zones = [''].concat(c.zones);
+    if (f.zone && zones.indexOf(f.zone) < 0) zones.push(f.zone);
+    var zone = '<select id="cf_zone" style="width:100%;padding:16px;border:1px solid #DCE0E5;border-radius:16px;' +
+      'background:#fff;font:inherit;color:#16181D">' + zones.map(function (z) {
+        return '<option value="' + esc(z) + '"' + (z === f.zone ? ' selected' : '') + '>' +
+          esc(z || '— не задана —') + '</option>';
+      }).join('') + '</select>';
+    var box = function (inner) { return '<div class="card" style="padding:2px 16px 18px">' + inner + '</div>'; };
+
+    var h = '<div class="info">Адрес: <b>' + esc(c.address) + '</b><br>' +
+      'Адреса здесь не меняются — по ним точка связана с заказами и отчётами.</div>';
+    h += section('Основное', box(txt('label', 'Название для продавца') + txt('code', 'Учётный номер', 'numeric') +
+      txt('route', 'Маршрут (Рома)') + txt('note', 'Примечание')));
+    h += section('Направления', '<div class="card">' +
+      chk('active', 'Активна', 'если снять — точка пропадёт у продавцов и из пульта') +
+      chk('bread', 'Хлеб Рома') + chk('nbhz', 'Хлеб НБХЗ') +
+      chk('bakery', 'Выпечка и кулинария') + chk('veg', 'Овощи и фрукты') + '</div>');
+    h += section('Хлеб', box(txt('edrpou', 'ЄДРПОУ юрлица (пусто = ' + (c.defEdrpou || 'по умолчанию') + ')',
+      'numeric', c.defEdrpou) + txt('routeNbhz', 'Маршрут НБХЗ')));
+    h += section('Выпечка', '<div class="card" style="padding:16px">' +
+      '<div class="s" style="margin:0 4px 10px">Дни приёма (ничего не выбрано = без ограничений)</div>' +
+      days('daysBakery') + '<div class="s" style="margin:18px 4px 8px">Зона доставки</div>' + zone + '</div>');
+    h += section('Овощи', '<div class="card" style="padding:16px">' +
+      '<div class="s" style="margin:0 4px 10px">Дни приёма (ничего не выбрано = без ограничений)</div>' +
+      days('daysVeg') + '</div>');
+    h += '<div><button class="btn" onclick="askCard()">Сохранить</button></div>';
+    view(h);
+  }).catch(fail);
+}
+
+function askCard() {
+  var c = S.card, f = c.f, set = {}, what = [];
+  function el(k) { return document.getElementById('cf_' + k); }
+  ['label', 'code', 'route', 'note', 'edrpou', 'routeNbhz', 'zone'].forEach(function (k) {
+    var v = String(el(k).value).trim();
+    if (v !== String(f[k] == null ? '' : f[k])) set[k] = v;
+  });
+  ['active', 'bread', 'nbhz', 'bakery', 'veg'].forEach(function (k) {
+    var v = el(k).checked;
+    if (v !== !!f[k]) set[k] = v;
+  });
+  ['daysBakery', 'daysVeg'].forEach(function (k) {
+    var on = Array.prototype.map.call(document.querySelectorAll('#cf_' + k + ' .chip.on'),
+      function (b) { return b.getAttribute('data-d'); });
+    var v = CARD_DAYS.filter(function (d) { return on.indexOf(d) >= 0; }).join(', ');
+    if (v !== cardDaysNorm(f[k])) set[k] = v;
+  });
+
+  var keys = Object.keys(set);
+  if (!keys.length) return toast('Ничего не изменено');
+  if ('label' in set && !set.label) return toast('Название не может быть пустым');
+  if (set.code && !/^\d+$/.test(set.code)) return toast('Учётный номер — только цифры');
+  if (set.edrpou && !/^\d{8}$/.test(set.edrpou)) return toast('ЄДРПОУ — 8 цифр или пусто');
+
+  keys.forEach(function (k) { what.push(CARD_T[k] + ': ' + cardFmt(f[k]) + ' → ' + cardFmt(set[k])); });
+  var dirsOn = ['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return (k in set) ? set[k] : f[k]; });
+  var gone = set.active === false || !dirsOn;
+  if (set.active === false) what.push('Точка пропадёт у продавцов и из пульта. Вернуть — галочкой в Довіднике');
+  else if (!dirsOn) what.push('Ни одного направления — точка пропадёт у продавцов');
+  if (['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return set[k] === false; }))
+    what.push('Если точка уже заказала сегодня по снимаемому направлению — лучше снять вечером');
+  what.push('Меняется только Довідник, принятые заказы не трогаются');
+
+  confirmSheet({
+    title: 'Сохранить изменения (' + keys.length + ')?', sub: c.label,
+    what: what, yes: 'Сохранить',
+    run: function () { return call('cardSave', { storeId: c.id, orig: f, set: set }); },
+    done: function () { toast('Сохранено'); if (gone) tabGo('stores'); else goBack(); }
+  });
+}
+</script>

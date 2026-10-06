@@ -137,12 +137,18 @@ function adminApi(action, payload, token) {
       case 'dupApply':       data = dupApply_(String(payload.dir || ''), payload.keys || []); break;
       case 'schedule':       data = admSchedule_(payload); break;
       case 'log':            data = admLogRead_(); break;
+      case 'health':         data = admHealth_(); break;
+      case 'healthClear':    data = admHealthClear_(); break;
+      case 'editOrder':      data = admEditOrder_(payload); break;
+      case 'card':           data = admCard_(payload); break;
+      case 'cardSave':       data = admCardSave_(payload); break;
       default: throw new Error('Невідома дія: ' + action);
     }
     return { ok: true, data: data };
   } catch (err) {
     var msg = String((err && err.message) || err);
     if (msg !== 'AUTH') console.error('adminApi ' + action + ': ' + ((err && err.stack) || err));
+    if (msg !== 'AUTH' && action !== 'login') healthNoteError_('пульт: ' + action, msg);
     return { ok: false, error: msg };
   }
 }
@@ -389,7 +395,7 @@ function admStore_(payload) {
       if (d !== today) return;
       if (addrKey_(String(r[2] || '').trim()) !== target) return;
       if (!first) first = from + i;
-      rows.push({ name: String(r[c.name] || ''), qty: Number(r[c.qty]) || 0 });
+      rows.push({ row: from + i, name: String(r[c.name] || ''), qty: Number(r[c.qty]) || 0 });
     });
   }
 
