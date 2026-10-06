@@ -693,3 +693,105 @@ function k02_applyNewEntity() {
   invalidateAppCache();
   buildBreadReports();
 }
+
+// ============================================================
+// ОФОРМЛЕННЯ ДОВІДНИКА ТТ - k03_styleRegistry()
+// Тільки вигляд: значення, порядок колонок і рядків НЕ змінює.
+// Колір заголовка = колір напрямку (як у застосунку і пульті).
+// Скидає старі заливки, чергування і умовне форматування листа ТТ.
+// Відкат: Файл -> Історія версій. Можна запускати повторно.
+// ============================================================
+var REG_STYLE_COLS = 20;   // A..T
+var REG_STYLE_GROUPS = [
+  { cols: 'ABCDFJ', head: '#37474F' },   // загальне
+  { cols: 'EGKT',   head: '#8D6E63' },   // хліб Рома
+  { cols: 'NOP',    head: '#5D4037' },   // хліб НБХЗ
+  { cols: 'HLRS',   head: '#E65100' },   // випічка
+  { cols: 'IMQ',    head: '#2E7D32' }    // овочі
+];
+var REG_STYLE_WIDTH = { A: 70, B: 210, C: 270, D: 80, E: 110, F: 100, G: 60, H: 70,
+  I: 60, J: 260, K: 210, L: 210, M: 210, N: 70, O: 120, P: 190, Q: 90, R: 150,
+  S: 110, T: 110 };
+var REG_STYLE_CHECK  = 'AGHIN';
+var REG_STYLE_CENTER = 'ADEFGHINOQRST';
+
+function regColNum_(letter) { return letter.charCodeAt(0) - 64; }
+
+function k03_styleRegistry() {
+  var sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
+  if (!sh) throw new Error('Немає листа "' + REGISTRY_SHEET + '"');
+  if (sh.getMaxColumns() < REG_STYLE_COLS) throw new Error('На листі менше 20 колонок - спершу k01');
+  var N = REG_STYLE_COLS;
+  var last = Math.max(sh.getLastRow(), 2);
+  var maxRows = sh.getMaxRows();
+
+  // --- скинути старе ---
+  sh.getBandings().forEach(function (b) { b.remove(); });
+  sh.setConditionalFormatRules([]);
+  sh.getRange(1, 1, maxRows, N)
+    .setBackground(null).setFontColor('#212121').setFontWeight('normal').setFontStyle('normal')
+    .setFontFamily('Arial').setFontSize(10).setVerticalAlignment('middle')
+    .setHorizontalAlignment('left')
+    .setBorder(false, false, false, false, false, false);
+
+  // --- шапка ---
+  var bg = [];
+  for (var c = 0; c < N; c++) bg.push('#37474F');
+  REG_STYLE_GROUPS.forEach(function (g) {
+    g.cols.split('').forEach(function (L) { bg[regColNum_(L) - 1] = g.head; });
+  });
+  sh.getRange(1, 1, 1, N).setBackgrounds([bg])
+    .setFontColor('#FFFFFF').setFontWeight('bold').setHorizontalAlignment('center')
+    .setWrap(true)
+    .setBorder(null, null, true, null, null, null, '#263238', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+  sh.setRowHeight(1, 46);
+  sh.getRange(1, 1).setNote('Колір заголовка = напрямок:\nсірий - загальне\nкоричневий - Хліб Рома\n' +
+    'темно-коричневий - Хліб НБХЗ\nпомаранчевий - Випічка\nзелений - Овочі\n\n' +
+    'Неактивні точки - сірим курсивом.\nПорядок колонок не міняти: його читає застосунок.');
+  sh.getRange(1, 20).setNote('Порожньо = 44413718 (стара юрособа).\nНова юрособа: 45672783.');
+
+  // --- тіло ---
+  var body = sh.getRange(2, 1, maxRows - 1, N);
+  body.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+  body.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false)
+    .setFirstRowColor('#FFFFFF').setSecondRowColor('#F5F7F9');
+  sh.getRange(1, 1, last, N).setBorder(true, true, true, true, true, true,
+    '#DADCE0', SpreadsheetApp.BorderStyle.SOLID);
+  sh.getRange(1, 1, 1, N).setBorder(null, null, true, null, null, null,
+    '#263238', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
+  REG_STYLE_CENTER.split('').forEach(function (L) {
+    sh.getRange(2, regColNum_(L), maxRows - 1, 1).setHorizontalAlignment('center');
+  });
+  REG_STYLE_CHECK.split('').forEach(function (L) {
+    sh.getRange(2, regColNum_(L), last - 1, 1).insertCheckboxes();
+  });
+  sh.getRange(2, regColNum_('D'), maxRows - 1, 1).setNumberFormat('0');
+  sh.getRange(2, regColNum_('T'), maxRows - 1, 1).setNumberFormat('@');
+  sh.getRange(2, regColNum_('B'), maxRows - 1, 1).setFontWeight('bold');
+
+  Object.keys(REG_STYLE_WIDTH).forEach(function (L) {
+    sh.setColumnWidth(regColNum_(L), REG_STYLE_WIDTH[L]);
+  });
+  sh.setFrozenRows(1);
+  sh.setFrozenColumns(2);
+
+  // --- умовне форматування (формули без ; і , - не залежать від локалі) ---
+  var data = sh.getRange(2, 1, maxRows - 1, N);
+  sh.setConditionalFormatRules([
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=($A2=FALSE)*($C2<>"")>0')
+      .setBackground('#ECEFF1').setFontColor('#9E9E9E').setItalic(true)
+      .setRanges([data]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=$F2="Виробництво"')
+      .setBackground('#E8EAF6').setRanges([data]).build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=LEN($T2)>0')
+      .setBackground('#FFE0B2').setBold(true)
+      .setRanges([sh.getRange(2, 20, maxRows - 1, 1)]).build()
+  ]);
+
+  SpreadsheetApp.flush();
+  console.log('Довідник оформлено: рядків ' + (last - 1) + ', колонок ' + N);
+}
