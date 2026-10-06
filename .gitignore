@@ -7,3 +7,5 @@ Thumbs.db
 ~$*
 *.tmp
 _to_delete/
+
+*.bak
