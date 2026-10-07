@@ -803,6 +803,7 @@ function generateSummaryReport_internal() {
 
 // Публичные обёртки с локом — для ручного вызова из меню
 function generateFormattedOrdersReport() {
+  console.log('Отключено: отчёты ВК строит основной проект'); return;
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) return;
   try { generateFormattedOrdersReport_internal(); }
@@ -811,6 +812,7 @@ function generateFormattedOrdersReport() {
 }
 
 function generateSummaryReport() {
+  console.log('Отключено: отчёты ВК строит основной проект'); return;
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) return;
   try { generateSummaryReport_internal(); }
@@ -880,6 +882,7 @@ function updateTrigger() {
 // ============================================================
 
 function deleteOrderForStoreFromDialog(storeAddress) {
+  throw new Error('Видалення замовлень перенесено в пульт (посилання з ?admin=1 -> точка -> правка замовлення). Старе видалення вимкнено: воно не знімало позначку в застосунку, і точка не могла замовити знову.');
   try {
     var ss = getSpreadsheet();
     var rawSheet = ss.getSheetByName(HIDDEN_RAW_DATA_SHEET_NAME);
@@ -1002,6 +1005,7 @@ function downloadSummaryAsExcel() {
 }
 
 function showDeleteOrderDialog() {
+  SpreadsheetApp.getUi().alert('Видалення замовлень перенесено в пульт (посилання з ?admin=1 -> точка -> правка замовлення). Старе видалення вимкнено: воно не знімало позначку в застосунку, і точка не могла замовити знову.'); return;
   try {
     var ui = SpreadsheetApp.getUi();
     var ss = getSpreadsheet();
