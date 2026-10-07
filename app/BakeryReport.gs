@@ -67,7 +67,10 @@ function refreshBakeryReports() {
   var have = ss.getSheetByName(BAKERY_ORDERS_SHEET) && ss.getSheetByName(BAKERY_SUMMARY_SHEET) &&
              ss.getSheetByName(BAKERY_ROUTE_SHEET);
 
-  if (have && props.getProperty('bakery_report_sig') === sig) return;
+  // лист могли перезаписать чужим скриптом (старый legacy/bakery) - тогда
+  // заголовок уже не тот, что мы записали, и надо пересобрать
+  if (have && props.getProperty('bakery_report_sig') === sig &&
+      props.getProperty('bakery_report_stamp') === bakeryReportStamp_(ss)) return;
 
   buildBakeryReports();
 }
@@ -82,8 +85,20 @@ function buildBakeryReports() {
   buildBakerySummarySheet_(rows);
   buildBakeryRouteSheet_(rows);
   markReport_('bakery');
-  PropertiesService.getScriptProperties()
-    .setProperty('bakery_report_sig', bakerySignature_(rows));
+  PropertiesService.getScriptProperties().setProperties({
+    bakery_report_sig: bakerySignature_(rows),
+    bakery_report_stamp: bakeryReportStamp_()
+  });
+}
+
+// Заголовки (A1) "Заказы ВК" и "Сводная ВК". В них есть время сборки,
+// поэтому чужая перезапись сразу видна.
+function bakeryReportStamp_(ss) {
+  ss = ss || SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
+  return [BAKERY_ORDERS_SHEET, BAKERY_SUMMARY_SHEET].map(function (n) {
+    var sh = ss.getSheetByName(n);
+    return sh ? String(sh.getRange(1, 1).getDisplayValue()) : '';
+  }).join('|');
 }
 
 // ТТ напрямку з Довідника - лише ті, у кого сьогодні робочий день

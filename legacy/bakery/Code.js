@@ -424,6 +424,7 @@ function setupOrdersSheetFormatting() {
 // ── ЗВІТ ЗАМОВЛЕНЬ ──────────────────────────────────────────
 
 function generateFormattedOrdersReport_internal() {
+  console.log('Отключено: отчёты ВК теперь строит основной проект (BakeryReport.gs)'); return;
   var ss = getSpreadsheet();
   var rawSheet = ss.getSheetByName(HIDDEN_RAW_DATA_SHEET_NAME);
   if (!rawSheet || rawSheet.getLastRow() < 2) return;
@@ -650,6 +651,7 @@ function generateFormattedOrdersReport_internal() {
 // ── ЗВЕДЕНА ТАБЛИЦЯ ─────────────────────────────────────────
 
 function generateSummaryReport_internal() {
+  console.log('Отключено: отчёты ВК теперь строит основной проект (BakeryReport.gs)'); return;
   var ss = getSpreadsheet();
   var rawSheet = ss.getSheetByName(HIDDEN_RAW_DATA_SHEET_NAME);
   if (!rawSheet || rawSheet.getLastRow() < 2) return;
@@ -821,10 +823,24 @@ function generateSummaryReport() {
 // ============================================================
 
 function autoMaintenance() {
+  console.log('Отключено: отчёты ВК теперь строит основной проект (BakeryReport.gs)'); return;
+  // ============================================================
+  // ВИКЛЮЧЕНО 14.09.2026.
+  // Звіти "Заказы ВК" і "Сводная ВК" тепер збирає новий застосунок
+  // shop-orders: BakeryReport.gs, тригер refreshBakeryReports
+  // кожні 5 хвилин. Цей проєкт більше не повинен торкатися цих
+  // листів - інакше два проєкти перезаписують одні й ті самі дані.
+  //
+  // Заглушка, а не видалення тригера, бо тригери належать тому
+  // акаунту, який їх створив: у списку "Тригери" видно лише свої.
+  // Якщо пятихвилинку колись поставив інший акаунт - ти її не
+  // побачиш, а працювати вона продовжить.
+  // ============================================================
+  return;
+
   var now = new Date();
   var hour = now.getHours();
   if (hour < 7 || hour >= 18) return;
-
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) { console.log('⏳ Lock зайнятий, пропускаю'); return; }
 
