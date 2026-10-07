@@ -956,28 +956,27 @@ function exportSummaryToExcel() { return getExcelExportUrl(SUMMARY_SHEET_NAME); 
 // ============================================================
 
 function onOpen() {
+  // Старий проєкт: звіти ВК, видалення і правку замовлень веде основний
+  // застосунок shop-orders. Тут лишились тільки безпечні пункти.
   try {
     SpreadsheetApp.getUi().createMenu('📋 Випічка/Кулінарія')
-      .addItem('📅 Фільтр за датою', 'showDateFilterDialog')
-      .addItem('🔄 Оновити звіти', 'forceGenerateReports')
-      .addItem('🎨 Форматувати листи', 'formatAllSheets')
+      .addItem('ℹ️ Як оновити звіти', 'forceGenerateReports')
       .addSeparator()
       .addItem('📊 Експорт "Заказы ВК" в Excel', 'downloadOrdersAsExcel')
       .addItem('📊 Експорт "Сводна ВК" в Excel', 'downloadSummaryAsExcel')
       .addSeparator()
       .addItem('🗑️ Видалити замовлення ТТ', 'showDeleteOrderDialog')
-      .addItem('🧹 Скинути кеш адрес/товарів', 'invalidateCache')
-      .addSeparator()
       .addItem('🧹 Очистити лог помилок', 'clearErrorLog')
       .addToUi();
   } catch(e) { console.error('Помилка меню: ' + e); }
 }
 
 function forceGenerateReports() {
-  generateFormattedOrdersReport();
-  generateSummaryReport();
-  formatRawDataSheet();
-  SpreadsheetApp.getUi().alert('Звіти оновлено!');
+  SpreadsheetApp.getUi().alert(
+    'Звіти "Заказы ВК", "Сводна ВК" і "Маршрути ВК" оновлюються автоматично ' +
+    'кожні 5 хвилин основним застосунком. Час останньої збірки - у клітинці A1 ' +
+    '("оновлено ..."). Якщо треба негайно - запустіть buildBakeryReports в ' +
+    'основному проєкті shop-orders.');
 }
 
 function downloadOrdersAsExcel() {
