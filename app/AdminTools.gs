@@ -188,6 +188,7 @@ function admEditOrder_(payload) {
   if (!left) props.deleteProperty(orderMarkKey_(dir, store));
   if (dir === 'nbhz') props.setProperty('nbhz_export_dirty', today);
   invalidateAppCache();
+  safeNoteDeleted_(dir);
   adminLog_('Змінено замовлення', cfg.title + ' / ' + store.label + ': ' + log.join('; ') +
             (left ? '' : ' - замовлення порожнє, позначку знято'));
   return { changed: log.length, left: left };

@@ -102,6 +102,9 @@ function markReport_(dirKey) {
       'report_at_' + dirKey,
       Utilities.formatDate(new Date(), 'Europe/Kyiv', 'dd.MM.yyyy HH:mm'));
   } catch (e) {}
+  // звіт щойно перезібрано - значить, замовлення змінились: оновлюємо список
+  // на листі "Видалення замовлення" (DeleteSheet.gs). Якщо листа немає - тихо виходить.
+  try { delSheetRefresh_(dirKey); } catch (e) { console.error('Видалення (список): ' + e.message); }
 }
 
 function reportAt_(dirKey) {
@@ -452,6 +455,7 @@ function admCancelOrder_(payload) {
   if (dir === 'nbhz')
     PropertiesService.getScriptProperties().setProperty('nbhz_export_dirty', formatDateDMY_(new Date()));
   invalidateAppCache();
+  if (removed) safeNoteDeleted_(dir);
   adminLog_('Скасовано замовлення', cfg.title + ' / ' + store.label + ' - рядків ' + removed);
   return { removed: removed };
 }
