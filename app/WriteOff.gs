@@ -23,13 +23,14 @@ var WO_DEADLINE   = '13:00';
 var WO_KEEP_DAYS  = 31;
 var WO_BOOKS_KEY  = 'wo_books';          // {edrpou: {id, name}}
 var WO_LATE_KEY   = 'wo_late';           // дата, на яку прийом відкрито до кінця дня
-var WO_SHEET      = 'Списання';
-var WO_ARCH       = 'Архів';
-var WO_SUM        = 'Зведена';
+var WO_SHEET      = 'Списания';          // назви листів і шапки - російською, як в основній таблиці
+var WO_ARCH       = 'Архив';
+var WO_SUM        = 'Сводная';
+var WO_OLD_NAMES  = { 'Списання': 'Списания', 'Архів': 'Архив', 'Зведена': 'Сводная' };  // перші таблиці
 var WO_MAX_ITEMS  = 150;
 var WO_MAX_QTY    = 500;
-var WO_HEAD = ['ID', 'Подано', 'Дата списання', 'Торгова точка', '№ ТТ', 'ЄДРПОУ',
-               'Категорія', 'Штрихкод', 'Товар', 'Кількість', 'Ціна', 'Сума', 'Ціна за', 'Ключ ТТ'];
+var WO_HEAD = ['ID', 'Подано', 'Дата списания', 'Торговая точка', '№ ТТ', 'ЕГРПОУ',
+               'Категория', 'Штрихкод', 'Товар', 'Количество', 'Цена', 'Сумма', 'Цена по', 'Ключ ТТ'];
 var WO_COLS = WO_HEAD.length;
 // Індекси колонок (з нуля)
 var WC = { id: 0, at: 1, date: 2, store: 3, code: 4, edrpou: 5, cat: 6, barcode: 7,
@@ -82,16 +83,24 @@ function woEnsureBook_(edrpou) {
     try { woSetupBook_(SpreadsheetApp.openById(b.id), edrpou); return { id: b.id, created: false }; }
     catch (e) { console.error('Таблиця списань ' + edrpou + ' не відкривається, створюю нову: ' + e.message); }
   }
-  var ss = SpreadsheetApp.create('Списання ВК · ЄДРПОУ ' + edrpou);
+  var ss = SpreadsheetApp.create(woBookTitle_(edrpou));
   ss.setSpreadsheetTimeZone('Europe/Kyiv');
   woSetupBook_(ss, edrpou);
-  books[edrpou] = { id: ss.getId(), name: 'ЄДРПОУ ' + edrpou };
+  books[edrpou] = { id: ss.getId(), name: 'ЕГРПОУ ' + edrpou };
   woSaveBooks_(books);
   return { id: ss.getId(), created: true };
 }
 
 // Листи і оформлення. Ідемпотентно: дані не чіпає.
+function woBookTitle_(edrpou) { return 'Списания ВК · ЕГРПОУ ' + edrpou; }
+
 function woSetupBook_(ss, edrpou) {
+  // таблиці, створені з українськими назвами, - перейменувати (дані на місці)
+  Object.keys(WO_OLD_NAMES).forEach(function (old) {
+    var sh = ss.getSheetByName(old);
+    if (sh && !ss.getSheetByName(WO_OLD_NAMES[old])) sh.setName(WO_OLD_NAMES[old]);
+  });
+  if (ss.getName() !== woBookTitle_(edrpou)) ss.rename(woBookTitle_(edrpou));
   var live = ss.getSheetByName(WO_SHEET);
   if (!live) {
     var first = ss.getSheets()[0];
@@ -104,17 +113,17 @@ function woSetupBook_(ss, edrpou) {
 
   var sum = ss.getSheetByName(WO_SUM) || ss.insertSheet(WO_SUM);
   var q = "'" + WO_SHEET + "'!A2:N";
-  sum.getRange('A1').setValue('Зведена · ЄДРПОУ ' + edrpou + ' · рядки листа «' + WO_SHEET +
-    '» (останні ' + WO_KEEP_DAYS + ' днів, старші - на листі «' + WO_ARCH + '»)')
+  sum.getRange('A1').setValue('Сводная · ЕГРПОУ ' + edrpou + ' · строки листа «' + WO_SHEET +
+    '» (последние ' + WO_KEEP_DAYS + ' дней, более старые - на листе «' + WO_ARCH + '»)')
     .setFontWeight('bold').setFontSize(13);
-  sum.getRange('A3').setValue('По торгових точках').setFontWeight('bold').setFontColor('#E65100');
+  sum.getRange('A3').setValue('По торговым точкам').setFontWeight('bold').setFontColor('#E65100');
   sum.getRange('A4').setFormula('=IFERROR(QUERY(' + q + ', "select D, count(I), sum(J), sum(L) ' +
     'where D is not null group by D order by sum(L) desc ' +
-    "label D 'Торгова точка', count(I) 'Рядків', sum(J) 'Кількість', sum(L) 'Сума, грн'\", 0), \"поки порожньо\")");
-  sum.getRange('G3').setValue('По товарах').setFontWeight('bold').setFontColor('#E65100');
+    "label D 'Торговая точка', count(I) 'Строк', sum(J) 'Количество', sum(L) 'Сумма, грн'\", 0), \"пока пусто\")");
+  sum.getRange('G3').setValue('По товарам').setFontWeight('bold').setFontColor('#E65100');
   sum.getRange('G4').setFormula('=IFERROR(QUERY(' + q + ', "select I, sum(J), sum(L) ' +
     'where I is not null group by I order by sum(L) desc ' +
-    "label I 'Товар', sum(J) 'Кількість', sum(L) 'Сума, грн'\", 0), \"поки порожньо\")");
+    "label I 'Товар', sum(J) 'Количество', sum(L) 'Сумма, грн'\", 0), \"пока пусто\")");
   sum.setColumnWidth(1, 300); sum.setColumnWidth(7, 300);
   sum.setTabColor('#1565C0');
 
@@ -228,7 +237,7 @@ function woProducts_() {
       id: id, barcode: barcode, name: name,
       category: String(row[1] || '').trim() || 'Інше',
       price: Math.round((cost > 0 ? cost : retail) * 100) / 100,
-      src: cost > 0 ? 'собівартість' : 'продажна'
+      src: cost > 0 ? 'себестоимость' : 'продажная'
     });
   }
   out.products.sort(function (a, b) {
@@ -532,6 +541,7 @@ function woArchive_() {
 // Тригер щоночі (ставить w01_setupWriteOffs)
 function woNightly() {
   try { woArchive_(); } catch (e) { console.error('woNightly: ' + e.message); }
+  try { woIndexSheet_(); } catch (e) { console.error('woNightly, зміст: ' + e.message); }
 }
 
 function woInstallTrigger_() {
@@ -548,7 +558,42 @@ function woSetup_() {
     return { edrpou: e, id: r.id, created: r.created, url: woBookUrl_(r.id) };
   });
   woInstallTrigger_();
+  try { woIndexSheet_(); } catch (e) { console.error('Вкладка "' + WO_SHEET + '" в таблиці випічки: ' + e.message); }
   return out;
+}
+
+// Вкладка "Списання" в основній таблиці випічки - зміст: посилання на таблиці
+// списань кожної юрособи і скільки точок у неї пише. Переписується повністю
+// при w01 / "Создать таблицы" в пульті і щоночі (кількість точок свіжа).
+function woIndexSheet_() {
+  var cfg = dirCfg_('bakery');
+  var ss = SpreadsheetApp.openById(cfg.spreadsheetId);
+  var sh = ss.getSheetByName(WO_SHEET) || ss.insertSheet(WO_SHEET);
+  var books = woBooks_(), cnt = {};
+  woStores_().forEach(function (st) { var e = woEdrpouOf_(st); cnt[e] = (cnt[e] || 0) + 1; });
+  var rows = Object.keys(books).sort(function (a, b) { return (cnt[b] || 0) - (cnt[a] || 0); })
+    .map(function (e) {
+      var url = woBookUrl_(books[e].id);
+      return ['ЕГРПОУ ' + e, cnt[e] || 0,
+              '=HYPERLINK("' + url + '", "Открыть таблицу списаний")'];
+    });
+  sh.clear();
+  sh.getRange(1, 1).setValue('Списания выпечки и кулинарии - отдельная таблица на каждое юрлицо')
+    .setFontWeight('bold').setFontSize(12);
+  sh.getRange(2, 1).setValue('Юрлицо точки - по колонке T (ЕГРПОУ) Довідника ТТ. Новое юрлицо - пульт → Списания → «Создать недостающие таблицы».')
+    .setFontColor('#666666');
+  var head = sh.getRange(4, 1, 1, 3).setValues([['Юрлицо', 'Точек', 'Таблица']]);
+  ss.getSheetByName(cfg.productsSheet) && ss.getSheetByName(cfg.productsSheet).getRange(1, 2)
+    .copyTo(head, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+  if (rows.length) {
+    sh.getRange(5, 1, rows.length, 3).setValues(rows);
+    sh.getRange(4, 1, rows.length + 1, 3).setBorder(true, true, true, true, true, true);
+    sh.getRange(5, 2, rows.length, 1).setHorizontalAlignment('center');
+  } else {
+    sh.getRange(5, 1).setValue('Таблиц ещё нет - запустите w01_setupWriteOffs');
+  }
+  sh.setColumnWidth(1, 160); sh.setColumnWidth(2, 70); sh.setColumnWidth(3, 220);
+  return rows.length;
 }
 
 // ============================================================
@@ -658,7 +703,7 @@ function admWoStats_(payload) {
     } catch (err) {}
     var en = byEnt[e] || { sum: 0, qty: 0, stores: {} };
     return {
-      edrpou: e, name: books[e].name || ('ЄДРПОУ ' + e), url: woBookUrl_(id), xlsx: live,
+      edrpou: e, name: 'ЕГРПОУ ' + e, url: woBookUrl_(id), xlsx: live,
       sum: r2(en.sum), qty: r3(en.qty), active: Object.keys(en.stores).length,
       storesNow: stores.filter(function (s) { return woEdrpouOf_(s) === e; }).length
     };
@@ -673,7 +718,7 @@ function admWoStats_(payload) {
     stores: storeList, products: prodList, days: dayList, silent: silent,
     books: bookList,
     missing: Object.keys(missing).map(function (e) { return { edrpou: e, stores: missing[e] }; }),
-    priceSrc: Object.keys(src).join(', ') || (p.costCol ? 'собівартість' : 'продажна'),
+    priceSrc: Object.keys(src).join(', ') || (p.costCol ? 'себестоимость' : 'продажная'),
     costCol: p.costCol, prodCount: p.products.length, noCost: p.noCost || [],
     closed: woClosed_(), openedAll: woOpenedAll_(), deadline: WO_DEADLINE, keepDays: WO_KEEP_DAYS
   };

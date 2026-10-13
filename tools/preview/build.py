@@ -49,7 +49,7 @@ var TODAY={today:'13.10.2026',time:'10:20',dow:'вторник',dirs:[{key:'bake
 window.google={script:{run:(function(){var o={_s:null,withSuccessHandler:function(f){var n=Object.create(o);n._s=f;return n;},withFailureHandler:function(){return this;},
 adminApi:function(a,p){var s=this._s;setTimeout(function(){var d;
 if(a==='today')d=TODAY;else if(a==='woBrief')d={todayDocs:14,todayStores:12,todaySum:1640.5,monthSum:18450.5,books:2,deadline:'13:00',closed:false,openedAll:false};
-else if(a==='woStats')d=STATS;else if(a==='woStore')d={id:'s1',label:'Валентиновская, 2',code:'14',edrpou:'44413718',bookUrl:'#',period:'month',periodTitle:'этот месяц',from:'01.10.2026',to:'13.10.2026',total:166,qty:6,docs:[{id:'w1',date:'12.10.2026',at:'13.10.2026 09:42',edrpou:'44413718',sheet:'Списання',items:[{name:'Булочка з маком',qty:3,price:18,sum:54},{name:'Салат Олів\'є',qty:2,price:56,sum:112}],total:166,qty:5}]};
+else if(a==='woStats')d=STATS;else if(a==='woStore')d={id:'s1',label:'Валентиновская, 2',code:'14',edrpou:'44413718',bookUrl:'#',period:'month',periodTitle:'этот месяц',from:'01.10.2026',to:'13.10.2026',total:166,qty:6,docs:[{id:'w1',date:'12.10.2026',at:'13.10.2026 09:42',edrpou:'44413718',sheet:'Списания',items:[{name:'Булочка з маком',qty:3,price:18,sum:54},{name:'Салат Олів\'є',qty:2,price:56,sum:112}],total:166,qty:5}]};
 else if(a==='batch')d=[];else d={};
 s&&s({ok:true,data:d,ms:5});},30);}};return o;})()}};
 </script>"""

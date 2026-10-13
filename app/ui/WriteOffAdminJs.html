@@ -84,7 +84,7 @@ function loadWo() {
       h += '<div class="chips" style="margin-bottom:0"><button class="chip' + (WA.ent ? '' : ' on') +
         '" onclick="woSetEnt(\'\')">Все юрлица</button>' + d.books.map(function (b) {
           return '<button class="chip' + (WA.ent === b.edrpou ? ' on' : '') + '" onclick="woSetEnt(\'' +
-            b.edrpou + '\')">ЄДРПОУ ' + esc(b.edrpou) + '</button>';
+            b.edrpou + '\')">ЕГРПОУ ' + esc(b.edrpou) + '</button>';
         }).join('') + '</div>';
     }
 
@@ -92,7 +92,7 @@ function loadWo() {
       h += '<div class="bad">Таблиц списаний ещё нет — продавцы не смогут подать списание. ' +
            'Нажмите «Создать таблицы» внизу.</div>';
     d.missing.forEach(function (m) {
-      h += '<div class="bad">Нет таблицы для <b>ЄДРПОУ ' + esc(m.edrpou) + '</b> — ' + m.stores.length +
+      h += '<div class="bad">Нет таблицы для <b>ЕГРПОУ ' + esc(m.edrpou) + '</b> — ' + m.stores.length +
         ' точек не смогут подать списание: ' + esc(m.stores.slice(0, 6).join(', ')) +
         (m.stores.length > 6 ? '…' : '') + '. Нажмите «Создать таблицы» внизу.</div>';
     });
@@ -120,7 +120,7 @@ function loadWo() {
     if (d.books.length) {
       var maxE = Math.max.apply(null, d.books.map(function (b) { return b.sum; }).concat([1]));
       h += section('По юрлицам', '<div class="card">' + d.books.map(function (b) {
-        return '<div class="item"><span class="grow"><span class="t">ЄДРПОУ ' + esc(b.edrpou) + '</span>' +
+        return '<div class="item"><span class="grow"><span class="t">ЕГРПОУ ' + esc(b.edrpou) + '</span>' +
           '<span class="s">точек сейчас ' + b.storesNow + ' · списывали ' + b.active + ' · ' + b.qty + ' шт</span>' +
           '<span class="minibar"><i style="width:' + Math.round(b.sum / maxE * 100) + '%"></i></span></span>' +
           '<span class="right">' + woMoney(b.sum) + ' грн</span></div>';
@@ -132,7 +132,7 @@ function loadWo() {
       h += section('По точкам (' + d.stores.length + ')', '<div class="card">' + d.stores.map(function (s) {
         var moved = s.nowEdrpou && s.nowEdrpou !== s.edrpou;
         var sub = (s.code ? '№ ' + esc(s.code) + ' · ' : '') + 'подач ' + s.docs + ' · ' + s.qty + ' шт' +
-          ' · ЄДРПОУ ' + esc(s.edrpou) +
+          ' · ЕГРПОУ ' + esc(s.edrpou) +
           (moved ? ' <b style="color:#6B4A00">→ теперь ' + esc(s.nowEdrpou) + '</b>' : '') +
           '<span class="minibar"><i style="width:' + Math.round(s.sum / maxS * 100) + '%"></i></span>';
         return item(s.label, sub, woMoney(s.sum) + ' грн', 'go(\'wostore\',{store:\'' + attr(s.id) + '\'})');
@@ -166,8 +166,8 @@ function loadWo() {
 
     var files = '';
     d.books.forEach(function (b) {
-      files += woLink(b.url, 'Таблица ЄДРПОУ ' + b.edrpou, 'Google Таблица: «Списання», «Архів», «Зведена»');
-      if (b.xlsx) files += woLink(b.xlsx, 'Excel ЄДРПОУ ' + b.edrpou, 'только лист «Списання»');
+      files += woLink(b.url, 'Таблица ЕГРПОУ ' + b.edrpou, 'Google Таблица: «Списания», «Архив», «Сводная»');
+      if (b.xlsx) files += woLink(b.xlsx, 'Excel ЕГРПОУ ' + b.edrpou, 'только лист «Списания»');
     });
     if (files) h += section('Таблицы юрлиц', '<div class="card">' + files + '</div>');
 
@@ -175,8 +175,8 @@ function loadWo() {
       (d.openedAll
         ? item('Вернуть обычный режим', 'приём снова закрывается в ' + esc(d.deadline), '', 'askWoOpen(false)')
         : item('Открыть приём до конца дня', 'сегодня дедлайн ' + esc(d.deadline) + ' не действует', '', 'askWoOpen(true)')) +
-      item('Перенести старое в архив', 'строки старше ' + d.keepDays + ' дней → лист «Архів» (делается и сам ночью)', '', 'askWoArchive()') +
-      item('Создать недостающие таблицы', 'для каждого ЄДРПОУ из колонки T Довідника', '', 'askWoSetup()') +
+      item('Перенести старое в архив', 'строки старше ' + d.keepDays + ' дней → лист «Архив» (делается и сам ночью)', '', 'askWoArchive()') +
+      item('Создать недостающие таблицы', 'для каждого ЕГРПОУ из колонки T Довідника', '', 'askWoSetup()') +
       '</div>');
 
     el.innerHTML = h;
@@ -195,14 +195,14 @@ function loadWoStore(id) {
     var h = '<div class="kpis"><div><i>Сумма</i><b>' + woMoney(d.total) + ' грн</b></div>' +
       '<div><i>Подач</i><b>' + d.docs.length + '</b></div></div>';
     h += '<div class="info">' + (d.code ? '№ ' + esc(d.code) + ' · ' : '') +
-      (d.edrpou ? 'сейчас пишет в <b>ЄДРПОУ ' + esc(d.edrpou) + '</b> (колонка T Довідника)' : 'точки нет среди активных') +
+      (d.edrpou ? 'сейчас пишет в <b>ЕГРПОУ ' + esc(d.edrpou) + '</b> (колонка T Довідника)' : 'точки нет среди активных') +
       '<br><span style="color:#7A828E;font-size:13.5px">' + esc(d.from) + ' — ' + esc(d.to) + '</span></div>';
     if (d.bookUrl) h += '<div class="card">' + woLink(d.bookUrl, 'Открыть таблицу юрлица', 'Google Таблица') + '</div>';
     if (!d.docs.length) h += '<div class="info">За этот период списаний нет.</div>';
     d.docs.forEach(function (doc, i) {
       h += '<div class="wodoc"><div class="h"><span class="grow"><span class="t">Списание за ' + esc(doc.date) + '</span>' +
-        '<span class="s">подано ' + esc(doc.at) + ' · ' + doc.items.length + ' поз. · ЄДРПОУ ' + esc(doc.edrpou) +
-        (doc.sheet === 'Архів' ? ' · в архиве' : '') + '</span></span>' +
+        '<span class="s">подано ' + esc(doc.at) + ' · ' + doc.items.length + ' поз. · ЕГРПОУ ' + esc(doc.edrpou) +
+        (doc.sheet === 'Архив' ? ' · в архиве' : '') + '</span></span>' +
         '<span class="right">' + woMoney(doc.total) + ' грн</span></div>' +
         doc.items.map(function (it) {
           return '<div class="r"><span class="g">' + esc(it.name) + '</span><span class="q">' + it.qty +
@@ -221,7 +221,7 @@ function askWoDelete(i) {
   if (!doc) return;
   confirmSheet({
     title: 'Удалить списание?', sub: d.label + ' · за ' + doc.date,
-    what: [doc.items.length + ' позиций на ' + woMoney(doc.total) + ' грн удалятся из таблицы ЄДРПОУ ' + doc.edrpou,
+    what: [doc.items.length + ' позиций на ' + woMoney(doc.total) + ' грн удалятся из таблицы ЕГРПОУ ' + doc.edrpou,
            'Сумма больше не пойдёт в счёт зарплаты продавцов',
            'Действие попадёт в журнал'],
     yes: 'Да, удалить',
@@ -243,7 +243,7 @@ function askWoOpen(on) {
 function askWoArchive() {
   confirmSheet({
     title: 'Перенести в архив?', sub: 'Списания',
-    what: ['Строки, где дата списания старше месяца, переедут на лист «Архів» той же таблицы',
+    what: ['Строки, где дата списания старше месяца, переедут на лист «Архив» той же таблицы',
            'Ничего не удаляется — аналитика за прошлые месяцы их видит',
            'Продавцы перестанут видеть их в «Мої списання»'],
     yes: 'Перенести',
@@ -254,7 +254,7 @@ function askWoArchive() {
 function askWoSetup() {
   confirmSheet({
     title: 'Создать таблицы?', sub: 'Списания',
-    what: ['Для каждого ЄДРПОУ из колонки T Довідника будет своя Google Таблица',
+    what: ['Для каждого ЕГРПОУ из колонки T Довідника будет своя Google Таблица',
            'Уже созданные таблицы не трогаются, только оформление',
            'Таблицы появятся на Google Диске владельца скрипта'],
     yes: 'Создать',
