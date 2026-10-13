@@ -49,6 +49,31 @@ function loadStores_() {
   return stores;
 }
 
+// --- Позначка ЮА маркет у звітах постачальникам ---
+// Юрособа точки - колонка T Довідника. Позначка лише в ЗВІТАХ (овочі,
+// вивантаження НБХЗ); у сирих листах адресу не чіпаємо - по ній
+// звіти знаходять точку. Хліб Рома і кулінарія - без позначки.
+var UA_EDRPOU = '45672783';
+var UA_MARK = ' · ЮА';
+
+function isUaStore_(s) {
+  return String((s && s.edrpou) || '').replace(/\D/g, '') === UA_EDRPOU;
+}
+
+// Ключі addrKey_ адрес точок ЮА в полі field (addrVeg, addrNbhz...)
+function uaAddrKeys_(field) {
+  var keys = {};
+  loadStores_().forEach(function (s) {
+    if (!isUaStore_(s)) return;
+    [s[field], s.address].forEach(function (a) {
+      if (!a) return;
+      keys[addrKey_(a)] = true;
+      keys[addrKey_(shortenAddress_(a))] = true;
+    });
+  });
+  return keys;
+}
+
 function findStore_(storeId) {
   const all = loadStores_();
   for (var i = 0; i < all.length; i++) if (all[i].id === String(storeId)) return all[i];

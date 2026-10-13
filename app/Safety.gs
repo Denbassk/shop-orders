@@ -51,6 +51,9 @@ function nightlyHealth() {
   if (until && until !== formatDateDMY_(new Date())) {
     try { v02_restoreVegDays(); } catch (e) { console.error('графік: ' + e.message); }
   }
+  // вивантаження НБХЗ архівуються і вдень з e04_refreshExport; тут - страховка,
+  // якщо той тригер не стоїть або падає
+  try { archiveNbhzExportsDaily_(); } catch (e) { console.error('архів НБХЗ: ' + e.message); }
   safeBackupAll_();
   safeCheckDrop_();
 }

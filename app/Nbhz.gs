@@ -327,6 +327,7 @@ function buildNbhzExport() {
     rowsByStore[key] = {
       route: st.routeNbhz || '',
       addr: addr,
+      ua: isUaStore_(st),
       qty: new Array(prods.length).fill(0),
       got: false
     };
@@ -334,6 +335,7 @@ function buildNbhzExport() {
   });
 
   // 2. Розкладаємо сьогоднішні замовлення
+  var uaN = uaAddrKeys_('addrNbhz');
   var raw = ss.getSheetByName(rawSheetName_(cfg));
   if (raw && raw.getLastRow() > 1) {
     var last = raw.getLastRow();
@@ -348,6 +350,7 @@ function buildNbhzExport() {
         rowsByStore[key] = {
           route: String(r[1] || '').trim(),
           addr: String(r[2] || '').trim(),
+          ua: !!uaN[addrKey_(r[2])],
           qty: new Array(prods.length).fill(0),
           got: true
         };
@@ -387,7 +390,9 @@ function buildNbhzExport() {
     .concat(keepCols.map(function (ci) { return prods[ci].name; }));
   var body = keepRows.map(function (k) {
     var s = rowsByStore[k];
-    return [s.route, s.addr].concat(keepCols.map(function (ci) { return s.qty[ci]; }));
+    // ЮА маркет - позначка після адреси (колонка T Довідника)
+    return [s.route, s.addr + (s.ua ? UA_MARK : '')]
+      .concat(keepCols.map(function (ci) { return s.qty[ci]; }));
   });
 
   // 3. Лист вивантаження

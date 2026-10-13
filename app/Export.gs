@@ -179,3 +179,44 @@ function showNbhzExportArchive_() {
   console.log('Архів: ' + arc.getUrl());
   arc.getSheets().forEach(function (sh) { console.log('   ' + sh.getName()); });
 }
+
+// Діагностика: e12_checkNbhzArchive()
+function checkNbhzArchive_() {
+  var props = PropertiesService.getScriptProperties();
+  var have = {}, total = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    var h = t.getHandlerFunction(); have[h] = (have[h] || 0) + 1; total++;
+  });
+  console.log('Тригерів усього: ' + total + ' з 20 можливих' +
+              (total >= 20 ? ' - ЛІМІТ, нові не ставляться!' : ''));
+  ['e04_refreshExport', 'e03_nbhzExport', 'nightlyArchive', 'nightlyHealth'].forEach(function (h) {
+    var c = have[h] || 0;
+    console.log('   ' + h + ': ' + (c === 1 ? 'є' : c === 0 ? 'НЕМАЄ' : c + ' шт - дубль'));
+  });
+
+  console.log('Останній архів вивантажень: ' + (props.getProperty(NBHZ_EXPORT_ARCHIVED_KEY) || 'ніколи'));
+  console.log('Таблиця-архів: ' + (props.getProperty(NBHZ_EXPORT_ARCHIVE_KEY) ? 'є' : 'ще немає'));
+
+  var ss = nbhzSS_(), now = new Date();
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var ex = [];
+  ss.getSheets().forEach(function (sh) {
+    var d = nbhzExportDate_(sh.getName());
+    if (d) ex.push(sh.getName() + ' (' + Math.round((today - d) / 86400000) + ' дн.)');
+    else if (/^Вивантаження/.test(sh.getName()))
+      ex.push(sh.getName() + ' - назва не за шаблоном, архів її не бачить');
+  });
+  console.log('Листи вивантаження в робочій таблиці (лишаються ' + NBHZ_EXPORT_KEEP_DAYS +
+              ' дн.): ' + (ex.length ? '\n   ' + ex.join('\n   ') : 'немає'));
+
+  var cfg = dirCfg_('nbhz');
+  var raw = ss.getSheetByName(rawSheetName_(cfg));
+  var arch = ss.getSheetByName(ARCHIVE_SHEET);
+  if (raw && raw.getLastRow() > 1) {
+    var d0 = raw.getRange(2, 1).getValue();
+    console.log('Сирий лист: ' + (raw.getLastRow() - 1) + ' рядків, найстаріший за ' +
+                ((d0 instanceof Date) ? formatDateDMY_(d0) : d0) +
+                ' (тижневий архів лишає ' + KEEP_DAYS + ' дн., щопонеділка вночі)');
+  } else console.log('Сирий лист: порожньо');
+  console.log('Лист "' + ARCHIVE_SHEET + '": ' + (arch ? (arch.getLastRow() - 1) + ' рядків' : 'немає'));
+}
