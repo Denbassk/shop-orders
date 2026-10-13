@@ -835,3 +835,33 @@ function w03_archiveWriteOffsNow() {
   var r = woArchive_();
   console.log('Перенесено рядків: ' + r.moved + ' (дата списання до ' + r.before + ')');
 }
+
+/** Додати в "Ассортимент" випічки колонку "Себестоимость" (код розуміє і "Собівартість") (у кінець, після
+ *  наявних). Поки клітинка порожня - списання цього товару рахується за
+ *  продажною ціною з D, заповнили - одразу за собівартістю (кеш 10 хв).
+ *  Решта коду читає лише колонки A-F, тож нова колонка нічого не ламає.
+ *  Повторний запуск безпечний: якщо колонка вже є - нічого не робить. */
+function w04_addCostColumn() {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
+  if (!sh) throw new Error('Немає листа "' + cfg.productsSheet + '"');
+  var w = Math.max(sh.getLastColumn(), 6);
+  var head = sh.getRange(1, 1, 1, w).getValues()[0];
+  for (var i = 0; i < head.length; i++) {
+    if (/собів|себест/i.test(String(head[i]))) {
+      console.log('Колонка вже є: ' + String.fromCharCode(65 + i) + ' "' + head[i] + '"');
+      return;
+    }
+  }
+  var col = w + 1;
+  if (col > sh.getMaxColumns()) sh.insertColumnsAfter(sh.getMaxColumns(), col - sh.getMaxColumns());
+  sh.getRange(1, 1).copyTo(sh.getRange(1, col), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+  sh.getRange(1, col).setValue('Себестоимость')
+    .setNote('Ціна для СПИСАНЬ (грн за шт). Порожньо = рахується за продажною ціною з колонки D.');
+  var rows = Math.max(sh.getMaxRows() - 1, 1);
+  sh.getRange(2, col, rows, 1).setNumberFormat('0.00').setBackground('#FFF8E1');
+  sh.setColumnWidth(col, 110);
+  try { CacheService.getScriptCache().remove('wo_prod_v1'); } catch (e) {}
+  console.log('Додано колонку ' + String.fromCharCode(64 + col) + ' "Себестоимость" у "' +
+              cfg.productsSheet + '". Заповнюйте - списання підхоплять самі.');
+}
