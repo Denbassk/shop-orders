@@ -382,6 +382,7 @@ function dupApply_(dirKey, keys) {
   } finally { dirLockRelease_(dirKey, token); }
 
   if (removed) {
+    safeNoteDeleted_(dirKey);
     try { PropertiesService.getScriptProperties().deleteProperty(dirKey + '_report_sig'); } catch (e) {}
     try { CacheService.getScriptCache().remove('status_v3'); } catch (e) {}
     done.forEach(function (d) {

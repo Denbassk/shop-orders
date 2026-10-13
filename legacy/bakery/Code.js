@@ -1004,7 +1004,18 @@ function downloadSummaryAsExcel() {
 }
 
 function showDeleteOrderDialog() {
-  SpreadsheetApp.getUi().alert('Видалення замовлень перенесено в пульт (посилання з ?admin=1 -> точка -> правка замовлення). Старе видалення вимкнено: воно не знімало позначку в застосунку, і точка не могла замовити знову.'); return;
+  // Саме видалення робить основний застосунок (знімає позначку "вже замовляли",
+  // перезбирає звіт). Тут лише переводимо на його вкладку в цій таблиці.
+  var ssDel = SpreadsheetApp.getActiveSpreadsheet();
+  var shDel = ssDel.getSheetByName('Видалення замовлення');
+  if (shDel) {
+    ssDel.setActiveSheet(shDel);
+    ssDel.toast('Оберіть ТТ у клітинці B4 і поставте галочку в B5.', '🗑️ Видалення замовлення', 10);
+  } else {
+    SpreadsheetApp.getUi().alert('Вкладка "Видалення замовлення" ще не створена. ' +
+      'Її створює основний застосунок: функція d09_installDeleteSheets.');
+  }
+  return;
   try {
     var ui = SpreadsheetApp.getUi();
     var ss = getSpreadsheet();

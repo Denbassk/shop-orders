@@ -313,11 +313,16 @@ function rememberOrder_(orderId, result) {
 // Видалити рядки сьогоднішнього замовлення однієї точки.
 // Викликати ЛИШЕ під замком: видалення зсуває нумерацію.
 function deleteTodayRows_(cfg, dirKey, store) {
+  return deleteTodayRowsByKey_(cfg, dirKey, statusKey_(dirKey, store));
+}
+
+// Те саме, але за ключем адреси (addrKey_) - так видаляє лист "Видалення
+// замовлення" (DeleteSheet.gs), де є лише адреса з сирого листа.
+function deleteTodayRowsByKey_(cfg, dirKey, target) {
   var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
   if (!sh || sh.getLastRow() < 2) return 0;
 
   var today = formatDateDMY_(new Date());
-  var target = statusKey_(dirKey, store);
   var last = sh.getLastRow();
   var take = Math.min(last - 1, RAW_TAIL_ROWS);
   var from = last - take + 1;

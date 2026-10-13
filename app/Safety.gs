@@ -125,6 +125,21 @@ function safeCheckDrop_() {
   }
 }
 
+// Після НАВМИСНОГО видалення (таблиця, пульт, прибирання дублів) сторож не має
+// слати "зникли рядки": знижуємо піки до поточної кількості рядків за сьогодні.
+// Без цього кожну годину до кінця доби приходив би лист про "втрату" замовлення.
+function safeNoteDeleted_(dirKey) {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var today = formatDateDMY_(new Date());
+    var peaks = {};
+    try { peaks = JSON.parse(props.getProperty(SAFE_PEAK_KEY) || '{}'); } catch (e) {}
+    peaks[dirKey] = today + '|' + todayRowsOf_(dirKey).length;
+    props.setProperty(SAFE_PEAK_KEY, JSON.stringify(peaks));
+    if (dirKey === 'veg') props.setProperty(VEG_PEAK, today + '|' + vegTodayRows_().length);
+  } catch (e) { console.error('safeNoteDeleted_: ' + e.message); }
+}
+
 function safeBackupUrl_() {
   var id = PropertiesService.getScriptProperties().getProperty(SAFE_BACKUP_SS);
   return id ? 'https://docs.google.com/spreadsheets/d/' + id : '(бекапу ще нема)';
