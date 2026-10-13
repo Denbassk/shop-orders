@@ -284,6 +284,8 @@ function openStore(s){
       sub + '</div></div>' +
       '<div class="tag">' + tag + '</div></div>';
   });
+  // списання випічки і кулінарії - окрема плашка під напрямками (ui/WriteOff.html)
+  if (s.wo && typeof woBlock === 'function') h += woBlock(s);
   h += '<div class="legend">Напрямки незалежні: можна замовити зараз одне, ' +
        'а решту — пізніше.</div>' +
        '<div style="text-align:center;padding-top:14px">' +
@@ -444,7 +446,8 @@ function done(r){
     '<button class="chip" onclick="screenStore()">Інша торгова точка</button></div>';
 }
 function goBack(){
-  if (S.screen==='prod') openStore(S.store);
+  if (String(S.screen).indexOf('wo') === 0) woBack();
+  else if (S.screen==='prod') openStore(S.store);
   else if (S.screen==='dir') { S.q=''; screenStore(); }
 }
 /* ---------- автооновлення: продавець нічого не натискає ---------- */
@@ -478,6 +481,7 @@ function beat(){
 }
 function needReload(){
   if (S.cart && Object.keys(S.cart).length) return showUpd();
+  if (typeof woHasCart === 'function' && woHasCart()) return showUpd();
   location.reload();
 }
 function showUpd(){
@@ -565,6 +569,7 @@ function injectLate(){
 
 start();
 </script>
+<?!= include('ui/WriteOff') ?>
 </body>
 </html>
 

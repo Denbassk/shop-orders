@@ -1,0 +1,264 @@
+<style>
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kpis div{background:#fff;border-radius:18px;padding:14px 16px;box-shadow:0 1px 3px rgba(22,24,29,.09)}
+.kpis i{display:block;font-style:normal;font-size:12.5px;color:#7A828E;font-weight:500}
+.kpis b{display:block;font-size:22px;font-weight:800;margin-top:4px;letter-spacing:-.01em}
+.wodoc{background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(22,24,29,.09);overflow:hidden}
+.wodoc + .wodoc{margin-top:12px}
+.wodoc .h{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;background:#FAFBFC;border-bottom:1px solid #EEF0F3}
+.wodoc .r{display:flex;gap:12px;padding:9px 16px;font-size:14.5px}
+.wodoc .r .g{flex-grow:1;min-width:0}
+.wodoc .r .q{color:#7A828E;white-space:nowrap}
+.minibar{display:block;height:6px;border-radius:4px;background:#EDEFF2;margin-top:8px;overflow:hidden}
+.minibar i{display:block;height:6px;border-radius:4px;background:#AD1457}
+</style>
+<script>
+// ================= СПИСАНИЯ (WriteOff.gs) =================
+// Отдельный пункт на главной: аналитика по всем юрлицам, таблицы, действия.
+var WO_C = '#AD1457';
+var WA = { period: 'month', ent: '' };
+var WO_PERIODS = [['today', 'Сегодня'], ['yesterday', 'Вчера'], ['week', '7 дней'],
+                  ['month', 'Этот месяц'], ['prev', 'Прошлый месяц']];
+
+function woMoney(n) {
+  var s = (Math.round((n || 0) * 100) / 100).toFixed(2).replace(/\.00$/, '');
+  return s.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+function woLink(href, title, sub) {
+  return '<a class="item" href="' + attr(href) + '" target="_blank" rel="noopener" ' +
+    'style="text-decoration:none;color:inherit"><span class="grow"><span class="t">' + esc(title) + '</span>' +
+    (sub ? '<span class="s">' + esc(sub) + '</span>' : '') + '</span>' + CHEV + '</a>';
+}
+function woPill(d) {
+  return d.openedAll ? '<span class="pill warn">Открыто всем</span>'
+       : (d.closed ? '<span class="pill closed">Закрыто</span>' : '<span class="pill open">Открыто</span>');
+}
+
+// --- плашка на главной ---
+function woBriefSlot() {
+  return section('Списания', '<div id="wobrief"><button class="dir" onclick="go(\'wo\',{})">' +
+    woBriefTop('выпечка и кулинария', '') + '<span class="s" style="margin-top:14px">Загрузка…</span></button></div>');
+}
+function woBriefTop(sub, pill) {
+  return '<span class="dirtop"><span class="sq" style="background:' + WO_C + '">С</span>' +
+    '<span class="grow"><span class="t" style="font-size:17px;font-weight:700;display:block">Списания</span>' +
+    '<span class="s" style="display:block">' + sub + '</span></span>' + pill + '</span>';
+}
+function woBriefFill() {
+  call('woBrief').then(function (d) {
+    var el = document.getElementById('wobrief');
+    if (!el) return;
+    var body = !d.books
+      ? '<span class="s" style="margin-top:14px;color:#8E1418">Таблицы списаний ещё не созданы — нажмите, чтобы создать</span>'
+      : '<span style="display:flex;gap:12px;margin-top:14px">' +
+          '<span class="grow"><span class="s" style="margin:0">Сегодня подано</span>' +
+          '<span style="font-size:17px;font-weight:700">' + d.todayDocs + ' · ' + woMoney(d.todaySum) + ' грн</span></span>' +
+          '<span class="grow"><span class="s" style="margin:0">За месяц</span>' +
+          '<span style="font-size:17px;font-weight:700">' + woMoney(d.monthSum) + ' грн</span></span></span>';
+    el.innerHTML = '<button class="dir" onclick="go(\'wo\',{})">' +
+      woBriefTop('выпечка и кулинария · до ' + esc(d.deadline) +
+                 (d.todayStores ? ' · точек сегодня ' + d.todayStores : ''), woPill(d)) + body + '</button>';
+  }, function () {});
+}
+
+// --- экран "Списания" ---
+function woChips() {
+  return '<div class="chips">' + WO_PERIODS.map(function (p) {
+    return '<button class="chip' + (WA.period === p[0] ? ' on' : '') + '" onclick="woSetPeriod(\'' + p[0] + '\')">' +
+      esc(p[1]) + '</button>';
+  }).join('') + '</div>';
+}
+function woSetPeriod(p) { WA.period = p; load(); }
+function woSetEnt(e) { WA.ent = e; load(); }
+
+function loadWo() {
+  setHead('Списания', 'выпечка и кулинария');
+  view(woChips() + '<div id="wores" class="grid"><div class="spin">Считаю…</div></div>');
+  call('woStats', { period: WA.period, edrpou: WA.ent }).then(function (d) {
+    var el = document.getElementById('wores');
+    if (!el || S.screen !== 'wo') return;
+    setHead('Списания', d.periodTitle + ': ' + (d.from === d.to ? d.from : d.from + ' — ' + d.to));
+    var h = '';
+
+    if (d.books.length > 1) {
+      h += '<div class="chips" style="margin-bottom:0"><button class="chip' + (WA.ent ? '' : ' on') +
+        '" onclick="woSetEnt(\'\')">Все юрлица</button>' + d.books.map(function (b) {
+          return '<button class="chip' + (WA.ent === b.edrpou ? ' on' : '') + '" onclick="woSetEnt(\'' +
+            b.edrpou + '\')">ЄДРПОУ ' + esc(b.edrpou) + '</button>';
+        }).join('') + '</div>';
+    }
+
+    if (!d.books.length)
+      h += '<div class="bad">Таблиц списаний ещё нет — продавцы не смогут подать списание. ' +
+           'Нажмите «Создать таблицы» внизу.</div>';
+    d.missing.forEach(function (m) {
+      h += '<div class="bad">Нет таблицы для <b>ЄДРПОУ ' + esc(m.edrpou) + '</b> — ' + m.stores.length +
+        ' точек не смогут подать списание: ' + esc(m.stores.slice(0, 6).join(', ')) +
+        (m.stores.length > 6 ? '…' : '') + '. Нажмите «Создать таблицы» внизу.</div>';
+    });
+    if (!d.costCol)
+      h += '<div class="note">Сумма считается по <b>продажной цене</b>: в листе «Ассортимент» выпечки нет ' +
+           'колонки «Собівартість». Добавьте колонку с таким заголовком — новые списания сразу пойдут по себестоимости.</div>';
+
+    h += '<div class="kpis">' +
+      '<div><i>Сумма</i><b>' + woMoney(d.total) + ' грн</b></div>' +
+      '<div><i>Количество</i><b>' + d.qty + ' шт</b></div>' +
+      '<div><i>Подач</i><b>' + d.docs + '</b></div>' +
+      '<div><i>Точек списывали</i><b>' + d.storesCount + ' из ' + d.storesAll + '</b></div></div>';
+
+    h += '<div class="info" style="display:flex;align-items:center;gap:12px"><span class="grow">Приём списаний ' +
+      (d.openedAll ? 'открыт <b>до конца дня</b>' : (d.closed ? '<b>закрыт</b> до завтра' : 'открыт')) +
+      ' · дедлайн ' + esc(d.deadline) + ' ежедневно<br><span style="color:#7A828E;font-size:13.5px">' +
+      'Продавец удаляет своё списание до ' + esc(d.deadline) + ' в день подачи. В архив — старше ' +
+      d.keepDays + ' дней.</span></span>' + woPill(d) + '</div>';
+
+    if (d.books.length) {
+      var maxE = Math.max.apply(null, d.books.map(function (b) { return b.sum; }).concat([1]));
+      h += section('По юрлицам', '<div class="card">' + d.books.map(function (b) {
+        return '<div class="item"><span class="grow"><span class="t">ЄДРПОУ ' + esc(b.edrpou) + '</span>' +
+          '<span class="s">точек сейчас ' + b.storesNow + ' · списывали ' + b.active + ' · ' + b.qty + ' шт</span>' +
+          '<span class="minibar"><i style="width:' + Math.round(b.sum / maxE * 100) + '%"></i></span></span>' +
+          '<span class="right">' + woMoney(b.sum) + ' грн</span></div>';
+      }).join('') + '</div>');
+    }
+
+    if (d.stores.length) {
+      var maxS = d.stores[0].sum || 1;
+      h += section('По точкам (' + d.stores.length + ')', '<div class="card">' + d.stores.map(function (s) {
+        var moved = s.nowEdrpou && s.nowEdrpou !== s.edrpou;
+        var sub = (s.code ? '№ ' + esc(s.code) + ' · ' : '') + 'подач ' + s.docs + ' · ' + s.qty + ' шт' +
+          ' · ЄДРПОУ ' + esc(s.edrpou) +
+          (moved ? ' <b style="color:#6B4A00">→ теперь ' + esc(s.nowEdrpou) + '</b>' : '') +
+          '<span class="minibar"><i style="width:' + Math.round(s.sum / maxS * 100) + '%"></i></span>';
+        return item(s.label, sub, woMoney(s.sum) + ' грн', 'go(\'wostore\',{store:\'' + attr(s.id) + '\'})');
+      }).join('') + '</div>');
+    } else {
+      h += '<div class="info">За этот период списаний нет.</div>';
+    }
+
+    if (d.products.length) {
+      h += section('Топ товаров', '<div class="card">' + d.products.map(function (p) {
+        return '<div class="item" style="min-height:56px"><span class="grow"><span class="t" style="font-size:15px">' +
+          esc(p.name) + '</span><span class="s">' + esc(p.cat) + ' · ' + p.qty + ' шт</span></span>' +
+          '<span class="right">' + woMoney(p.sum) + ' грн</span></div>';
+      }).join('') + '</div>');
+    }
+
+    if (d.days.length > 1) {
+      var maxD = Math.max.apply(null, d.days.map(function (x) { return x.sum; }).concat([1]));
+      h += section('По дням списания', '<div class="card">' + d.days.map(function (x) {
+        return '<div class="item" style="min-height:52px;padding:12px 16px"><span style="flex:none;width:92px;font-size:14.5px;font-weight:600">' +
+          esc(x.date) + '</span><span class="bar"><i style="width:' + Math.round(x.sum / maxD * 100) +
+          '%;background:' + WO_C + '"></i></span><span class="right" style="min-width:92px">' +
+          woMoney(x.sum) + ' грн</span></div>';
+      }).join('') + '</div>');
+    }
+
+    if (d.silent.length) {
+      h += section('Не списывали за период (' + d.silent.length + ')',
+        '<div class="info" style="font-size:14px;color:#5A626D">' + esc(d.silent.join(' · ')) + '</div>');
+    }
+
+    var files = '';
+    d.books.forEach(function (b) {
+      files += woLink(b.url, 'Таблица ЄДРПОУ ' + b.edrpou, 'Google Таблица: «Списання», «Архів», «Зведена»');
+      if (b.xlsx) files += woLink(b.xlsx, 'Excel ЄДРПОУ ' + b.edrpou, 'только лист «Списання»');
+    });
+    if (files) h += section('Таблицы юрлиц', '<div class="card">' + files + '</div>');
+
+    h += section('Управление', '<div class="card">' +
+      (d.openedAll
+        ? item('Вернуть обычный режим', 'приём снова закрывается в ' + esc(d.deadline), '', 'askWoOpen(false)')
+        : item('Открыть приём до конца дня', 'сегодня дедлайн ' + esc(d.deadline) + ' не действует', '', 'askWoOpen(true)')) +
+      item('Перенести старое в архив', 'строки старше ' + d.keepDays + ' дней → лист «Архів» (делается и сам ночью)', '', 'askWoArchive()') +
+      item('Создать недостающие таблицы', 'для каждого ЄДРПОУ из колонки T Довідника', '', 'askWoSetup()') +
+      '</div>');
+
+    el.innerHTML = h;
+  }).catch(fail);
+}
+
+// --- списания одной точки ---
+function loadWoStore(id) {
+  setHead('Списания точки', '');
+  view(woChips() + '<div id="wores" class="grid"><div class="spin">Загрузка…</div></div>');
+  call('woStore', { storeId: id, period: WA.period }).then(function (d) {
+    var el = document.getElementById('wores');
+    if (!el || S.screen !== 'wostore') return;
+    S.woStore = d;
+    setHead(d.label, 'списания · ' + d.periodTitle);
+    var h = '<div class="kpis"><div><i>Сумма</i><b>' + woMoney(d.total) + ' грн</b></div>' +
+      '<div><i>Подач</i><b>' + d.docs.length + '</b></div></div>';
+    h += '<div class="info">' + (d.code ? '№ ' + esc(d.code) + ' · ' : '') +
+      (d.edrpou ? 'сейчас пишет в <b>ЄДРПОУ ' + esc(d.edrpou) + '</b> (колонка T Довідника)' : 'точки нет среди активных') +
+      '<br><span style="color:#7A828E;font-size:13.5px">' + esc(d.from) + ' — ' + esc(d.to) + '</span></div>';
+    if (d.bookUrl) h += '<div class="card">' + woLink(d.bookUrl, 'Открыть таблицу юрлица', 'Google Таблица') + '</div>';
+    if (!d.docs.length) h += '<div class="info">За этот период списаний нет.</div>';
+    d.docs.forEach(function (doc, i) {
+      h += '<div class="wodoc"><div class="h"><span class="grow"><span class="t">Списание за ' + esc(doc.date) + '</span>' +
+        '<span class="s">подано ' + esc(doc.at) + ' · ' + doc.items.length + ' поз. · ЄДРПОУ ' + esc(doc.edrpou) +
+        (doc.sheet === 'Архів' ? ' · в архиве' : '') + '</span></span>' +
+        '<span class="right">' + woMoney(doc.total) + ' грн</span></div>' +
+        doc.items.map(function (it) {
+          return '<div class="r"><span class="g">' + esc(it.name) + '</span><span class="q">' + it.qty +
+            ' × ' + woMoney(it.price) + ' = ' + woMoney(it.sum) + '</span></div>';
+        }).join('') +
+        '<div style="padding:8px 16px 14px"><button class="btn ghost" style="height:46px;color:#B3261E" ' +
+        'onclick="askWoDelete(' + i + ')">Удалить это списание</button></div></div>';
+    });
+    el.innerHTML = h;
+  }).catch(fail);
+}
+
+// --- действия ---
+function askWoDelete(i) {
+  var d = S.woStore, doc = d && d.docs[i];
+  if (!doc) return;
+  confirmSheet({
+    title: 'Удалить списание?', sub: d.label + ' · за ' + doc.date,
+    what: [doc.items.length + ' позиций на ' + woMoney(doc.total) + ' грн удалятся из таблицы ЄДРПОУ ' + doc.edrpou,
+           'Сумма больше не пойдёт в счёт зарплаты продавцов',
+           'Действие попадёт в журнал'],
+    yes: 'Да, удалить',
+    run: function () { return call('woDelete', { docId: doc.id }); },
+    done: function (r) { toast('Удалено строк: ' + r.removed); apply('wostore', { store: d.id }); }
+  });
+}
+function askWoOpen(on) {
+  confirmSheet({
+    title: on ? 'Открыть приём списаний?' : 'Вернуть обычный режим?', sub: 'Списания',
+    what: on ? ['До конца сегодняшнего дня все точки смогут подать и удалить своё списание',
+                'Завтра снова действует дедлайн']
+             : ['Приём снова закрывается в дедлайн', 'Поданные списания остаются на месте'],
+    yes: on ? 'Открыть' : 'Вернуть',
+    run: function () { return call('woOpen', { on: on }); },
+    done: function () { toast(on ? 'Открыто до конца дня' : 'Обычный режим'); apply('wo', {}); }
+  });
+}
+function askWoArchive() {
+  confirmSheet({
+    title: 'Перенести в архив?', sub: 'Списания',
+    what: ['Строки, где дата списания старше месяца, переедут на лист «Архів» той же таблицы',
+           'Ничего не удаляется — аналитика за прошлые месяцы их видит',
+           'Продавцы перестанут видеть их в «Мої списання»'],
+    yes: 'Перенести',
+    run: function () { return call('woArchive'); },
+    done: function (r) { toast('Перенесено строк: ' + r.moved); apply('wo', {}); }
+  });
+}
+function askWoSetup() {
+  confirmSheet({
+    title: 'Создать таблицы?', sub: 'Списания',
+    what: ['Для каждого ЄДРПОУ из колонки T Довідника будет своя Google Таблица',
+           'Уже созданные таблицы не трогаются, только оформление',
+           'Таблицы появятся на Google Диске владельца скрипта'],
+    yes: 'Создать',
+    run: function () { return call('woSetup'); },
+    done: function (r) {
+      var n = r.filter(function (x) { return x.created; }).length;
+      toast(n ? 'Создано таблиц: ' + n : 'Все таблицы уже есть');
+      apply('wo', {});
+    }
+  });
+}
+</script>

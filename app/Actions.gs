@@ -230,7 +230,7 @@ function d03_storeLinks() {
 function d06_installTriggers() {
   var mine = { zz_DANGER_archiveNow: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
                e04_refreshExport: 1, refreshBakeryReports: 1,
-               refreshBreadReports: 1, refreshVegReports: 1 };
+               refreshBreadReports: 1, refreshVegReports: 1, woNightly: 1 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (mine[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
   });
@@ -247,6 +247,8 @@ function d06_installTriggers() {
   ScriptApp.newTrigger('refreshBakeryReports').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('refreshBreadReports').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('refreshVegReports').timeBased().everyMinutes(5).create();
+  // списання: рядки старші за місяць - на лист "Архів" (WriteOff.gs)
+  ScriptApp.newTrigger('woNightly').timeBased().everyDays(1).atHour(2).create();
 
   console.log('Розклад поставлено:');
   d07_showTriggers();
@@ -794,4 +796,42 @@ function k03_styleRegistry() {
 
   SpreadsheetApp.flush();
   console.log('Довідник оформлено: рядків ' + (last - 1) + ', колонок ' + N);
+}
+
+// ============================================================
+// СПИСАННЯ ВИПІЧКИ І КУЛІНАРІЇ (WriteOff.gs)
+// Кожна юрособа - окрема таблиця. Куди йде списання точки - за ЄДРПОУ
+// з колонки T Довідника (порожньо = 44413718, див. BREAD_EDRPOU).
+// ============================================================
+
+/** РАЗОВО після clasp push: створює таблиці списань для всіх ЄДРПОУ точок
+ *  випічки і нічний тригер архіву. Повторний запуск безпечний: наявні
+ *  таблиці лише переоформлюються, дані не чіпає. Нове ЄДРПОУ в Довіднику -
+ *  запустити ще раз (або кнопка "Создать недостающие таблицы" в пульті). */
+function w01_setupWriteOffs() {
+  woSetup_().forEach(function (b) {
+    console.log((b.created ? 'СТВОРЕНО ' : 'є        ') + 'ЄДРПОУ ' + b.edrpou + ': ' + b.url);
+  });
+  console.log('Тригер woNightly (архів щоночі о 2:00) поставлено.');
+}
+
+/** Які таблиці є і скільки точок у кожну пишуть. */
+function w02_showWriteOffs() {
+  var books = woBooks_();
+  var cnt = {};
+  woStores_().forEach(function (s) { var e = woEdrpouOf_(s); cnt[e] = (cnt[e] || 0) + 1; });
+  Object.keys(cnt).forEach(function (e) {
+    console.log('ЄДРПОУ ' + e + ': точок ' + cnt[e] + ' - ' +
+      (books[e] ? woBookUrl_(books[e].id) : 'ТАБЛИЦІ НЕМАЄ, запустіть w01_setupWriteOffs'));
+  });
+  Object.keys(books).forEach(function (e) {
+    if (!cnt[e]) console.log('ЄДРПОУ ' + e + ': точок 0 - ' + woBookUrl_(books[e].id));
+  });
+  console.log('Прийом: до ' + WO_DEADLINE + (woClosed_() ? ' - зараз ЗАКРИТО' : ' - зараз відкрито'));
+}
+
+/** Перенести в архів рядки старші за WO_KEEP_DAYS днів просто зараз. */
+function w03_archiveWriteOffsNow() {
+  var r = woArchive_();
+  console.log('Перенесено рядків: ' + r.moved + ' (дата списання до ' + r.before + ')');
 }

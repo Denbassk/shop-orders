@@ -1,0 +1,308 @@
+<style>
+/* --- списання: плашка на екрані точки --- */
+.wob{background:#fff;border-radius:16px;margin:18px 0 6px;box-shadow:0 3px 8px rgba(0,0,0,.10);
+     overflow:hidden;border-top:4px solid #E65100}
+.wob .hd{display:flex;align-items:center;gap:13px;padding:15px 16px 13px}
+.wob .ic{width:48px;height:48px;border-radius:14px;background:#FFF0E5;flex:none;
+         display:flex;align-items:center;justify-content:center}
+.wob .ic svg{width:27px;height:27px;fill:none;stroke:#E65100;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wob .hd b{display:block;font-size:18px;font-weight:800}
+.wob .hd span{display:block;font-size:13px;color:#6b7280;margin-top:3px}
+.wob .acts{display:flex;gap:10px;padding:0 16px 16px}
+.wob .acts button{flex:1;border-radius:12px;padding:14px 6px;font-size:15px;font-weight:800;cursor:pointer;line-height:1.2}
+.wob .a1{background:#E65100;color:#fff;border:2px solid #E65100}
+.wob .a2{background:#fff;color:#E65100;border:2px solid #E65100}
+
+/* --- форма --- */
+.seg{display:flex;gap:6px;background:#fff;border-radius:15px;padding:5px;margin-bottom:12px;
+     box-shadow:0 2px 5px rgba(0,0,0,.07)}
+.seg button{flex:1;border:0;background:none;border-radius:11px;padding:10px 6px;font-size:16px;
+            font-weight:800;color:#16181d;cursor:pointer;line-height:1.2}
+.seg button small{display:block;font-size:12px;font-weight:600;opacity:.7;margin-top:2px}
+.seg button.on{background:#E65100;color:#fff}
+.seg button.on small{opacity:.9}
+.wolbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin:4px 4px 8px}
+.woinfo{background:#FFF4EC;border:1px solid #F6C9A8;color:#7a3a00;border-radius:13px;padding:12px 14px;
+        font-size:14px;margin-bottom:12px;line-height:1.5}
+.wocard .qty button.plus{background:#E65100;border-color:#E65100}
+.wocard .qty input:focus{border-color:#E65100}
+.wocard .row.has{background:#FFF4EC;box-shadow:inset 4px 0 0 #E65100}
+.btn.wo{background:#E65100}
+.btn.wo:disabled{background:#c9ccd2}
+
+/* --- перевірка --- */
+.revh{background:#fff;border-radius:15px;padding:4px 14px;margin-bottom:12px;box-shadow:0 2px 5px rgba(0,0,0,.07)}
+.revh div{display:flex;gap:12px;padding:11px 0;font-size:15px;border-bottom:1px solid #f0f1f3}
+.revh div:last-child{border-bottom:0}
+.revh i{font-style:normal;color:#6b7280;flex:none;width:112px}
+.revh b{flex:1;text-align:right}
+.ritem{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #f0f1f3}
+.ritem:last-child{border-bottom:0}
+.ritem .n{flex:1;min-width:0;font-size:15.5px;line-height:1.3}
+.ritem .n span{display:block;font-size:13px;color:#6b7280;margin-top:3px}
+.ritem .s{font-weight:800;white-space:nowrap;font-size:15.5px}
+
+/* --- мої списання --- */
+.kpi{display:flex;gap:10px;margin-bottom:12px}
+.kpi div{flex:1;background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 2px 5px rgba(0,0,0,.07)}
+.kpi i{font-style:normal;font-size:12.5px;color:#6b7280;display:block}
+.kpi b{font-size:21px;display:block;margin-top:3px}
+.doc{background:#fff;border-radius:15px;box-shadow:0 2px 5px rgba(0,0,0,.07);margin-bottom:11px;overflow:hidden}
+.doc .dh{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;background:#FAFAFB;border-bottom:1px solid #f0f1f3}
+.doc .dh .w{flex:1;min-width:0}
+.doc .dh b{font-size:16px}
+.doc .dh span{display:block;font-size:13px;color:#6b7280;margin-top:3px}
+.doc .dh .s{font-size:17px;font-weight:800;white-space:nowrap}
+.doc .it{display:flex;gap:10px;padding:8px 14px;font-size:14.5px;line-height:1.35}
+.doc .it .n{flex:1;min-width:0}
+.doc .it .q{color:#6b7280;white-space:nowrap}
+.doc .del{display:block;margin:6px 14px 13px;width:calc(100% - 28px);background:#fff;border:2px solid #e11b22;
+          color:#e11b22;border-radius:11px;padding:11px;font-weight:800;font-size:15px;cursor:pointer}
+.doc .lock{font-size:12.5px;color:#8b9098;padding:4px 14px 12px}
+</style>
+
+<script>
+/* ================= СПИСАННЯ ВИПІЧКИ І КУЛІНАРІЇ =================
+   Продавець: дата (сьогодні / вчора) -> товари -> перевірка -> відправка.
+   Окремо "Мої списання" - усе, що ще не пішло в архів. Сервер - WriteOff.gs. */
+var W = { data:null, date:'', cart:{}, q:'', cat:null, docId:'', mine:null };
+
+var WO_ICON = '<svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4.8c0-.4.4-.8.8-.8h4.4c.4 0 .8.4.8.8V7"/>' +
+  '<path d="M6 7l1 12.2c.1.9.8 1.8 1.8 1.8h6.4c1 0 1.7-.9 1.8-1.8L18 7"/><path d="M10 11v6M14 11v6"/></svg>';
+
+function woBlock(s){
+  var dl = (S.boot && S.boot.woDeadline) || '13:00';
+  return '<div class="wob"><div class="hd"><div class="ic">' + WO_ICON + '</div><div>' +
+    '<b>Списання</b><span>випічка і кулінарія · щодня до ' + esc(dl) + '</span></div></div>' +
+    '<div class="acts"><button class="a1" onclick="woOpen()">Подати списання</button>' +
+    '<button class="a2" onclick="woMy()">Мої списання</button></div></div>';
+}
+
+function woHasCart(){ return W.cart && Object.keys(W.cart).length > 0; }
+
+/* ---------- форма ---------- */
+function woOpen(){
+  S.screen = 'wo'; W.cart = {}; W.q = ''; W.cat = null; W.docId = uuid().replace(/^o/, 'w');
+  el('back').style.display = '';
+  el('ttl').textContent = 'Списання · ' + S.store.label;
+  el('bot').innerHTML = '';
+  showLoader('Хвилинку…', 'Вантажимо асортимент');
+  call('woProducts', { storeId: S.store.id }).then(function(d){
+    d.products.forEach(function(p, i){ p._i = i; });
+    W.data = d;
+    if (!W.date || !d.dates.some(function(x){ return x.v === W.date; })) W.date = d.dates[0].v;
+    if (d.closed) return woClosedScreen();
+    woDraw();
+  }).catch(fail);
+}
+
+function woClosedScreen(){
+  var d = W.data;
+  el('wrap').innerHTML = '<div class="ok"><div class="big" style="background:#8b9098">&#9201;</div>' +
+    '<h2>Прийом списань закрито</h2>' +
+    '<p>Списання приймаються щодня до <b>' + esc(d.deadline) + '</b>.</p>' +
+    '<p>Завтра до ' + esc(d.deadline) + ' можна буде подати списання за сьогодні.</p>' +
+    '<div style="height:22px"></div>' +
+    '<button class="btn wo" onclick="woMy()">Мої списання</button>' +
+    '<div style="height:12px"></div>' +
+    '<button class="chip" onclick="openStore(S.store)">← До точки</button></div>';
+  el('bot').innerHTML = '';
+}
+
+function woDraw(){
+  S.screen = 'wo';
+  var d = W.data;
+  el('ttl').textContent = 'Списання · ' + S.store.label;
+  var list = d.products.filter(function(p){
+    if (W.cat && p.category !== W.cat) return false;
+    return !W.q || p.name.toLowerCase().indexOf(W.q.toLowerCase()) >= 0;
+  });
+  var h = '';
+  if (!d.hasBook)
+    h += '<div class="err">Для юрособи цієї точки (ЄДРПОУ ' + esc(d.edrpou) + ') ще не створено ' +
+         'таблицю списань. Відправити не вийде - повідомте керівника.</div>';
+  h += '<div class="wolbl">За яку дату списання</div><div class="seg">' + d.dates.map(function(x){
+    return '<button class="' + (x.v === W.date ? 'on' : '') + '" onclick="woSetDate(\'' + x.v + '\')">' +
+      esc(x.t) + '<small>' + esc(x.v) + '</small></button>';
+  }).join('') + '</div>';
+  h += '<input class="search" id="woq" placeholder="Пошук товару…" value="' + esc(W.q) + '">';
+  if (d.categories.length > 1){
+    h += '<div class="chips"><div class="chip' + (W.cat ? '' : ' act') + '" onclick="woSetCat(-1)">Усі</div>';
+    d.categories.forEach(function(c, ci){
+      h += '<div class="chip' + (W.cat === c ? ' act' : '') + '" onclick="woSetCat(' + ci + ')">' + esc(c) + '</div>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="card wocard">';
+  if (!list.length) h += '<div class="msg">Нічого не знайдено</div>';
+  list.forEach(function(p){
+    var q = W.cart[p.id] || 0;
+    h += '<div class="row' + (q ? ' has' : '') + '" id="wr' + p._i + '">' +
+      '<div class="info"><div class="nm">' + esc(p.name) + '</div><div class="pr">' +
+      (p.price ? money(p.price) + ' грн / шт' : 'без ціни') +
+      (q && p.price ? ' · <b style="color:#16181d">' + money(p.price * q) + ' грн</b>' : '') + '</div></div>' +
+      '<div class="qty"><button onclick="woChg(' + p._i + ',-1)">−</button>' +
+      '<input type="number" inputmode="decimal" id="wi' + p._i + '" value="' + (q || '') +
+      '" onchange="woSetQ(' + p._i + ',this.value)"><button class="plus" onclick="woChg(' + p._i + ',1)">+</button></div></div>';
+  });
+  el('wrap').innerHTML = h + '</div>';
+  var qi = el('woq');
+  qi.oninput = function(){ W.q = this.value; var p = this.selectionStart; woDraw();
+    var n = el('woq'); n.focus(); n.setSelectionRange(p, p); };
+  woBot();
+}
+
+function woSetDate(v){ W.date = v; woDraw(); }
+function woSetCat(ci){ W.cat = ci < 0 ? null : W.data.categories[ci]; woDraw(); }
+function woChg(i, sign){
+  var p = W.data.products[i];
+  var v = (W.cart[p.id] || 0) + sign;
+  woSetQ(i, v < 0 ? 0 : v);
+}
+function woSetQ(i, v){
+  var p = W.data.products[i];
+  v = parseFloat(String(v).replace(',', '.'));
+  if (!(v > 0)) delete W.cart[p.id]; else W.cart[p.id] = Math.round(v * 1000) / 1000;
+  var q = W.cart[p.id] || 0;
+  var inp = el('wi' + i); if (inp) inp.value = q || '';
+  var row = el('wr' + i);
+  if (row){
+    row.className = 'row' + (q ? ' has' : '');
+    var pr = row.querySelector('.pr');
+    if (pr) pr.innerHTML = (p.price ? money(p.price) + ' грн / шт' : 'без ціни') +
+      (q && p.price ? ' · <b style="color:#16181d">' + money(p.price * q) + ' грн</b>' : '');
+  }
+  woBot();
+}
+function woTotal(){
+  var t = 0;
+  W.data.products.forEach(function(p){ if (W.cart[p.id]) t += p.price * W.cart[p.id]; });
+  return Math.round(t * 100) / 100;
+}
+function woBot(){
+  var n = Object.keys(W.cart).length;
+  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum"><b>' + money(woTotal()) +
+    ' грн</b>' + n + ' поз. · за ' + esc(W.date) + '</div>' +
+    '<button class="btn wo"' + (!n || !W.data.hasBook ? ' disabled' : '') + ' onclick="woReview()">Далі</button></div></div>';
+}
+
+/* ---------- перевірка перед відправкою ---------- */
+function woChosen(){
+  return W.data.products.filter(function(p){ return W.cart[p.id]; });
+}
+function woReview(){
+  var items = woChosen();
+  if (!items.length) return;
+  S.screen = 'woRev';
+  el('ttl').textContent = 'Перевірте списання';
+  var dl = W.data.dates.filter(function(x){ return x.v === W.date; })[0];
+  var h = '<div class="revh">' +
+    '<div><i>Торгова точка</i><b>' + esc(S.store.label) + '</b></div>' +
+    '<div><i>Дата списання</i><b>' + esc((dl ? dl.t.toLowerCase() + ', ' : '') + W.date) + '</b></div>' +
+    '<div><i>Юрособа</i><b>ЄДРПОУ ' + esc(W.data.edrpou) + '</b></div>' +
+    '<div><i>Позицій</i><b>' + items.length + '</b></div></div>';
+  h += '<div class="card">' + items.map(function(p){
+    var q = W.cart[p.id];
+    return '<div class="ritem"><div class="n">' + esc(p.name) + '<span>' + q + ' шт × ' +
+      money(p.price) + ' грн</span></div><div class="s">' + money(p.price * q) + ' грн</div></div>';
+  }).join('') + '</div>';
+  h += '<div style="text-align:center;padding-top:14px">' +
+       '<button class="chip" onclick="woDraw()">← Змінити</button></div>';
+  el('wrap').innerHTML = h;
+  window.scrollTo(0, 0);
+  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum"><b>' + money(woTotal()) +
+    ' грн</b>сума списання</div><button class="btn wo" id="wosend" onclick="woSend()">Відправити</button></div></div>';
+}
+
+function woSend(){
+  var items = woChosen().map(function(p){ return { id: p.id, qty: W.cart[p.id] }; });
+  var b = el('wosend'); if (b){ b.disabled = true; b.textContent = 'Відправка…'; }
+  woTry(items, 0);
+}
+/* Той самий docId при повторі - дубль на сервері не створиться. */
+function woTry(items, attempt){
+  call('woSubmit', { storeId: S.store.id, date: W.date, items: items, docId: W.docId })
+    .then(woDone)
+    .catch(function(e){
+      var msg = String((e && e.message) || e), b = el('wosend');
+      if (msg.indexOf('BUSY') >= 0 && attempt < 3){
+        if (b) b.textContent = 'Черга…';
+        setTimeout(function(){ woTry(items, attempt + 1); }, 4000 + attempt * 8000);
+        return;
+      }
+      alert(msg.replace(/^BUSY:\s*/, 'Сервер зайнятий. '));
+      if (b){ b.disabled = false; b.textContent = 'Відправити'; }
+    });
+}
+
+function woDone(r){
+  S.screen = 'woDone'; W.cart = {};
+  el('bot').innerHTML = '';
+  el('ttl').textContent = S.store.label;
+  el('wrap').innerHTML = '<div class="ok"><div class="big" style="background:#E65100">&#10003;</div>' +
+    '<h2>Списання прийнято</h2>' +
+    '<p><b>' + esc(r.store) + '</b></p>' +
+    '<p>за ' + esc(r.woDate) + ' · ' + r.positions + ' поз. на <b>' + money(r.total) + ' грн</b></p>' +
+    '<p style="color:#8b9098">подано о ' + esc(r.time) + ' · ЄДРПОУ ' + esc(r.edrpou) + '</p>' +
+    (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
+    '<p style="color:#8b9098;font-size:14px">Помилились? Видалити можна в «Мої списання» до ' +
+      esc((W.data && W.data.deadline) || '13:00') + '.</p>' +
+    '<div style="height:20px"></div>' +
+    '<button class="btn wo" onclick="woMy()">Мої списання</button>' +
+    '<div style="height:12px"></div>' +
+    '<button class="btn gray" onclick="woOpen()">Ще одне списання</button>' +
+    '<div style="height:12px"></div>' +
+    '<button class="chip" onclick="openStore(S.store)">← До точки</button></div>';
+}
+
+/* ---------- мої списання ---------- */
+function woMy(){
+  S.screen = 'woMy';
+  el('back').style.display = '';
+  el('ttl').textContent = 'Мої списання · ' + S.store.label;
+  el('bot').innerHTML = '';
+  showLoader('Хвилинку…', 'Збираємо ваші списання');
+  call('woMine', { storeId: S.store.id }).then(function(d){
+    W.mine = d;
+    if (S.screen !== 'woMy') return;
+    var h = '<div class="kpi"><div><i>Цього місяця</i><b>' + money(d.month) + ' грн</b></div>' +
+      '<div><i>Усього в списку</i><b>' + money(d.total) + ' грн</b></div></div>';
+    h += '<div class="woinfo">Видалити своє списання можна лише в день подачі до <b>' + esc(d.deadline) +
+      '</b>.' + (d.closed ? ' Сьогодні прийом уже закрито.' : '') +
+      ' Записи, старші за ' + d.keepDays + ' днів, переходять в архів.</div>';
+    if (!d.docs.length) h += '<div class="msg">Списань поки немає</div>';
+    d.docs.forEach(function(doc, i){
+      h += '<div class="doc"><div class="dh"><div class="w"><b>Списання за ' + esc(doc.date) + '</b>' +
+        '<span>подано ' + esc(doc.at) + ' · ' + doc.items.length + ' поз.</span></div>' +
+        '<div class="s">' + money(doc.total) + ' грн</div></div>' +
+        doc.items.map(function(it){
+          return '<div class="it"><div class="n">' + esc(it.name) + '</div><div class="q">' + it.qty +
+            ' шт · ' + money(it.sum) + ' грн</div></div>';
+        }).join('') +
+        (doc.canDelete
+          ? '<button class="del" onclick="woDel(' + i + ')">Видалити це списання</button>'
+          : '<div class="lock">Змінити вже не можна</div>') + '</div>';
+    });
+    el('wrap').innerHTML = h;
+    el('bot').innerHTML = d.closed ? '' :
+      '<div class="bot"><div class="in"><div class="sum">Прийом відкритий<b style="font-size:17px">до ' +
+      esc(d.deadline) + '</b></div><button class="btn wo" onclick="woOpen()">Подати списання</button></div></div>';
+  }).catch(fail);
+}
+
+function woDel(i){
+  var doc = W.mine && W.mine.docs[i];
+  if (!doc) return;
+  if (!confirm('Видалити списання за ' + doc.date + '?\n\n' + doc.items.length + ' поз. на ' +
+               money(doc.total) + ' грн\n\nЦе не можна скасувати.')) return;
+  call('woDelete', { storeId: S.store.id, docId: doc.id }).then(function(r){
+    alert('Списання видалено (' + r.removed + ' поз.)');
+    woMy();
+  }).catch(function(e){ alert(e.message || e); });
+}
+
+function woBack(){
+  if (S.screen === 'woRev') return woDraw();
+  openStore(S.store);
+}
+</script>
