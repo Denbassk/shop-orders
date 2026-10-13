@@ -22,7 +22,7 @@ window.google={script:{run:(function(){var o={_s:null,_f:null,withSuccessHandler
 api:function(a,p){var s=this._s;setTimeout(function(){var d;
 if(a==='bootstrap')d={stores:[{id:'tt1',label:'Валентинівська, 2',code:'14',directions:['bread','bakery'],ordered:{bread:true,bakery:false},dayOk:{bread:true,bakery:true},dayOff:{},wo:true}],
 directions:{bread:{key:'bread',title:'Хліб Рома',subtitle:'ЧП Рома',color:'#8D6E63',deadline:'16:00',closed:false},bakery:{key:'bakery',title:'Випічка і кулінарія',subtitle:'власне виробництво',color:'#E65100',deadline:'13:00',closed:false}},version:'v',today:'13.10.2026',testMode:false,woDeadline:'13:00'};
-else if(a==='woProducts')d={products:JSON.parse(JSON.stringify(PRODUCTS)),categories:['Випічка','Кулінарія'],costCol:false,dates:[{v:'13.10.2026',t:'Сьогодні'},{v:'12.10.2026',t:'Вчора'}],closed:false,deadline:'13:00',edrpou:'44413718',hasBook:true};
+else if(a==='woProducts')d={products:JSON.parse(JSON.stringify(PRODUCTS)),categories:['Випічка','Кулінарія'],costCol:false,dates:[{v:'13.10.2026',t:'Сьогодні'}],closed:false,deadline:'13:00',edrpou:'44413718',hasBook:true};
 else if(a==='woSubmit')d={docId:p.docId,store:'Валентинівська, 2',woDate:p.date,edrpou:'44413718',positions:p.items.length,qty:5,total:155,time:'10:12',date:'13.10.2026',duplicate:false};
 else if(a==='woMine')d=MINE; else d={};
 s&&s({ok:true,data:d});},50);}};return o;})()}};

@@ -159,7 +159,7 @@ window.google={script:{run:(function(){var o={_s:null,_f:null,withSuccessHandler
 api:function(a,p){var s=this._s;setTimeout(function(){var d;
 if(a==='bootstrap')d={stores:[{id:'tt1',label:'Валентинівська, 2',code:'14',directions:['bread','bakery'],ordered:{bread:true,bakery:false},dayOk:{bread:true,bakery:true},dayOff:{},wo:true}],
 directions:{bread:{key:'bread',title:'Хліб Рома',subtitle:'ЧП Рома',color:'#8D6E63',deadline:'16:00',closed:false},bakery:{key:'bakery',title:'Випічка і кулінарія',subtitle:'власне виробництво',color:'#E65100',deadline:'13:00',closed:false}},version:'v',today:'13.10.2026',testMode:false,woDeadline:'13:00'};
-else if(a==='woProducts')d={products:JSON.parse(JSON.stringify(PRODUCTS)),categories:['Випічка','Кулінарія'],costCol:false,dates:[{v:'13.10.2026',t:'Сьогодні'},{v:'12.10.2026',t:'Вчора'}],closed:false,deadline:'13:00',edrpou:'44413718',hasBook:true};
+else if(a==='woProducts')d={products:JSON.parse(JSON.stringify(PRODUCTS)),categories:['Випічка','Кулінарія'],costCol:false,dates:[{v:'13.10.2026',t:'Сьогодні'}],closed:false,deadline:'13:00',edrpou:'44413718',hasBook:true};
 else if(a==='woSubmit')d={docId:p.docId,store:'Валентинівська, 2',woDate:p.date,edrpou:'44413718',positions:p.items.length,qty:5,total:155,time:'10:12',date:'13.10.2026',duplicate:false};
 else if(a==='woMine')d=MINE; else d={};
 s&&s({ok:true,data:d});},50);}};return o;})()}};
@@ -646,7 +646,7 @@ start();
 
 <script>
 /* ================= СПИСАННЯ ВИПІЧКИ І КУЛІНАРІЇ =================
-   Продавець: дата (сьогодні / вчора) -> товари -> перевірка -> відправка.
+   Продавець: товари (за сьогодні) -> перевірка -> відправка.
    Окремо "Мої списання" - усе, що ще не пішло в архів. Сервер - WriteOff.gs. */
 var W = { data:null, date:'', cart:{}, q:'', cat:null, docId:'', mine:null };
 
@@ -704,10 +704,7 @@ function woDraw(){
   if (!d.hasBook)
     h += '<div class="err">Для цієї точки ще не налаштовано прийом списань. ' +
          'Відправити не вийде - повідомте керівника.</div>';
-  h += '<div class="wolbl">За яку дату списання</div><div class="seg">' + d.dates.map(function(x){
-    return '<button class="' + (x.v === W.date ? 'on' : '') + '" onclick="woSetDate(\'' + x.v + '\')">' +
-      esc(x.t) + '<small>' + esc(x.v) + '</small></button>';
-  }).join('') + '</div>';
+  h += '<div class="wolbl">Списання за сьогодні, ' + esc(W.date) + '</div>';
   h += '<input class="search" id="woq" placeholder="Пошук товару…" value="' + esc(W.q) + '">';
   if (d.categories.length > 1){
     h += '<div class="chips"><div class="chip' + (W.cat ? '' : ' act') + '" onclick="woSetCat(-1)">Усі</div>';
@@ -733,7 +730,6 @@ function woDraw(){
   woBot();
 }
 
-function woSetDate(v){ W.date = v; woDraw(); }
 function woSetCat(ci){ W.cat = ci < 0 ? null : W.data.categories[ci]; woDraw(); }
 function woChg(i, sign){
   var p = W.data.products[i];
