@@ -135,7 +135,7 @@ function loadWo() {
           ' · ЕГРПОУ ' + esc(s.edrpou) +
           (moved ? ' <b style="color:#6B4A00">→ теперь ' + esc(s.nowEdrpou) + '</b>' : '') +
           '<span class="minibar"><i style="width:' + Math.round(s.sum / maxS * 100) + '%"></i></span>';
-        return item(s.label, sub, woMoney(s.sum) + ' грн', 'go(\'wostore\',{store:\'' + attr(s.id) + '\'})');
+        return item(s.label, sub, woMoney(s.sum) + ' грн', 'go(\'wostore\',{store:\'' + attr(s.id) + '\'})', s.ua);
       }).join('') + '</div>');
     } else {
       h += '<div class="info">За этот период списаний нет.</div>';
@@ -191,7 +191,7 @@ function loadWoStore(id) {
     var el = document.getElementById('wores');
     if (!el || S.screen !== 'wostore') return;
     S.woStore = d;
-    setHead(d.label, 'списания · ' + d.periodTitle);
+    setHead(d.label + (d.ua ? ' · ЮА' : ''), 'списания · ' + d.periodTitle);
     var h = '<div class="kpis"><div><i>Сумма</i><b>' + woMoney(d.total) + ' грн</b></div>' +
       '<div><i>Подач</i><b>' + d.docs.length + '</b></div></div>';
     h += '<div class="info">' + (d.code ? '№ ' + esc(d.code) + ' · ' : '') +

@@ -35,6 +35,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
       min-height:104px;display:flex;flex-direction:column;justify-content:space-between}
 .cell:active{background:#fafafa;transform:scale(.98)}
 .cell .nm{font-size:17px;font-weight:700;line-height:1.25}
+.ua{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:#1565C0;
+  color:#fff;font-size:11px;font-weight:700;vertical-align:2px;letter-spacing:.3px}
 .mine{background:#fff;border:2px solid #16181d;border-radius:14px;padding:12px 14px;
       margin-bottom:12px;display:flex;align-items:center;gap:12px}
 .mine .t{flex:1;min-width:0}
@@ -234,7 +236,7 @@ function screenStore(){
   var h = '';
   var mine = myStore();
   if (mine && !S.q) h += '<div class="mine"><div class="t"><i>Ваша торгова точка</i><b>' +
-    esc(mine.label) + '</b></div><button onclick="openMine()">Відкрити</button></div>';
+    esc(mine.label) + uaTag(mine) + '</b></div><button onclick="openMine()">Відкрити</button></div>';
   h += '<input class="search" id="q" placeholder="Пошук точки…" value="' + esc(S.q) + '">';
   h += '<div class="grid">';
   if (!list.length) h += '<div class="msg">Нічого не знайдено</div>';
@@ -244,7 +246,7 @@ function screenStore(){
       var cls = {bread:'b',nbhz:'n',bakery:'k',veg:'v'}[k] || 'b';
       return '<div class="dot ' + (s.ordered[k] ? 'done' : cls) + '"></div>';
     }).join('');
-    h += '<div class="cell" onclick="pick(' + i + ')"><div class="nm">' + esc(s.label) +
+    h += '<div class="cell" onclick="pick(' + i + ')"><div class="nm">' + esc(s.label) + uaTag(s) +
          '</div><div class="dots">' + dots + '</div></div>';
   });
   h += '</div><div class="legend">Кольорові кружечки — доступні напрямки.<br>' +
@@ -255,6 +257,7 @@ function screenStore(){
   q.oninput = function(){ S.q=this.value; var p=this.selectionStart; screenStore();
     var n=el('q'); n.focus(); n.setSelectionRange(p,p); };
 }
+function uaTag(s){ return s && s.ua ? '<span class="ua">ЮА</span>' : ''; }
 function pick(i){
   var s = S._view[i];
   S.q = '';
@@ -278,7 +281,7 @@ function openStore(s){
   rememberStore(s.id);
   S.store=s; S.screen='dir'; S.dir=null; S.cart={};
   el('back').style.display='';
-  el('ttl').textContent = s.label;
+  el('ttl').textContent = s.label + (s.ua ? ' · ЮА' : '');
   el('bot').innerHTML='';
   var h = '';
   s.directions.forEach(function(k){

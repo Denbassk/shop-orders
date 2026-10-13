@@ -256,10 +256,13 @@ function section(title, inner) {
   return '<div>' + (title ? '<div class="sec">' + esc(title) + '</div>' : '') + inner + '</div>';
 }
 
-function item(title, sub, right, onclick) {
+// значок ЮА маркет (колонка T Довідника), як у продавців
+var UA_TAG = '<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;' +
+  'background:#1565C0;color:#fff;font-size:11px;font-weight:700;vertical-align:2px">ЮА</span>';
+function item(title, sub, right, onclick, ua) {
   var tag = onclick ? 'button' : 'div';
   return '<' + tag + ' class="item"' + (onclick ? ' onclick="' + onclick + '"' : '') + '>' +
-    '<span class="grow"><span class="t">' + esc(title) + '</span>' +
+    '<span class="grow"><span class="t">' + esc(title) + (ua ? UA_TAG : '') + '</span>' +
     (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' +
     (right ? '<span class="right">' + right + '</span>' : '') +
     (onclick ? CHEV : '') + '</' + tag + '>';
@@ -391,7 +394,7 @@ function loadDir(k) {
           var sub = s.n + ' позиций · ' + s.qty + ' ' + esc(ds.unit) +
                     (s.time ? ' · в ' + esc(s.time) : '') +
                     (s.code ? ' · № ' + esc(s.code) : '');
-          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})', s.ua);
         }).join('') + '</div>');
     }
 
@@ -399,7 +402,7 @@ function loadDir(k) {
       h += section('Ещё не заказали (' + ds.wait.length + ')', '<div class="card">' +
         ds.wait.map(function (s) {
           var sub = (s.code ? '№ ' + esc(s.code) : '') + (s.route ? ' · маршрут ' + esc(s.route) : '');
-          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})', s.ua);
         }).join('') + '</div>');
     } else if (byDay) {
       h += '<div class="ok">Заказали все точки, у которых сегодня приём.</div>';
@@ -409,7 +412,7 @@ function loadDir(k) {
       h += section('Сегодня не их день (' + ds.off.length + ')', '<div class="card">' +
         ds.off.map(function (s) {
           var sub = 'дни приёма: ' + esc(s.days || '—') + (s.next ? ' · ближайший ' + esc(s.next) : '');
-          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})', s.ua);
         }).join('') + '</div>');
     }
 
@@ -450,7 +453,7 @@ function loadSchedule(dir) {
             '</b> — ' + mark + '</span></div>';
         }).join('');
         return '<button class="item" style="align-items:flex-start" onclick="go(\'store\',{store:\'' +
-          attr(r.id) + '\',dir:\'\'})"><span class="grow"><span class="t">' + esc(r.label) + '</span>' +
+          attr(r.id) + '\',dir:\'\'})"><span class="grow"><span class="t">' + esc(r.label) + (r.ua ? UA_TAG : '') + '</span>' +
           '<span style="display:block;margin-top:8px">' + lines + '</span></span>' + CHEV + '</button>';
       }).join('') + '</div></div>';
 
@@ -484,7 +487,7 @@ function fillStores(q) {
                'background:' + (DIRS[k] ? DIRS[k].c : '#ccc') + ';margin-right:5px"></span>';
       }).join('');
       var sub = dots + (s.code ? '№ ' + esc(s.code) : '') + (s.route ? ' · маршрут ' + esc(s.route) : '');
-      return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'\'})');
+      return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'\'})', s.ua);
     }).join('') + '</div>';
   }).catch(fail);
 }
@@ -494,7 +497,7 @@ function loadStore(id, dir) {
   spin();
   call('store', { storeId: id, dir: dir || '' }).then(function (d) {
     S.dir = d.dir;
-    setHead(d.label, (d.code ? '№ ' + d.code : '') + (d.route ? ' · маршрут ' + d.route : ''));
+    setHead(d.label + (d.ua ? ' · ЮА' : ''), (d.code ? '№ ' + d.code : '') + (d.route ? ' · маршрут ' + d.route : ''));
 
     var sched = {};
     (d.schedule || []).forEach(function (c) { sched[c.dir] = c; });
