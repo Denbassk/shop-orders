@@ -29,12 +29,15 @@ var WO_SUM        = 'Сводная';
 var WO_OLD_NAMES  = { 'Списання': 'Списания', 'Архів': 'Архив', 'Зведена': 'Сводная' };  // перші таблиці
 var WO_MAX_ITEMS  = 150;
 var WO_MAX_QTY    = 500;
-var WO_HEAD = ['ID', 'Подано', 'Дата списания', 'Торговая точка', '№ ТТ', 'ЕГРПОУ',
+var WO_HEAD = ['ID', 'Подано', 'Дата списания', 'Торговая точка', '№ ТТ',
                'Категория', 'Штрихкод', 'Товар', 'Количество', 'Цена', 'Сумма', 'Ключ ТТ'];
 var WO_COLS = WO_HEAD.length;
 // Індекси колонок (з нуля)
 var WC = { id: 0, at: 1, date: 2, store: 3, code: 4, edrpou: 5, cat: 6, barcode: 7,
-           name: 8, qty: 9, price: 10, sum: 11, key: 12 };
+           name: 7, qty: 8, price: 9, sum: 10, key: 11 };
+// Назви юросіб для людей (вкладка "Списания", назви таблиць). Немає в списку - "ЕГРПОУ ...".
+var WO_ENTITY_NAMES = { '44413718': 'Фемели Маркет', '45672783': 'ЮА Маркет' };
+function woEntityName_(e) { return WO_ENTITY_NAMES[e] || ('ЕГРПОУ ' + e); }
 
 // ============================================================
 // ЮРОСОБИ І ТАБЛИЦІ
@@ -86,13 +89,13 @@ function woEnsureBook_(edrpou) {
   var ss = SpreadsheetApp.create(woBookTitle_(edrpou));
   ss.setSpreadsheetTimeZone('Europe/Kyiv');
   woSetupBook_(ss, edrpou);
-  books[edrpou] = { id: ss.getId(), name: 'ЕГРПОУ ' + edrpou };
+  books[edrpou] = { id: ss.getId(), name: woEntityName_(edrpou) };
   woSaveBooks_(books);
   return { id: ss.getId(), created: true };
 }
 
 // Листи і оформлення. Ідемпотентно: дані не чіпає.
-function woBookTitle_(edrpou) { return 'Списания ВК · ЕГРПОУ ' + edrpou; }
+function woBookTitle_(edrpou) { return 'Списания ВК · ' + woEntityName_(edrpou); }
 
 function woSetupBook_(ss, edrpou) {
   // таблиці, створені з українськими назвами, - перейменувати (дані на місці)
@@ -112,18 +115,18 @@ function woSetupBook_(ss, edrpou) {
   woStyleData_(arch, '#5f6368');
 
   var sum = ss.getSheetByName(WO_SUM) || ss.insertSheet(WO_SUM);
-  var q = "'" + WO_SHEET + "'!A2:M";
-  sum.getRange('A1').setValue('Сводная · ЕГРПОУ ' + edrpou + ' · строки листа «' + WO_SHEET +
+  var q = "'" + WO_SHEET + "'!A2:L";
+  sum.getRange('A1').setValue('Сводная · ' + woEntityName_(edrpou) + ' · строки листа «' + WO_SHEET +
     '» (последние ' + WO_KEEP_DAYS + ' дней, более старые - на листе «' + WO_ARCH + '»)')
     .setFontWeight('bold').setFontSize(13);
   sum.getRange('A3').setValue('По торговым точкам').setFontWeight('bold').setFontColor('#E65100');
-  sum.getRange('A4').setFormula('=IFERROR(QUERY(' + q + ', "select D, count(I), sum(J), sum(L) ' +
-    'where D is not null group by D order by sum(L) desc ' +
-    "label D 'Торговая точка', count(I) 'Строк', sum(J) 'Количество', sum(L) 'Сумма, грн'\", 0), \"пока пусто\")");
+  sum.getRange('A4').setFormula('=IFERROR(QUERY(' + q + ', "select D, count(H), sum(I), sum(K) ' +
+    'where D is not null group by D order by sum(K) desc ' +
+    "label D 'Торговая точка', count(H) 'Строк', sum(I) 'Количество', sum(K) 'Сумма, грн'\", 0), \"пока пусто\")");
   sum.getRange('G3').setValue('По товарам').setFontWeight('bold').setFontColor('#E65100');
-  sum.getRange('G4').setFormula('=IFERROR(QUERY(' + q + ', "select I, sum(J), sum(L) ' +
-    'where I is not null group by I order by sum(L) desc ' +
-    "label I 'Товар', sum(J) 'Количество', sum(L) 'Сумма, грн'\", 0), \"пока пусто\")");
+  sum.getRange('G4').setFormula('=IFERROR(QUERY(' + q + ', "select H, sum(I), sum(K) ' +
+    'where H is not null group by H order by sum(K) desc ' +
+    "label H 'Товар', sum(I) 'Количество', sum(K) 'Сумма, грн'\", 0), \"пока пусто\")");
   sum.setColumnWidth(1, 300); sum.setColumnWidth(7, 300);
   sum.setTabColor('#1565C0');
 
@@ -135,6 +138,8 @@ function woStyleData_(sh, color) {
   // перші таблиці мали колонку M "Цена по"/"Ціна за" (собівартість чи продажна) - прибрати
   var m = String(sh.getRange(1, 13).getValue() || '');
   if (/^(Цена по|Ціна за)$/.test(m)) sh.deleteColumn(13);
+  // і колонку F "ЕГРПОУ" - юрособу і так видно з того, чия це таблиця
+  if (/^(ЕГРПОУ|ЄДРПОУ)$/.test(String(sh.getRange(1, 6).getValue() || ''))) sh.deleteColumn(6);
   sh.getRange(1, 1, 1, WO_COLS).setValues([WO_HEAD])
     .setFontWeight('bold').setBackground(color).setFontColor('#ffffff');
   sh.setFrozenRows(1);
@@ -142,11 +147,11 @@ function woStyleData_(sh, color) {
   sh.getRange(2, WC.id + 1, rows, 1).setNumberFormat('@');
   sh.getRange(2, WC.at + 1, rows, 1).setNumberFormat('dd.MM.yyyy HH:mm');
   sh.getRange(2, WC.date + 1, rows, 1).setNumberFormat('dd.MM.yyyy');
-  sh.getRange(2, WC.code + 1, rows, 3).setNumberFormat('@');          // № ТТ, ЄДРПОУ, категорія
+  sh.getRange(2, WC.code + 1, rows, 2).setNumberFormat('@');          // № ТТ, категорія
   sh.getRange(2, WC.barcode + 1, rows, 1).setNumberFormat('@');
   sh.getRange(2, WC.qty + 1, rows, 1).setNumberFormat('0.###');
   sh.getRange(2, WC.price + 1, rows, 2).setNumberFormat('0.00');
-  var widths = [90, 125, 105, 260, 60, 85, 100, 120, 280, 80, 70, 85, 60];
+  var widths = [90, 125, 105, 260, 60, 100, 120, 280, 80, 70, 85, 60];
   widths.forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
   sh.hideColumns(WC.key + 1);
 }
@@ -261,7 +266,7 @@ function woRowObj_(r, rowNum, bookEdrpou, sheetName) {
     row: rowNum, sheet: sheetName, book: bookEdrpou,
     id: String(r[WC.id] || ''), at: r[WC.at], date: r[WC.date], dateNum: woNum_(r[WC.date]),
     store: String(r[WC.store] || ''), code: String(r[WC.code] || ''),
-    edrpou: String(r[WC.edrpou] || ''), cat: String(r[WC.cat] || ''),
+    edrpou: bookEdrpou, cat: String(r[WC.cat] || ''),
     barcode: String(r[WC.barcode] || ''), name: String(r[WC.name] || ''),
     qty: Number(r[WC.qty]) || 0, price: Number(r[WC.price]) || 0, sum: Number(r[WC.sum]) || 0,
     key: String(r[WC.key] || '')
@@ -329,15 +334,15 @@ function apiWoProducts_(payload) {
   var p = woProducts_();
   var edrpou = woEdrpouOf_(store);
   return {
+    // без цін і ЄДРПОУ: продавцю вони не потрібні, суму рахує сервер
     products: p.products.map(function (x) {
-      return { id: x.id, name: x.name, category: x.category, price: x.price };
+      return { id: x.id, name: x.name, category: x.category };
     }),
     categories: p.categories,
     costCol: p.costCol,
     dates: woAllowedDates_(),
     closed: woClosed_(),
     deadline: WO_DEADLINE,
-    edrpou: edrpou,
     hasBook: !!(woBooks_()[edrpou] || {}).id
   };
 }
@@ -359,7 +364,7 @@ function apiWoSubmit_(payload) {
   var edrpou = woEdrpouOf_(store);
   var book = woBooks_()[edrpou];
   if (!book || !book.id)
-    throw new Error('Для юрособи ЄДРПОУ ' + edrpou + ' ще не створено таблицю списань. Повідомте керівника.');
+    throw new Error('Для цієї точки ще не налаштовано прийом списань. Повідомте керівника.');
 
   // ціни - тільки з сервера, телефону не віримо
   var byId = {};
@@ -384,13 +389,13 @@ function apiWoSubmit_(payload) {
     if (q > WO_MAX_QTY) throw new Error('Перевірте кількість: ' + p.name + ' - ' + q);
     var s = Math.round(p.price * q * 100) / 100;
     total += s; qty += q;
-    return [docId, now, wdate, store.label, store.code, edrpou, p.category, p.barcode,
+    return [docId, now, wdate, store.label, store.code, p.category, p.barcode,
             p.name, q, p.price, s, store.id];
   });
   total = Math.round(total * 100) / 100;
 
   var result = {
-    docId: docId, store: store.label, woDate: date, edrpou: edrpou,
+    docId: docId, store: store.label, woDate: date,
     positions: values.length, qty: Math.round(qty * 1000) / 1000, total: total,
     time: Utilities.formatDate(now, 'Europe/Kyiv', 'HH:mm'),
     date: woToday_()                       // день подачі: за ним нічна чистка прибирає ключ
@@ -435,12 +440,13 @@ function apiWoMine_(payload) {
     d.canDelete = !closed && d.at.indexOf(today) === 0;
     sum += d.total;
     if (d.dateNum >= monthFrom) month += d.total;
-    delete d.atNum; delete d.key; delete d.sheet;
+    delete d.atNum; delete d.key; delete d.sheet; delete d.book; delete d.edrpou;
+    // продавцю - без цін: по товарах лише кількість, суми - тільки разом
+    d.items = d.items.map(function (it) { return { name: it.name, qty: it.qty }; });
   });
   return {
     docs: docs, closed: closed, deadline: WO_DEADLINE, keepDays: WO_KEEP_DAYS,
-    total: Math.round(sum * 100) / 100, month: Math.round(month * 100) / 100,
-    edrpou: woEdrpouOf_(store)
+    total: Math.round(sum * 100) / 100, month: Math.round(month * 100) / 100
   };
 }
 
@@ -576,7 +582,7 @@ function woIndexSheet_() {
   var rows = Object.keys(books).sort(function (a, b) { return (cnt[b] || 0) - (cnt[a] || 0); })
     .map(function (e) {
       var url = woBookUrl_(books[e].id);
-      return ['ЕГРПОУ ' + e, cnt[e] || 0,
+      return [woEntityName_(e), cnt[e] || 0,
               url];
     });
   sh.clear();
@@ -709,7 +715,7 @@ function admWoStats_(payload) {
     } catch (err) {}
     var en = byEnt[e] || { sum: 0, qty: 0, stores: {} };
     return {
-      edrpou: e, name: 'ЕГРПОУ ' + e, url: woBookUrl_(id), xlsx: live,
+      edrpou: e, name: woEntityName_(e), url: woBookUrl_(id), xlsx: live,
       sum: r2(en.sum), qty: r3(en.qty), active: Object.keys(en.stores).length,
       storesNow: stores.filter(function (s) { return woEdrpouOf_(s) === e; }).length
     };

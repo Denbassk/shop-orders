@@ -119,8 +119,8 @@ function woDraw(){
   });
   var h = '';
   if (!d.hasBook)
-    h += '<div class="err">Для юрособи цієї точки (ЄДРПОУ ' + esc(d.edrpou) + ') ще не створено ' +
-         'таблицю списань. Відправити не вийде - повідомте керівника.</div>';
+    h += '<div class="err">Для цієї точки ще не налаштовано прийом списань. ' +
+         'Відправити не вийде - повідомте керівника.</div>';
   h += '<div class="wolbl">За яку дату списання</div><div class="seg">' + d.dates.map(function(x){
     return '<button class="' + (x.v === W.date ? 'on' : '') + '" onclick="woSetDate(\'' + x.v + '\')">' +
       esc(x.t) + '<small>' + esc(x.v) + '</small></button>';
@@ -138,9 +138,7 @@ function woDraw(){
   list.forEach(function(p){
     var q = W.cart[p.id] || 0;
     h += '<div class="row' + (q ? ' has' : '') + '" id="wr' + p._i + '">' +
-      '<div class="info"><div class="nm">' + esc(p.name) + '</div><div class="pr">' +
-      (p.price ? money(p.price) + ' грн / шт' : 'без ціни') +
-      (q && p.price ? ' · <b style="color:#16181d">' + money(p.price * q) + ' грн</b>' : '') + '</div></div>' +
+      '<div class="info"><div class="nm">' + esc(p.name) + '</div><div class="pr">' + woRowNote(p, q) + '</div></div>' +
       '<div class="qty"><button onclick="woChg(' + p._i + ',-1)">−</button>' +
       '<input type="number" inputmode="decimal" id="wi' + p._i + '" value="' + (q || '') +
       '" onchange="woSetQ(' + p._i + ',this.value)"><button class="plus" onclick="woChg(' + p._i + ',1)">+</button></div></div>';
@@ -169,20 +167,23 @@ function woSetQ(i, v){
   if (row){
     row.className = 'row' + (q ? ' has' : '');
     var pr = row.querySelector('.pr');
-    if (pr) pr.innerHTML = (p.price ? money(p.price) + ' грн / шт' : 'без ціни') +
-      (q && p.price ? ' · <b style="color:#16181d">' + money(p.price * q) + ' грн</b>' : '');
+    if (pr) pr.innerHTML = woRowNote(p, q);
   }
   woBot();
 }
-function woTotal(){
+/* Ціни продавцю не показуємо - лише кількість; суму рахує сервер і показує після відправки. */
+function woRowNote(p, q){
+  return q ? '<b style="color:#E65100">у списанні: ' + q + ' шт</b>' : esc(p.category);
+}
+function woPcs(){
   var t = 0;
-  W.data.products.forEach(function(p){ if (W.cart[p.id]) t += p.price * W.cart[p.id]; });
-  return Math.round(t * 100) / 100;
+  Object.keys(W.cart).forEach(function(id){ t += W.cart[id]; });
+  return Math.round(t * 1000) / 1000;
 }
 function woBot(){
   var n = Object.keys(W.cart).length;
-  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum"><b>' + money(woTotal()) +
-    ' грн</b>' + n + ' поз. · за ' + esc(W.date) + '</div>' +
+  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum"><b>' + woPcs() +
+    ' шт</b>' + n + ' поз. · за ' + esc(W.date) + '</div>' +
     '<button class="btn wo"' + (!n || !W.data.hasBook ? ' disabled' : '') + ' onclick="woReview()">Далі</button></div></div>';
 }
 
@@ -199,19 +200,18 @@ function woReview(){
   var h = '<div class="revh">' +
     '<div><i>Торгова точка</i><b>' + esc(S.store.label) + '</b></div>' +
     '<div><i>Дата списання</i><b>' + esc((dl ? dl.t.toLowerCase() + ', ' : '') + W.date) + '</b></div>' +
-    '<div><i>Юрособа</i><b>ЄДРПОУ ' + esc(W.data.edrpou) + '</b></div>' +
     '<div><i>Позицій</i><b>' + items.length + '</b></div></div>';
   h += '<div class="card">' + items.map(function(p){
     var q = W.cart[p.id];
-    return '<div class="ritem"><div class="n">' + esc(p.name) + '<span>' + q + ' шт × ' +
-      money(p.price) + ' грн</span></div><div class="s">' + money(p.price * q) + ' грн</div></div>';
+    return '<div class="ritem"><div class="n">' + esc(p.name) + '<span>' + esc(p.category) +
+      '</span></div><div class="s">' + q + ' шт</div></div>';
   }).join('') + '</div>';
   h += '<div style="text-align:center;padding-top:14px">' +
        '<button class="chip" onclick="woDraw()">← Змінити</button></div>';
   el('wrap').innerHTML = h;
   window.scrollTo(0, 0);
-  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum"><b>' + money(woTotal()) +
-    ' грн</b>сума списання</div><button class="btn wo" id="wosend" onclick="woSend()">Відправити</button></div></div>';
+  el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum"><b>' + woPcs() +
+    ' шт</b>' + items.length + ' поз. до списання</div><button class="btn wo" id="wosend" onclick="woSend()">Відправити</button></div></div>';
 }
 
 function woSend(){
@@ -243,7 +243,7 @@ function woDone(r){
     '<h2>Списання прийнято</h2>' +
     '<p><b>' + esc(r.store) + '</b></p>' +
     '<p>за ' + esc(r.woDate) + ' · ' + r.positions + ' поз. на <b>' + money(r.total) + ' грн</b></p>' +
-    '<p style="color:#8b9098">подано о ' + esc(r.time) + ' · ЄДРПОУ ' + esc(r.edrpou) + '</p>' +
+    '<p style="color:#8b9098">подано о ' + esc(r.time) + '</p>' +
     (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
     '<p style="color:#8b9098;font-size:14px">Помилились? Видалити можна в «Мої списання» до ' +
       esc((W.data && W.data.deadline) || '13:00') + '.</p>' +
@@ -277,7 +277,7 @@ function woMy(){
         '<div class="s">' + money(doc.total) + ' грн</div></div>' +
         doc.items.map(function(it){
           return '<div class="it"><div class="n">' + esc(it.name) + '</div><div class="q">' + it.qty +
-            ' шт · ' + money(it.sum) + ' грн</div></div>';
+            ' шт</div></div>';
         }).join('') +
         (doc.canDelete
           ? '<button class="del" onclick="woDel(' + i + ')">Видалити це списання</button>'
