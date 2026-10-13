@@ -580,7 +580,7 @@ function woIndexSheet_() {
   sh.clear();
   sh.getRange(1, 1).setValue('Списания выпечки и кулинарии - отдельная таблица на каждое юрлицо')
     .setFontWeight('bold').setFontSize(12);
-  sh.getRange(2, 1).setValue('Юрлицо точки - по колонке T (ЕГРПОУ) Довідника ТТ. Новое юрлицо - пульт → Списания → «Создать недостающие таблицы».')
+  sh.getRange(2, 1).setValue('Юрлицо точки - по колонке T (ЕГРПОУ) Довідника ТТ.')
     .setFontColor('#666666');
   var head = sh.getRange(4, 1, 1, 3).setValues([['Юрлицо', 'Точек', 'Таблица']]);
   ss.getSheetByName(cfg.productsSheet) && ss.getSheetByName(cfg.productsSheet).getRange(1, 2)
