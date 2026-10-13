@@ -869,15 +869,37 @@ function w04_addCostColumn() {
   }
   var col = w + 1;
   if (col > sh.getMaxColumns()) sh.insertColumnsAfter(sh.getMaxColumns(), col - sh.getMaxColumns());
-  sh.getRange(1, 1).copyTo(sh.getRange(1, col), SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
   sh.getRange(1, col).setValue('Себестоимость')
     .setNote('Ціна для СПИСАНЬ (грн за шт). Порожньо = рахується за продажною ціною з колонки D.');
-  var rows = Math.max(sh.getMaxRows() - 1, 1);
-  sh.getRange(2, col, rows, 1).setNumberFormat('0.00').setBackground('#FFF8E1');
-  sh.setColumnWidth(col, 110);
+  costStyle_(sh, col);
   try { CacheService.getScriptCache().remove('wo_prod_v1'); } catch (e) {}
   console.log('Додано колонку ' + String.fromCharCode(64 + col) + ' "Себестоимость" у "' +
               cfg.productsSheet + '". Заповнюйте - списання підхоплять самі.');
+}
+
+// Оформити колонку собівартості так само, як колонку ціни D: шрифт, рамки,
+// фон, вирівнювання по центру, ширина; числа - 0.00. Значення не чіпає.
+function costStyle_(sh, col) {
+  var rows = sh.getMaxRows();
+  sh.getRange(1, 4, rows, 1).copyTo(sh.getRange(1, col, rows, 1),
+                                    SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+  sh.getRange(1, col, rows, 1).setHorizontalAlignment('center').setVerticalAlignment('middle');
+  if (rows > 1) sh.getRange(2, col, rows - 1, 1).setNumberFormat('0.00');
+  sh.setColumnWidth(col, Math.max(sh.getColumnWidth(4), 110));
+}
+
+/** Оформити колонку "Себестоимость" в одному стилі з рештою таблиці
+ *  (як колонка "Цена" D, по центру, 0.00). Цифри не змінює. Можна запускати повторно. */
+function w07_styleCostColumn() {
+  var cfg = dirCfg_('bakery');
+  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
+  if (!sh) throw new Error('Немає листа "' + cfg.productsSheet + '"');
+  var head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  var col = 0;
+  head.forEach(function (h, i) { if (!col && /собів|себест/i.test(String(h))) col = i + 1; });
+  if (!col) throw new Error('Немає колонки "Себестоимость" - спершу запустіть w04_addCostColumn');
+  costStyle_(sh, col);
+  console.log('Колонку ' + String.fromCharCode(64 + col) + ' оформлено як колонку D (по центру, 0.00).');
 }
 
 /** Показати, як довідка собівартості (WriteOffCosts.gs) зіставилась
