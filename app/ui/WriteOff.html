@@ -63,7 +63,7 @@
 
 <script>
 /* ================= СПИСАННЯ ВИПІЧКИ І КУЛІНАРІЇ =================
-   Продавець: дата (сьогодні / вчора) -> товари -> перевірка -> відправка.
+   Продавець: товари (за сьогодні) -> перевірка -> відправка.
    Окремо "Мої списання" - усе, що ще не пішло в архів. Сервер - WriteOff.gs. */
 var W = { data:null, date:'', cart:{}, q:'', cat:null, docId:'', mine:null };
 
@@ -121,10 +121,7 @@ function woDraw(){
   if (!d.hasBook)
     h += '<div class="err">Для цієї точки ще не налаштовано прийом списань. ' +
          'Відправити не вийде - повідомте керівника.</div>';
-  h += '<div class="wolbl">За яку дату списання</div><div class="seg">' + d.dates.map(function(x){
-    return '<button class="' + (x.v === W.date ? 'on' : '') + '" onclick="woSetDate(\'' + x.v + '\')">' +
-      esc(x.t) + '<small>' + esc(x.v) + '</small></button>';
-  }).join('') + '</div>';
+  h += '<div class="wolbl">Списання за сьогодні, ' + esc(W.date) + '</div>';
   h += '<input class="search" id="woq" placeholder="Пошук товару…" value="' + esc(W.q) + '">';
   if (d.categories.length > 1){
     h += '<div class="chips"><div class="chip' + (W.cat ? '' : ' act') + '" onclick="woSetCat(-1)">Усі</div>';
@@ -150,7 +147,6 @@ function woDraw(){
   woBot();
 }
 
-function woSetDate(v){ W.date = v; woDraw(); }
 function woSetCat(ci){ W.cat = ci < 0 ? null : W.data.categories[ci]; woDraw(); }
 function woChg(i, sign){
   var p = W.data.products[i];
