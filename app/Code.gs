@@ -32,6 +32,11 @@ function api(action, payload) {
       case 'submitOrder': data = apiSubmitOrder_(payload); break;
       case 'requestLate': data = apiRequestLate_(payload); break;
       case 'refresh':     data = apiRefresh_(payload); break;
+      // списання випічки і кулінарії - WriteOff.gs
+      case 'woProducts':  data = apiWoProducts_(payload); break;
+      case 'woSubmit':    data = apiWoSubmit_(payload); break;
+      case 'woMine':      data = apiWoMine_(payload); break;
+      case 'woDelete':    data = apiWoDelete_(payload); break;
       default: throw new Error('Невідома дія: ' + action);
     }
     return { ok: true, data: data };
@@ -79,12 +84,15 @@ function apiBootstrap_() {
     });
     return { id: s.id, label: s.label, code: s.code,
              directions: dirKeys, ordered: ordered,
-             dayOk: dayOk, dayOff: dayOff };
+             dayOk: dayOk, dayOff: dayOff,
+             // списання випічки: за колонкою H Довідника, навіть якщо заказ вимкнено
+             wo: s.directions.indexOf('bakery') >= 0 };
   });
 
   return {
     stores: list, directions: dirs, version: APP_VERSION,
-    today: formatDateDMY_(new Date()), testMode: TEST_MODE
+    today: formatDateDMY_(new Date()), testMode: TEST_MODE,
+    woDeadline: WO_DEADLINE
   };
 }
 

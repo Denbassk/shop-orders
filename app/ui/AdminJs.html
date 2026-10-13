@@ -24,7 +24,8 @@ function attr(s) { return esc(s).replace(/\|/g, ''); }
 // ===== БЫСТРЫЙ ПУЛЬТ: кеш экранов + фоновое обновление + предзагрузка =====
 // Каждый вызов сервера стоит 1-3 с на связь, поэтому экран показывается
 // из сохранённого сразу, а свежие данные приходят фоном.
-var SWR_READ = { today: 1, dirStores: 1, stores: 1, store: 1, schedule: 1, log: 1 };
+var SWR_READ = { today: 1, dirStores: 1, stores: 1, store: 1, schedule: 1, log: 1,
+                 woBrief: 1, woStats: 1, woStore: 1 };
 var SWR_MAX_AGE = 10 * 60 * 1000;   // старше - не показываем, ждём сервер
 var SWR_FRESH = 8000;               // столько после ответа сервера не переспрашиваем
 var SWR_LS = 'adm_swr_v1';
@@ -43,7 +44,10 @@ function swrSave() {
 }
 function swrClear() { SWR = {}; SWR_PREFETCH_AT = 0; try { localStorage.removeItem(SWR_LS); } catch (e) {} }
 function swrKey(a, p) { return a + '|' + JSON.stringify(p || {}); }
-function swrSig() { return JSON.stringify([S.screen, S.dir, S.store, S.q, HIST.length]); }
+function swrSig() {
+  return JSON.stringify([S.screen, S.dir, S.store, S.q, HIST.length,
+    typeof WA === 'object' ? WA.period + WA.ent : '']);
+}
 function swrPut(k, d) { SWR[k] = { t: Date.now(), d: d }; swrSave(); }
 
 function swrRerender(sig) {
@@ -222,6 +226,8 @@ function load() {
   if (S.screen === 'health') return loadHealth();
   if (S.screen === 'edit') return loadEdit(S.store, S.dir);
   if (S.screen === 'card') return loadCard(S.store);
+  if (S.screen === 'wo') return loadWo();
+  if (S.screen === 'wostore') return loadWoStore(S.store);
 }
 
 // ================= ОБЩЕЕ =================
@@ -234,7 +240,7 @@ function setHead(title, sub) {
 function tabs(name) {
   var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today',
               stores: 'stores', store: 'stores', restore: 'restore', log: 'log',
-              health: 'today', edit: 'stores', card: 'stores' };
+              health: 'today', edit: 'stores', card: 'stores', wo: 'today', wostore: 'today' };
   var on = map[name] || 'today';
   ['today', 'stores', 'restore', 'log'].forEach(function (k) {
     var el = document.getElementById('t-' + k);
@@ -315,6 +321,7 @@ function loadToday() {
       stale.map(function (x) { return esc(DIRS[x.key] ? DIRS[x.key].short : x.key); }).join(', ') +
       '. Нажмите, чтобы проверить.</button>';
     h += section('Направления', cards);
+    h += woBriefSlot();                       // списания - отдельным пунктом (WriteOffAdminJs)
 
     h += section('Быстрые действия', '<div class="card">' +
       item('График по точкам', 'кому какие дни и что доступно сегодня', '', 'go(\'schedule\',{dir:\'\'})') +
@@ -326,6 +333,7 @@ function loadToday() {
       '</div>');
 
     view(h);
+    woBriefFill();
   }).catch(fail);
 }
 
@@ -541,6 +549,9 @@ function loadStore(id, dir) {
       '', 'askClearMark(\'' + attr(d.id) + '\',\'' + d.dir + '\')');
     if (d.rows.length) acts += item('Изменить заказ', 'поправить количество или убрать позиции',
       '', 'go(\'edit\',{store:\'' + attr(d.id) + '\',dir:\'' + d.dir + '\'})');
+    if (d.directions.indexOf('bakery') >= 0)
+      acts += item('Списания точки', 'выпечка и кулинария: что и на сколько списали',
+        '', 'go(\'wostore\',{store:\'' + attr(d.id) + '\'})');
     acts += item('Карточка точки', 'направления, дни, зона, ЄДРПОУ, номер',
       '', 'go(\'card\',{store:\'' + attr(d.id) + '\',dir:\'' + d.dir + '\'})');
     acts += item('Открыть приём этой точке', 'на 30 минут, даже после дедлайна',

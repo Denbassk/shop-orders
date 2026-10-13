@@ -147,6 +147,14 @@ function adminApi(action, payload, token) {
       case 'card':           data = admCard_(payload); break;
       case 'cardSave':       data = admCardSave_(payload); break;
       case 'batch':          data = admBatch_(payload, token); break;
+      // списання - WriteOff.gs
+      case 'woBrief':        data = admWoBrief_(); break;
+      case 'woStats':        data = admWoStats_(payload); break;
+      case 'woStore':        data = admWoStore_(payload); break;
+      case 'woDelete':       data = admWoDelete_(payload); break;
+      case 'woOpen':         data = admWoOpen_(payload); break;
+      case 'woArchive':      data = admWoArchive_(); break;
+      case 'woSetup':        data = admWoSetup_(); break;
       default: throw new Error('Невідома дія: ' + action);
     }
     return { ok: true, data: data, ms: Date.now() - t0 };
