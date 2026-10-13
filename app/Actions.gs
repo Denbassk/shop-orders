@@ -879,3 +879,19 @@ function w04_addCostColumn() {
   console.log('Додано колонку ' + String.fromCharCode(64 + col) + ' "Себестоимость" у "' +
               cfg.productsSheet + '". Заповнюйте - списання підхоплять самі.');
 }
+
+/** Показати, як довідка собівартості (WriteOffCosts.gs) зіставилась
+ *  з "Ассортиментом". НІЧОГО не пише - лише журнал. */
+function w05_previewCosts() {
+  costReport_(costPlan_());
+}
+
+/** Записати собівартість у колонку "Себестоимость" для впевнених збігів.
+ *  "Під питанням" і "не знайшлось" - не чіпає, їх заповнити руками. */
+function w06_fillCosts() {
+  var p = costPlan_();
+  costReport_(p);
+  p.sure.forEach(function (m) { p.sheet.getRange(m.row, p.col).setValue(m.src.cost); });
+  try { CacheService.getScriptCache().remove('wo_prod_v1'); } catch (e) {}
+  console.log('ЗАПИСАНО: ' + p.sure.length + ' клітинок у колонку ' + String.fromCharCode(64 + p.col) + '.');
+}
