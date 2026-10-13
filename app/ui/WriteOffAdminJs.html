@@ -84,7 +84,7 @@ function loadWo() {
       h += '<div class="chips" style="margin-bottom:0"><button class="chip' + (WA.ent ? '' : ' on') +
         '" onclick="woSetEnt(\'\')">Все юрлица</button>' + d.books.map(function (b) {
           return '<button class="chip' + (WA.ent === b.edrpou ? ' on' : '') + '" onclick="woSetEnt(\'' +
-            b.edrpou + '\')">ЕГРПОУ ' + esc(b.edrpou) + '</button>';
+            b.edrpou + '\')">' + esc(b.name) + '</button>';
         }).join('') + '</div>';
     }
 
@@ -120,8 +120,8 @@ function loadWo() {
     if (d.books.length) {
       var maxE = Math.max.apply(null, d.books.map(function (b) { return b.sum; }).concat([1]));
       h += section('По юрлицам', '<div class="card">' + d.books.map(function (b) {
-        return '<div class="item"><span class="grow"><span class="t">ЕГРПОУ ' + esc(b.edrpou) + '</span>' +
-          '<span class="s">точек сейчас ' + b.storesNow + ' · списывали ' + b.active + ' · ' + b.qty + ' шт</span>' +
+        return '<div class="item"><span class="grow"><span class="t">' + esc(b.name) + '</span>' +
+          '<span class="s">ЕГРПОУ ' + esc(b.edrpou) + ' · точек сейчас ' + b.storesNow + ' · списывали ' + b.active + ' · ' + b.qty + ' шт</span>' +
           '<span class="minibar"><i style="width:' + Math.round(b.sum / maxE * 100) + '%"></i></span></span>' +
           '<span class="right">' + woMoney(b.sum) + ' грн</span></div>';
       }).join('') + '</div>');
@@ -166,8 +166,8 @@ function loadWo() {
 
     var files = '';
     d.books.forEach(function (b) {
-      files += woLink(b.url, 'Таблица ЕГРПОУ ' + b.edrpou, 'Google Таблица: «Списания», «Архив», «Сводная»');
-      if (b.xlsx) files += woLink(b.xlsx, 'Excel ЕГРПОУ ' + b.edrpou, 'только лист «Списания»');
+      files += woLink(b.url, 'Таблица ' + b.name, 'Google Таблица: «Списания», «Архив», «Сводная»');
+      if (b.xlsx) files += woLink(b.xlsx, 'Excel ' + b.name, 'только лист «Списания»');
     });
     if (files) h += section('Таблицы юрлиц', '<div class="card">' + files + '</div>');
 
