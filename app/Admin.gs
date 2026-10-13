@@ -251,7 +251,7 @@ function admSchedule_(payload) {
         ordered: !!(map && map[statusKey_(k, s)])
       });
     });
-    return { id: s.id, label: s.label, code: s.code, route: s.route, cells: cells };
+    return { id: s.id, label: s.label, ua: isUaStore_(s), code: s.code, route: s.route, cells: cells };
   }).filter(function (r) { return r.cells.length; });
 
   rows.sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
@@ -284,7 +284,7 @@ function admStores_(payload) {
   }).slice(0, 60).map(function (s) {
     var map = dir ? status[dir] : null;
     return {
-      id: s.id, label: s.label, code: s.code, route: s.route,
+      id: s.id, label: s.label, ua: isUaStore_(s), code: s.code, route: s.route,
       zone: s.zone, directions: s.directions,
       ordered: !!(map && map[statusKey_(dir, s)])
     };
@@ -329,7 +329,7 @@ function admDirStores_(payload) {
     var d = admDays_(dir, s);
     var a = agg[statusKey_(dir, s)];
     var row = {
-      id: s.id, label: s.label, code: s.code, route: s.route,
+      id: s.id, label: s.label, ua: isUaStore_(s), code: s.code, route: s.route,
       n: a ? a.n : 0, qty: a ? Math.round(a.qty * 1000) / 1000 : 0,
       time: a ? a.time : '',
       days: d.label, next: d.next, dayOk: d.today
@@ -416,7 +416,7 @@ function admStore_(payload) {
   rows.forEach(function (r) { qty += r.qty; });
 
   return {
-    id: store.id, label: store.label, code: store.code,
+    id: store.id, label: store.label, ua: isUaStore_(store), code: store.code,
     route: store.route, zone: store.zone, directions: store.directions,
     dir: dir, dirTitle: cfg.title, unit: cfg.unit, today: today,
     sheet: rawSheetName_(cfg), firstRow: first,

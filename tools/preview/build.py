@@ -40,7 +40,7 @@ def inc(s):
 mock = r"""<script>
 try{localStorage.setItem('adm_token','T');localStorage.removeItem('adm_swr_v1');}catch(e){}
 var STATS={period:'month',periodTitle:'этот месяц',from:'01.10.2026',to:'13.10.2026',edrpou:'',total:18450.5,qty:612,docs:184,storesCount:31,storesAll:37,
-stores:[{id:'s1',label:'Валентиновская, 2',code:'14',edrpou:'44413718',nowEdrpou:'44413718',sum:1820.5,qty:61,docs:12},{id:'s2',label:'Гвардейцев Широнинцев, 49',code:'7',edrpou:'44413718',nowEdrpou:'45672783',sum:1210,qty:40,docs:9},{id:'s3',label:'Тракторостроителей, 85',code:'21',edrpou:'45672783',nowEdrpou:'45672783',sum:640,qty:22,docs:5}],
+stores:[{id:'s1',label:'Валентиновская, 2',code:'14',edrpou:'44413718',nowEdrpou:'44413718',sum:1820.5,qty:61,docs:12},{id:'s2',label:'Гвардейцев Широнинцев, 49',code:'7',edrpou:'44413718',nowEdrpou:'45672783',sum:1210,qty:40,docs:9},{id:'s3',label:'Тракторостроителей, 85',code:'21',ua:true,edrpou:'45672783',nowEdrpou:'45672783',sum:640,qty:22,docs:5}],
 products:[{name:'Салат Олів\'є, 250 г',cat:'Кулінарія',sum:3480,qty:60},{name:'Круасан з шоколадом',cat:'Випічка',sum:2275,qty:70}],
 days:[{date:'13.10.2026',sum:820},{date:'12.10.2026',sum:1640},{date:'11.10.2026',sum:1210}],silent:['Бучмы, 3','Победы, 66'],
 books:[{edrpou:'44413718',name:'',url:'#',xlsx:'#',sum:12400,qty:400,active:22,storesNow:27},{edrpou:'45672783',name:'',url:'#',xlsx:'#',sum:6050.5,qty:212,active:9,storesNow:10}],

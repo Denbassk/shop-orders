@@ -684,6 +684,7 @@ function admWoStats_(payload) {
   var storeList = Object.keys(byStore).map(function (k) {
     var s = byStore[k], cur = label[k];
     return { id: k, label: cur ? cur.label : s.label, code: cur ? cur.code : s.code,
+             ua: cur ? isUaStore_(cur) : String(s.edrpou) === UA_EDRPOU,
              edrpou: s.edrpou, nowEdrpou: cur ? woEdrpouOf_(cur) : '',
              sum: r2(s.sum), qty: r3(s.qty), docs: Object.keys(s.docs).length };
   }).sort(function (a, b) { return b.sum - a.sum; });
@@ -747,6 +748,7 @@ function admWoStore_(payload) {
   docs.forEach(function (d) { total += d.total; qty += d.qty; delete d.atNum; delete d.key; });
   return {
     id: key, label: cur ? cur.label : (docs[0] ? docs[0].store : key), code: cur ? cur.code : '',
+    ua: cur ? isUaStore_(cur) : e === UA_EDRPOU,
     edrpou: e, bookUrl: (books[e] && books[e].id) ? woBookUrl_(books[e].id) : '',
     period: String(payload.period || 'month'), periodTitle: per.title,
     from: woDmyOfNum_(per.from), to: woDmyOfNum_(Math.min(per.to, woNum_(new Date()))),
