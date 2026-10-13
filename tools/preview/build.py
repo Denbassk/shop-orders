@@ -44,7 +44,7 @@ stores:[{id:'s1',label:'Валентиновская, 2',code:'14',edrpou:'44413
 products:[{name:'Салат Олів\'є, 250 г',cat:'Кулінарія',sum:3480,qty:60},{name:'Круасан з шоколадом',cat:'Випічка',sum:2275,qty:70}],
 days:[{date:'13.10.2026',sum:820},{date:'12.10.2026',sum:1640},{date:'11.10.2026',sum:1210}],silent:['Бучмы, 3','Победы, 66'],
 books:[{edrpou:'44413718',name:'',url:'#',xlsx:'#',sum:12400,qty:400,active:22,storesNow:27},{edrpou:'45672783',name:'',url:'#',xlsx:'#',sum:6050.5,qty:212,active:9,storesNow:10}],
-missing:[],priceSrc:'продажна',costCol:false,closed:false,openedAll:false,deadline:'13:00',keepDays:31};
+missing:[],costCol:false,closed:false,openedAll:false,deadline:'13:00',keepDays:31};
 var TODAY={today:'13.10.2026',time:'10:20',dow:'вторник',dirs:[{key:'bakery',title:'Выпечка',color:'#E65100',deadline:'13:00',closed:false,openedAll:false,enabled:true,total:30,ordered:21,waiting:[],all:37,offDay:7,byDays:true,noDayToday:false,reportAt:'10:15',minLeft:160}]};
 window.google={script:{run:(function(){var o={_s:null,withSuccessHandler:function(f){var n=Object.create(o);n._s=f;return n;},withFailureHandler:function(){return this;},
 adminApi:function(a,p){var s=this._s;setTimeout(function(){var d;

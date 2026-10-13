@@ -30,11 +30,11 @@ var WO_OLD_NAMES  = { 'Списання': 'Списания', 'Архів': 'А�
 var WO_MAX_ITEMS  = 150;
 var WO_MAX_QTY    = 500;
 var WO_HEAD = ['ID', 'Подано', 'Дата списания', 'Торговая точка', '№ ТТ', 'ЕГРПОУ',
-               'Категория', 'Штрихкод', 'Товар', 'Количество', 'Цена', 'Сумма', 'Цена по', 'Ключ ТТ'];
+               'Категория', 'Штрихкод', 'Товар', 'Количество', 'Цена', 'Сумма', 'Ключ ТТ'];
 var WO_COLS = WO_HEAD.length;
 // Індекси колонок (з нуля)
 var WC = { id: 0, at: 1, date: 2, store: 3, code: 4, edrpou: 5, cat: 6, barcode: 7,
-           name: 8, qty: 9, price: 10, sum: 11, src: 12, key: 13 };
+           name: 8, qty: 9, price: 10, sum: 11, key: 12 };
 
 // ============================================================
 // ЮРОСОБИ І ТАБЛИЦІ
@@ -112,7 +112,7 @@ function woSetupBook_(ss, edrpou) {
   woStyleData_(arch, '#5f6368');
 
   var sum = ss.getSheetByName(WO_SUM) || ss.insertSheet(WO_SUM);
-  var q = "'" + WO_SHEET + "'!A2:N";
+  var q = "'" + WO_SHEET + "'!A2:M";
   sum.getRange('A1').setValue('Сводная · ЕГРПОУ ' + edrpou + ' · строки листа «' + WO_SHEET +
     '» (последние ' + WO_KEEP_DAYS + ' дней, более старые - на листе «' + WO_ARCH + '»)')
     .setFontWeight('bold').setFontSize(13);
@@ -132,6 +132,9 @@ function woSetupBook_(ss, edrpou) {
 }
 
 function woStyleData_(sh, color) {
+  // перші таблиці мали колонку M "Цена по"/"Ціна за" (собівартість чи продажна) - прибрати
+  var m = String(sh.getRange(1, 13).getValue() || '');
+  if (/^(Цена по|Ціна за)$/.test(m)) sh.deleteColumn(13);
   sh.getRange(1, 1, 1, WO_COLS).setValues([WO_HEAD])
     .setFontWeight('bold').setBackground(color).setFontColor('#ffffff');
   sh.setFrozenRows(1);
@@ -143,7 +146,7 @@ function woStyleData_(sh, color) {
   sh.getRange(2, WC.barcode + 1, rows, 1).setNumberFormat('@');
   sh.getRange(2, WC.qty + 1, rows, 1).setNumberFormat('0.###');
   sh.getRange(2, WC.price + 1, rows, 2).setNumberFormat('0.00');
-  var widths = [90, 125, 105, 260, 60, 85, 100, 120, 280, 80, 70, 85, 100, 60];
+  var widths = [90, 125, 105, 260, 60, 85, 100, 120, 280, 80, 70, 85, 60];
   widths.forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
   sh.hideColumns(WC.key + 1);
 }
@@ -236,8 +239,7 @@ function woProducts_() {
     out.products.push({
       id: id, barcode: barcode, name: name,
       category: String(row[1] || '').trim() || 'Інше',
-      price: Math.round((cost > 0 ? cost : retail) * 100) / 100,
-      src: cost > 0 ? 'себестоимость' : 'продажная'
+      price: Math.round((cost > 0 ? cost : retail) * 100) / 100
     });
   }
   out.products.sort(function (a, b) {
@@ -262,7 +264,7 @@ function woRowObj_(r, rowNum, bookEdrpou, sheetName) {
     edrpou: String(r[WC.edrpou] || ''), cat: String(r[WC.cat] || ''),
     barcode: String(r[WC.barcode] || ''), name: String(r[WC.name] || ''),
     qty: Number(r[WC.qty]) || 0, price: Number(r[WC.price]) || 0, sum: Number(r[WC.sum]) || 0,
-    src: String(r[WC.src] || ''), key: String(r[WC.key] || '')
+    key: String(r[WC.key] || '')
   };
 }
 
@@ -383,7 +385,7 @@ function apiWoSubmit_(payload) {
     var s = Math.round(p.price * q * 100) / 100;
     total += s; qty += q;
     return [docId, now, wdate, store.label, store.code, edrpou, p.category, p.barcode,
-            p.name, q, p.price, s, p.src, store.id];
+            p.name, q, p.price, s, store.id];
   });
   total = Math.round(total * 100) / 100;
 
@@ -657,9 +659,9 @@ function admWoStats_(payload) {
   stores.forEach(function (s) { label[s.id] = s; });
 
   var byStore = {}, byProd = {}, byDay = {}, byEnt = {}, docs = {};
-  var total = 0, qty = 0, src = {};
+  var total = 0, qty = 0;
   rows.forEach(function (x) {
-    total += x.sum; qty += x.qty; docs[x.id] = 1; src[x.src] = 1;
+    total += x.sum; qty += x.qty; docs[x.id] = 1;
     var s = byStore[x.key] || (byStore[x.key] = { id: x.key, label: x.store, code: x.code,
                                                    edrpou: x.edrpou, sum: 0, qty: 0, docs: {} });
     s.sum += x.sum; s.qty += x.qty; s.docs[x.id] = 1;
@@ -722,7 +724,6 @@ function admWoStats_(payload) {
     stores: storeList, products: prodList, days: dayList, silent: silent,
     books: bookList,
     missing: Object.keys(missing).map(function (e) { return { edrpou: e, stores: missing[e] }; }),
-    priceSrc: Object.keys(src).join(', ') || (p.costCol ? 'себестоимость' : 'продажная'),
     costCol: p.costCol, prodCount: p.products.length, noCost: p.noCost || [],
     closed: woClosed_(), openedAll: woOpenedAll_(), deadline: WO_DEADLINE, keepDays: WO_KEEP_DAYS
   };
