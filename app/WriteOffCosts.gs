@@ -107,7 +107,11 @@ function costPlan_() {
   for (var r = 1; r < data.length; r++) {
     var name = String(data[r][4] || '').trim();
     if (!name) continue;
-    rows.push({ row: r + 1, name: name, cat: String(data[r][1] || '').trim(),
+    var cat = String(data[r][1] || '').trim();
+    // у назві спереду буває категорія ("Кулінарія Борщ ...") - для порівняння її прибрати
+    var bare = name.replace(/^(випічка|кулінарія)\s+/i, '');
+    if (cat && bare.toLowerCase().indexOf(cat.toLowerCase() + ' ') === 0) bare = bare.slice(cat.length + 1);
+    rows.push({ row: r + 1, name: name, bare: bare, cat: cat,
                 price: parseFloat(String(data[r][3] || '').replace(',', '.')) || 0,
                 weight: costWeight_(name), old: data[r][col] });
   }
@@ -117,7 +121,7 @@ function costPlan_() {
     var sw = costWeight_(src[1]);
     var best = [], bestScore = 0;
     rows.forEach(function (x) {
-      var sc = costScore_(src[1], x.name);
+      var sc = costScore_(src[1], x.bare);
       if (sc <= 0) return;
       var wOk = !sw || !x.weight || sw === x.weight;
       var pOk = src[3] > 0 && Math.abs(x.price - src[3]) < 0.011;
