@@ -50,16 +50,21 @@ function costWeight_(s) {
   return Math.round(v);
 }
 
-// Слова назви без ваги, штук і розділових знаків
+// Латинські літери-двійники в кириличній назві ("Чiабата" з латинською i)
+var COST_LAT = { a: 'а', c: 'с', e: 'е', i: 'і', o: 'о', p: 'р', x: 'х', y: 'у', k: 'к', m: 'м', t: 'т', h: 'н', b: 'в' };
+
+// Слова назви без ваги, штук, чисел і розділових знаків
 function costWords_(s) {
   return String(s).toLowerCase()
+    .replace(/[aceiopxykmthb]/g, function (ch) { return COST_LAT[ch] || ch; })
+    .replace(/[\u00a0\u2009\u202f]/g, ' ')
     .replace(/[’ʼ'`"«»]/g, '')
     .replace(/(\d+(?:[.,]\d+)?)\s*(кг|гр|г|мл|л|шт)(?![а-яіїєґa-z])/g, ' ')
     .replace(/\.(?=[a-zа-яіїєґ])/g, '. ')               // "прованс.травами" -> два слова
     .replace(/[^a-zа-яіїєґ0-9.]+/g, ' ')
     .split(' ')
     .map(function (w) { return w.replace(/\.+$/, ''); })
-    .filter(function (w) { return w && w !== 'з' && w !== 'та' && w !== 'і' && w !== 'в' && w !== 'и' && w !== 'с'; });
+    .filter(function (w) { return w && !/\d/.test(w) && w !== 'з' && w !== 'та' && w !== 'і' && w !== 'в' && w !== 'и' && w !== 'с'; });
 }
 
 // Слова збігаються: однакові, одне - скорочення іншого (від 4 літер),
@@ -116,9 +121,12 @@ function costPlan_() {
       if (sc <= 0) return;
       var wOk = !sw || !x.weight || sw === x.weight;
       var pOk = src[3] > 0 && Math.abs(x.price - src[3]) < 0.011;
-      // вага різна - це інший товар (180г і 250г), навіть якщо назва та сама
-      if (sw && x.weight && sw !== x.weight) sc = sc * 0.5;
-      var how = (sc === 1 && wOk) ? 'точно'
+      // вага різна - це інший товар (180г і 250г), навіть якщо назва та сама;
+      // але та сама назва і та сама ціна - той самий товар, вагу записали по-різному
+      var wDiff = sw && x.weight && sw !== x.weight;
+      if (wDiff && !(sc === 1 && pOk)) sc = sc * 0.5;
+      var how = (sc === 1 && wDiff) ? 'та сама назва і ціна, вага різна: ' + sw + 'г / ' + x.weight + 'г'
+              : (sc === 1 && wOk) ? 'точно'
               : (sc >= 0.75 && wOk) ? 'схожа назва, та сама вага'
               : (sc >= 0.5 && pOk) ? 'схожа назва, та сама ціна'
               : '';
@@ -132,7 +140,8 @@ function costPlan_() {
       best.forEach(function (b) { sure.push({ src: item, row: b.x.row, name: b.x.name, how: b.how, old: b.x.old }); });
     } else {
       doubt.push({ src: item, cands: best.slice(0, 3).map(function (b) {
-        return b.x.name + ' (рядок ' + b.x.row + ', ціна ' + b.x.price + ')';
+        return b.x.name + ' (рядок ' + b.x.row + ', ціна ' + b.x.price + ', вага ' + b.x.weight +
+               'г / в довідці ' + sw + 'г, схожість ' + Math.round(b.sc * 100) + '%)';
       }) });
     }
   });
