@@ -575,18 +575,22 @@ function woIndexSheet_() {
     .map(function (e) {
       var url = woBookUrl_(books[e].id);
       return ['ЕГРПОУ ' + e, cnt[e] || 0,
-              '=HYPERLINK("' + url + '", "Открыть таблицу списаний")'];
+              url];
     });
   sh.clear();
   sh.getRange(1, 1).setValue('Списания выпечки и кулинарии - отдельная таблица на каждое юрлицо')
     .setFontWeight('bold').setFontSize(12);
-  sh.getRange(2, 1).setValue('Юрлицо точки - по колонке T (ЕГРПОУ) Довідника ТТ. Новое юрлицо - пульт → Списания → «Создать недостающие таблицы».')
+  sh.getRange(2, 1).setValue('Юрлицо точки - по колонке T (ЕГРПОУ) Довідника ТТ.')
     .setFontColor('#666666');
   var head = sh.getRange(4, 1, 1, 3).setValues([['Юрлицо', 'Точек', 'Таблица']]);
   ss.getSheetByName(cfg.productsSheet) && ss.getSheetByName(cfg.productsSheet).getRange(1, 2)
     .copyTo(head, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
   if (rows.length) {
-    sh.getRange(5, 1, rows.length, 3).setValues(rows);
+    // посилання - rich text, не формула HYPERLINK: та залежить від локалі таблиці (; чи ,)
+    sh.getRange(5, 1, rows.length, 2).setValues(rows.map(function (r) { return [r[0], r[1]]; }));
+    sh.getRange(5, 3, rows.length, 1).setRichTextValues(rows.map(function (r) {
+      return [SpreadsheetApp.newRichTextValue().setText('Открыть таблицу списаний').setLinkUrl(r[2]).build()];
+    }));
     sh.getRange(4, 1, rows.length + 1, 3).setBorder(true, true, true, true, true, true);
     sh.getRange(5, 2, rows.length, 1).setHorizontalAlignment('center');
   } else {
