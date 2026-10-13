@@ -118,7 +118,8 @@ function buildVegOrdersSheet_(rows) {
   var all = vegStoresToday_();
   var missing = all.filter(function (s) {
     return !ordered[addrKey_(s.addrVeg)];
-  }).map(function (s) { return s.label; });
+  }).map(function (s) { return s.label + (isUaStore_(s) ? UA_MARK : ''); });
+  var ua = uaAddrKeys_('addrVeg');
 
   var data = [], g = { title: [], sub: [], head: [], store: [],
                        row: [], total: [], grand: [], missHead: [], miss: [] };
@@ -134,7 +135,7 @@ function buildVegOrdersSheet_(rows) {
 
   Object.keys(byStore).sort(function (a, b) { return a.localeCompare(b, 'uk'); })
     .forEach(function (store) {
-      push([store, '', '', '', ''], 'store');
+      push([store + (ua[addrKey_(store)] ? UA_MARK : ''), '', '', '', ''], 'store');
       var sQty = 0, sSum = 0;
 
       byStore[store].sort(function (a, b) { return a.name.localeCompare(b.name, 'uk'); })

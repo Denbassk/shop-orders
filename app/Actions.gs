@@ -228,7 +228,10 @@ function d03_storeLinks() {
  *    повна збірка вивантаження   - щодня після 18:00
  *  Запустити ОДИН РАЗ. Повторний запуск просто перестворює ті самі тригери. */
 function d06_installTriggers() {
-  var mine = { zz_DANGER_archiveNow: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
+  // nightlyArchive теж тут: без нього кожен повторний запуск додавав ще один
+  // його тригер, а на ліміті 20 тригерів наступні (e04_refreshExport і далі)
+  // вже не ставились
+  var mine = { zz_DANGER_archiveNow: 1, nightlyArchive: 1, d02_cleanupProps: 1, e03_nbhzExport: 1,
                e04_refreshExport: 1, refreshBakeryReports: 1,
                refreshBreadReports: 1, refreshVegReports: 1, woNightly: 1 };
   ScriptApp.getProjectTriggers().forEach(function (t) {
@@ -344,6 +347,12 @@ function e09_archiveNbhzExports() {
  *  Листи переносяться в архів (копія -> звірка -> видалення), не губляться. */
 function e11_archiveNbhzExportsKeepToday() {
   archiveOldNbhzExports(1);
+}
+
+/** Чому не архівуються вивантаження і замовлення НБХЗ: тригери, листи
+ *  "Вивантаження ..." в робочій таблиці, дата останнього архіву, сирий лист. */
+function e12_checkNbhzArchive() {
+  checkNbhzArchive_();
 }
 
 /** Посилання на архів вивантажень НБХЗ і список листів у ньому. */
