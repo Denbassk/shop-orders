@@ -192,7 +192,7 @@ function woAllowedDates_() {
 // ============================================================
 
 function woProducts_() {
-  var cached = cacheGet_('wo_prod_v1');
+  var cached = cacheGet_('wo_prod_v2');
   if (cached) return cached;
 
   var cfg = dirCfg_('bakery');
@@ -206,15 +206,21 @@ function woProducts_() {
   data[0].forEach(function (h, i) { if (costIdx < 0 && /собів|себест/i.test(String(h))) costIdx = i; });
   out.costCol = costIdx >= 0;
 
+  // Є колонка собівартості - продавцям лише товари з заповненою собівартістю
+  // (статус "стоп" тут не важливий: стоп на замовлення, а списати залишок можна).
+  // Колонки немає - як раніше: усе без "стоп" за продажною ціною.
+  out.noCost = [];
   var seen = {};
   for (var r = 1; r < data.length; r++) {
     var row = data[r];
-    if (String(row[0] || '').trim().toLowerCase() === 'стоп') continue;
     var name = String(row[4] || '').trim();
     if (!name) continue;
     var barcode = String(row[2] || '').trim();
     var retail = parseFloat(String(row[3] || '').replace(',', '.')) || 0;
     var cost = costIdx >= 0 ? (parseFloat(String(row[costIdx] || '').replace(',', '.')) || 0) : 0;
+    if (costIdx >= 0) {
+      if (!(cost > 0)) { out.noCost.push(name); continue; }
+    } else if (String(row[0] || '').trim().toLowerCase() === 'стоп') continue;
     var id = barcode || nameKey_(name);
     if (seen[id]) id = id + '#' + r;
     seen[id] = 1;
@@ -231,7 +237,7 @@ function woProducts_() {
   out.products.forEach(function (p) {
     if (out.categories.indexOf(p.category) < 0) out.categories.push(p.category);
   });
-  cachePut_('wo_prod_v1', out, 600);
+  cachePut_('wo_prod_v2', out, 600);
   return out;
 }
 
@@ -668,7 +674,7 @@ function admWoStats_(payload) {
     books: bookList,
     missing: Object.keys(missing).map(function (e) { return { edrpou: e, stores: missing[e] }; }),
     priceSrc: Object.keys(src).join(', ') || (p.costCol ? 'собівартість' : 'продажна'),
-    costCol: p.costCol,
+    costCol: p.costCol, prodCount: p.products.length, noCost: p.noCost || [],
     closed: woClosed_(), openedAll: woOpenedAll_(), deadline: WO_DEADLINE, keepDays: WO_KEEP_DAYS
   };
 }
