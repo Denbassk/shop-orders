@@ -83,6 +83,8 @@ function apiBootstrap_() {
       if (!dayOk[k]) dayOff[k] = dayOffText_(k, s);
     });
     return { id: s.id, label: s.label, code: s.code,
+             // юрособа ЮА маркет (колонка T Довідника) - значок у списку точок
+             ua: isUaStore_(s),
              directions: dirKeys, ordered: ordered,
              dayOk: dayOk, dayOff: dayOff,
              // списання випічки: за колонкою H Довідника, навіть якщо заказ вимкнено
