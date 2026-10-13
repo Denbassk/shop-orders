@@ -872,7 +872,7 @@ function w04_addCostColumn() {
   sh.getRange(1, col).setValue('Себестоимость')
     .setNote('Ціна для СПИСАНЬ (грн за шт). Порожньо = рахується за продажною ціною з колонки D.');
   costStyle_(sh, col);
-  try { CacheService.getScriptCache().remove('wo_prod_v1'); } catch (e) {}
+  try { CacheService.getScriptCache().remove('wo_prod_v2'); } catch (e) {}
   console.log('Додано колонку ' + String.fromCharCode(64 + col) + ' "Себестоимость" у "' +
               cfg.productsSheet + '". Заповнюйте - списання підхоплять самі.');
 }
@@ -914,6 +914,6 @@ function w06_fillCosts() {
   var p = costPlan_();
   costReport_(p);
   p.sure.forEach(function (m) { p.sheet.getRange(m.row, p.col).setValue(m.src.cost); });
-  try { CacheService.getScriptCache().remove('wo_prod_v1'); } catch (e) {}
+  try { CacheService.getScriptCache().remove('wo_prod_v2'); } catch (e) {}
   console.log('ЗАПИСАНО: ' + p.sure.length + ' клітинок у колонку ' + String.fromCharCode(64 + p.col) + '.');
 }
