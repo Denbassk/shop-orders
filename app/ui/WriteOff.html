@@ -29,6 +29,12 @@
 .wocard .row.has{background:#FFF4EC;box-shadow:inset 4px 0 0 #E65100}
 .btn.wo{background:#E65100}
 .btn.wo:disabled{background:#c9ccd2}
+.woseller{background:#fff;border-radius:14px;padding:12px 14px;margin:14px 0 4px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.woseller label{display:block;font-size:13px;font-weight:700;color:#6b7280;margin-bottom:6px}
+.woseller input{width:100%;box-sizing:border-box;font-size:17px;padding:11px 12px;border:2px solid #e3e5e8;
+  border-radius:11px;outline:none}
+.woseller input:focus{border-color:#E65100}
+.woseller.bad input{border-color:#b3261e}
 
 /* --- перевірка --- */
 .revh{background:#fff;border-radius:15px;padding:4px 14px;margin-bottom:12px;box-shadow:0 2px 5px rgba(0,0,0,.07)}
@@ -202,6 +208,9 @@ function woReview(){
     return '<div class="ritem"><div class="n">' + esc(p.name) + '<span>' + esc(p.category) +
       '</span></div><div class="s">' + q + ' шт</div></div>';
   }).join('') + '</div>';
+  h += '<div class="woseller" id="wosel"><label for="woseller">Прізвище продавця, який подає списання</label>' +
+       '<input id="woseller" autocomplete="family-name" maxlength="40" placeholder="Наприклад: Петренко" value="' +
+       esc(woSellerSaved()) + '"></div>';
   h += '<div style="text-align:center;padding-top:14px">' +
        '<button class="chip" onclick="woDraw()">← Змінити</button></div>';
   el('wrap').innerHTML = h;
@@ -210,14 +219,26 @@ function woReview(){
     ' шт</b>' + items.length + ' поз. до списання</div><button class="btn wo" id="wosend" onclick="woSend()">Відправити</button></div></div>';
 }
 
+/* Прізвище запам'ятовується на телефоні - наступного разу підставиться саме. */
+function woSellerSaved(){ try { return localStorage.getItem('wo_seller') || ''; } catch(e){ return ''; } }
 function woSend(){
+  var inp = el('woseller');
+  var seller = String(inp ? inp.value : '').replace(/\s+/g, ' ').trim();
+  if (seller.length < 2 || !/[A-Za-zА-Яа-яІіЇїЄєҐґ]{2}/.test(seller)){
+    el('wosel').className = 'woseller bad';
+    alert('Вкажіть прізвище продавця, який подає списання');
+    if (inp) inp.focus();
+    return;
+  }
+  try { localStorage.setItem('wo_seller', seller); } catch(e){}
+  W.seller = seller;
   var items = woChosen().map(function(p){ return { id: p.id, qty: W.cart[p.id] }; });
   var b = el('wosend'); if (b){ b.disabled = true; b.textContent = 'Відправка…'; }
   woTry(items, 0);
 }
 /* Той самий docId при повторі - дубль на сервері не створиться. */
 function woTry(items, attempt){
-  call('woSubmit', { storeId: S.store.id, date: W.date, items: items, docId: W.docId })
+  call('woSubmit', { storeId: S.store.id, date: W.date, items: items, docId: W.docId, seller: W.seller })
     .then(woDone)
     .catch(function(e){
       var msg = String((e && e.message) || e), b = el('wosend');
@@ -238,6 +259,7 @@ function woDone(r){
   el('wrap').innerHTML = '<div class="ok"><div class="big" style="background:#E65100">&#10003;</div>' +
     '<h2>Списання прийнято</h2>' +
     '<p><b>' + esc(r.store) + '</b></p>' +
+    (r.seller ? '<p>подав(ла): ' + esc(r.seller) + '</p>' : '') +
     '<p>за ' + esc(r.woDate) + ' · ' + r.positions + ' поз. на <b>' + money(r.total) + ' грн</b></p>' +
     '<p style="color:#8b9098">подано о ' + esc(r.time) + '</p>' +
     (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
@@ -269,7 +291,8 @@ function woMy(){
     if (!d.docs.length) h += '<div class="msg">Списань поки немає</div>';
     d.docs.forEach(function(doc, i){
       h += '<div class="doc"><div class="dh"><div class="w"><b>Списання за ' + esc(doc.date) + '</b>' +
-        '<span>подано ' + esc(doc.at) + ' · ' + doc.items.length + ' поз.</span></div>' +
+        '<span>подано ' + esc(doc.at) + ' · ' + doc.items.length + ' поз.' +
+        (doc.seller ? ' · ' + esc(doc.seller) : '') + '</span></div>' +
         '<div class="s">' + money(doc.total) + ' грн</div></div>' +
         doc.items.map(function(it){
           return '<div class="it"><div class="n">' + esc(it.name) + '</div><div class="q">' + it.qty +
