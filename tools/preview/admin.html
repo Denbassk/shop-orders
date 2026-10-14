@@ -370,7 +370,8 @@ function loadWoStore(id) {
     if (!d.docs.length) h += '<div class="info">За этот период списаний нет.</div>';
     d.docs.forEach(function (doc, i) {
       h += '<div class="wodoc"><div class="h"><span class="grow"><span class="t">Списание за ' + esc(doc.date) + '</span>' +
-        '<span class="s">подано ' + esc(doc.at) + ' · ' + doc.items.length + ' поз. · ЕГРПОУ ' + esc(doc.edrpou) +
+        '<span class="s">подано ' + esc(doc.at) + (doc.seller ? ' · продавец: <b>' + esc(doc.seller) + '</b>' : '') +
+        ' · ' + doc.items.length + ' поз. · ЕГРПОУ ' + esc(doc.edrpou) +
         (doc.sheet === 'Архив' ? ' · в архиве' : '') + '</span></span>' +
         '<span class="right">' + woMoney(doc.total) + ' грн</span></div>' +
         doc.items.map(function (it) {
