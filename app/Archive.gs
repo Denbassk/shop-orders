@@ -26,7 +26,7 @@ function archiveRawSheets(keepDays) {
   console.log('Лишаємо записи від ' + formatDateDMY_(cutoff) + ' і новіші');
   Object.keys(DIRECTIONS).forEach(function (k) {
     try { archiveOne_(k, cutoff); }
-    catch (e) { console.log(dirCfg_(k).title + ': ПОМИЛКА ' + e.message); }
+    catch (e) { archiveLog_(dirCfg_(k).title + ': ' + e.message); }
   });
   dropOldExportSheets();
   console.log('Готово');
@@ -37,65 +37,53 @@ function archiveOne_(dirKey, cutoff) {
   var ss = SpreadsheetApp.openById(cfg.spreadsheetId);
   var sh = ss.getSheetByName(rawSheetName_(cfg));
   if (!sh || sh.getLastRow() < 2) { console.log(cfg.title + ': порожньо'); return; }
-
-  var last = sh.getLastRow();
   var width = Math.max(sh.getLastColumn(), 1);
-  var values = sh.getRange(2, 1, last - 1, width).getValues();
 
-  // рядки лежать у порядку додавання, тож старі - це префікс.
-  // шукаємо перший рядок, який лишається.
-  var firstKeep = -1;
-  for (var i = 0; i < values.length; i++) {
-    var d = values[i][0];
-    var when = (d instanceof Date) ? d : parseDMY_(String(d));
-    if (!when) continue;                       // рядок без дати - лишаємо
-    if (when >= cutoff) { firstKeep = i; break; }
-  }
-
-  if (firstKeep === 0) { console.log(cfg.title + ': архівувати нічого (' + values.length + ' рядків)'); return; }
-  if (firstKeep < 0) firstKeep = values.length;   // усе старе
-
-  var oldRows = values.slice(0, firstKeep);
-
-  // перестраховка: чи справді серед "старих" немає свіжих
-  var stray = oldRows.filter(function (r) {
-    var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
-    return d && d >= cutoff;
-  }).length;
-  if (stray) {
-    console.log(cfg.title + ': дати вперемішку (' + stray + ' свіжих серед старих) - пропускаю, ' +
-                'запустіть zz_DANGER_archiveRebuild() з цим напрямком');
-    return;
-  }
+  // Що вже лежить в архіві - читаємо ДО замка: "_Архів" пише лише
+  // архівування, а замок напрямку живе тільки DIR_LOCK_TTL_MS.
+  var arch = archiveSheet_(ss, sh, width);
+  var inArch = archivedCounts_(arch, width);
 
   var tok = dirLockAcquire_(dirKey, 60000);
-  if (!tok) { console.log(cfg.title + ': не вдалось взяти замок, спробуйте пізніше'); return; }
+  if (!tok) { archiveLog_(cfg.title + ': не вдалось взяти замок, спробуйте пізніше'); return; }
 
   try {
-    var arch = ss.getSheetByName(ARCHIVE_SHEET);
-    if (!arch) {
-      arch = ss.insertSheet(ARCHIVE_SHEET);
-      arch.getRange(1, 1, 1, width)
-        .setValues([sh.getRange(1, 1, 1, width).getValues()[0]])
-        .setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
-      arch.setFrozenRows(1);
-    }
-    var at = arch.getLastRow() + 1;
-    arch.getRange(at, 1, oldRows.length, width).setValues(oldRows);
-    arch.getRange(at, 1, oldRows.length, 1).setNumberFormat('dd.MM.yyyy');
-    SpreadsheetApp.flush();
+    // Читаємо ПІД замком: між читанням і видаленням номери рядків не мають зсунутись.
+    var last = sh.getLastRow();
+    if (last < 2) return;
+    var values = sh.getRange(2, 1, last - 1, width).getValues();
 
-    // видаляємо порціями - інакше на 15 тисячах рядків можна впертись у ліміт часу
-    var left = oldRows.length;
-    while (left > 0) {
-      var chunk = Math.min(left, 2000);
-      sh.deleteRows(2, chunk);
-      left -= chunk;
+    // рядки лежать по даті (append у кінець, сортування - дата першим ключем),
+    // тож старі - це префікс. Шукаємо перший рядок, який лишається.
+    var firstKeep = -1;
+    for (var i = 0; i < values.length; i++) {
+      var d = values[i][0];
+      var when = (d instanceof Date) ? d : parseDMY_(String(d));
+      if (!when) continue;                       // рядок без дати - лишаємо
+      if (when >= cutoff) { firstKeep = i; break; }
     }
-    SpreadsheetApp.flush();
 
-    console.log(cfg.title + ': в архів ' + oldRows.length + ' рядків, у роботі лишилось ' +
-                (sh.getLastRow() - 1));
+    if (firstKeep === 0) { console.log(cfg.title + ': архівувати нічого (' + values.length + ' рядків)'); return; }
+    if (firstKeep < 0) firstKeep = values.length;   // усе старе
+
+    var oldRows = values.slice(0, firstKeep);
+    var copied = copyToArchive_(arch, oldRows, inArch, width);
+
+    // Видаляємо через Sheets API, як і решта видалень у застосунку.
+    // sh.deleteRows для ВК не спрацьовував: з 12.09 по 15.10.2026 рядки
+    // щопонеділка копіювались в архів (і не раз), а з робочого листа не зникали.
+    try {
+      Sheets.Spreadsheets.batchUpdate({ requests: [{ deleteDimension: { range: {
+        sheetId: sh.getSheetId(), dimension: 'ROWS', startIndex: 1, endIndex: 1 + oldRows.length } } }]
+      }, cfg.spreadsheetId);
+    } catch (e) {
+      archiveLog_(cfg.title + ': НЕ видалено з робочого листа ' + oldRows.length + ' рядків (' +
+                  e.message + '). В архів дописано ' + copied + ' - повторний запуск їх не задвоїть.');
+      return;
+    }
+
+    archiveLog_(cfg.title + ': в архів ' + oldRows.length + ' рядків (нових в архіві ' + copied +
+                '), у роботі лишилось ' + (values.length - oldRows.length), true);
   } finally {
     dirLockRelease_(dirKey, tok);
   }
@@ -107,6 +95,76 @@ function archiveOne_(dirKey, cutoff) {
     console.log(cfg.title + ': дати не по порядку, доганяю повним перезбиранням');
     archiveOneRebuild_(dirKey, cutoff);
   }
+}
+
+// Лист "_Архів" (створює, якщо нема)
+function archiveSheet_(ss, sh, width) {
+  var arch = ss.getSheetByName(ARCHIVE_SHEET);
+  if (!arch) {
+    arch = ss.insertSheet(ARCHIVE_SHEET);
+    arch.getRange(1, 1, 1, width)
+      .setValues([sh.getRange(1, 1, 1, width).getValues()[0]])
+      .setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
+    arch.setFrozenRows(1);
+  }
+  return arch;
+}
+
+// Рядок -> текстовий ключ: дата дд.мм.рррр, час гг:хх:сс, решта як є.
+// Однаковий для робочого листа і архіву, хоч би який там стояв формат.
+function archiveKey_(r, width) {
+  var out = [];
+  for (var c = 0; c < width; c++) {
+    var v = r[c];
+    if (v instanceof Date) {
+      v = v.getFullYear() < 1900
+        ? ('0' + v.getHours()).slice(-2) + ':' + ('0' + v.getMinutes()).slice(-2) + ':' +
+          ('0' + v.getSeconds()).slice(-2)
+        : formatDateDMY_(v);
+    }
+    out.push(String(v == null ? '' : v).trim());
+  }
+  return out.join('|');
+}
+
+// Скільки разів кожен рядок уже є в архіві (мультимножина)
+function archivedCounts_(arch, width) {
+  var counts = {};
+  var last = arch.getLastRow();
+  if (last < 2) return counts;
+  arch.getRange(2, 1, last - 1, width).getValues().forEach(function (r) {
+    var k = archiveKey_(r, width);
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  return counts;
+}
+
+// Дописати в архів лише ті рядки, яких там ще немає (мультимножина: однакові
+// рядки хліба-добавки рахуються поштучно). Повторний або подвійний запуск -
+// два тригери nightlyArchive - більше не задвоює архів. counts оновлюється.
+function copyToArchive_(arch, rows, counts, width) {
+  var used = {}, toCopy = [];
+  rows.forEach(function (r) {
+    var k = archiveKey_(r, width);
+    used[k] = (used[k] || 0) + 1;
+    if (used[k] > (counts[k] || 0)) toCopy.push(r);
+  });
+  if (!toCopy.length) return 0;
+  var at = arch.getLastRow() + 1;
+  arch.getRange(at, 1, toCopy.length, width).setValues(toCopy);
+  arch.getRange(at, 1, toCopy.length, 1).setNumberFormat('dd.MM.yyyy');
+  SpreadsheetApp.flush();
+  toCopy.forEach(function (r) {
+    var k = archiveKey_(r, width);
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  return toCopy.length;
+}
+
+// Архів працює вночі - без запису в "Журнал дій" його збої ніхто не бачить.
+function archiveLog_(msg, ok) {
+  if (ok) console.log(msg); else console.error('АРХІВ: ' + msg);
+  try { if (typeof adminLog_ === 'function') adminLog_(ok ? 'Архів' : 'Архів: помилка', msg); } catch (e) {}
 }
 
 function hasOlderRows_(sh, cutoff) {
@@ -134,53 +192,88 @@ function archiveOneRebuild_(dirKey, cutoff) {
   if (!sh || sh.getLastRow() < 2) { console.log('порожньо'); return; }
 
   var width = Math.max(sh.getLastColumn(), 1);
-  var head = sh.getRange(1, 1, 1, width).getValues()[0];
-  var values = sh.getRange(2, 1, sh.getLastRow() - 1, width).getValues();
-
-  var keep = [], old = [];
-  values.forEach(function (r) {
-    var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
-    (!d || d >= cutoff ? keep : old).push(r);
-  });
-  if (!old.length) { console.log('архівувати нічого'); return; }
+  var arch = archiveSheet_(ss, sh, width);
+  var inArch = archivedCounts_(arch, width);
 
   var tok = dirLockAcquire_(dirKey, 60000);
-  if (!tok) { console.log('не вдалось взяти замок'); return; }
+  if (!tok) { archiveLog_(cfg.title + ' (повне перезбирання): не вдалось взяти замок'); return; }
   try {
-    var arch = ss.getSheetByName(ARCHIVE_SHEET);
-    if (!arch) {
-      arch = ss.insertSheet(ARCHIVE_SHEET);
-      arch.getRange(1, 1, 1, width).setValues([head])
-        .setFontWeight('bold').setBackground('#16181d').setFontColor('#ffffff');
-      arch.setFrozenRows(1);
-    }
-    var at = arch.getLastRow() + 1;
-    arch.getRange(at, 1, old.length, width).setValues(old);
-    arch.getRange(at, 1, old.length, 1).setNumberFormat('dd.MM.yyyy');
-    SpreadsheetApp.flush();
-
-    // Старі рядки ВИДАЛЯЄМО, а не перезаписуємо лист цілком.
-    // Перезапис (clearContent + setValues) затирав би замовлення,
-    // яке прийде саме в цю мить: apiAppend_ замка не бере.
-    var hits = [];
+    // читаємо ПІД замком - номери рядків до видалення не зсуваються
+    var values = sh.getRange(2, 1, sh.getLastRow() - 1, width).getValues();
+    var old = [], hits = [];
     values.forEach(function (r, i) {
       var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
-      if (d && d < cutoff) hits.push(i + 2);
+      if (d && d < cutoff) { old.push(r); hits.push(i + 2); }
     });
-    var ranges = [], start = hits[0], prev = hits[0];
-    for (var j = 1; j < hits.length; j++) {
-      if (hits[j] === prev + 1) { prev = hits[j]; continue; }
-      ranges.push([start, prev]); start = hits[j]; prev = hits[j];
+    if (!old.length) { console.log('архівувати нічого'); return; }
+
+    var copied = copyToArchive_(arch, old, inArch, width);
+
+    // Старі рядки ВИДАЛЯЄМО (Sheets API - deleteRowNums_ з AppendGuard.gs),
+    // а не перезаписуємо лист цілком: перезапис затирав би замовлення,
+    // яке прийде саме в цю мить - apiAppend_ замка не бере.
+    try { deleteRowNums_(cfg, sh, hits); }
+    catch (e) {
+      archiveLog_(cfg.title + ' (повне перезбирання): НЕ видалено ' + hits.length + ' рядків (' +
+                  e.message + '). В архів дописано ' + copied + '.');
+      return;
     }
-    if (hits.length) ranges.push([start, prev]);
-    ranges.reverse();
-    ranges.forEach(function (x) { sh.deleteRows(x[0], x[1] - x[0] + 1); });
-    SpreadsheetApp.flush();
-    console.log(cfg.title + ': в архів ' + old.length + ', лишилось ' + keep.length +
-                ' (видалено відрізків ' + ranges.length + ')');
+    archiveLog_(cfg.title + ' (повне перезбирання): в архів ' + old.length + ' (нових в архіві ' +
+                copied + '), лишилось ' + (values.length - old.length), true);
   } finally {
     dirLockRelease_(dirKey, tok);
   }
+}
+
+// ------------------------------------------------------------
+// ДУБЛІ В "_Архів" (ВК, 15.10.2026)
+//
+// Поки архів ВК не міг видалити рядки з робочого листа, щопонеділка
+// (і не раз - два тригери nightlyArchive) ті самі дні копіювались в
+// архів знову. Дубль = рядок, що збігається повністю, включно з часом
+// до секунди. Беремо лише рядки з датою в A і ненульовим часом у B
+// (випічка, овочі): у хліба в B маршрут, там однакові рядки бувають законно.
+// Перший рядок групи лишається.
+// ------------------------------------------------------------
+function archiveDupScan_(dirKey) {
+  var cfg = dirCfg_(dirKey);
+  var arch = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(ARCHIVE_SHEET);
+  var out = { title: cfg.title, rows: 0, extra: [], byDate: {} };
+  if (!arch || arch.getLastRow() < 2) return out;
+  var width = Math.max(arch.getLastColumn(), 1);
+  var vals = arch.getRange(2, 1, arch.getLastRow() - 1, width).getValues();
+  out.rows = vals.length;
+  var seen = {};
+  vals.forEach(function (r, i) {
+    var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
+    if (!d) return;
+    var k = archiveKey_(r, width);
+    var t = k.split('|')[1];
+    if (!/^\d{1,2}:\d{2}:\d{2}$/.test(t) || /^0?0:00:00$/.test(t)) return;
+    if (!seen[k]) { seen[k] = true; return; }
+    out.extra.push(i + 2);
+    var dd = formatDateDMY_(d);
+    out.byDate[dd] = (out.byDate[dd] || 0) + 1;
+  });
+  return out;
+}
+
+function archiveDupShow_(dirKey) {
+  var s = archiveDupScan_(dirKey);
+  console.log(s.title + ', "_Архів": рядків ' + s.rows + ', зайвих копій ' + s.extra.length);
+  Object.keys(s.byDate).sort(function (a, b) { return parseDMY_(a) - parseDMY_(b); })
+    .forEach(function (d) { console.log('   ' + d + ': ' + s.byDate[d]); });
+  if (s.extra.length) console.log('Прибрати: g20_removeBakeryArchiveDups(). Нічого не видалено.');
+}
+
+function archiveDupRemove_(dirKey) {
+  var cfg = dirCfg_(dirKey);
+  var arch = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(ARCHIVE_SHEET);
+  var s = archiveDupScan_(dirKey);
+  if (!s.extra.length) { console.log('Зайвих копій немає'); return; }
+  deleteRowNums_(cfg, arch, s.extra);
+  archiveLog_(cfg.title + ': з "_Архів" прибрано зайвих копій ' + s.extra.length +
+              ', лишилось ' + (s.rows - s.extra.length), true);
 }
 
 // "10.09.2026" -> Date. Повертає null, якщо не схоже на дату.

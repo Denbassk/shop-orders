@@ -573,31 +573,8 @@ function repairBakeryRawSheet() {
 // Далі порядок тримається сам: append дописує в кінець.
 // ============================================================
 function sortBakeryRawSheet() {
-  var cfg = dirCfg_('bakery');
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (!sh || sh.getLastRow() < 3) { console.log('Сортувати нічого'); return; }
-
-  var lock = LockService.getScriptLock();
-  if (!lock.tryLock(60000)) { console.log('Лист зайнятий - спробуйте за хвилину'); return; }
-  try {
-    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues();
-    rows.sort(function (a, b) { return bakeryStamp_(a) - bakeryStamp_(b); });
-    sh.getRange(2, 1, rows.length, 8).setValues(rows);
-    SpreadsheetApp.flush();
-    console.log('Відсортовано рядків: ' + rows.length);
-    console.log('Перший: ' + rows[0][0] + ', останній: ' + rows[rows.length - 1][0]);
-  } finally { try { lock.releaseLock(); } catch (e) {} }
-}
-
-// Дата + час одним числом. Час у листі - Date від 30.12.1899,
-// тож із нього беремо лише години-хвилини-секунди.
-function bakeryStamp_(r) {
-  var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
-  if (!d) return 0;
-  var ms = d.getTime(), t = r[1];
-  if (t instanceof Date)
-    ms += t.getHours() * 3600000 + t.getMinutes() * 60000 + t.getSeconds() * 1000;
-  return ms;
+  sortBakeryRawApi_([0, 1]);   // дата, час - на боці Google, див. BakeryZones.gs
+  console.log('Сирий лист ВК впорядковано по даті і часу');
 }
 
 // ============================================================
@@ -743,48 +720,18 @@ function bakeryOrderTrace() {
   console.log('Склад замовлення бере або з Історії версій листа, або у продавця.');
 }
 // ============================================================
-// СОРТУВАННЯ СИРОГО ЛИСТА: ДАТА -> АДРЕСА -> КАТЕГОРІЯ -> ТОВАР
+// СОРТУВАННЯ СИРОГО ЛИСТА: ДАТА -> АДРЕСА -> ТОВАР
 //
-// Так рядки однієї ТТ стоять разом, а не розкидані по всьому
-// листу через однаковий товар. Дата лишається ПЕРШИМ ключем -
-// інакше архівування вважає дати "вперемішку" і зупиняється.
+// Так рядки однієї ТТ стоять разом. Дата лишається ПЕРШИМ ключем -
+// інакше архівування вважає дати "вперемішку".
+// Категорія окремим ключем не потрібна: назви починаються з "Випічка" /
+// "Кулінарія", тож сортування за назвою саме ставить випічку першою.
 //
-// Замок напрямку той самий, що чекає apiAppend_ (AppendGuard.gs),
-// тому замовлення, яке прийде під час сортування, зачекає і ляже
-// в кінець, а не буде затерте.
+// Сортує Google (sortRange), а не читання-запис: див. sortBakeryRawApi_
+// у BakeryZones.gs - саме перезапис листа задвоював замовлення.
 // ============================================================
 function sortBakeryRawByAddress_() {
-  var cfg = dirCfg_('bakery');
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (!sh || sh.getLastRow() < 3) return;
-
-  var token = dirLockAcquire_('bakery', 30000);
-  if (!token) { console.log('Лист зайнятий - сортування пропущено'); return; }
-  try {
-    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues();
-    var catRank = function (r) {
-      var i = BAKERY_CAT_ORDER.indexOf(bakeryCatOf_(r));
-      return i < 0 ? 99 : i;
-    };
-    var dayOf = function (r) {
-      var d = (r[0] instanceof Date) ? r[0] : parseDMY_(String(r[0]));
-      return d ? d.getTime() : 0;
-    };
-
-    rows.sort(function (a, b) {
-      var d = dayOf(a) - dayOf(b);
-      if (d) return d;
-      var aa = String(a[2] || '').trim(), ba = String(b[2] || '').trim();
-      if (aa !== ba) return aa.localeCompare(ba, 'uk');
-      var c = catRank(a) - catRank(b);
-      if (c) return c;
-      return String(a[5] || '').localeCompare(String(b[5] || ''), 'uk');
-    });
-
-    sh.getRange(2, 1, rows.length, 8).setValues(rows);
-    SpreadsheetApp.flush();
-    console.log('Сирий лист ВК впорядковано по адресах: рядків ' + rows.length);
-  } finally { dirLockRelease_('bakery', token); }
+  sortBakeryRawApi_([0, 2, 5]);   // дата, адреса, назва товару
 }
 
 /** Впорядкувати сирий лист ВК по адресах просто зараз. */

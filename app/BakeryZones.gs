@@ -283,28 +283,47 @@ function buildBakeryRouteSheet_(rows) {
 // довгим шляхом повного перезбирання.
 // ============================================================
 function sortBakeryRawByProduct_() {
+  sortBakeryRawApi_([0, 5]);   // дата, назва товару
+}
+
+// ЄДИНИЙ спосіб сортувати сирий лист ВК. cols - номери колонок від 0.
+//
+// ВАЖЛИВО (15.10.2026). Читати лист, сортувати в памʼяті і писати назад
+// (getValues + setValues) НЕ МОЖНА: apiAppend_ замка не бере, і замовлення,
+// що прийшло посеред перезапису, задвоювало кінець листа (24.09 - 8 рядків,
+// 14.10 - 6 рядків, щоразу суцільний шматок через межу двох замовлень).
+// sortRange Google виконує у себе одним кроком - записати поверх нічим.
+//
+// Замок напрямку + ScriptLock - не від append, а від видалень, які спершу
+// рахують номери рядків, а потім видаляють (пульт, лист "Видалення
+// замовлення", прибирання дублів, заміна замовлення з дозволом).
+// Пересортування між цими кроками зсунуло б номери.
+function sortBakeryRawApi_(cols) {
   if (typeof Sheets === 'undefined') { console.log('Sheets API вимкнено - не сортую'); return; }
 
   var cfg = dirCfg_('bakery');
   var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
   if (!sh || sh.getLastRow() < 3) return;
 
+  var token = dirLockAcquire_('bakery', 30000);
+  if (!token) { console.log('Лист зайнятий - сортування пропущено'); return; }
   try {
-    Sheets.Spreadsheets.batchUpdate({
-      requests: [{
-        sortRange: {
-          range: { sheetId: sh.getSheetId(), startRowIndex: 1,
-                   endRowIndex: sh.getLastRow(), startColumnIndex: 0, endColumnIndex: 8 },
-          sortSpecs: [
-            { dimensionIndex: 0, sortOrder: 'ASCENDING' },   // дата
-            { dimensionIndex: 5, sortOrder: 'ASCENDING' }    // назва товару
-          ]
-        }
-      }]
-    }, cfg.spreadsheetId);
+    var g = LockService.getScriptLock();
+    if (!g.tryLock(10000)) { console.log('Сервер зайнятий - сортування пропущено'); return; }
+    try {
+      Sheets.Spreadsheets.batchUpdate({
+        requests: [{
+          sortRange: {
+            range: { sheetId: sh.getSheetId(), startRowIndex: 1,
+                     endRowIndex: sh.getLastRow(), startColumnIndex: 0, endColumnIndex: 8 },
+            sortSpecs: cols.map(function (c) { return { dimensionIndex: c, sortOrder: 'ASCENDING' }; })
+          }
+        }]
+      }, cfg.spreadsheetId);
+    } finally { try { g.releaseLock(); } catch (e) {} }
   } catch (e) {
     console.log('Сортування сирого листа: ' + e.message);
-  }
+  } finally { dirLockRelease_('bakery', token); }
 }
 
 // ============================================================

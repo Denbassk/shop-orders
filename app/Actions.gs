@@ -202,6 +202,18 @@ function zz_DANGER_archiveNow() {
   showRawSizes();
 }
 
+/** Показати зайві копії в "_Архів" випічки (нічого не видаляє). */
+function g19_showBakeryArchiveDups() {
+  archiveDupShow_('bakery');
+}
+
+/** Прибрати зайві копії в "_Архів" випічки (перший рядок групи лишається).
+ *  Не запускати в ніч з неділі на понеділок, коли працює архівування. */
+function g20_removeBakeryArchiveDups() {
+  archiveDupRemove_('bakery');
+  archiveDupShow_('bakery');
+}
+
 /** Повне перезбирання архіву одного напрямку - якщо дати переплутані.
  *  Звичайний zz_DANGER_archiveNow викликає це сам, коли бачить потребу. */
 function zz_DANGER_archiveRebuild() {
