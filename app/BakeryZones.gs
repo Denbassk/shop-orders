@@ -305,16 +305,19 @@ function sortBakeryRawApi_(cols) {
   var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
   if (!sh || sh.getLastRow() < 3) return;
 
-  var token = dirLockAcquire_('bakery', 30000);
+  var token = dirLockAcquire_('bakery', 4000);
   if (!token) { console.log('Лист зайнятий - сортування пропущено'); return; }
   try {
     var g = LockService.getScriptLock();
-    if (!g.tryLock(10000)) { console.log('Сервер зайнятий - сортування пропущено'); return; }
+    if (!g.tryLock(2000)) { console.log('Сервер зайнятий - сортування пропущено'); return; }
     try {
       Sheets.Spreadsheets.batchUpdate({
         requests: [{
           sortRange: {
-            range: { sheetId: sh.getSheetId(), startRowIndex: 1,
+            range: { sheetId: sh.getSheetId(),
+                     // лише хвіст листа: сортувати всю історію під замком = хвилини
+                     // очікування для всіх телефонів (18.10.2026)
+                     startRowIndex: Math.max(1, sh.getLastRow() - 8000),
                      endRowIndex: sh.getLastRow(), startColumnIndex: 0, endColumnIndex: 8 },
             sortSpecs: cols.map(function (c) { return { dimensionIndex: c, sortOrder: 'ASCENDING' }; })
           }

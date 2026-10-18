@@ -60,6 +60,12 @@ function bakerySignature_(rows) {
 // --- Функція для тригера: перезбирає, лише якщо щось змінилось ---
 function refreshBakeryReports() {
   var rows = bakeryTodayRows_();
+  // Немає сьогодні замовлень ВК (вихідний напрямку, або вже після дедлайну
+  // 13:00) - нема чого пересобирати і нема чого сортувати. Інакше тригер
+  // щоп'ять хвилин бере ГЛОБАЛЬНИЙ ScriptLock на сортування всієї історії
+  // листа ВК, і в цей час відправка інших напрямків (НБХЗ, овочі) стоїть
+  // у черзі за тим самим замком. 18.10.2026: саме через це висів НБХЗ.
+  if (!rows.length) return;
   var sig = bakerySignature_(rows);
   var props = PropertiesService.getScriptProperties();
 
