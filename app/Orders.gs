@@ -15,7 +15,8 @@ function apiProducts_(payload) {
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
   if (!dayAllowed_(dirKey, store)) throw new Error(dayOffText_(dirKey, store));
-  assertDirHealthy_(dirKey);
+  // таблиця напрямку висить - асортимент із запасної копії (Products.gs),
+  // замовлення піде в буфер (Buffer.gs)
 
   var products = loadProducts_(dirKey).map(function (p) {
     return {
@@ -68,7 +69,15 @@ function orderedTodayCached_(dirKey, store) {
     var map = loadTodayStatus_()[dirKey];
     if (map) return !!map[statusKey_(dirKey, store)];
   } catch (e) {}
-  return isOrderedToday_(dirKey, store);
+  // таблиця висить - судимо за позначкою "дата|orderId", яку ставить відправка
+  if (dirSick_(dirKey)) return markedToday_(dirKey, store);
+  try { return isOrderedToday_(dirKey, store); }
+  catch (e) { if (dirSick_(dirKey)) return markedToday_(dirKey, store); throw e; }
+}
+
+function markedToday_(dirKey, store) {
+  var v = PropertiesService.getScriptProperties().getProperty(orderMarkKey_(dirKey, store)) || '';
+  return v.indexOf(formatDateDMY_(new Date())) === 0;
 }
 
 function isOrderedToday_(dirKey, store) {
@@ -357,6 +366,9 @@ function apiSubmitOrder_(payload) {
   var items = payload.items || [];
   var orderId = String(payload.orderId || '').slice(0, 60);
 
+  // спершу буфер, потім oid_: bufDrain ставить oid_ ДО того, як прибрати буфер
+  var buf = bufHas_(orderId);
+  if (buf) return bufResult_(buf);
   var prev = seenOrder_(orderId);
   if (prev) { prev.duplicate = true; return prev; }
 
@@ -369,8 +381,9 @@ function apiSubmitOrder_(payload) {
 
   if (!dayAllowed_(dirKey, store)) throw new Error(dayOffText_(dirKey, store));
 
-  // таблиця напрямку не відповідає - кажемо одразу, а не висимо 6 хвилин
-  assertDirHealthy_(dirKey);
+  // таблиця напрямку не відповідає - замовлення йде в буфер (Buffer.gs),
+  // а не висить 6 хвилин і не губиться
+  var sick = dirSick_(dirKey);
 
   // Дозвіл закупниці = зміни. Знімає ТРИ замки: дедлайн, повторне
   // замовлення на сьогодні і мінімальну суму.
@@ -380,6 +393,8 @@ function apiSubmitOrder_(payload) {
   // 'replace' - замовлення переписується з нуля: старі рядки за сьогодні
   // видаляються. Так прибирають зайву позицію або міняють кількість.
   var replaceAll = approvedNow && String(payload.mode || '') === 'replace';
+  // заміна видаляє рядки в листі - без живої таблиці її не зробити
+  if (replaceAll && sick) assertDirHealthy_(dirKey);
 
   if (deadlinePassed_(dirKey, store.id)) {
     throw new Error(cfg.lateRequest
@@ -425,8 +440,30 @@ function apiSubmitOrder_(payload) {
 
   // Швидка відмова ПОЗА замком. Читання сирого листа буває лише один раз
   // на добу на точку - поки позначки ще немає.
-  var already = (props.getProperty(markKey) === todayStr);
-  if (!already) already = isOrderedToday_(dirKey, store);
+  // Позначка = "дата|orderId". Повтор ТОГО САМОГО замовлення (той самий orderId,
+  // телефон його зберігає) не блокується: 18.10.2026 запит, убитий Google на
+  // 360 с, лишав позначку, і продавець уже не міг відправити ще раз.
+  var mine = orderId ? todayStr + '|' + orderId : '';
+  var markBlocks = function () {
+    var v = props.getProperty(markKey) || '';
+    return v.indexOf(todayStr) === 0 && v !== mine;
+  };
+  var retry = !!mine && props.getProperty(markKey) === mine;
+  var already = markBlocks();
+  if (!already && !sick) {
+    var inSheet;
+    try { inSheet = isOrderedToday_(dirKey, store); }
+    catch (e) { if (!dirSick_(dirKey)) throw e; sick = true; inSheet = false; }
+    if (inSheet && retry && !approvedNow) {
+      // перша спроба записалась, але відповідь до телефона не дійшла
+      return { ok: true, duplicate: true, positions: lines.length,
+               total: Math.round(totalSupplier * cfg.markup * 100) / 100,
+               time: formatTime_(new Date()), date: todayStr,
+               direction: cfg.title, store: store.label, test: TEST_MODE };
+    }
+    already = inSheet;
+  }
+  if (sick && replaceAll) assertDirHealthy_(dirKey);
   if (already && !approvedNow)
     throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
       (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
@@ -438,14 +475,16 @@ function apiSubmitOrder_(payload) {
   if (!g.tryLock(SUBMIT_WAIT_MS))
     throw new Error('BUSY: сервер зайнятий, спробуйте ще раз');
   try {
+    var bufAgain = bufHas_(orderId);
+    if (bufAgain) return bufResult_(bufAgain);
     var again = seenOrder_(orderId);
     if (again) { again.duplicate = true; return again; }
 
     if (!approvedNow) {
-      if (props.getProperty(markKey) === todayStr)
+      if (markBlocks())
         throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
           (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
-      props.setProperty(markKey, todayStr);
+      props.setProperty(markKey, mine || todayStr);
       claimed = true;
     }
   } finally {
@@ -485,11 +524,36 @@ function apiSubmitOrder_(payload) {
   // orderId запамʼятовується ОДРАЗУ після підтвердженого запису (колбек),
   // а не в кінці виклику: якщо щось обірветься пізніше, повтор з телефона
   // отримає "дублі не створені" замість другого запису.
+  // Запис - під запобіжником: якщо append висне, наступні продавці бачать
+  // "таблиця не відповідає" і йдуть у буфер, а не стають за ним у чергу.
+  var bufOid = orderId || ('srv-' + Utilities.getUuid());
+  if (sick) {
+    var bres = bufAccept_(bufOid, dirKey, store, values, result, approvedNow, 'таблиця не відповідала');
+    CacheService.getScriptCache().remove('status_v4');
+    return bres;
+  }
+  APPEND_STATE_ = { confirmed: false, notified: false, onWritten: null };
   try {
-    appendRows_(cfg, dirKey, values, function () { rememberOrder_(orderId, result); });
+    guardedDir_(dirKey, function () {
+      appendRows_(cfg, dirKey, values, function () { rememberOrder_(orderId, result); });
+    });
   } catch (e) {
-    if (claimed) { try { props.deleteProperty(markKey); } catch (e2) {} }
-    throw e;
+    // Не підтверджено - у буфер. bufDrain перед записом дивиться, чи рядків уже
+    // немає в листі (той самий час), тож навіть "можливо записалось" не дасть дубля.
+    if (!APPEND_STATE_.notified && !replaceAll) {
+      try {
+        var b2 = bufAccept_(bufOid, dirKey, store, values, result, approvedNow,
+                            'запис не вдався: ' + e.message);
+        CacheService.getScriptCache().remove('status_v4');
+        return b2;
+      } catch (e3) { console.error('буфер не прийняв: ' + e3.message); }
+    }
+    if (APPEND_STATE_.notified) {
+      console.error('помилка після запису (замовлення в листі): ' + e.message);
+    } else {
+      if (claimed) { try { props.deleteProperty(markKey); } catch (e2) {} }
+      throw e;
+    }
   }
   if (!APPEND_STATE_.notified) rememberOrder_(orderId, result);
 

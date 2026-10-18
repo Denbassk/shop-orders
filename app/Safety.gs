@@ -137,7 +137,12 @@ function safeNoteDeleted_(dirKey) {
     var today = formatDateDMY_(new Date());
     var peaks = {};
     try { peaks = JSON.parse(props.getProperty(SAFE_PEAK_KEY) || '{}'); } catch (e) {}
-    peaks[dirKey] = today + '|' + todayRowsOf_(dirKey).length;
+    // Sheets API під запобіжником: викликається з пульта і листа "Видалення",
+    // SpreadsheetApp на зависшій ВК тримав би їх хвилинами
+    var cfg = dirCfg_(dirKey);
+    var n = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'A'); }).rows
+      .filter(function (r) { return dmyApi_(r[0]) === today; }).length;
+    peaks[dirKey] = today + '|' + n;
     props.setProperty(SAFE_PEAK_KEY, JSON.stringify(peaks));
     if (dirKey === 'veg') props.setProperty(VEG_PEAK, today + '|' + vegTodayRows_().length);
   } catch (e) { console.error('safeNoteDeleted_: ' + e.message); }

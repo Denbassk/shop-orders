@@ -48,6 +48,16 @@ function admHealth_() {
       lv = 'warn'; text = 'Отчёт собран ' + age + ' мин назад, в ' + at + ' · заказали ' + ordered;
     }
     else text = (at ? 'Отчёт в ' + at : 'Отчёт сегодня не собирался') + ' · заказали ' + ordered;
+    var inBuf = 0;
+    try { JSON.parse(all[BUF_INDEX] || '[]').forEach(function (id) {
+      var h = JSON.parse(all[BUF_PREFIX + id] || 'null'); if (h && h.dir === k) inBuf++; }); } catch (e) {}
+    if (inBuf) {
+      if (lv === 'ok') lv = 'warn';
+      text += ' · в буфере ' + inBuf + ' зак. (таблица не отвечала; допишутся сами)';
+    } else if (dirSick_(k)) {
+      if (lv === 'ok') lv = 'warn';
+      text += ' · таблица отвечает медленно - новые заказы идут в буфер';
+    }
     if (all['busy_' + k]) {
       if (lv === 'ok') lv = 'warn';
       text += ' · висит замок записи (если дольше минуты - clearDirLocks() в редакторе)';

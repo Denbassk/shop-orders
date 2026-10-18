@@ -80,7 +80,7 @@ function cleanupOldOrderIds() {
   Object.keys(all).forEach(function (k) {
     if (k.indexOf('busy_') === 0) { props.deleteProperty(k); killed++; return; }
     if (k.indexOf('sub_') === 0) {                 // позначки "вже замовляли"
-      if (all[k] !== today) { props.deleteProperty(k); killed++; }
+      if (String(all[k]).indexOf(today) !== 0) { props.deleteProperty(k); killed++; }   // "дата|orderId"
       return;
     }
     if (k.indexOf('oid_') !== 0) return;

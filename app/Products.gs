@@ -5,9 +5,43 @@
 function loadProducts_(dirKey) {
   var cached = cacheGet_('prod2_' + dirKey);
   if (cached) return cached;
-  var list = (dirKey === 'veg') ? loadVegProducts_() : loadSheetProducts_(dirKey);
+  var list;
+  try {
+    list = (dirKey === 'veg') ? loadVegProducts_() : loadSheetProducts_(dirKey);
+  } catch (e) {
+    // таблиця напрямку висить - останній вдалий асортимент, щоб замовлення
+    // можна було зібрати і покласти в буфер (Buffer.gs)
+    var last = lastProducts_(dirKey);
+    if (!last) throw e;
+    console.error('асортимент ' + dirKey + ' - запасна копія: ' + e.message);
+    cachePut_('prod2_' + dirKey, last, 120);
+    return last;
+  }
   cachePut_('prod2_' + dirKey, list, 600);
+  saveLastProducts_(dirKey, list);
   return list;
+}
+
+// Остання вдала копія асортименту - стиснена у властивостях (Buffer.gs: packMap_)
+function saveLastProducts_(dirKey, list) {
+  if (!list || !list.length) return;
+  try {
+    var props = PropertiesService.getScriptProperties(), key = 'prodlast_' + dirKey, old = null;
+    try { old = JSON.parse(props.getProperty(key) || 'null'); } catch (e) {}
+    var map = packMap_(key, list, { ts: Date.now() });
+    props.setProperties(map);
+    for (var i = JSON.parse(map[key]).n; old && i < old.n; i++) {
+      try { props.deleteProperty(key + '#' + i); } catch (e) {}
+    }
+  } catch (e) { console.error('копія асортименту ' + dirKey + ': ' + e.message); }
+}
+
+function lastProducts_(dirKey) {
+  try {
+    var props = PropertiesService.getScriptProperties(), key = 'prodlast_' + dirKey;
+    var meta = JSON.parse(props.getProperty(key) || 'null');
+    return meta ? packRead_(props, key, meta) : null;
+  } catch (e) { console.error('запасна копія асортименту ' + dirKey + ': ' + e.message); return null; }
 }
 
 // Лист "Ассортимент":
