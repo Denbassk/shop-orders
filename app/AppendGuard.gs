@@ -289,32 +289,32 @@ function dupScan_(dirKey) {
     throw new Error('Для цього напрямку дублі автоматично не шукаються (немає часу замовлення в листі)');
   var cfg = dirCfg_(dirKey);
   var sheetName = rawSheetName_(cfg);
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(sheetName);
   var out = { dir: dirKey, dirTitle: cfg.title, sheet: sheetName, unit: cfg.unit,
               liveRows: 0, orders: [], extraTotal: 0 };
-  if (!sh || sh.getLastRow() < 2) return out;
 
-  var last = sh.getLastRow();
-  var take = Math.min(last - 1, RAW_TAIL_ROWS);
-  var from = last - take + 1;
-  var w = Math.max(sh.getLastColumn(), 7);
-  var disp = sh.getRange(from, 1, take, w).getDisplayValues();
-  var dates = sh.getRange(from, 1, take, 1).getValues();
+  // Sheets API (як бачить людина - аналог getDisplayValues) під запобіжником
+  var all = guardedDir_(dirKey, function () {
+    return apiValues_(cfg.spreadsheetId, a1q_(sheetName, 'A:H'), true);
+  });
+  if (all.length < 2) return out;
+  var take = Math.min(all.length - 1, RAW_TAIL_ROWS);
+  var from = all.length - take + 1;
+  var disp = all.slice(all.length - take);
   var c = rawCols_(dirKey);
 
   var byOrder = {}, seq = [];
   for (var i = 0; i < disp.length; i++) {
     var r = disp[i];
-    var d = (dates[i][0] instanceof Date) ? formatDateDMY_(dates[i][0]) : dmyOfCell_(r[0]);
-    var addr = String(r[2]).trim(), name = String(r[c.name]).trim();
+    var d = dmyOfCell_(r[0]);
+    var addr = cellStr_(r[2]), name = cellStr_(r[c.name]);
     if (!parseDMY_(d) || !addr || !name) continue;
     out.liveRows++;
-    var time = String(r[1]).trim();
+    var time = cellStr_(r[1]);
     var okey = d + '|' + time + '|' + addr;
     var o = byOrder[okey];
     if (!o) { o = byOrder[okey] = { key: okey, date: d, time: time, addr: addr, total: 0, lines: {} }; seq.push(o); }
     o.total++;
-    var qty = Number(String(r[c.qty]).replace(',', '.')) || 0;
+    var qty = numApi_(r[c.qty]);
     var lkey = name + '|' + qty;
     var l = o.lines[lkey] = o.lines[lkey] || { name: name, qty: qty, rows: [] };
     l.rows.push(from + i);
@@ -353,11 +353,13 @@ function deleteRowNums_(cfg, sh, nums) {
   ranges.push([start, prev]);
   ranges.reverse();
 
-  if (typeof Sheets !== 'undefined') {
+  // sh - лист SpreadsheetApp або вже готовий sheetId (число)
+  if (typeof sh === 'number' || typeof Sheets !== 'undefined') {
+    var sid = (typeof sh === 'number') ? sh : sh.getSheetId();
     Sheets.Spreadsheets.batchUpdate({
       requests: ranges.map(function (r) {
         return { deleteDimension: { range: {
-          sheetId: sh.getSheetId(), dimension: 'ROWS',
+          sheetId: sid, dimension: 'ROWS',
           startIndex: r[0] - 1, endIndex: r[1] } } };
       })
     }, cfg.spreadsheetId);
@@ -381,10 +383,10 @@ function dupApply_(dirKey, keys) {
   var token = dirLockAcquire_(dirKey, 30000);
   if (!token) throw new Error('Лист зайнятий, спробуйте через хвилину');
   var removed = 0, done = [];
+  // без глобального ScriptLock (18.10.2026): зависла таблиця одного напрямку
+  // не повинна тримати замок для всіх; від паралельних видалень - замок напрямку
   try {
-    var g = LockService.getScriptLock();
-    if (!g.tryLock(30000)) throw new Error('Сервер зайнятий, спробуйте ще раз');
-    try {
+    {
       var scan = dupScan_(dirKey);
       var nums = [];
       scan.orders.forEach(function (o) {
@@ -396,11 +398,9 @@ function dupApply_(dirKey, keys) {
         });
         done.push({ key: o.key, addr: o.addr, date: o.date, time: o.time, removed: n, items: items });
       });
-      if (nums.length) {
-        var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-        removed = deleteRowNums_(cfg, sh, nums);
-      }
-    } finally { try { g.releaseLock(); } catch (e) {} }
+      if (nums.length)
+        removed = deleteRowNums_(cfg, sheetIdOf_(cfg.spreadsheetId, rawSheetName_(cfg)), nums);
+    }
   } finally { dirLockRelease_(dirKey, token); }
 
   if (removed) {

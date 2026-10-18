@@ -57,16 +57,15 @@ function restoreBackupRows_(dirKey, dmy) {
 
 // Рядки робочого листа за дату
 function restoreLiveRows_(dirKey, dmy) {
+  // Sheets API під запобіжником; дата в колонці A - рядком ДД.ММ.РРРР
   var cfg = dirCfg_(dirKey);
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (!sh || sh.getLastRow() < 2) return [];
-
-  var last = sh.getLastRow();
-  var take = Math.min(last - 1, RAW_TAIL_ROWS);
-  var w = Math.max(sh.getLastColumn(), 7);
-  return sh.getRange(last - take + 1, 1, take, w).getValues().filter(function (r) {
-    var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0] || '').trim();
-    return d === dmy && String(r[2] || '').trim();
+  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); });
+  return tail.rows.map(function (r) {
+    var x = r.slice();
+    x[0] = dmyApi_(x[0]);
+    return x;
+  }).filter(function (r) {
+    return r[0] === dmy && cellStr_(r[2]);
   });
 }
 

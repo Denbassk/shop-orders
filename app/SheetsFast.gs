@@ -18,12 +18,24 @@
 // ============================================================
 var SICK_AFTER_MS = 20000;
 var SICK_TTL_S = 300;
+// Читання тривало довше за SICK_AFTER_MS (навіть якщо зрештою відповіло) -
+// напрямок "повільний" SLOW_TTL_S секунд: запити продавців і пульта його не
+// чекають. Перевіряє, чи ожив, лише тригер (guardedDir_ з probe=true).
+// 18.10.2026: перший читач зависшої ВК чекав 190 с, а щойно відповідь
+// приходила, запобіжник знімався - і наступний читач знову висів.
+var SLOW_TTL_S = 600;
 
-function dirSick_(dirKey) {
+// Хтось зараз читає таблицю напрямку довше за SICK_AFTER_MS.
+function dirStuck_(dirKey) {
   try {
     var t = Number(CacheService.getScriptCache().get('inflight_' + dirKey) || 0);
     return !!t && (Date.now() - t) > SICK_AFTER_MS;
   } catch (e) { return false; }
+}
+
+function dirSick_(dirKey) {
+  if (dirStuck_(dirKey)) return true;
+  try { return !!CacheService.getScriptCache().get('slow_' + dirKey); } catch (e) { return false; }
 }
 
 function assertDirHealthy_(dirKey) {
@@ -33,15 +45,27 @@ function assertDirHealthy_(dirKey) {
 }
 
 // Виконати fn() як читання таблиці напрямку під запобіжником.
-function guardedDir_(dirKey, fn) {
-  assertDirHealthy_(dirKey);
-  var c = null, mine = false, k = 'inflight_' + dirKey;
+// probe=true - для тригерів: ігнорує позначку "повільний" і знімає її, якщо відповіло швидко.
+function guardedDir_(dirKey, fn, probe) {
+  if (probe) { if (dirStuck_(dirKey)) assertDirHealthy_(dirKey); }
+  else assertDirHealthy_(dirKey);
+  var c = null, mine = false, k = 'inflight_' + dirKey, t0 = Date.now(), ok = false;
   try {
     c = CacheService.getScriptCache();
     if (!c.get(k)) { c.put(k, String(Date.now()), SICK_TTL_S); mine = true; }
   } catch (e) {}
-  try { return fn(); }
-  finally { if (mine) { try { c.remove(k); } catch (e) {} } }
+  try { var res = fn(); ok = true; return res; }
+  finally {
+    if (mine) { try { c.remove(k); } catch (e) {} }
+    try {
+      if (c) {
+        if (Date.now() - t0 > SICK_AFTER_MS) {
+          c.put('slow_' + dirKey, String(Date.now()), SLOW_TTL_S);
+          console.error('Таблиця ' + dirKey + ' відповідала ' + (Date.now() - t0) + ' мс - позначено повільною');
+        } else if (ok) c.remove('slow_' + dirKey);
+      }
+    } catch (e) {}
+  }
 }
 
 function a1q_(sheetName, range) {
@@ -91,4 +115,171 @@ function sheetIdOf_(spreadsheetId, sheetName) {
   var id = hit.properties.sheetId;
   try { if (c) c.put(k, String(id), 21600); } catch (e) {}
   return id;
+}
+
+// Час із сирого листа: серійна частка доби -> "HH:mm", рядок -> перші 5 символів.
+function timeApi_(v) {
+  if (typeof v === 'number') {
+    var m = Math.round((v - Math.floor(v)) * 1440) % 1440;
+    return ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2);
+  }
+  return cellStr_(v).slice(0, 5);
+}
+
+// Число з клітинки (у тому числі "1,5").
+function numApi_(v) {
+  if (typeof v === 'number') return v;
+  return Number(cellStr_(v).replace(',', '.')) || 0;
+}
+
+// Властивості листа (sheetId, кількість рядків/колонок, умовні формати) або null.
+function sheetMetaApi_(spreadsheetId, sheetName) {
+  var meta = Sheets.Spreadsheets.get(spreadsheetId,
+    { fields: 'sheets(properties(sheetId,title,gridProperties),conditionalFormats)' });
+  var hit = (meta.sheets || []).filter(function (s) { return s.properties.title === sheetName; })[0];
+  return hit || null;
+}
+
+// ============================================================
+// ЗАПИС ЗВІТНОГО ЛИСТА ОДНИМ batchUpdate (замість SpreadsheetApp)
+//
+//   var w = apiSheetWriter_(ssId, 'Заказы ВК', data, 4);   // очищує лист, пише значення
+//   w.fmt(rowsList | null, 'A', 'D', { bg:'#1565C0', color:'#FFF', bold:true, size:14 });
+//   w.border(rowsList, 'A', 'D'); w.rowHeights(24); w.colWidths([50,420]); w.frozen(4);
+//   w.commit();
+// rowsList - номери рядків (1-based), сусідні склеюються; null - усі рядки даних.
+// ============================================================
+function hexRgb_(h) {
+  h = String(h).replace('#', '');
+  if (h.length === 3) h = h.replace(/(.)/g, '$1$1');
+  return { red: parseInt(h.slice(0, 2), 16) / 255, green: parseInt(h.slice(2, 4), 16) / 255,
+           blue: parseInt(h.slice(4, 6), 16) / 255 };
+}
+
+function colIdx_(L) { return String(L).toUpperCase().charCodeAt(0) - 65; }
+
+function rowRuns_(rows) {
+  var s = rows.slice().sort(function (a, b) { return a - b; }), out = [];
+  for (var i = 0; i < s.length; i++) {
+    if (out.length && s[i] === out[out.length - 1][1] + 1) out[out.length - 1][1] = s[i];
+    else if (!out.length || s[i] > out[out.length - 1][1]) out.push([s[i], s[i]]);
+  }
+  return out;
+}
+
+// repeatCell лише з тими полями формату, що задані в f - решта формату клітинки не чіпається.
+function apiFmtReq_(rg, f) {
+  var cf = {}, tf = {}, fields = [];
+  if (f.bg) { cf.backgroundColor = hexRgb_(f.bg); fields.push('backgroundColor'); }
+  if (f.halign) { cf.horizontalAlignment = f.halign.toUpperCase(); fields.push('horizontalAlignment'); }
+  if (f.valign) { cf.verticalAlignment = f.valign.toUpperCase(); fields.push('verticalAlignment'); }
+  if (f.wrap) { cf.wrapStrategy = 'WRAP'; fields.push('wrapStrategy'); }
+  if (f.num) {
+    cf.numberFormat = f.num === '@' ? { type: 'TEXT', pattern: '@' } : { type: 'NUMBER', pattern: f.num };
+    fields.push('numberFormat');
+  }
+  if (f.color) { tf.foregroundColor = hexRgb_(f.color); fields.push('textFormat.foregroundColor'); }
+  if (f.bold != null) { tf.bold = !!f.bold; fields.push('textFormat.bold'); }
+  if (f.size) { tf.fontSize = f.size; fields.push('textFormat.fontSize'); }
+  if (f.font) { tf.fontFamily = f.font; fields.push('textFormat.fontFamily'); }
+  if (Object.keys(tf).length) cf.textFormat = tf;
+  return { repeatCell: { range: rg, cell: { userEnteredFormat: cf },
+    fields: fields.map(function (x) { return 'userEnteredFormat.' + x; }).join(',') } };
+}
+
+// Діапазон для batchUpdate: рядки/колонки 1-based включно
+function gridRange_(sid, r1, c1, r2, c2) {
+  return { sheetId: sid, startRowIndex: r1 - 1, endRowIndex: r2,
+           startColumnIndex: c1 - 1, endColumnIndex: c2 };
+}
+
+function apiSheetWriter_(spreadsheetId, sheetName, data, width) {
+  var meta = sheetMetaApi_(spreadsheetId, sheetName);
+  var sid;
+  if (!meta) {
+    var r = Sheets.Spreadsheets.batchUpdate({ requests: [{ addSheet: { properties: { title: sheetName } } }] },
+                                            spreadsheetId);
+    sid = r.replies[0].addSheet.properties.sheetId;
+    meta = { properties: { sheetId: sid, gridProperties: { rowCount: 1000, columnCount: 26 } } };
+  }
+  sid = meta.properties.sheetId;
+  var gp = meta.properties.gridProperties || {};
+  var n = data.length, reqs = [];
+
+  // як sh.clear() + clearConditionalFormatRules() + breakApart()
+  (meta.conditionalFormats || []).forEach(function () {
+    reqs.push({ deleteConditionalFormatRule: { sheetId: sid, index: 0 } });
+  });
+  reqs.push({ unmergeCells: { range: { sheetId: sid } } });
+  reqs.push({ updateCells: { range: { sheetId: sid }, fields: '*' } });
+  if ((gp.rowCount || 0) < n)
+    reqs.push({ appendDimension: { sheetId: sid, dimension: 'ROWS', length: n - (gp.rowCount || 0) } });
+  if ((gp.columnCount || 0) < width)
+    reqs.push({ appendDimension: { sheetId: sid, dimension: 'COLUMNS', length: width - (gp.columnCount || 0) } });
+
+  reqs.push({ updateCells: {
+    start: { sheetId: sid, rowIndex: 0, columnIndex: 0 },
+    fields: 'userEnteredValue',
+    rows: data.map(function (row) {
+      var vals = [];
+      for (var c = 0; c < width; c++) {
+        var v = row[c];
+        if (v === '' || v == null) vals.push({});
+        else if (typeof v === 'number') vals.push({ userEnteredValue: { numberValue: v } });
+        else if (typeof v === 'boolean') vals.push({ userEnteredValue: { boolValue: v } });
+        else vals.push({ userEnteredValue: { stringValue: String(v) } });
+      }
+      return { values: vals };
+    })
+  } });
+
+  function ranges(rows, c1, c2) {
+    var runs = rows ? rowRuns_(rows) : [[1, n]];
+    return runs.map(function (r) {
+      return { sheetId: sid, startRowIndex: r[0] - 1, endRowIndex: r[1],
+               startColumnIndex: colIdx_(c1), endColumnIndex: colIdx_(c2 || c1) + 1 };
+    });
+  }
+
+  var w = {
+    sheetId: sid,
+    fmt: function (rows, c1, c2, f) {
+      if (rows && !rows.length) return w;
+      ranges(rows, c1, c2).forEach(function (rg) { reqs.push(apiFmtReq_(rg, f)); });
+      return w;
+    },
+    border: function (rows, c1, c2) {
+      if (rows && !rows.length) return w;
+      var b = { style: 'SOLID', color: { red: 0, green: 0, blue: 0 } };
+      ranges(rows, c1, c2).forEach(function (rg) {
+        reqs.push({ updateBorders: { range: rg, top: b, bottom: b, left: b, right: b,
+                                     innerHorizontal: b, innerVertical: b } });
+      });
+      return w;
+    },
+    rowHeights: function (px) {
+      if (n) reqs.push({ updateDimensionProperties: {
+        range: { sheetId: sid, dimension: 'ROWS', startIndex: 0, endIndex: n },
+        properties: { pixelSize: px }, fields: 'pixelSize' } });
+      return w;
+    },
+    colWidths: function (list) {
+      list.forEach(function (px, i) {
+        reqs.push({ updateDimensionProperties: {
+          range: { sheetId: sid, dimension: 'COLUMNS', startIndex: i, endIndex: i + 1 },
+          properties: { pixelSize: px }, fields: 'pixelSize' } });
+      });
+      return w;
+    },
+    frozen: function (k) {
+      reqs.push({ updateSheetProperties: { properties: { sheetId: sid, gridProperties: { frozenRowCount: k } },
+                                           fields: 'gridProperties.frozenRowCount' } });
+      return w;
+    },
+    raw: function (req) { reqs.push(req); return w; },
+    commit: function () {
+      Sheets.Spreadsheets.batchUpdate({ requests: reqs }, spreadsheetId);
+    }
+  };
+  return w;
 }

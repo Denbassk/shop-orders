@@ -152,34 +152,47 @@ function admEditOrder_(payload) {
   if (!tok) throw new Error('Зараз іде запис замовлень, спробуйте за хвилину');
   var log = [], left = 0;
   try {
-    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-    if (!sh) throw new Error('Немає листа ' + rawSheetName_(cfg));
-    var w = Math.max(sh.getLastColumn(), 7);
-    var last = sh.getLastRow();
+    // Sheets API під запобіжником (18.10.2026: SpreadsheetApp на ВК висів хвилинами)
+    var sheet = rawSheetName_(cfg);
+    var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); });
+    var from = tail.from, last = from + tail.rows.length - 1;
+    var isToday = function (r) {
+      return r && dmyApi_(r[0]) === today && addrKey_(cellStr_(r[2])) === target;
+    };
 
     ch.forEach(function (x) {
-      if (x.row > last) throw new Error('Рядок «' + x.name + '» вже не на місці. Оновіть екран.');
-      var r = sh.getRange(x.row, 1, 1, w).getValues()[0];
-      if (rawDate_(r[0]) !== today ||
-          addrKey_(String(r[2] || '').trim()) !== target ||
-          String(r[c.name] || '') !== x.name ||
-          (Number(r[c.qty]) || 0) !== x.oldQty)
+      if (x.row > last || x.row < from) throw new Error('Рядок «' + x.name + '» вже не на місці. Оновіть екран.');
+      var r = tail.rows[x.row - from];
+      if (!isToday(r) ||
+          String(r[c.name] == null ? '' : r[c.name]) !== x.name ||
+          numApi_(r[c.qty]) !== x.oldQty)
         throw new Error('Рядок «' + x.name + '» змінився з моменту відкриття. Оновіть екран.');
       x.r = r;
     });
 
+    var upd = [];
     ch.forEach(function (x) {
       if (x.qty <= 0) return;
-      sh.getRange(x.row, c.qty + 1).setValue(x.qty);
+      upd.push({ range: a1q_(sheet, String.fromCharCode(65 + c.qty) + x.row), values: [[x.qty]] });
       if (dir === 'veg')
-        sh.getRange(x.row, 7).setValue(Math.round((Number(x.r[4]) || 0) * x.qty * 100) / 100);
+        upd.push({ range: a1q_(sheet, 'G' + x.row),
+                   values: [[Math.round(numApi_(x.r[4]) * x.qty * 100) / 100]] });
       log.push(x.name + ': ' + x.oldQty + ' → ' + x.qty);
     });
-    ch.filter(function (x) { return x.qty <= 0; })
-      .sort(function (a, b) { return b.row - a.row; })      // знизу вгору - номери не зсуваються
-      .forEach(function (x) { sh.deleteRow(x.row); log.push(x.name + ': прибрано (було ' + x.oldQty + ')'); });
-    SpreadsheetApp.flush();
-    left = todayRowsCount_(sh, today, target);
+    if (upd.length)
+      Sheets.Spreadsheets.Values.batchUpdate({ valueInputOption: 'RAW', data: upd }, cfg.spreadsheetId);
+
+    var del = ch.filter(function (x) { return x.qty <= 0; })
+      .sort(function (a, b) { return b.row - a.row; });     // знизу вгору - номери не зсуваються
+    if (del.length) {
+      var sid = sheetIdOf_(cfg.spreadsheetId, sheet);
+      Sheets.Spreadsheets.batchUpdate({ requests: del.map(function (x) {
+        return { deleteDimension: { range: { sheetId: sid, dimension: 'ROWS',
+                                             startIndex: x.row - 1, endIndex: x.row } } };
+      }) }, cfg.spreadsheetId);
+      del.forEach(function (x) { log.push(x.name + ': прибрано (було ' + x.oldQty + ')'); });
+    }
+    left = tail.rows.filter(isToday).length - del.length;
   } finally {
     dirLockRelease_(cfg.key, tok);
   }

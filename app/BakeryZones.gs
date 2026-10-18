@@ -98,9 +98,10 @@ function bakeryCatByBarcode_() {
   var map = {};
   try {
     var cfg = dirCfg_('bakery');
-    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
-    if (sh && sh.getLastRow() > 1) {
-      sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues().forEach(function (r) {
+    // Sheets API: SpreadsheetApp на таблиці ВК висів хвилинами (18.10.2026)
+    var vals = apiValues_(cfg.spreadsheetId, a1q_(cfg.productsSheet, 'A2:E'));
+    if (vals.length) {
+      vals.forEach(function (r) {
         var bc = String(r[2] || '').trim();
         var cat = String(r[1] || '').trim();
         if (bc && cat) map[bc] = cat;
@@ -229,42 +230,22 @@ function buildBakeryRouteSheet_(rows) {
     push(['ЗАГАЛОМ', '', grand, ''], 'zone');
   }
 
-  var ss = SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
-  var sh = ss.getSheetByName(BAKERY_ROUTE_SHEET) || ss.insertSheet(BAKERY_ROUTE_SHEET);
-  sh.clear();
-  sh.clearConditionalFormatRules();
-  try { sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).breakApart(); } catch (e) {}
-
+  // один batchUpdate Sheets API замість SpreadsheetApp (див. SheetsFast.gs)
   var n = data.length;
-  sh.getRange(1, 1, n, 4).setValues(data);
-  sh.getRange(1, 1, n, 4).setFontFamily('Arial').setFontSize(10)
-    .setVerticalAlignment('middle').setFontColor('#000000').setBackground('#FFFFFF');
-  sh.setRowHeights(1, n, 22);
-  sh.getRange(1, 3, n, 1).setNumberFormat('0.###').setHorizontalAlignment('center');
-  sh.getRange(1, 4, n, 1).setHorizontalAlignment('center');
+  var w = apiSheetWriter_(dirCfg_('bakery').spreadsheetId, BAKERY_ROUTE_SHEET, data, 4);
+  w.fmt(null, 'A', 'D', { font: 'Arial', size: 10, valign: 'middle', color: '#000000', bg: '#FFFFFF' });
+  w.rowHeights(22);
+  w.fmt(null, 'C', 'C', { num: '0.###', halign: 'center' });
+  w.fmt(null, 'D', 'D', { halign: 'center' });
 
-  if (g.title.length) sh.getRangeList(bakeryRowList_(g.title, 'A', 'D'))
-    .setBackground('#1565C0').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(12);
-  if (g.head.length) sh.getRangeList(bakeryRowList_(g.head, 'A', 'D'))
-    .setFontWeight('bold').setHorizontalAlignment('center')
-    .setBorder(true, true, true, true, true, true);
-  if (g.row.length) sh.getRangeList(bakeryRowList_(g.row, 'A', 'D'))
-    .setBorder(true, true, true, true, true, true);
-  if (g.item.length) sh.getRangeList(bakeryRowList_(g.item, 'A', 'D'))
-    .setBackground('#F1F3F4').setFontWeight('bold')
-    .setBorder(true, true, true, true, true, true);
-  if (g.zone.length) sh.getRangeList(bakeryRowList_(g.zone, 'A', 'D'))
-    .setBackground('#E8F5E9').setFontColor('#1B5E20').setFontWeight('bold')
-    .setBorder(true, true, true, true, true, true);
-  if (g.empty.length) sh.getRangeList(bakeryRowList_(g.empty, 'A', 'D'))
-    .setBackground('#FFEBEE').setFontColor('#C62828').setFontWeight('bold');
+  w.fmt(g.title, 'A', 'D', { bg: '#1565C0', color: '#FFFFFF', bold: true, size: 12 });
+  w.fmt(g.head, 'A', 'D', { bold: true, halign: 'center' }).border(g.head, 'A', 'D');
+  w.border(g.row, 'A', 'D');
+  w.fmt(g.item, 'A', 'D', { bg: '#F1F3F4', bold: true }).border(g.item, 'A', 'D');
+  w.fmt(g.zone, 'A', 'D', { bg: '#E8F5E9', color: '#1B5E20', bold: true }).border(g.zone, 'A', 'D');
+  w.fmt(g.empty, 'A', 'D', { bg: '#FFEBEE', color: '#C62828', bold: true });
 
-  sh.setColumnWidth(1, 220);
-  sh.setColumnWidth(2, 420);
-  sh.setColumnWidth(3, 110);
-  sh.setColumnWidth(4, 130);
-  sh.setFrozenRows(2);
-  SpreadsheetApp.flush();
+  w.colWidths([220, 420, 110, 130]).frozen(2).commit();
 
   console.log('Маршрути ВК: маршрутів ' + Object.keys(z).length +
               ', рядків ' + n + ', разом ' + grand + ' шт');
