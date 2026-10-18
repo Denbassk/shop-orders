@@ -283,6 +283,51 @@ function d10_showDeleteSheets() {
   showDeleteSheets_();
 }
 
+/** Перевірка звітів ВК, що тепер пишуться через Sheets API (18.10.2026).
+ *  Бере рядки ОСТАННЬОГО дня з замовленнями і будує три листи з префіксом
+ *  "ТЕСТ " у таблиці ВК. Справжні звіти не чіпає. Подивитись - і видалити d12. */
+function d11_testBakeryReportsApi() {
+  var cfg = dirCfg_('bakery');
+  var tail = rawTailApi_(cfg, 'H');
+  var rows = tail.rows.map(function (r) {
+    var x = [];
+    for (var i = 0; i < 8; i++) x.push(r[i] == null ? '' : r[i]);
+    x[0] = dmyApi_(x[0]).slice(0, 10); x[1] = timeApi_(x[1]); x[7] = numApi_(x[7]);
+    return x;
+  }).filter(function (r) { return parseDMY_(r[0]) && String(r[5] || '').trim() && r[7] > 0; });
+  var lastDay = rows.length ? rows[rows.length - 1][0] : '';
+  rows = rows.filter(function (r) { return r[0] === lastDay; }).sort(function (a, b) {
+    var x = String(a[2] || '').localeCompare(String(b[2] || ''), 'uk');
+    return x || String(a[5] || '').localeCompare(String(b[5] || ''), 'uk');
+  });
+  console.log('День ' + lastDay + ', рядків ' + rows.length);
+
+  var keep = [BAKERY_ORDERS_SHEET, BAKERY_SUMMARY_SHEET, BAKERY_ROUTE_SHEET];
+  BAKERY_ORDERS_SHEET = 'ТЕСТ ' + keep[0];
+  BAKERY_SUMMARY_SHEET = 'ТЕСТ ' + keep[1];
+  BAKERY_ROUTE_SHEET = 'ТЕСТ ' + keep[2];
+  try {
+    var t0 = Date.now();
+    buildBakeryOrdersSheet_(rows);
+    buildBakerySummarySheet_(rows);
+    buildBakeryRouteSheet_(rows);
+    console.log('OK: три листи "ТЕСТ ..." за ' + (Date.now() - t0) + ' мс');
+  } finally {
+    BAKERY_ORDERS_SHEET = keep[0]; BAKERY_SUMMARY_SHEET = keep[1]; BAKERY_ROUTE_SHEET = keep[2];
+  }
+}
+
+/** Прибрати листи "ТЕСТ ..." після d11. */
+function d12_removeBakeryTestSheets() {
+  var id = dirCfg_('bakery').spreadsheetId;
+  var meta = Sheets.Spreadsheets.get(id, { fields: 'sheets.properties(sheetId,title)' });
+  var req = (meta.sheets || []).filter(function (s) {
+    return s.properties.title.indexOf('ТЕСТ ') === 0;
+  }).map(function (s) { return { deleteSheet: { sheetId: s.properties.sheetId } }; });
+  if (req.length) Sheets.Spreadsheets.batchUpdate({ requests: req }, id);
+  console.log('Прибрано листів: ' + req.length);
+}
+
 /** Що зараз стоїть у розкладі. */
 function d07_showTriggers() {
   var all = ScriptApp.getProjectTriggers();
