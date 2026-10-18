@@ -86,15 +86,16 @@ function refreshBakeryReports() {
     if (stamp && props.getProperty('bakery_report_stamp') === stamp) return;
   }
 
-  buildBakeryReports();
+  // ті самі рядки: друге читання поза probe впало б на позначці "повільна"
+  buildBakeryReports(rows);
 }
 
 // --- Зібрати обидва звіти ПРЯМО ЗАРАЗ, у будь-якому разі ---
-function buildBakeryReports() {
+function buildBakeryReports(preRows) {
   // Сирий лист БІЛЬШЕ НЕ СОРТУЄМО (18.10.2026): sortRange всієї таблиці під
   // глобальним ScriptLock тримав замок до 360 с і поклав усі напрямки.
   // Порядок потрібен лише звітам - сортуємо в памʼяті: адреса, назва.
-  var rows = bakeryTodayRows_().sort(function (a, b) {
+  var rows = (preRows || bakeryTodayRows_()).slice().sort(function (a, b) {
     var x = String(a[2] || '').localeCompare(String(b[2] || ''), 'uk');
     return x || String(a[5] || '').localeCompare(String(b[5] || ''), 'uk');
   });

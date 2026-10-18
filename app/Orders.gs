@@ -466,10 +466,12 @@ function apiSubmitOrder_(payload) {
 
   var removed = 0;
   if (replaceAll) {
-    var gd = LockService.getScriptLock();
-    if (!gd.tryLock(SUBMIT_WAIT_MS)) throw new Error('BUSY: сервер зайнятий');
+    // замок напрямку - той самий, що в пульті, на листі "Видалення" і в архіві:
+    // видалення за номерами рядків не повинні йти одночасно
+    var dtok = dirLockAcquire_(dirKey, SUBMIT_WAIT_MS);
+    if (!dtok) throw new Error('BUSY: сервер зайнятий');
     try { removed = deleteTodayRows_(cfg, dirKey, store); }
-    finally { try { gd.releaseLock(); } catch (e) {} }
+    finally { dirLockRelease_(dirKey, dtok); }
   }
 
   var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;
