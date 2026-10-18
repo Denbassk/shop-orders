@@ -317,6 +317,39 @@ function d11_testBakeryReportsApi() {
   }
 }
 
+/** ДІАГНОСТИКА: чим перевантажена таблиця ВК. Нічого не змінює.
+ *  Метадані (вони відповідають) - розмір сітки, умовні формати, фільтри,
+ *  захисти, метадані розробника по кожному листу; потім час читання A1 кожного листа. */
+function d13_diagVk() {
+  var id = dirCfg_('bakery').spreadsheetId;
+  var t0 = Date.now();
+  var m = Sheets.Spreadsheets.get(id, { fields:
+    'developerMetadata(metadataId),namedRanges(name),dataSources(dataSourceId),' +
+    'sheets(properties(title,sheetId,hidden,sheetType,gridProperties),conditionalFormats(ranges),' +
+    'protectedRanges(protectedRangeId),filterViews(filterViewId),basicFilter(range),merges,' +
+    'bandedRanges(bandedRangeId),charts(chartId),developerMetadata(metadataId),slicers(slicerId))' });
+  console.log('metadata ' + (Date.now() - t0) + ' мс; devMeta=' + (m.developerMetadata || []).length +
+              ' named=' + (m.namedRanges || []).length + ' dataSources=' + (m.dataSources || []).length);
+  var cells = 0;
+  (m.sheets || []).forEach(function (s) {
+    var p = s.properties, g = p.gridProperties || {};
+    var n = (g.rowCount || 0) * (g.columnCount || 0); cells += n;
+    var cfRanges = (s.conditionalFormats || []).reduce(function (a, c) { return a + (c.ranges || []).length; }, 0);
+    console.log(p.title + (p.hidden ? ' (скр)' : '') + ': ' + g.rowCount + 'x' + g.columnCount + '=' + n +
+      ' | CF ' + (s.conditionalFormats || []).length + ' (діап ' + cfRanges + ')' +
+      ' | protected ' + (s.protectedRanges || []).length + ' | filterViews ' + (s.filterViews || []).length +
+      ' | basicFilter ' + (s.basicFilter ? 'ТАК' : '-') + ' | merges ' + (s.merges || []).length +
+      ' | banded ' + (s.bandedRanges || []).length + ' | charts ' + (s.charts || []).length +
+      ' | devMeta ' + (s.developerMetadata || []).length + ' | slicers ' + (s.slicers || []).length);
+  });
+  console.log('ВСЬОГО клітинок: ' + cells + ' (ліміт 10 000 000)');
+  (m.sheets || []).forEach(function (s) {
+    var t = Date.now();
+    try { apiValues_(id, a1q_(s.properties.title, 'A1')); console.log('читання ' + s.properties.title + ': ' + (Date.now() - t) + ' мс'); }
+    catch (e) { console.log('читання ' + s.properties.title + ': ПОМИЛКА за ' + (Date.now() - t) + ' мс: ' + e.message); }
+  });
+}
+
 /** Прибрати листи "ТЕСТ ..." після d11. */
 function d12_removeBakeryTestSheets() {
   var id = dirCfg_('bakery').spreadsheetId;
