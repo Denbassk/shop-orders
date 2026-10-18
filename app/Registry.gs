@@ -10,13 +10,11 @@
 // ============================================================
 
 function loadStores_() {
-  const cached = cacheGet_('registry_v7');
+  const cached = cacheGet_('registry_v8');
   if (cached) return cached;
 
-  const sh = SpreadsheetApp.openById(REGISTRY_ID).getSheetByName(REGISTRY_SHEET);
-  if (!sh || sh.getLastRow() < 2) return [];
-
-  const stores = sh.getRange(2, 1, sh.getLastRow() - 1, 20).getValues()
+  // Sheets API, не SpreadsheetApp (див. SheetsFast.gs)
+  const stores = apiValues_(REGISTRY_ID, a1q_(REGISTRY_SHEET, 'A2:T'))
     .filter(function (r) { return r[0] === true && String(r[2]).trim(); })
     .map(function (r) {
       const addr = String(r[2]).trim();
@@ -45,7 +43,7 @@ function loadStores_() {
     .filter(function (s) { return s.directions.length; })
     .sort(function (a, b) { return a.label.localeCompare(b.label, 'uk'); });
 
-  cachePut_('registry_v7', stores, 600);
+  cachePut_('registry_v8', stores, 600);
   return stores;
 }
 
@@ -81,7 +79,7 @@ function findStore_(storeId) {
 }
 
 function loadTodayStatus_() {
-  const cached = cacheGet_('status_v3');
+  const cached = cacheGet_('status_v4');
   if (cached) return cached;
 
   const today = formatDateDMY_(new Date());
@@ -91,16 +89,13 @@ function loadTodayStatus_() {
     const cfg = DIRECTIONS[k];
     status[k] = {};
     try {
-      const sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-      if (!sh || sh.getLastRow() < 2) return;
-      const last = sh.getLastRow();
-      const take = Math.min(last - 1, RAW_TAIL_ROWS);
-      sh.getRange(last - take + 1, 1, take, 3).getValues().forEach(function (r) {
-        const d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
-        if (d === today) {
-          const a = String(r[2]).trim();
-          if (a) status[k][addrKey_(a)] = true;
-        }
+      // Sheets API + запобіжник (SheetsFast.gs): одна таблиця, що не
+      // відповідає, більше не тримає статус решти напрямків.
+      const tail = guardedDir_(k, function () { return rawTailApi_(cfg, 'C'); });
+      tail.rows.forEach(function (r) {
+        if (dmyApi_(r[0]) !== today) return;
+        const a = cellStr_(r[2]);
+        if (a) status[k][addrKey_(a)] = true;
       });
     } catch (e) {
       console.error('Статус ' + k + ': ' + e.message);
@@ -108,7 +103,7 @@ function loadTodayStatus_() {
     }
   });
 
-  cachePut_('status_v3', status, 60);
+  cachePut_('status_v4', status, 60);
   return status;
 }
 
@@ -144,7 +139,8 @@ function cachePut_(k, data, sec) {
 
 function invalidateAppCache() {
   CacheService.getScriptCache().removeAll(['registry_v2', 'registry_v3', 'registry_v4',
-    'registry_v5', 'registry_v6', 'registry_v7', 'status_v2', 'status_v3',
-    'prod_bread', 'prod_nbhz', 'prod_bakery', 'prod_veg']);
+    'registry_v5', 'registry_v6', 'registry_v8', 'status_v2', 'status_v4',
+    'prod_bread', 'prod_nbhz', 'prod_bakery', 'prod_veg',
+    'prod2_bread', 'prod2_nbhz', 'prod2_bakery', 'prod2_veg']);
   console.log('Кеш очищено');
 }

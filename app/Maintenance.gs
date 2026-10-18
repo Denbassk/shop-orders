@@ -364,7 +364,7 @@ function benchmarkApp() {
   Object.keys(DIRECTIONS).forEach(function (k) {
     var s = loadStores_().filter(function (x) { return x.directions.indexOf(k) >= 0; })[0];
     if (!s) { console.log('немає точок для ' + k); return; }
-    CacheService.getScriptCache().remove('prod_' + k);
+    CacheService.getScriptCache().remove('prod2_' + k);
     step('products ' + k + ', холодний', function () {
       return apiProducts_({ dir: k, storeId: s.id }).products.length + ' позицій';
     });

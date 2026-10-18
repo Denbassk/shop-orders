@@ -59,6 +59,7 @@ function bakerySignature_(rows) {
 
 // --- Функція для тригера: перезбирає, лише якщо щось змінилось ---
 function refreshBakeryReports() {
+  if (dirSick_('bakery')) { console.log('таблиця ВК не відповідає - пропускаю'); return; }
   var rows = bakeryTodayRows_();
   // Немає сьогодні замовлень ВК (вихідний напрямку, або вже після дедлайну
   // 13:00) - нема чого пересобирати і нема чого сортувати. Інакше тригер
@@ -83,10 +84,13 @@ function refreshBakeryReports() {
 
 // --- Зібрати обидва звіти ПРЯМО ЗАРАЗ, у будь-якому разі ---
 function buildBakeryReports() {
-  // спершу впорядковуємо сирий лист (дата, потім назва товару),
-  // далі читаємо вже впорядковані рядки
-  sortBakeryRawByAddress_();
-  var rows = bakeryTodayRows_();
+  // Сирий лист БІЛЬШЕ НЕ СОРТУЄМО (18.10.2026): sortRange всієї таблиці під
+  // глобальним ScriptLock тримав замок до 360 с і поклав усі напрямки.
+  // Порядок потрібен лише звітам - сортуємо в памʼяті: адреса, назва.
+  var rows = bakeryTodayRows_().sort(function (a, b) {
+    var x = String(a[2] || '').localeCompare(String(b[2] || ''), 'uk');
+    return x || String(a[5] || '').localeCompare(String(b[5] || ''), 'uk');
+  });
   buildBakeryOrdersSheet_(rows);
   buildBakerySummarySheet_(rows);
   buildBakeryRouteSheet_(rows);
@@ -656,7 +660,7 @@ function clearBakeryLostMarks() {
     n++;
   });
 
-  CacheService.getScriptCache().remove('status_v3');
+  CacheService.getScriptCache().remove('status_v4');
   console.log('Знято позначок: ' + n + '. Ці точки можуть відправити замовлення заново.');
 }
 // ============================================================

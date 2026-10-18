@@ -15,6 +15,7 @@ function apiProducts_(payload) {
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
   if (!dayAllowed_(dirKey, store)) throw new Error(dayOffText_(dirKey, store));
+  assertDirHealthy_(dirKey);
 
   var products = loadProducts_(dirKey).map(function (p) {
     return {
@@ -75,19 +76,12 @@ function isOrderedToday_(dirKey, store) {
   var target = statusKey_(dirKey, store);
   var today = formatDateDMY_(new Date());
 
-  try {
-    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-    if (!sh || sh.getLastRow() < 2) return false;
-    var last = sh.getLastRow();
-    var take = Math.min(last - 1, RAW_TAIL_ROWS);
-    var rows = sh.getRange(last - take + 1, 1, take, 3).getValues();
-    for (var i = rows.length - 1; i >= 0; i--) {
-      var d = (rows[i][0] instanceof Date) ? formatDateDMY_(rows[i][0]) : String(rows[i][0]).trim();
-      if (d !== today) continue;
-      if (addrKey_(String(rows[i][2]).trim()) === target) return true;
-    }
-  } catch (e) {
-    console.error('isOrderedToday ' + dirKey + ': ' + e.message);
+  // Sheets API під запобіжником. Помилку НЕ ковтаємо: "не змогли перевірити"
+  // не означає "не замовляли" - інакше пропустимо дубль.
+  var rows = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'C'); }).rows;
+  for (var i = rows.length - 1; i >= 0; i--) {
+    if (dmyApi_(rows[i][0]) !== today) continue;
+    if (addrKey_(cellStr_(rows[i][2])) === target) return true;
   }
   return false;
 }
@@ -117,7 +111,8 @@ function seenOrder_(orderId) {
 // до властивостей, без жодного читання таблиці.
 // ============================================================
 var USE_SHEETS_API = true;     // false - повернутись до старого шляху з замком
-var SUBMIT_WAIT_MS = 75000;    // скільки чекати свою чергу на коротку перевірку
+var SUBMIT_WAIT_MS = 30000;    // скільки чекати свою чергу на коротку перевірку
+                               // (було 75 с: кожен, хто чекає, займає слот виконання)
 var DIR_LOCK_TTL_MS = 45000;   // для archiveRawSheets, див. нижче
 
 // Одне замовлення = один виклик append, скільки б у ньому не було позицій.
@@ -319,20 +314,18 @@ function deleteTodayRows_(cfg, dirKey, store) {
 // Те саме, але за ключем адреси (addrKey_) - так видаляє лист "Видалення
 // замовлення" (DeleteSheet.gs), де є лише адреса з сирого листа.
 function deleteTodayRowsByKey_(cfg, dirKey, target) {
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (!sh || sh.getLastRow() < 2) return 0;
+  // Sheets API: викликається під ScriptLock, тож зависле SpreadsheetApp тут
+  // тримало б замок для всіх напрямків
+  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'C'); });
+  if (!tail.rows.length) return 0;
 
   var today = formatDateDMY_(new Date());
-  var last = sh.getLastRow();
-  var take = Math.min(last - 1, RAW_TAIL_ROWS);
-  var from = last - take + 1;
-  var rows = sh.getRange(from, 1, take, 3).getValues();
+  var from = tail.from, rows = tail.rows;
 
   var hits = [];
   for (var i = 0; i < rows.length; i++) {
-    var d = (rows[i][0] instanceof Date) ? formatDateDMY_(rows[i][0]) : String(rows[i][0]).trim();
-    if (d !== today) continue;
-    if (addrKey_(String(rows[i][2]).trim()) !== target) continue;
+    if (dmyApi_(rows[i][0]) !== today) continue;
+    if (addrKey_(cellStr_(rows[i][2])) !== target) continue;
     hits.push(from + i);
   }
   if (!hits.length) return 0;
@@ -346,18 +339,14 @@ function deleteTodayRowsByKey_(cfg, dirKey, target) {
   ranges.push([start, prev]);
   ranges.reverse();
 
-  if (typeof Sheets !== 'undefined') {
-    Sheets.Spreadsheets.batchUpdate({
-      requests: ranges.map(function (r) {
-        return { deleteDimension: { range: {
-          sheetId: sh.getSheetId(), dimension: 'ROWS',
-          startIndex: r[0] - 1, endIndex: r[1] } } };
-      })
-    }, cfg.spreadsheetId);
-  } else {
-    ranges.forEach(function (r) { sh.deleteRows(r[0], r[1] - r[0] + 1); });
-    SpreadsheetApp.flush();
-  }
+  var sid = sheetIdOf_(cfg.spreadsheetId, rawSheetName_(cfg));
+  Sheets.Spreadsheets.batchUpdate({
+    requests: ranges.map(function (r) {
+      return { deleteDimension: { range: {
+        sheetId: sid, dimension: 'ROWS',
+        startIndex: r[0] - 1, endIndex: r[1] } } };
+    })
+  }, cfg.spreadsheetId);
   return hits.length;
 }
 
@@ -379,6 +368,9 @@ function apiSubmitOrder_(payload) {
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
   if (!dayAllowed_(dirKey, store)) throw new Error(dayOffText_(dirKey, store));
+
+  // таблиця напрямку не відповідає - кажемо одразу, а не висимо 6 хвилин
+  assertDirHealthy_(dirKey);
 
   // Дозвіл закупниці = зміни. Знімає ТРИ замки: дедлайн, повторне
   // замовлення на сьогодні і мінімальну суму.
@@ -499,7 +491,7 @@ function apiSubmitOrder_(payload) {
   }
   if (!APPEND_STATE_.notified) rememberOrder_(orderId, result);
 
-  CacheService.getScriptCache().remove('status_v3');
+  CacheService.getScriptCache().remove('status_v4');
   if (dirKey === 'nbhz') {
     try { props.setProperty('nbhz_export_dirty', todayStr); } catch (e) {}
   }

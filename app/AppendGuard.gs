@@ -97,17 +97,25 @@ function orderRowsInTail_(spreadsheetId, sheetName, dirKey, rows) {
   var res = { rowNums: [], keys: {}, total: 0 };
   if (!rows || !rows.length) return res;
 
-  var sh = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
-  if (!sh) return res;
-  SpreadsheetApp.flush();
-  var last = sh.getLastRow();
+  // Sheets API: бачить рівно те, що щойно записав append (SpreadsheetApp
+  // інколи не бачив - див. шапку файлу), і не висне разом із SpreadsheetApp.
+  var w = Math.max(rows[0].length, 3);
+  var lastCol = String.fromCharCode(64 + Math.min(w, 26));
+  var dispAll = apiValues_(spreadsheetId, a1q_(sheetName, 'A:' + lastCol), true);
+  var datesAll = apiValues_(spreadsheetId, a1q_(sheetName, 'A:A'));
+  var last = dispAll.length;
   if (last < 2) return res;
 
   var take = Math.min(last - 1, RAW_TAIL_ROWS);
   var from = last - take + 1;
-  var w = Math.max(rows[0].length, 3);
-  var disp = sh.getRange(from, 1, take, w).getDisplayValues();
-  var dates = sh.getRange(from, 1, take, 1).getValues();
+  var disp = dispAll.slice(last - take).map(function (r) {
+    var o = []; for (var j = 0; j < w; j++) o.push(r[j] == null ? '' : r[j]); return o;
+  });
+  var dates = datesAll.slice(from - 1, from - 1 + take).map(function (r) {
+    var v = r && r[0];
+    return [typeof v === 'number' ? new Date(Math.round((Math.floor(v) - 25569) * 86400000) + 43200000) : (v == null ? '' : v)];
+  });
+  while (dates.length < disp.length) dates.push(['']);
 
   var wantDate = dmyOfCell_(rows[0][0]);
   var wantAddr = String(rows[0][2] == null ? '' : rows[0][2]).trim();
@@ -147,15 +155,32 @@ function fixAppendedFormat_(sh, startRow, count, firstRow, bcCol) {
   } catch (e) { console.error('формат після append: ' + e.message); }
 }
 
+// Те саме, що fixAppendedFormat_, але одним batchUpdate через Sheets API.
+function fixAppendedFormatApi_(spreadsheetId, sheetName, startRow, count, firstRow, bcCol) {
+  try {
+    var sid = sheetIdOf_(spreadsheetId, sheetName);
+    var fmt = function (col, nf) {
+      return { repeatCell: {
+        range: { sheetId: sid, startRowIndex: startRow - 1, endRowIndex: startRow - 1 + count,
+                 startColumnIndex: col - 1, endColumnIndex: col },
+        cell: { userEnteredFormat: { numberFormat: nf } },
+        fields: 'userEnteredFormat.numberFormat' } };
+    };
+    var req = [fmt(1, { type: 'DATE', pattern: 'dd.mm.yyyy' })];
+    if (/^\d{1,2}:\d{2}/.test(String(firstRow[1] || '')))
+      req.push(fmt(2, { type: 'TIME', pattern: 'hh:mm:ss' }));
+    if (bcCol) req.push(fmt(bcCol, { type: 'TEXT' }));
+    Sheets.Spreadsheets.batchUpdate({ requests: req }, spreadsheetId);
+  } catch (e) { console.error('формат після append: ' + e.message); }
+}
+
 function apiAppend_(spreadsheetId, sheetName, rows, dirKey, bcCol) {
   APPEND_STATE_.confirmed = false;
   waitWhileArchiving_(dirKey, 45000);
 
+  // якір - останній заповнений рядок колонки A, через Sheets API (не SpreadsheetApp)
   var anchor = 1;
-  try {
-    var sh0 = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
-    if (sh0) anchor = Math.max(sh0.getLastRow(), 1);
-  } catch (e) {}
+  try { anchor = Math.max(apiValues_(spreadsheetId, a1q_(sheetName, 'A:A')).length, 1); } catch (e) {}
 
   var res = Sheets.Spreadsheets.Values.append(
     { values: rows },
@@ -172,10 +197,7 @@ function apiAppend_(spreadsheetId, sheetName, rows, dirKey, bcCol) {
   if (at && (updated === 0 || updated === rows.length)) {
     APPEND_STATE_.confirmed = true;
     appendNotifyWritten_();
-    try {
-      var sh = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
-      if (sh) fixAppendedFormat_(sh, at.first, at.count, rows[0], bcCol || 0);
-    } catch (e) { console.error('формат після append: ' + e.message); }
+    fixAppendedFormatApi_(spreadsheetId, sheetName, at.first, at.count, rows[0], bcCol || 0);
     return;
   }
 
@@ -384,7 +406,7 @@ function dupApply_(dirKey, keys) {
   if (removed) {
     safeNoteDeleted_(dirKey);
     try { PropertiesService.getScriptProperties().deleteProperty(dirKey + '_report_sig'); } catch (e) {}
-    try { CacheService.getScriptCache().remove('status_v3'); } catch (e) {}
+    try { CacheService.getScriptCache().remove('status_v4'); } catch (e) {}
     done.forEach(function (d) {
       var msg = cfg.title + ' / ' + d.addr + ', ' + d.date + ' ' + d.time + ' - рядків ' + d.removed +
                 ' (' + d.items.join('; ') + ')';

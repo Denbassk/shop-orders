@@ -60,6 +60,7 @@ function vegSignature_(rows) {
 
 // --- Функція для тригера: перезбирає, лише якщо щось змінилось ---
 function refreshVegReports() {
+  if (dirSick_('veg')) { console.log('таблиця овочів не відповідає - пропускаю'); return; }
   var rows = vegTodayRows_();
   var sig = vegSignature_(rows);
   var props = PropertiesService.getScriptProperties();

@@ -3,10 +3,10 @@
 // ============================================================
 
 function loadProducts_(dirKey) {
-  var cached = cacheGet_('prod_' + dirKey);
+  var cached = cacheGet_('prod2_' + dirKey);
   if (cached) return cached;
   var list = (dirKey === 'veg') ? loadVegProducts_() : loadSheetProducts_(dirKey);
-  cachePut_('prod_' + dirKey, list, 600);
+  cachePut_('prod2_' + dirKey, list, 600);
   return list;
 }
 
@@ -16,10 +16,10 @@ function loadSheetProducts_(dirKey) {
   var cfg = dirCfg_(dirKey);
   if (cfg.productLayout === 'nbhz') return loadNbhzSheetProducts_(cfg);
 
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
-  if (!sh || sh.getLastRow() < 2) return [];
-
-  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues();
+  // Sheets API під запобіжником (SheetsFast.gs), не SpreadsheetApp
+  var rows = guardedDir_(dirKey, function () {
+    return apiValues_(cfg.spreadsheetId, a1q_(cfg.productsSheet, 'A2:F'));
+  });
   var out = [];
 
   rows.forEach(function (r) {
@@ -58,10 +58,9 @@ function loadSheetProducts_(dirKey) {
 // НБХЗ: без цін і штрихкодів. Лист рівно 3 колонки:
 // A Статус | B № | C Номенклатура. Порядок рядків = порядок колонок для заводу.
 function loadNbhzSheetProducts_(cfg) {
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
-  if (!sh || sh.getLastRow() < 2) return [];
-
-  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
+  var rows = guardedDir_(cfg.key, function () {
+    return apiValues_(cfg.spreadsheetId, a1q_(cfg.productsSheet, 'A2:C'));
+  });
   var out = [];
 
   rows.forEach(function (r) {
