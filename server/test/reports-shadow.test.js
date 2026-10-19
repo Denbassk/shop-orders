@@ -55,3 +55,13 @@ test('modelFromGridData: те, що Google віддає для комірок, -
   const r = compareModels({ o: live }, { o: ours });
   assert.deepEqual(r.sheets.o.valueDiffs.concat(r.sheets.o.formatDiffs), []);
 });
+
+test('залишок формату числа в порожніх комірках бойового листа (clear() його не скидає) не є розбіжністю; у комірках зі значенням - є', () => {
+  const live = { S: model({ '1,1': { v: 5, nf: '0.###' }, '2,3': { nf: '#,##0.00' }, '3,3': { v: 7, nf: '#,##0.00' }, '4,1': { v: 'x', nf: '@' } }) };
+  const ours = { S: model({ '1,1': { v: 5, nf: '0.###' }, '3,3': { v: 7 }, '4,1': { v: 'x' } }) };
+  const tally = {};
+  const r = compareModels(live, ours, {}, { liveTextFormat: true, tally });
+  assert.equal(r.sheets.S.formatDiffs.length, 1, 'лише (3,3): значення є, а формату нема');
+  assert.equal(r.sheets.S.formatDiffs[0].cell, '3,3');
+  assert.equal(tally.residual, 2, 'порожня (2,3) і текст "x" з "@"');
+});

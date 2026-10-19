@@ -97,7 +97,7 @@ if (require.main === module) {
         console.log(`  «${name}»: комірок ${s.cells}, розбіжностей значень ${s.valueDiffs.length}, оформлення ${s.formatDiffs.length}`);
         [...s.valueDiffs, ...s.formatDiffs].slice(0, 12).forEach((d) => console.log(`       ${d.cell} ${d.prop}: бойовий=${d.gas} наш=${d.ours}`));
       }
-      console.log(`  разом: комірок ${r.totalCells}, значень ${r.totalValue}, оформлення ${r.totalFormat}` + (r.looseCells ? `; допуск число/текст у штрихкодах зведення: ${r.looseCells} розб.` : '') + (r.residualTextFormat ? ` (окремо не рахується: залишок текстового формату '@' у бойовому на ${r.residualTextFormat} комірках з текстом)` : ''));
+      console.log(`  разом: комірок ${r.totalCells}, значень ${r.totalValue}, оформлення ${r.totalFormat}` + (r.looseCells ? `; допуск число/текст у штрихкодах зведення: ${r.looseCells} розб.` : '') + (r.residualTextFormat ? ` (окремо не рахується: залишок формату числа в бойовому на ${r.residualTextFormat} порожніх або текстових комірках, де код формату не задає)` : ''));
       bad += r.totalValue + r.totalFormat; cells += r.totalCells;
     }
     console.log(`\nУСЬОГО: комірок ${cells}, розбіжностей ${bad}`);

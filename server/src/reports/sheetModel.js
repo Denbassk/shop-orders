@@ -164,7 +164,9 @@ function diffSheets(a, b, opts = {}) {
       if (opts.mask && (p === 'v' || p === 'formula' || p === 'link')) { if (typeof va === 'string') va = opts.mask(va); if (typeof vb === 'string') vb = opts.mask(vb); }
       if (p === 'rot' && va === undefined && vb === 0) return;
       // liveTextFormat: у бойовому листі лишається текстовий формат '@' від давніх збірок (clear() у Apps Script його не скидає) там, де код формату не задає
-      if (opts.liveTextFormat && p === 'nf' && va === '@' && vb === undefined && !/^-?\d+([.,]\d+)?$/.test(String(cb.v === undefined ? '' : cb.v)) && typeof cb.v !== 'number') { (opts.tally || {}).residual = ((opts.tally || {}).residual || 0) + 1; return; }
+      // Те саме для будь-якого формату числа в ПОРОЖНІХ комірках (ні в бойовому, ні в нашому значення нема): невидимий залишок.
+      const emptyBoth = ca.v === undefined && cb.v === undefined;
+      if (opts.liveTextFormat && p === 'nf' && va !== undefined && vb === undefined && (emptyBoth || (va === '@' && !/^-?\d+([.,]\d+)?$/.test(String(cb.v === undefined ? '' : cb.v)) && typeof cb.v !== 'number'))) { (opts.tally || {}).residual = ((opts.tally || {}).residual || 0) + 1; return; }
       if (JSON.stringify(va) !== JSON.stringify(vb)) {
         // loose - вузький допуск (див. shadow.looseFor): бойовий лист сам непослідовний у типі комірки, залежить від залишків форматів
         if (opts.loose && opts.loose(k, p, va, vb, ca, cb)) { if (opts.tally) opts.tally.loose = (opts.tally.loose || 0) + 1; return; }
