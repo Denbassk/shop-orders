@@ -94,7 +94,13 @@ async function apiSubmitOrder(payload, env) {
       money(totalSupplier * cfg.markup) + ' грн');
   }
 
-  if (!approvedNow && await env.data.hasOrderToday(dirKey, store.id, now.day)) throw new Error(alreadyText(cfg));
+  if (!approvedNow && await env.data.hasOrderToday(dirKey, store.id, now.day)) {
+    // Гонка: перша копія цього ж order_id (повтор при поганому зв'язку) могла закомітитись між перевіркою
+    // повтору нагорі і цією - тоді це не «вже сьогодні», а той самий запит: віддаємо збережену відповідь.
+    const prev = orderId ? await env.data.orderResult(orderId) : null;
+    if (prev) return { ...prev, duplicate: true };
+    throw new Error(alreadyText(cfg));
+  }
 
   const totalShown = money(totalSupplier * cfg.markup);
   const result = {

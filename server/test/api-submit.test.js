@@ -193,6 +193,22 @@ test('транзакція каже duplicate (гонка) -> та сама ві
   assert.deepEqual(calls.exports, []);
 });
 
+test('гонка: той самий order_id записався між orderResult і hasOrderToday -> duplicate, не "вже сьогодні"', async () => {
+  let n = 0;
+  const { r, calls } = await submit(base(), { data: {
+    orderResult: async (id) => (id === 'o-1' && n++ > 0 ? SAVED : null),   // 1-й виклик - ще немає, 2-й - перша копія вже закомітилась
+    hasOrderToday: async () => true,
+  } });
+  assert.deepEqual(r, { ...SAVED, duplicate: true });
+  assert.equal(calls.tx.length, 0);
+  assert.deepEqual(calls.exports, []);
+});
+
+test('чужий запис за сьогодні (інший order_id) -> як і раніше "вже сьогодні відправлено"', async () => {
+  await rejects(base(), 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено. Для добавки натисніть "Попросити дозвіл".',
+    { data: { hasOrderToday: async () => true } });
+});
+
 test('транзакція: конфлікт унікального індексу -> текст "вже сьогодні відправлено"', async () => {
   await rejects(base(), 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено. Для добавки натисніть "Попросити дозвіл".',
     { data: { submitOrderTx: async () => ({ ok: false, reason: 'already' }) } });
