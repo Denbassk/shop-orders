@@ -283,3 +283,63 @@ function apiSheetWriter_(spreadsheetId, sheetName, data, width) {
   };
   return w;
 }
+
+// Зняти позначки "висить/повільна" з усіх напрямків (запуск з редактора).
+// Потрібно після переключення напрямку на іншу таблицю: позначки старої
+// таблиці інакше живуть до 30 хв.
+function z_resetSick() {
+  var c = CacheService.getScriptCache();
+  Object.keys(DIRECTIONS).forEach(function (k) { c.remove('inflight_' + k); c.remove('slow_' + k); });
+  console.log('Позначки знято: ' + Object.keys(DIRECTIONS).join(', '));
+}
+
+// Перевірка таблиці ВК з редактора: позначки, асортимент, сирий лист - з точним текстом помилки
+function z_checkVk() {
+  var cfg = dirCfg_('bakery');
+  console.log('таблиця ' + cfg.spreadsheetId + ' | висить: ' + dirStuck_('bakery') + ' | повільна: ' + dirSick_('bakery'));
+  [[cfg.productsSheet, 'A2:F'], [rawSheetName_(cfg), 'A1:C3']].forEach(function (x) {
+    var t = Date.now();
+    try { var v = apiValues_(cfg.spreadsheetId, a1q_(x[0], x[1]));
+          console.log('OK "' + x[0] + '" рядків ' + v.length + ' за ' + (Date.now() - t) + ' мс'); }
+    catch (e) { console.error('ПОМИЛКА "' + x[0] + '" за ' + (Date.now() - t) + ' мс: ' + e.message); }
+  });
+  try { CacheService.getScriptCache().remove('prod2_bakery'); var p = loadProducts_('bakery');
+        console.log('асортимент для продавця: ' + p.length + ' позицій'); }
+  catch (e) { console.error('асортимент: ' + e.message); }
+}
+
+// 19.10.2026: ВК повернули з копії 1a94… на оригінал. Сьогоднішні рядки, що встигли
+// лягти в копію, переносимо в оригінал. Дублі не пишемо: ключ = дата+час+адреса+назва+кількість.
+var VK_COPY_ID = '1a94srF34gowBQ71U1sLDgiDnJgvTEvW32l2gLtJk3FY';
+function vkCopyMissing_() {
+  var cfg = dirCfg_('bakery'), sheet = rawSheetName_(cfg), today = formatDateDMY_(new Date());
+  var key = function (r) {
+    return [dmyApi_(r[0]), timeApi_(r[1]), cellStr_(r[2]).toLowerCase(), cellStr_(r[5]).toLowerCase(), numApi_(r[7])].join('|');
+  };
+  var t = Date.now();
+  var copy = apiValues_(VK_COPY_ID, a1q_(sheet, 'A2:H')).filter(function (r) { return dmyApi_(r[0]) === today; });
+  console.log('копія: сьогоднішніх рядків ' + copy.length + ' (читання ' + (Date.now() - t) + ' мс)');
+  var have = {};
+  rawTailApi_(cfg, 'H').rows.forEach(function (r) { if (dmyApi_(r[0]) === today) { var k = key(r); have[k] = (have[k] || 0) + 1; } });
+  var miss = [];
+  copy.forEach(function (r) { var k = key(r); if (have[k]) have[k]--; else miss.push(r); });
+  var stores = {};
+  miss.forEach(function (r) { stores[cellStr_(r[2])] = (stores[cellStr_(r[2])] || 0) + 1; });
+  console.log('немає в оригіналі: ' + miss.length + ' рядків; точки: ' + JSON.stringify(stores));
+  return miss;
+}
+function z_vkCopyDry() { vkCopyMissing_(); }
+function z_vkCopyApply() {
+  var cfg = dirCfg_('bakery'), miss = vkCopyMissing_();
+  if (!miss.length) return;
+  var rows = miss.map(function (r) {
+    var o = r.slice(0, 8); while (o.length < 8) o.push('');
+    o[0] = dmyApi_(o[0]); o[1] = timeApi_(o[1]) + ':00';
+    if (o[4] !== '' && o[4] != null) o[4] = "'" + String(o[4]);
+    return o;
+  });
+  Sheets.Spreadsheets.Values.append({ values: rows }, cfg.spreadsheetId, a1q_(rawSheetName_(cfg), 'A1'),
+    { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' });
+  try { CacheService.getScriptCache().remove('status_v4'); } catch (e) {}
+  console.log('дописано в оригінал: ' + rows.length + ' рядків');
+}
