@@ -70,7 +70,7 @@ const DIRECTIONS = {
   bakery: {
     key: 'bakery', title: 'Випічка і кулінарія', subtitle: 'власне виробництво',
     color: '#E65100', deadline: '13:00', step: 1,
-    spreadsheetId: '1a94srF34gowBQ71U1sLDgiDnJgvTEvW32l2gLtJk3FY',
+    spreadsheetId: '1THdB-b4JkXzAKsaVPw8DLrXATlycpFkTgolTmqCOXWo',
     productsSheet: 'Ассортимент',
     rawSheet: '_Сырые_Заказы_ВК', testSheet: '_Тест_Заказы_ВК',
     unit: 'шт', minOrder: 0, markup: 1,

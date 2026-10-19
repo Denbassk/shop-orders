@@ -290,7 +290,7 @@ function onDeleteSheetEdit(e) {
 // Повторний запуск безпечний: вкладки оновляться, тригери не задвояться.
 // Таблиці, що були замість нинішніх (копія ВК 18.10.2026). Їхні тригери
 // onDeleteSheetEdit прибираємо, щоб не лишалось двох.
-var DEL_OLD_SPREADSHEETS = ['1THdB-b4JkXzAKsaVPw8DLrXATlycpFkTgolTmqCOXWo'];
+var DEL_OLD_SPREADSHEETS = ['1a94srF34gowBQ71U1sLDgiDnJgvTEvW32l2gLtJk3FY'];
 
 function installDeleteSheets_() {
   // спершу - усі тригери обробника: старих таблиць і поточних (поставимо заново)
