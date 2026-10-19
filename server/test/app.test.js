@@ -57,7 +57,8 @@ test('диспетчер: невідома дія як в Apps Script, поми�
   const api = createApi(() => ({}), () => {});
   assert.deepEqual(await api('foo', {}), { ok: false, error: 'Невідома дія: foo' });
   assert.deepEqual(await api(undefined), { ok: false, error: 'Невідома дія: undefined' });
-  assert.deepEqual(await api('woSubmit', {}), { ok: false, error: 'Невідома дія: woSubmit' });
+  // Task 8: дії списань маршрутизуються; порожній payload -> перша перевірка apiWoSubmit_ (WriteOff.gs)
+  assert.deepEqual(await api('woSubmit', {}), { ok: false, error: 'Оновіть сторінку і спробуйте ще раз' });
   // bootstrap з зламаним оточенням -> конверт з помилкою, а не падіння
   const bad = await api('bootstrap', {});
   assert.equal(bad.ok, false);
