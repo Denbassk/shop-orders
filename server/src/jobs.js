@@ -27,13 +27,17 @@ async function resendLateMails(env) {
   return out;
 }
 
-// Один тік: вигрузка всіх напрямків + довідправка листів. Збій однієї частини не зупиняє іншу.
+// Один тік: вигрузка всіх напрямків + довідправка листів + перебудова звітів ВК (env.rebuildReports). Збій однієї частини не зупиняє іншу.
 async function tick(env, exportAll) {
-  const [exp, mail] = await Promise.allSettled([exportAll(env), resendLateMails(env)]);
-  return {
+  const [exp, mail, rep] = await Promise.allSettled([exportAll(env), resendLateMails(env),
+    env.rebuildReports ? env.rebuildReports() : Promise.resolve(null)]);
+  const out = {
     export: exp.status === 'fulfilled' ? exp.value : { error: String(exp.reason && exp.reason.message) },
     mail: mail.status === 'fulfilled' ? mail.value : { error: String(mail.reason && mail.reason.message) },
   };
+  if (rep.status === 'rejected') { out.reports = { error: String(rep.reason && rep.reason.message) }; console.error('звіти ВК: ' + out.reports.error); }
+  else if (rep.value) out.reports = rep.value;
+  return out;
 }
 
 module.exports = { resendLateMails, tick };

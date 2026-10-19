@@ -145,9 +145,26 @@ function createData(sb, { now = Date.now } = {}) {
     }));
   }
 
+  // --- звіти (reports/*.js): активні замовлення напрямку за день з рядками, точки і асортимент напрямку ---
+  // stores - активні (як loadStores_ у Apps Script); orderStores - усі: замовлення від уже вимкненої точки теж у звіті.
+  async function reportSnapshot(dir, day) {
+    const sel = 'id,order_id,store_id,order_date,created_at,order_lines(line_no,barcode,name,price,qty)';
+    const [orders, stRows, prods] = await Promise.all([
+      sb.from('orders').select(sel).eq('dir', dir).eq('order_date', day).eq('status', 'active'),
+      sb.from('stores').select('*').order('sort'),
+      sb.from('products').select('barcode,name,category,status').eq('dir', dir).order('sort'),
+    ]).then(([a, b, c]) => [must('orders', a), must('stores', b), must('products', c)]);
+    return {
+      orders: orders.map(({ order_lines, ...o }) => ({ ...o, lines: order_lines || [] })),
+      stores: stRows.filter((r) => r.active).map(rowToStore),
+      orderStores: stRows.map(rowToStore),
+      products: prods,
+    };
+  }
+
   return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
     orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate,
-    exportSnapshot, markExported };
+    exportSnapshot, markExported, reportSnapshot };
 }
 
 module.exports = { createData };

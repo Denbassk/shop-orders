@@ -209,4 +209,4 @@ async function exportAll(env) {
   return out;
 }
 
-module.exports = { exportDir, exportAll, rawRowOf };
+module.exports = { exportDir, exportAll, rawRowOf, dmyOfSheetCell, hmOfCell };

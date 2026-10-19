@@ -70,6 +70,14 @@ async function sheetIdOf(spreadsheetId, title) {
   return hit.properties.sheetId;
 }
 
+// Властивості вкладки (sheetId, розмір, умовні формати) або null, якщо вкладки нема
+async function sheetMeta(spreadsheetId, title) {
+  const res = await sheetsClient().spreadsheets.get({
+    spreadsheetId, fields: 'sheets(properties(sheetId,title,gridProperties),conditionalFormats)',
+  }, REQ);
+  return res.data.sheets.find((s) => s.properties.title === title) || null;
+}
+
 const a1q = (sheet, range) => `'${String(sheet).replace(/'/g, "''")}'!${range}`;
 
-module.exports = { sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, sheetIdOf, a1q, TIMEOUT_MS };
+module.exports = { sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, sheetIdOf, sheetMeta, a1q, TIMEOUT_MS };

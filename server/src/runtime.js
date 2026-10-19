@@ -9,6 +9,7 @@ const { approvePage, approveForm } = require('./pages/approve');
 const { createExportQueue } = require('./export/queue');
 const { exportDir, exportAll } = require('./export/raw');
 const { resolveTarget, exportTargetMode } = require('./export/target');
+const { rebuildBakeryReports, exportThenReports } = require('./reports/rebuild');
 const { tick } = require('./jobs');
 const googleApi = require('./google');
 const { getValues, firstSheetTitle, a1q } = googleApi;
@@ -52,16 +53,21 @@ function createRuntime() {
   console.log('вигрузка в сирі листи: ' + target.mode);
   const googleForExport = {
     ...googleApi,
-    ...Object.fromEntries(['getValues', 'appendValues', 'batchUpdate', 'sheetIdOf'].map((m) => [m, (...a) => {
+    ...Object.fromEntries(['getValues', 'appendValues', 'batchUpdate', 'sheetIdOf', 'sheetMeta'].map((m) => [m, (...a) => {
       if (process.env.EXPORT_GOOGLE_OFF) return Promise.reject(new Error('Google вимкнено (EXPORT_GOOGLE_OFF)'));
       return googleApi[m](...a);
     }])),
   };
   const exportEnv = () => ({ data, google: googleForExport, target, at: new Date() });
-  const queueExport = createExportQueue({ run: (dir) => exportDir(dir, exportEnv()) });
+  // Звіти ВК збираються з бази в ту саму ціль, що й вигрузка. Після вигрузки ВК - перебудова з дебаунсом 30 с
+  // (не на кожне замовлення: перше замовлення відкриває вікно, усі наступні в ньому входять в одну перебудову).
+  const reportEnv = () => ({ data, google: googleForExport, target, at: new Date() });
+  const rebuildReports = () => rebuildBakeryReports(reportEnv());
+  const queueReports = createExportQueue({ run: rebuildReports, delayMs: Number(process.env.REPORTS_DEBOUNCE_MS) || 30000 });
+  const queueExport = createExportQueue({ run: exportThenReports((dir) => exportDir(dir, exportEnv()), queueReports) });
 
   const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport, defer });
-  const tickJob = () => tick({ ...getEnv(), ...exportEnv() }, exportAll);
+  const tickJob = () => tick({ ...getEnv(), ...exportEnv(), rebuildReports }, exportAll);
   return { getEnv, tick: tickJob, approve: (query) => approvePage(query, getEnv()), approveForm: (query) => approveForm(query, getEnv()) };
 }
 
