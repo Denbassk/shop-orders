@@ -1,6 +1,6 @@
 # Состояние работы в Genspark (обновлять каждый шаг)
 
-Обновлено: 19.10.2026. Task 8 (списания), шаг 5.
+Обновлено: 19.10.2026. Task 8 (списания), шаг 6.
 
 ## Как продолжить в новом чате
 Прислать: содержимое этого файла + вывод `git log --oneline -5` + `git status --short`.
@@ -110,3 +110,13 @@ import-reference.js, тестовая вкладка «Списания», POST 
   хотя с себестоимостью оригинал бы их взял; дубли id в оригинале -> id#r, в базе (dir,id) уникален.
 - Дальше: 6 - reference.js (cost); 7 - export/writeoff.js (лист «Списания», 14 колонок WO_HEAD) + тесты;
   8 - runtime.js (queueWoExport), jobs.js (tick); 9 - полный прогон, PR.
+## Шаг 6 (итог)
+- scripts/import-reference.js: випечка читается 'A1:Z' с шапкой -> parseSheetProducts(..., header) -> cost;
+  нет колонки себестоимости -> warning. Хлеб без изменений (A2:F).
+- DEFAULT_SETTINGS + wo_books {} и wo_late '' (ignoreDuplicates - живые значения не затираются).
+  Тест: server/test/import-reference-cost.test.js (google через require.cache).
+- ЧЕТВЕРГ ВЛАДЕЛЬЦУ (порядок): 1) supabase db push (000005); 2) в Apps Script выполнить
+  Logger.log(PropertiesService.getScriptProperties().getProperty('wo_books')) и вставить JSON
+  в settings.wo_books (Table Editor); 3) import-reference --dry -> проверить «випічка» и нет warning
+  о себестоимости; 4) import-reference --force (затрёт правки stores/products из Table Editor!).
+- Дальше шаг 7: export/writeoff.js - выгрузка writeoffs в лист «Списания» (WO_HEAD, 14 колонок) + тесты.

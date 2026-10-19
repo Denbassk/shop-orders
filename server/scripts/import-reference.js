@@ -16,7 +16,7 @@ if (!process.env.SUPABASE_URL && fs.existsSync(secretsEnv)) {
 const { getValues, firstSheetTitle, a1q } = require('../src/google');
 const { DIRECTIONS, REGISTRY_ID, REGISTRY_SHEET, APP_VERSION, WO_DEADLINE } = require('../src/directions');
 const {
-  parseStores, storeToRow, parseSheetProducts, parseNbhzProducts, readVegPrices, parseVegProducts,
+  parseStores, storeToRow, parseSheetProducts, parseNbhzProducts, readVegPrices, parseVegProducts, costIdxOf,
 } = require('../src/import/parse');
 
 const DEFAULT_SETTINGS = {
@@ -25,6 +25,8 @@ const DEFAULT_SETTINGS = {
   app_version: APP_VERSION,
   test_mode: false,
   wo_deadline: WO_DEADLINE,
+  wo_books: {},      // {edrpou: {id, name}} - ScriptProperties wo_books з Apps Script, вносить власник
+  wo_late: '',       // ДД.ММ.РРРР - прийом списань відкрито до кінця дня (woOpenedAll_)
 };
 
 // Читає з Google і повертає { stores, products: {dir: [...]}, warnings }
@@ -38,10 +40,16 @@ async function readAll() {
   stores.forEach((s) => { if (seenIds.has(s.id)) warnings.push(`дубль store_id: ${s.id}`); seenIds.add(s.id); });
 
   const products = {};
-  for (const dir of ['bread', 'bakery']) {
+  for (const dir of ['bread']) {
     const cfg = DIRECTIONS[dir];
     products[dir] = parseSheetProducts(dir, cfg, await getValues(cfg.spreadsheetId, a1q(cfg.productsSheet, 'A2:F')), dropped);
   }
+  // випічка: з шапкою до Z - колонка собівартості шукається за заголовком (WriteOff.gs woProducts_)
+  const bk = DIRECTIONS.bakery;
+  const bkAll = await getValues(bk.spreadsheetId, a1q(bk.productsSheet, 'A1:Z'));
+  products.bakery = parseSheetProducts('bakery', bk, bkAll.slice(1), dropped, bkAll[0] || []);
+  if (costIdxOf(bkAll[0]) < 0) warnings.push('випічка: у шапці «Ассортимента» немає колонки собівартості - список для списань буде порожній');
+
   const nb = DIRECTIONS.nbhz;
   products.nbhz = parseNbhzProducts(await getValues(nb.spreadsheetId, a1q(nb.productsSheet, 'A2:C')), dropped);
 
@@ -144,4 +152,4 @@ if (require.main === module) {
   main().catch((e) => { console.error('ПОМИЛКА:', e.message); process.exit(1); });
 }
 
-module.exports = { readAll, summarize };
+module.exports = { readAll, summarize, DEFAULT_SETTINGS };
