@@ -1,6 +1,6 @@
 # Состояние работы в Genspark (обновлять каждый шаг)
 
-Обновлено: 19.10.2026. Task 8 (списания), шаг 4.
+Обновлено: 19.10.2026. Task 8 (списания), шаг 5.
 
 ## Как продолжить в новом чате
 Прислать: содержимое этого файла + вывод `git log --oneline -5` + `git status --short`.
@@ -98,16 +98,15 @@ import-reference.js, тестовая вкладка «Списания», POST 
   woFind, woMarkDeleted (update ... where deleted_at is null), adminLog; тесты с базой - пропуск,
   если таблицы writeoffs нет (миграция ещё не применена). Проверить, что import-reference заполняет products.cost.
 - Четверг владельцу: supabase db push (000005), затем import-reference (cost), затем тесты БД списаний.
-## Шаг 3б-4 (итог)
-- Тест диспетчера чинён в app.test.js: он был заглушкой «woSubmit = Невідома дія» до Task 8;
-  теперь ждёт 'Оновіть сторінку і спробуйте ще раз'. api/index.js менялся только 4 case.
-- woOpenedAll_ = wo_late === woToday_() (ДД.ММ.РРРР) - совпадает. settings: wo_late строка ДД.ММ.РРРР,
-  wo_books {edrpou: {id, name}}.
-- woMine: оригинал читает только лист «Списания» (архив ночью уносит старше 31 дня) = окно 31 день.
-- Шаг 4 [готово, НЕ применено]: supabase/migrations/20261019000005_writeoff.sql - products.cost,
-  writeoffs (deleted_at, exported_at, частичный unique doc_id), writeoff_lines, admin_log,
-  submit_writeoff_tx (advisory lock + unique_violation -> duplicate). Тест: server/test/migration-writeoff.test.js.
-- Дальше шаг 5: server/src/data.js - woResult (без удалённых), submitWriteoffTx, woDocsOfStore,
-  woFind, woMarkDeleted (update ... where deleted_at is null), adminLog; тесты с базой - пропуск,
-  если таблицы writeoffs нет (миграция ещё не применена). Проверить, что import-reference заполняет products.cost.
-- Четверг владельцу: supabase db push (000005), затем import-reference (cost), затем тесты БД списаний.
+
+## Шаг 5 (итог)
+- Шаг 4 закоммичен дважды (368d468, f014371 - блок вставлен 2 раза); код верный, 243/241/2.
+- data.js: woResult, submitWriteoffTx, woDocsOfStore (gte wo_date), woFind, woMarkDeleted, adminLog.
+  Тест: server/test/data-writeoff.test.js (подменный Supabase).
+- import/parse.js: costIdxOf(header) + parseSheetProducts(..., header) -> products.cost для bakery.
+  Тест: server/test/parse-cost.test.js. ОСТАЛОСЬ: reference.js должен передать строку заголовка и
+  читать лист до колонки себестоимости (шаг 6). Импорт с cost - только ПОСЛЕ db push 000005.
+- Известные отличия от woProducts_ (для пульта, Task 9): парсер отбрасывает не-«стоп» без штрихкода/цены,
+  хотя с себестоимостью оригинал бы их взял; дубли id в оригинале -> id#r, в базе (dir,id) уникален.
+- Дальше: 6 - reference.js (cost); 7 - export/writeoff.js (лист «Списания», 14 колонок WO_HEAD) + тесты;
+  8 - runtime.js (queueWoExport), jobs.js (tick); 9 - полный прогон, PR.
