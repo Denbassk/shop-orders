@@ -1,3 +1,8 @@
+# fly.toml app configuration file generated for shop-orders on 2026-10-19T09:57:05+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
 app = 'shop-orders'
 primary_region = 'fra'
 
@@ -10,7 +15,7 @@ primary_region = 'fra'
 [http_service]
   internal_port = 3000
   force_https = true
-  auto_stop_machines = "suspend"
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
@@ -19,3 +24,4 @@ primary_region = 'fra'
   memory = '256mb'
   cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 256
