@@ -29,7 +29,7 @@ async function apiSubmitOrder(payload, env) {
   payload = payload || {};
   const dirKey = String(payload.dir || '');
   const { settings, ctx, cfg, store } = await loadCommon(env, dirKey, payload.storeId);
-  const items = payload.items || [];
+  const items = Array.isArray(payload.items) ? payload.items : [];
   const orderId = String(payload.orderId || '').slice(0, 60);
   const now = R.kyivNow(env.at);
 
@@ -74,6 +74,7 @@ async function apiSubmitOrder(payload, env) {
   const lines = [];
   let totalSupplier = 0;
   items.forEach((it) => {
+    if (!it || typeof it !== 'object') return;
     const p = priceMap[String(it.id)];
     if (!p) return;
     const qty = Math.round(parseFloat(it.qty) * 1000) / 1000;

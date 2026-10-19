@@ -82,6 +82,14 @@ test('порожнє замовлення / немає items', async () => {
   await rejects(base({ items: undefined }), 'Замовлення порожнє');
 });
 
+test('items не масив / null-елементи: без падіння з TypeError', async () => {
+  await rejects(base({ items: 'абв' }), 'Замовлення порожнє');
+  await rejects(base({ items: { length: 3 } }), 'Замовлення порожнє');
+  await rejects(base({ items: [null, undefined, 5, 'x'] }), 'Не розпізнано жодної позиції');
+  const { r } = await submit(base({ items: [null, { id: '111', qty: 5 }] }));
+  assert.equal(r.positions, 1);
+});
+
 test('> 500 позицій', async () => {
   const items = Array.from({ length: 501 }, () => ({ id: '111', qty: 1 }));
   await rejects(base({ items }), 'Занадто багато позицій');
