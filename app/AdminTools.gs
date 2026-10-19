@@ -164,7 +164,7 @@ function admEditOrder_(payload) {
   try {
     // Sheets API під запобіжником (18.10.2026: SpreadsheetApp на ВК висів хвилинами)
     var sheet = rawSheetName_(cfg);
-    var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); });
+    var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); }, true);
     var from = tail.from, last = from + tail.rows.length - 1;
     var isToday = function (r) {
       return r && dmyApi_(r[0]) === today && addrKey_(cellStr_(r[2])) === target;

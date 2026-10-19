@@ -161,6 +161,11 @@ function bufDrain() {
     ids.forEach(function (oid) {
       var h = bufHas_(oid);
       if (!h) { bufIndexEdit_(function (a) { return a.filter(function (x) { return x !== oid; }); }); return; }
+      if (!h.mirrored) {                        // аварійний лист - до спроби запису в таблицю
+        try { bufMirror_(props, h); h.mirrored = true;
+              props.setProperty(BUF_PREFIX + oid, JSON.stringify(h)); }
+        catch (e) { console.error('аварійний лист: ' + e.message); }
+      }
       if (dirStuck_(h.dir)) return;            // хтось зараз висить на цій таблиці
       try {
         var res = bufWriteOne_(props, h);
@@ -262,4 +267,31 @@ function z_bufShow() {
                 Utilities.formatDate(new Date(h.ts), 'Europe/Kyiv', 'dd.MM HH:mm:ss') +
                 ' | спроб ' + (h.tries || 0) + (h.err ? ' | ' + h.err : '') + ' | ' + lines);
   });
+}
+
+// Аварійний лист у бекап-таблиці (окремий документ): закупниця бачить замовлення
+// з буфера, навіть якщо таблиця напрямку так і не ожила. 19.10.2026.
+var BUF_MIRROR_SHEET = { bakery: 'ВК аварійно', bread: 'Хліб аварійно', nbhz: 'НБХЗ аварійно', veg: 'Овочі аварійно' };
+function bufMirror_(props, h) {
+  var id = props.getProperty(SAFE_BACKUP_SS);
+  if (!id) throw new Error('немає бекап-таблиці');
+  var name = BUF_MIRROR_SHEET[h.dir] || (h.dir + ' аварійно');
+  if (!sheetMetaApi_(id, name)) {
+    Sheets.Spreadsheets.batchUpdate({ requests: [{ addSheet: { properties: { title: name } } }] }, id);
+    Sheets.Spreadsheets.Values.update({ values: [['Дата', 'Час / маршрут', 'Адреса', '', '', '', '', '', '', 'Точка']] },
+      id, a1q_(name, 'A1'), { valueInputOption: 'RAW' });
+  }
+  var rows = bufRowsIn_(packRead_(props, BUF_PREFIX + h.oid, h)).map(function (r) {
+    var o = r.map(function (v) { return (v instanceof Date) ? formatDateDMY_(v) : v; });
+    while (o.length < 9) o.push('');
+    return o.slice(0, 9).concat([h.label]);
+  });
+  Sheets.Spreadsheets.Values.append({ values: rows }, id, a1q_(name, 'A1'),
+    { valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS' });
+}
+
+// Посилання на аварійні листи - у журнал
+function z_bufMirrorUrl() {
+  var id = PropertiesService.getScriptProperties().getProperty(SAFE_BACKUP_SS);
+  console.log('https://docs.google.com/spreadsheets/d/' + id);
 }

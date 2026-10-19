@@ -140,7 +140,7 @@ function safeNoteDeleted_(dirKey) {
     // Sheets API під запобіжником: викликається з пульта і листа "Видалення",
     // SpreadsheetApp на зависшій ВК тримав би їх хвилинами
     var cfg = dirCfg_(dirKey);
-    var n = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'A'); }).rows
+    var n = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'A'); }, true).rows
       .filter(function (r) { return dmyApi_(r[0]) === today; }).length;
     peaks[dirKey] = today + '|' + n;
     props.setProperty(SAFE_PEAK_KEY, JSON.stringify(peaks));

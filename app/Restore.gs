@@ -59,7 +59,7 @@ function restoreBackupRows_(dirKey, dmy) {
 function restoreLiveRows_(dirKey, dmy) {
   // Sheets API під запобіжником; дата в колонці A - рядком ДД.ММ.РРРР
   var cfg = dirCfg_(dirKey);
-  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); });
+  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); }, true);
   return tail.rows.map(function (r) {
     var x = r.slice();
     x[0] = dmyApi_(x[0]);

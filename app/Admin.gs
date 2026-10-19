@@ -302,7 +302,7 @@ function admDirStores_(payload) {
 
   var agg = {};
   // Sheets API під запобіжником: зависла таблиця одного напрямку не вішає пульт
-  var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); });
+  var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); }, true);
   tail.rows.forEach(function (r) {
     if (dmyApi_(r[0]) !== today) return;
     var key = addrKey_(cellStr_(r[2]));
@@ -387,7 +387,7 @@ function admStore_(payload) {
   var today = formatDateDMY_(new Date());
 
   var rows = [], first = 0;
-  var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); });
+  var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); }, true);
   var from = tail.from;
   var c = rawCols_(dir);
   var target = statusKey_(dir, store);

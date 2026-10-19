@@ -45,7 +45,7 @@ function delTimeOf_(v) {
 function delTodayOrders_(dirKey) {
   var cfg = dirCfg_(dirKey);
   var out = [];
-  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); });
+  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); }, true);
 
   var today = formatDateDMY_(new Date());
   var c = rawCols_(dirKey);
@@ -162,7 +162,7 @@ function delSheetRefresh_(dirKey) {
 // --- рядки замовлення для журналу (до видалення) ---
 function delRowsSummary_(cfg, dirKey, target) {
   var out = [];
-  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); });
+  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); }, true);
   var today = formatDateDMY_(new Date());
   var c = rawCols_(dirKey);
   tail.rows.forEach(function (r) {

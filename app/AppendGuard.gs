@@ -295,7 +295,7 @@ function dupScan_(dirKey) {
   // Sheets API (як бачить людина - аналог getDisplayValues) під запобіжником
   var all = guardedDir_(dirKey, function () {
     return apiValues_(cfg.spreadsheetId, a1q_(sheetName, 'A:H'), true);
-  });
+  }, true);
   if (all.length < 2) return out;
   var take = Math.min(all.length - 1, RAW_TAIL_ROWS);
   var from = all.length - take + 1;
