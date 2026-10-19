@@ -1,0 +1,19 @@
+{
+  "name": "shop-orders-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "import:dry": "node scripts/import-reference.js --dry",
+    "import": "node scripts/import-reference.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "dotenv": "^18.0.8",
+    "googleapis": "^186.0.0"
+  }
+}
