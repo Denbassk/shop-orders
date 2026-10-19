@@ -29,10 +29,10 @@ var WO_SUM        = 'Сводная';
 var WO_OLD_NAMES  = { 'Списання': 'Списания', 'Архів': 'Архив', 'Зведена': 'Сводная' };  // перші таблиці
 var WO_MAX_ITEMS  = 150;
 var WO_MAX_QTY    = 500;
-var WO_MARKUP = 0.15;                    // колонка "Сумма +15%" = Сумма (за собівартістю) + 15%
+var WO_MARKUP = 0.20;                    // колонка "Сумма +20%" = Сумма (за собівартістю) + 20% (з 19.10.2026; раніше 15%, старі рядки не перераховуються)
 var WO_HEAD = ['ID', 'Подано', 'Дата списания', 'Торговая точка', '№ ТТ',
                'Категория', 'Штрихкод', 'Товар', 'Количество', 'Цена', 'Сумма',
-               'Сумма +15%', 'Продавец', 'Ключ ТТ'];
+               'Сумма +20%', 'Продавец', 'Ключ ТТ'];
 var WO_COLS = WO_HEAD.length;
 // Індекси колонок (з нуля)
 var WC = { id: 0, at: 1, date: 2, store: 3, code: 4, cat: 5, barcode: 6,
@@ -40,7 +40,7 @@ var WC = { id: 0, at: 1, date: 2, store: 3, code: 4, cat: 5, barcode: 6,
 function woPlus_(sum) { return Math.round(sum * (1 + WO_MARKUP) * 100) / 100; }
 
 // Лист до 14.10.2026 мав 12 колонок (L - "Ключ ТТ"). Вставляємо перед ключем
-// "Сумма +15%" і "Продавец", +15% дораховуємо для старих рядків. Викликається
+// "Сумма +20%" і "Продавец", +20% дораховуємо для старих рядків. Викликається
 // перед кожним читанням/записом, тож після clasp push нічого запускати не треба.
 // haveLock - виклик уже під LockService.getScriptLock() (подача, видалення, архів);
 // інакше беремо замок самі, щоб дві паралельні подачі не вставили колонки двічі.
@@ -59,7 +59,7 @@ function woMigrate_(sh, haveLock) {
 }
 function woMigrateNow_(sh) {
   sh.insertColumnsBefore(12, 2);
-  sh.getRange(1, 12, 1, 2).setValues([['Сумма +15%', 'Продавец']]);
+  sh.getRange(1, 12, 1, 2).setValues([['Сумма +20%', 'Продавец']]);
   var n = sh.getLastRow() - 1;
   if (n > 0) {
     var sums = sh.getRange(2, WC.sum + 1, n, 1).getValues();
@@ -157,14 +157,14 @@ function woSetupBook_(ss, edrpou) {
   sum.getRange('A3').setValue('По торговым точкам').setFontWeight('bold').setFontColor('#E65100');
   sum.getRange('A4').setFormula('=IFERROR(QUERY(' + q + ', "select D, count(H), sum(I), sum(K), sum(L) ' +
     'where D is not null group by D order by sum(K) desc ' +
-    "label D 'Торговая точка', count(H) 'Строк', sum(I) 'Количество', sum(K) 'Сумма, грн', sum(L) 'Сумма +15%'\", 0), \"пока пусто\")");
+    "label D 'Торговая точка', count(H) 'Строк', sum(I) 'Количество', sum(K) 'Сумма, грн', sum(L) 'Сумма +20%'\", 0), \"пока пусто\")");
   sum.getRange('A3:L3').clearContent();
   sum.getRange('A3').setValue('По торговым точкам').setFontWeight('bold').setFontColor('#E65100');
   sum.getRange('H3').setValue('По товарам').setFontWeight('bold').setFontColor('#E65100');
   sum.getRange('G4').clearContent();          // раніше "По товарам" стояло з G
   sum.getRange('H4').setFormula('=IFERROR(QUERY(' + q + ', "select H, sum(I), sum(K), sum(L) ' +
     'where H is not null group by H order by sum(K) desc ' +
-    "label H 'Товар', sum(I) 'Количество', sum(K) 'Сумма, грн', sum(L) 'Сумма +15%'\", 0), \"пока пусто\")");
+    "label H 'Товар', sum(I) 'Количество', sum(K) 'Сумма, грн', sum(L) 'Сумма +20%'\", 0), \"пока пусто\")");
   sum.setColumnWidth(1, 300); sum.setColumnWidth(7, 30); sum.setColumnWidth(8, 300);
   sum.setTabColor('#1565C0');
 
@@ -189,7 +189,7 @@ function woStyleData_(sh, color) {
   sh.getRange(2, WC.code + 1, rows, 2).setNumberFormat('@');          // № ТТ, категорія
   sh.getRange(2, WC.barcode + 1, rows, 1).setNumberFormat('@');
   sh.getRange(2, WC.qty + 1, rows, 1).setNumberFormat('0.###');
-  sh.getRange(2, WC.price + 1, rows, 3).setNumberFormat('0.00');     // цена, сумма, +15%
+  sh.getRange(2, WC.price + 1, rows, 3).setNumberFormat('0.00');     // цена, сумма, +20%
   sh.getRange(2, WC.seller + 1, rows, 1).setNumberFormat('@');
   var widths = [90, 125, 105, 260, 60, 100, 120, 280, 80, 70, 85, 95, 150, 60];
   widths.forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
