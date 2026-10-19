@@ -11,7 +11,7 @@ function loadProducts_(dirKey) {
   } catch (e) {
     // таблиця напрямку висить - останній вдалий асортимент, щоб замовлення
     // можна було зібрати і покласти в буфер (Buffer.gs)
-    var last = lastProducts_(dirKey) || backupProducts_(dirKey);
+    var last = lastProducts_(dirKey);
     if (!last) throw e;
     console.error('асортимент ' + dirKey + ' - запасна копія: ' + e.message);
     cachePut_('prod2_' + dirKey, last, 120);
@@ -164,29 +164,4 @@ function nameKey_(s) {
     .replace(/[’'`"()]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-// Аварійний асортимент з бекап-таблиці (Safety.gs): позиції, які точки замовляли
-// останніми днями, з тими самими штрихкодами і цінами. 19.10.2026 таблиця ВК
-// не відповідала зовсім, а копії асортименту ще не було.
-function backupProducts_(dirKey) {
-  if (dirKey !== 'bakery') return null;
-  try {
-    var id = PropertiesService.getScriptProperties().getProperty(SAFE_BACKUP_SS);
-    if (!id) return null;
-    var rows = apiValues_(id, a1q_('bakery', 'A2:I'));
-    var seen = {}, out = [];
-    for (var i = rows.length - 1; i >= 0; i--) {         // свіжі рядки - знизу
-      var r = rows[i];
-      var barcode = String(r[5] == null ? '' : r[5]).replace(/^'/, '').trim();
-      var name = String(r[6] || '').trim();
-      var price = parseFloat(String(r[7] == null ? '' : r[7]).replace(',', '.'));
-      if (!barcode || !name || !(price > 0) || seen[barcode]) continue;
-      seen[barcode] = true;
-      out.push({ id: barcode, barcode: barcode, name: name, price: price, category: 'Інше' });
-    }
-    out.sort(function (a, b) { return a.name.localeCompare(b.name, 'uk'); });
-    console.error('асортимент ' + dirKey + ' - з бекапу: ' + out.length + ' позицій');
-    return out.length ? out : null;
-  } catch (e) { console.error('асортимент з бекапу: ' + e.message); return null; }
 }

@@ -343,3 +343,31 @@ function z_vkCopyApply() {
   try { CacheService.getScriptCache().remove('status_v4'); } catch (e) {}
   console.log('дописано в оригінал: ' + rows.length + ' рядків');
 }
+
+// 19.10.2026: прибрати з сьогоднішніх замовлень ВК позиції, яких немає серед доступних
+// в «Ассортименті» (стоп або без ціни/штрихкоду). Пише в журнал кожен рядок, що видаляє.
+function z_vkDropStopped() {
+  var cfg = dirCfg_('bakery'), sheet = rawSheetName_(cfg), today = formatDateDMY_(new Date());
+  var ok = {};
+  loadSheetProducts_('bakery').forEach(function (p) { ok[String(p.barcode)] = true; ok['n:' + p.name.toLowerCase()] = true; });
+  var tok = dirLockAcquire_('bakery', 30000);
+  if (!tok) throw new Error('замок ВК зайнятий, спробуйте ще раз');
+  try {
+    var tail = rawTailApi_(cfg, 'H'), del = [];
+    tail.rows.forEach(function (r, i) {
+      if (dmyApi_(r[0]) !== today) return;
+      var bc = cellStr_(r[4]).replace(/^'/, ''), name = cellStr_(r[5]);
+      if (ok[bc] || ok['n:' + name.toLowerCase()]) return;
+      del.push(tail.from + i);
+      console.log('видаляю рядок ' + (tail.from + i) + ': ' + cellStr_(r[2]) + ' | ' + name + ' x ' + cellStr_(r[7]));
+    });
+    if (!del.length) { console.log('зайвих позицій немає'); return; }
+    var sid = sheetIdOf_(cfg.spreadsheetId, sheet);
+    Sheets.Spreadsheets.batchUpdate({ requests: del.sort(function (a, b) { return b - a; }).map(function (n) {
+      return { deleteDimension: { range: { sheetId: sid, dimension: 'ROWS', startIndex: n - 1, endIndex: n } } };
+    }) }, cfg.spreadsheetId);
+    console.log('видалено рядків: ' + del.length + '. Доступних позицій в асортименті: ' + Object.keys(ok).length / 2);
+  } finally { dirLockRelease_('bakery', tok); }
+  try { CacheService.getScriptCache().remove('status_v4'); } catch (e) {}
+  safeNoteDeleted_('bakery');
+}
