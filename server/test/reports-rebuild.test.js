@@ -25,7 +25,7 @@ function makeEnv(over = {}) {
     google: {
       sheetMeta: async (id, name) => { log.push(['meta', id, name]); return over.noSheets ? null : { properties: { sheetId: 7, gridProperties: { rowCount: 1000, columnCount: 26 } } }; },
       batchUpdate: async (id, reqs) => {
-        log.push(['batch', id, reqs.length]);
+        log.push(['batch', id, reqs.length, reqs]);
         if (over.failOn && log.filter((x) => x[0] === 'batch').length === over.failOn) throw new Error('Google тайм-аут');
         return { replies: [{ addSheet: { properties: { sheetId: 9 } } }] };
       },
@@ -56,10 +56,26 @@ test('вкладки нема - створюється (addSheet), потім п
   assert.equal(batches(log)[0][2], 1);
 });
 
-test('немає замовлень за сьогодні - листи не чіпаємо', async () => {
+test('немає замовлень за сьогодні - звіт перебудовується порожнім («ще немає»), а не пропускається; повтор - «без змін»', async () => {
   const { env, log } = makeEnv({ orders: [], target: fresh() });
-  assert.deepEqual(await rebuildBakeryReports(env), { skipped: 'нема замовлень за сьогодні', rows: 0 });
-  assert.equal(log.filter((x) => x[0] !== 'snapshot').length, 0);
+  const r = await rebuildBakeryReports(env);
+  assert.deepEqual(r.sheets, ['Заказы ВК', 'Сводная ВК', 'Маршрути ВК']);
+  assert.equal(r.rows, 0);
+  assert.equal(batches(log).length, 3);
+  const texts = JSON.stringify(batches(log).map((b) => b[3]));
+  assert.match(texts, /Замовлень на сьогодні ще немає/);
+  assert.deepEqual(await rebuildBakeryReports(env), { skipped: 'без змін', rows: 0 });
+});
+
+test('скасовано ОСТАННЄ замовлення дня: наступна перебудова затирає старі рядки порожнім звітом', async () => {
+  const { env, log, setOrders } = makeEnv({ orders: [order('a', 2)], target: fresh() });
+  assert.equal((await rebuildBakeryReports(env)).rows, 1);
+  setOrders([]);
+  const r = await rebuildBakeryReports(env);
+  assert.equal(r.rows, 0);
+  assert.equal(r.sheets.length, 3, 'не пропущено');
+  assert.equal(batches(log).length, 6);
+  assert.match(JSON.stringify(batches(log).slice(3).map((b) => b[3])), /Замовлень на сьогодні ще немає/);
 });
 
 test('без змін - пропуск; змінилось замовлення - пише; force - пише завжди', async () => {

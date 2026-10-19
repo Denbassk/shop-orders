@@ -152,7 +152,8 @@ test('rebuildAllReports: збій одного напрямку не зупин�
     orders: { bakery: [], bread: [order('a', [['Батон', 5]])], veg: [order('a', [['Картопля', 10, 14.5]])], nbhz: [order('a', [['Батон', 10]])] } });
   const r = await rebuildAllReports(t.env);
   assert.deepEqual(Object.keys(r), ['bakery', 'bread', 'veg', 'nbhz']);
-  assert.equal(r.bakery.skipped, 'нема замовлень за сьогодні');
+  assert.equal(r.bakery.rows, 0);
+  assert.equal(r.bakery.sheets.length, 3, 'ВК без замовлень теж будується порожнім');
   assert.ok(r.bread.sheets);
   assert.match(r.veg.error, /Google тайм-аут/);
   assert.ok(r.nbhz.sheets);

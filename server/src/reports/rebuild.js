@@ -30,9 +30,6 @@ const SHEETS = {
   veg: () => [veg.VEG_ORDERS_SHEET, veg.VEG_SUMMARY_SHEET],
   nbhz: (env, day) => ['Вивантаження ' + dmyOfDay(day), nbhzLinkName(env)],
 };
-// Немає замовлень за сьогодні: ВК листи не чіпає (вихідний напрямку, після дедлайну 13:00 - Apps Script так само);
-// хліб, овочі і НБХЗ будують «Замовлень на … немає» (як їх refresh*).
-const SKIP_EMPTY = { bakery: true, bread: false, veg: false, nbhz: false };
 
 const projStore = (s) => [s.id, s.label, s.address, s.code, s.edrpou, s.zone, s.route, s.routeNbhz, s.addrBread, s.addrBakery, s.addrVeg, s.addrNbhz, s.directions, s.days];
 const sizeOf = (plan) => ({ rows: plan.data.length, cols: plan.width });
@@ -115,7 +112,9 @@ async function rebuildLocked(dir, env, { force }) {
   const snap = await env.data.reportSnapshot(dir, day);
   const rows = rowsFromOrders(dir, snap.orders, snap.orderStores, day);
   const spreadsheetId = env.target.spreadsheetId(dir);
-  if (!rows.length && SKIP_EMPTY[dir]) return { skipped: 'нема замовлень за сьогодні', rows: 0 };
+  // Немає замовлень за день (вихідний, усе скасовано) - звіт будується порожнім («ще немає»), а не пропускається: інакше після
+  // скасування останнього замовлення в листах лишились би вчорашні/скасовані рядки. Apps Script тут виходив (refreshBakeryReports:
+  // if (!rows.length) return) - щоб не брати глобальний замок; на сервері замка нема, а сигнатура з датою пише порожній звіт раз.
 
   const sig = crypto.createHash('sha1').update(JSON.stringify([day, rows, snap.stores.map(projStore),
     (snap.products || []).map((p) => [p.name, p.status, p.category])])).digest('hex');
