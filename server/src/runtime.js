@@ -5,7 +5,7 @@ const { createData } = require('./data');
 const { createVegPrices } = require('./vegPrices');
 const { createLate } = require('./late');
 const { createMailer } = require('./mail');
-const { approvePage } = require('./pages/approve');
+const { approvePage, approveForm } = require('./pages/approve');
 const { queueExport } = require('./export/queue');
 const { getValues, firstSheetTitle, a1q } = require('./google');
 const { DIRECTIONS } = require('./directions');
@@ -37,10 +37,13 @@ function createRuntime() {
   const { SMTP_USER, SMTP_PASS } = process.env;
   const mailer = SMTP_USER && SMTP_PASS
     ? createMailer({ transport: createMailTransport(SMTP_USER, SMTP_PASS), user: SMTP_USER, testTo: process.env.LATE_MAIL_TEST || SMTP_USER })
-    : { sendLateMail: async () => false };            // пошта не налаштована: запит записується, листа нема (mailed:false)
+    : { sendLateMail: async () => false, recipient: () => '' };   // пошта не налаштована: запит записується, листа нема (mailed:false)
 
-  const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport });
-  return { getEnv, approve: (query) => approvePage(query, getEnv()) };
+  // фонові завдання (лист про дозвіл): помилки вже оброблені в задачі, тут лише щоб не було unhandled rejection
+  const defer = (p) => { Promise.resolve(p).catch(() => {}); };
+
+  const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport, defer });
+  return { getEnv, approve: (query) => approvePage(query, getEnv()), approveForm: (query) => approveForm(query, getEnv()) };
 }
 
 module.exports = { createRuntime };

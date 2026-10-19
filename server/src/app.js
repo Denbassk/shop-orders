@@ -18,6 +18,7 @@ function createApp(opts = {}) {
     return api;
   };
   const approve = opts.approve || ((query) => runtime().approve(query));
+  const approveForm = opts.approveForm || ((query) => runtime().approveForm(query));
 
   app.get('/health', (req, res) => {
     res.json({ ok: true, region: process.env.FLY_REGION || null, time: new Date().toISOString() });
@@ -31,11 +32,16 @@ function createApp(opts = {}) {
     res.json(await getApi()(body.action, body.payload));
   });
 
+  // GET лише показує форму з кнопкою; дозвіл видає POST (поштові сканери відкривають лише GET)
+  const sendPage = (res, { status, html }) =>
+    res.status(status).set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }).type('html').send(html);
+
   app.get('/ok', async (req, res, next) => {
-    try {
-      const { status, html } = await approve(req.query);
-      res.status(status).set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }).type('html').send(html);
-    } catch (e) { next(e); }
+    try { sendPage(res, await approveForm(req.query)); } catch (e) { next(e); }
+  });
+
+  app.post('/ok', express.urlencoded({ extended: false, limit: '8kb' }), async (req, res, next) => {
+    try { sendPage(res, await approve(req.body)); } catch (e) { next(e); }
   });
 
   app.use((req, res) => res.status(404).json({ ok: false, error: 'Not found' }));

@@ -39,9 +39,13 @@ const isTestStore = (store) => String(store.id).startsWith('test-');
 // transport - nodemailer-транспорт ({ sendMail }); user - адреса відправника.
 // Тестові точки (store_id 'test-…') НІКОЛИ не пишуть закупницям: лист іде на testTo (або не йде зовсім).
 function createMailer({ transport, user, testTo = '', lateMail = LATE_MAIL }) {
+  // кому піде лист за цією парою ('' - нікому)
+  const recipient = (cfg, store) =>
+    String(isTestStore(store) ? testTo : lateMail[cfg.key] || '').trim();
+
   async function sendLateMail(cfg, store, { url, at }) {
     const test = isTestStore(store);
-    const to = test ? String(testTo || '').trim() : String(lateMail[cfg.key] || '').trim();
+    const to = recipient(cfg, store);
     if (!to) return false;
     const m = buildLateMail(cfg, store, { url, at, to });
     await transport.sendMail({
@@ -52,7 +56,7 @@ function createMailer({ transport, user, testTo = '', lateMail = LATE_MAIL }) {
     });
     return true;
   }
-  return { sendLateMail };
+  return { sendLateMail, recipient };
 }
 
 module.exports = { LATE_MAIL, esc, buildLateMail, createMailer };

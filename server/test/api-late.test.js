@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const { apiRequestLate } = require('../src/api/submit');
 const { createLate } = require('../src/late');
 const { createMailer, LATE_MAIL, buildLateMail } = require('../src/mail');
-const { approvePage } = require('../src/pages/approve');
+const { approvePage, approveForm } = require('../src/pages/approve');
 const { createApp } = require('../src/app');
 const { DIRECTIONS } = require('../src/directions');
 
@@ -16,7 +16,7 @@ const STORE = { id: 'м харків вул бучми 32', label: 'Бучми, 
 const TEST_STORE = { ...STORE, id: 'test-a', label: 'Тест А' };
 
 function makeEnv(over = {}) {
-  const calls = { requested: [], approved: [], mails: [] };
+  const calls = { requested: [], approved: [], mails: [], mailed: [], bg: [] };
   const data = {
     stores: async () => [STORE, TEST_STORE],
     settings: async () => ({}),
@@ -24,10 +24,11 @@ function makeEnv(over = {}) {
     lateRows: async () => [],
     requestLate: async (...a) => { calls.requested.push(a); },
     approveLate: async (...a) => { calls.approved.push(a); },
+    markLateMailed: async (...a) => { calls.mailed.push(a); },
     ...(over.data || {}),
   };
-  const mailer = over.mailer || { sendLateMail: async (cfg, store, x) => { calls.mails.push([cfg.key, store.id, x.url]); return true; } };
-  return { env: { at: over.at || AT, data, late, mailer }, calls };
+  const mailer = over.mailer || { recipient: () => 'x@example.com', sendLateMail: async (cfg, store, x) => { calls.mails.push([cfg.key, store.id, x.url]); return true; } };
+  return { env: { at: over.at || AT, data, late, mailer, defer: (p) => { calls.bg.push(p); } }, calls };
 }
 
 // ---------- токен ----------
@@ -105,26 +106,59 @@ test('mailer: тестова точка без тестового адресат
 });
 
 // ---------- requestLate ----------
-test('requestLate: pending, запис у базу, лист із посиланням на цей сервер', async () => {
+const settle = (calls) => Promise.allSettled(calls.bg);
+
+test('requestLate: pending, запис у базу; лист іде у фоні, mailed_at ставиться після успіху', async () => {
   const { env, calls } = makeEnv();
   const r = await apiRequestLate({ dir: 'bread', storeId: STORE.id }, env);
   assert.deepEqual(r, { status: 'pending', mailed: true, leftMin: 0 });
   assert.deepEqual(calls.requested, [['bread', STORE.id, '2026-10-19', AT]]);
+  assert.equal(calls.bg.length, 1, 'лист поставлено у фон');
+  await settle(calls);
   const [dir, st, url] = calls.mails[0];
   assert.deepEqual([dir, st], ['bread', STORE.id]);
   assert.equal(url, late.approveUrl('bread', STORE.id, '2026-10-19'));
+  assert.deepEqual(calls.mailed.map((m) => m.slice(0, 3)), [['bread', STORE.id, '2026-10-19']]);
 });
 
-test('requestLate: збій пошти не ламає запит (mailed:false)', async () => {
-  const { env } = makeEnv({ mailer: { sendLateMail: async () => { throw new Error('smtp down'); } } });
+test('requestLate: відповідь не чекає на пошту (SMTP висить - відповідь одразу)', async () => {
+  const never = new Promise(() => {});
+  const { env, calls } = makeEnv({ mailer: { recipient: () => 'x@example.com', sendLateMail: () => never } });
+  const r = await Promise.race([apiRequestLate({ dir: 'bread', storeId: TEST_STORE.id }, env), new Promise((res) => setTimeout(() => res('TIMEOUT'), 500))]);
+  assert.deepEqual(r, { status: 'pending', mailed: true, leftMin: 0 });
+  assert.equal(calls.mailed.length, 0);
+});
+
+test('requestLate: збій SMTP логується, mailed_at НЕ ставиться (довідправить tick), відповідь не ламається', async () => {
+  const errs = [];
+  const orig = console.error; console.error = (m) => errs.push(String(m));
+  try {
+    const { env, calls } = makeEnv({ mailer: { recipient: () => 'x@example.com', sendLateMail: async () => { throw new Error('smtp down'); } } });
+    assert.deepEqual(await apiRequestLate({ dir: 'bread', storeId: STORE.id }, env), { status: 'pending', mailed: true, leftMin: 0 });
+    await settle(calls);
+    assert.deepEqual(calls.mailed, []);
+    assert.ok(errs.some((e) => e.includes('smtp down')), errs.join('|'));
+  } finally { console.error = orig; }
+});
+
+test('requestLate: немає адресата / пошта не налаштована -> mailed:false, у фон нічого', async () => {
+  const { env, calls } = makeEnv({ mailer: { recipient: () => '', sendLateMail: async () => false } });
   assert.deepEqual(await apiRequestLate({ dir: 'bread', storeId: STORE.id }, env), { status: 'pending', mailed: false, leftMin: 0 });
+  assert.equal(calls.bg.length, 0);
+});
+
+test('requestLate: sendLateMail повернув false -> mailed_at не ставиться', async () => {
+  const { env, calls } = makeEnv({ mailer: { recipient: () => 'x@example.com', sendLateMail: async () => false } });
+  await apiRequestLate({ dir: 'bread', storeId: STORE.id }, env);
+  await settle(calls);
+  assert.deepEqual(calls.mailed, []);
 });
 
 test('requestLate: дозвіл уже діє -> approved, без листа і без запису', async () => {
   const rows = [{ dir: 'bread', store_id: STORE.id, requested_at: '2026-10-19T16:10:00+03:00', approved_at: '2026-10-19T16:20:00+03:00' }];
   const { env, calls } = makeEnv({ data: { lateRows: async () => rows } });
   assert.deepEqual(await apiRequestLate({ dir: 'bread', storeId: STORE.id }, env), { status: 'approved', mailed: true, leftMin: 20 });
-  assert.deepEqual([calls.requested.length, calls.mails.length], [0, 0]);
+  assert.deepEqual([calls.requested.length, calls.bg.length], [0, 0]);
 });
 
 test('requestLate: помилки дослівно', async () => {
@@ -185,17 +219,92 @@ test('/ok: назва точки екранується; невідома точ
   assert.ok(unknown.html.includes('<br>невідома<br>'));
 });
 
-test('GET /ok через сервер: 403 при поганому підписі, 200 при доброму', async () => {
-  const { env } = makeEnv();
-  const server = createApp({ api: async () => ({}), approve: (query) => approvePage(query, env) }).listen(0, '127.0.0.1');
+test('GET /ok (форма): показує кнопку "Дозволити" з прихованими полями, дозвіл НЕ видає', async () => {
+  const { env, calls } = makeEnv();
+  const r = await approveForm(q('bakery', STORE.id, '2026-10-19'), env);
+  assert.equal(r.status, 200);
+  assert.ok(r.html.includes('<form method="post" action="/ok">'));
+  const sig = late.token('bakery', STORE.id, '2026-10-19');
+  for (const [k, v] of [['dir', 'bakery'], ['st', STORE.id], ['d', '2026-10-19'], ['s', sig]])
+    assert.ok(r.html.includes('<input type="hidden" name="' + k + '" value="' + v + '">'), k);
+  assert.ok(r.html.includes('Дозволити') && r.html.includes('Бучми, 32') && r.html.includes('Випічка і кулінарія'));
+  assert.ok(!r.html.includes('Дозволено на'));
+  assert.deepEqual(calls.approved, []);
+});
+
+test('GET /ok (форма): поганий підпис 403, чужий день 400, ok= як у старих листах - форма з dir', async () => {
+  const { env, calls } = makeEnv();
+  assert.equal((await approveForm(q('bread', STORE.id, '2026-10-19', 'zzzz'), env)).status, 403);
+  assert.equal((await approveForm({}, env)).status, 403);
+  assert.equal((await approveForm(q('bread', STORE.id, '2026-10-18'), env)).status, 400);
+  const old = await approveForm({ ok: 'bread', st: STORE.id, d: '2026-10-19', s: late.token('bread', STORE.id, '2026-10-19') }, env);
+  assert.equal(old.status, 200);
+  assert.ok(old.html.includes('name="dir" value="bread"'));
+  assert.deepEqual(calls.approved, []);
+});
+
+test('/ok через сервер: GET не міняє нічого, POST міняє, POST з поганим підписом 403', async () => {
+  const { env, calls } = makeEnv();
+  const app = createApp({ api: async () => ({}), approve: (query) => approvePage(query, env), approveForm: (query) => approveForm(query, env) });
+  const server = app.listen(0, '127.0.0.1');
   await new Promise((r) => server.once('listening', r));
+  const form = { 'Content-Type': 'application/x-www-form-urlencoded' };
   try {
     const base = `http://127.0.0.1:${server.address().port}`;
-    const bad = await fetch(`${base}/ok?dir=bread&st=x&d=2026-10-19&s=bad`);
-    assert.equal(bad.status, 403);
-    assert.match(bad.headers.get('content-type'), /text\/html/);
-    const good = await fetch(`${base}/ok?` + new URLSearchParams(q('bread', STORE.id, '2026-10-19')));
-    assert.equal(good.status, 200);
-    assert.ok((await good.text()).includes('Дозволено на 30 хв'));
+    const params = new URLSearchParams(q('bread', STORE.id, '2026-10-19'));
+    const badGet = await fetch(`${base}/ok?dir=bread&st=x&d=2026-10-19&s=bad`);
+    assert.equal(badGet.status, 403);
+    assert.match(badGet.headers.get('content-type'), /text\/html/);
+
+    const get = await fetch(`${base}/ok?` + params);
+    assert.equal(get.status, 200);
+    const page = await get.text();
+    assert.ok(page.includes('<form method="post"') && !page.includes('Дозволено на 30 хв'));
+    assert.equal(calls.approved.length, 0, 'GET не видає дозвіл (поштовий сканер відкриває посилання)');
+
+    const badPost = await fetch(`${base}/ok`, { method: 'POST', headers: form, body: new URLSearchParams(q('bread', STORE.id, '2026-10-19', 'badbadbadbadbadbadbadbad')) });
+    assert.equal(badPost.status, 403);
+    assert.equal(calls.approved.length, 0);
+
+    const post = await fetch(`${base}/ok`, { method: 'POST', headers: form, body: params });
+    assert.equal(post.status, 200);
+    assert.ok((await post.text()).includes('Дозволено на 30 хв'));
+    assert.equal(calls.approved.length, 1);
   } finally { await new Promise((r) => server.close(r)); }
 });
+
+// ---------- довідправка (jobs/tick) ----------
+test('resendLateMails: невідправлені pending -> лист + mailed_at; точку без пари в Довіднику пропускає', async () => {
+  const { resendLateMails } = require('../src/jobs');
+  const sent = [], marked = [];
+  const rows = [
+    { dir: 'bread', store_id: STORE.id, req_date: '2026-10-19', requested_at: '2026-10-19T16:20:00+03:00' },
+    { dir: 'bakery', store_id: 'нема такої', req_date: '2026-10-19', requested_at: '2026-10-19T16:20:00+03:00' },
+  ];
+  const env = {
+    at: AT, late,
+    data: { stores: async () => [STORE], directions: async () => DIRECTIONS, unmailedLate: async () => rows,
+      markLateMailed: async (...a) => { marked.push(a); } },
+    mailer: { recipient: () => 'x@example.com', sendLateMail: async (cfg, store, x) => { sent.push([cfg.key, store.id, x.url]); return true; } },
+  };
+  assert.deepEqual(await resendLateMails(env), { sent: 1, failed: 0, skipped: 1 });
+  assert.equal(sent[0][2], late.approveUrl('bread', STORE.id, '2026-10-19'));
+  assert.deepEqual(marked.map((m) => m.slice(0, 3)), [['bread', STORE.id, '2026-10-19']]);
+});
+
+test('resendLateMails: збій SMTP -> failed, mailed_at не ставиться', async () => {
+  const { resendLateMails } = require('../src/jobs');
+  const marked = [];
+  const orig = console.error; console.error = () => {};
+  try {
+    const env = {
+      at: AT, late,
+      data: { stores: async () => [STORE], directions: async () => DIRECTIONS, markLateMailed: async (...a) => { marked.push(a); },
+        unmailedLate: async () => [{ dir: 'bread', store_id: STORE.id, req_date: '2026-10-19', requested_at: '2026-10-19T16:20:00+03:00' }] },
+      mailer: { recipient: () => 'x@example.com', sendLateMail: async () => { throw new Error('smtp down'); } },
+    };
+    assert.deepEqual(await resendLateMails(env), { sent: 0, failed: 1, skipped: 0 });
+    assert.deepEqual(marked, []);
+  } finally { console.error = orig; }
+});
+

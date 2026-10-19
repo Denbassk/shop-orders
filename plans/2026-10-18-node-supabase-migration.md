@@ -128,7 +128,7 @@
 
 ### Task 8: Списання
 
-**Files:** Create `supabase/migrations/20261019000004_writeoff.sql`, `server/src/api/writeoff.js` (`WriteOff.gs`, `WriteOffCosts.gs`), `server/src/export/writeoff.js`, тест.
+**Files:** Create `supabase/migrations/20261019000005_writeoff.sql`, `server/src/api/writeoff.js` (`WriteOff.gs`, `WriteOffCosts.gs`), `server/src/export/writeoff.js`, тест.
 **Interfaces:** дії `/api` `woProducts`, `woSubmit`, `woMine`, `woDelete` - ті самі поля і тексти; дедлайн `WO_DEADLINE`; вигрузка в той самий лист, куди пише Apps Script.
 - [ ] **Step 1-4:** тести на кожну дію і дедлайн, реалізація. **Step 5:** commit.
 

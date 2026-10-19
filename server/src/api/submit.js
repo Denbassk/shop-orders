@@ -7,6 +7,7 @@
 const R = require('../rules');
 const { randomUUID } = require('node:crypto');
 const { queueExport: defaultQueueExport } = require('../export/queue');
+const { sendAndMark } = require('../lateMail');
 
 const money = (n) => Math.round(n * 100) / 100;
 
@@ -133,14 +134,17 @@ async function apiRequestLate(payload, env) {
   const day = R.kyivNow(env.at).day;
   await env.data.requestLate(dirKey, store.id, day, env.at);
 
-  let mailed = false;
-  try {
-    const url = env.late.approveUrl(dirKey, store.id, day);
-    mailed = await env.mailer.sendLateMail(cfg, store, { url, at: env.at });
-  } catch (e) { console.error('Лист про дозвіл: ' + e.message); }
+  // Відповідь продавцю - одразу після запису; лист - у фоні. Помилку SMTP логуємо, mailed_at не ставимо:
+  // /jobs/tick довідправить (jobs.resendLateMails). mailed:false лише коли листа не буде взагалі (немає адресата/пошти).
+  const mailed = !!env.mailer.recipient(cfg, store);
+  if (mailed) {
+    const task = sendAndMark(env, cfg, store, day, env.at)
+      .catch((e) => console.error('Лист про дозвіл не надіслано (довідправить tick): ' + e.message));
+    (env.defer || ((p) => p))(task);
+  }
 
   console.log('Запит дозволу: ' + cfg.title + ' / ' + store.label +
-    (mailed ? ' - лист надіслано' : ' - БЕЗ листа (не налаштована пошта)'));
+    (mailed ? ' - лист іде у фоні' : ' - БЕЗ листа (не налаштована пошта)'));
   return { status: 'pending', mailed, leftMin: 0 };
 }
 

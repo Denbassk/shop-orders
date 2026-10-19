@@ -1,5 +1,8 @@
 // Сторінка, що відкривається з листа закупниці (lateApprovePage_ з app/LateRequest.gs).
-// Повертає { status, html }: 403 - підпис не збігся, 400 - інша причина відмови, 200 - дозволено.
+// GET /ok  -> approveForm: перевіряє підпис і ПОКАЗУЄ кнопку "Дозволити" (нічого не змінює: поштові сканери
+//             відкривають посилання самі).
+// POST /ok -> approvePage: та сама перевірка HMAC, видає дозвіл.
+// Обидві повертають { status, html }: 403 - підпис не збігся, 400 - інша причина відмови, 200 - успіх.
 const R = require('../rules');
 const { esc } = require('../mail');
 
@@ -17,39 +20,65 @@ function render(okState, head, body) {
     '</div></body></html>';
 }
 
-// env = { at, data, late }
-async function approvePage(query, env) {
+function parseQuery(query) {
   query = query || {};
-  const dirKey = String(query.dir || query.ok || '');      // ok= - назва параметра в листах Apps Script
-  const storeId = String(query.st || '');
-  const day = String(query.d || '');
-  const sig = String(query.s || '');
-  const fail = (status, message) => ({ status, html: render(false, 'Не вийшло', esc(message)) });
+  return {
+    dirKey: String(query.dir || query.ok || ''),      // ok= - назва параметра в листах Apps Script
+    storeId: String(query.st || ''),
+    day: String(query.d || ''),
+    sig: String(query.s || ''),
+  };
+}
 
-  if (!storeId || !env.late.verify(dirKey, storeId, day, sig)) return fail(403, 'Посилання недійсне');
-  if (day !== R.kyivNow(env.at).day)
+// Спільна перевірка: підпис -> день -> напрямок. Повертає { fail } або { cfg, ... }.
+async function check(query, env) {
+  const q = parseQuery(query);
+  const fail = (status, message) => ({ fail: { status, html: render(false, 'Не вийшло', esc(message)) } });
+  if (!q.storeId || !env.late.verify(q.dirKey, q.storeId, q.day, q.sig)) return fail(403, 'Посилання недійсне');
+  if (q.day !== R.kyivNow(env.at).day)
     return fail(400, 'Посилання діє лише в день запиту. Попросіть продавця натиснути кнопку ще раз.');
-
   let cfg;
-  try { cfg = R.dirCfg(dirKey, { directions: await env.data.directions() }); }
+  try { cfg = R.dirCfg(q.dirKey, { directions: await env.data.directions() }); }
   catch (e) { return fail(400, e.message); }
-
-  try { await env.data.approveLate(dirKey, storeId, day, env.at); }
-  catch (e) { console.error('дозвіл не записано: ' + e.message); return fail(500, 'Не вдалося записати дозвіл. Спробуйте ще раз.'); }
-
-  let label = storeId;
+  let label = q.storeId;
   try {
-    const s = (await env.data.stores()).find((x) => x.id === storeId);
+    const s = (await env.data.stores()).find((x) => x.id === q.storeId);
     if (s) label = s.label;
   } catch (e) { /* лишаємо id */ }
+  return { q, cfg, label };
+}
+
+// GET: форма з кнопкою. Дані запиту й підпис - у прихованих полях.
+async function approveForm(query, env) {
+  const c = await check(query, env);
+  if (c.fail) return c.fail;
+  const hidden = [['dir', c.q.dirKey], ['st', c.q.storeId], ['d', c.q.day], ['s', c.q.sig]]
+    .map(([k, v]) => '<input type="hidden" name="' + k + '" value="' + esc(v) + '">').join('');
+  const html = render(true, 'Дозволити замовлення?',
+    '<b>' + esc(c.cfg.title) + '</b><br>' + esc(c.label) +
+    '<div style="margin:26px 0 0"><form method="post" action="/ok">' + hidden +
+    '<button type="submit" style="width:100%;background:#e11b22;color:#fff;border:0;padding:17px;border-radius:13px;' +
+    'font-size:18px;font-weight:800;cursor:pointer">Дозволити</button></form></div>' +
+    '<br>Дозвіл відкриє прийом на ' + R.LATE_TTL_MIN + ' хвилин. Нічого не натискати - значить не дозволити.');
+  return { status: 200, html };
+}
+
+// POST: видає дозвіл. env = { at, data, late }
+async function approvePage(query, env) {
+  const c = await check(query, env);
+  if (c.fail) return c.fail;
+  const { dirKey, storeId, day } = c.q;
+
+  try { await env.data.approveLate(dirKey, storeId, day, env.at); }
+  catch (e) { console.error('дозвіл не записано: ' + e.message); return { status: 500, html: render(false, 'Не вийшло', 'Не вдалося записати дозвіл. Спробуйте ще раз.') }; }
 
   return {
     status: 200,
     html: render(true, 'Дозволено на ' + R.LATE_TTL_MIN + ' хв',
-      '<b>' + esc(cfg.title) + '</b><br>' + esc(label) +
+      '<b>' + esc(c.cfg.title) + '</b><br>' + esc(c.label) +
       '<br><br>Продавець зможе відправити замовлення протягом хвилини.<br>' +
       'Через ' + R.LATE_TTL_MIN + ' хвилин прийом закриється знову.'),
   };
 }
 
-module.exports = { approvePage };
+module.exports = { approvePage, approveForm };

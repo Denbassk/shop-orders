@@ -99,8 +99,21 @@ function createData(sb, { now = Date.now } = {}) {
       { dir, store_id: storeId, req_date: day, status: 'approved', approved_at: at.toISOString() }, { onConflict: 'dir,store_id,req_date' }));
   }
 
+  // лист про дозвіл надіслано (ставиться лише після успіху SMTP)
+  async function markLateMailed(dir, storeId, day, at) {
+    must('late_requests', await sb.from('late_requests').update({ mailed_at: at.toISOString() })
+      .eq('dir', dir).eq('store_id', storeId).eq('req_date', day));
+  }
+
+  // pending-запити дозволу за день без листа, подані раніше за olderThan (щоб не наздоганяти фонову відправку)
+  async function unmailedLate(day, olderThan, notBefore) {
+    return must('late_requests', await sb.from('late_requests').select('dir,store_id,req_date,requested_at')
+      .eq('req_date', day).eq('status', 'pending').is('mailed_at', null)
+      .lt('requested_at', olderThan.toISOString()).gt('requested_at', notBefore.toISOString()));
+  }
+
   return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
-    orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate };
+    orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate };
 }
 
 module.exports = { createData };
