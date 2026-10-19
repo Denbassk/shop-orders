@@ -1,6 +1,6 @@
 # Состояние работы в Genspark (обновлять каждый шаг)
 
-Обновлено: 19.10.2026. Task 8 (списания), шаг 2г.
+Обновлено: 19.10.2026. Task 8 (списания), шаг 3а.
 
 ## Как продолжить в новом чате
 Прислать: содержимое этого файла + вывод `git log --oneline -5` + `git status --short`.
@@ -24,8 +24,8 @@ genspark/task-8 от migration/node-supabase. PR - в migration/node-supabase, �
 1. [готово] Ветка, базовый прогон: 227 тестов, 225 pass, 2 fail (золото Task 7).
 2. [готово] server/test/api-writeoff.test.js, server/src/api/writeoff.js,
    server/src/api/index.js (case woProducts/woSubmit/woMine/woDelete). 12/12 зелёные.
-2г. [в работе] Сверка текстов ошибок с WriteOff.gs, полный прогон, коммит (без push).
-3. Тесты-оракул: настоящий app/WriteOff.gs в vm (server/scripts/gas-oracle.js) против writeoff.js.
+2г. [готово] Все 16 текстов есть в writeoff.js. Коммит 2e011f7 (без push).
+3. [в работе] 3а: сверка порядка проверок и полей ответа с оригиналом; 3б: тесты-оракул: настоящий app/WriteOff.gs в vm (server/scripts/gas-oracle.js) против writeoff.js.
 4. Миграция supabase/migrations/20261019000005_writeoff.sql: writeoffs, writeoff_lines,
    admin_log, функция submit_writeoff_tx (повтор doc_id -> duplicate). Только файл, НЕ применять.
 5. server/src/woData.js - слой данных Supabase для списаний (тесты с базой без секретов пропускаются).
@@ -60,3 +60,18 @@ import-reference.js, тестовая вкладка «Списания», POST 
 508 Списання не знайдено - можливо, його вже видалили  [сверено]
 516 Невірний ID списання   (woDelete, docId !~ /^[a-z0-9]{8,40}$/i)
 Не переносим: 52/450/520 (lock), 456 (лист), 117 (setup), 562 (архив, Task 10), 807 (пульт, Task 9).
+## Оригинал apiWo*_ (WriteOff.gs, строки 360-524) - ключевое
+- woStoreChecked_: нет bakery у точки -> 'Для цієї ТТ списання випічки не передбачене'.
+- woProducts ответ: products [{id,name,category}] БЕЗ цен, categories, costCol, dates, closed, deadline, hasBook.
+- woSubmit порядок: docId /^[a-z0-9]{8,40}$/i -> точка -> woClosed_ -> date в woAllowedDates_().v
+  -> seller (пробелы схлопнуть, trim, 2..40, 2 буквы подряд) -> повтор oid_wo_ (duplicate:true)
+  -> книга юрлица по ЄДРПОУ -> товары: неизвестный id = ошибка; qty с запятой; q<=0 пропуск;
+  одинаковые id складываются (округл. 0.001) -> пусто -> >WO_MAX_ITEMS -> по позиции q>WO_MAX_QTY.
+  Сумма позиции round(price*q*100)/100, колонка woPlus_(s). Строка листа (14 кол.):
+  docId, now, wdate, label, code, category, barcode, name, q, price, s, woPlus_(s), seller, store.id.
+  result: docId, store(label), woDate, seller, positions, qty, total, time HH:mm, date=woToday_(); duplicate:false.
+- woMine: docs точки; canDelete = !closed && подано сегодня; total за всё; month с 1-го числа;
+  items только {name, qty}; + closed, deadline, keepDays.
+- woDelete: точка -> closed ('Після ...') -> docId ('Невірний ID списання') -> чужая точка -> не сегодня
+  -> не найдено. adminLog('Продавець видалив списання', label + ' - за ' + date + ', позицій ' + removed
+  + ', ' + total + ' грн (ID ' + docId + ')'). Возврат res из woDeleteDoc_.
