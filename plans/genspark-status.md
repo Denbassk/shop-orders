@@ -98,3 +98,16 @@ import-reference.js, тестовая вкладка «Списания», POST 
   woFind, woMarkDeleted (update ... where deleted_at is null), adminLog; тесты с базой - пропуск,
   если таблицы writeoffs нет (миграция ещё не применена). Проверить, что import-reference заполняет products.cost.
 - Четверг владельцу: supabase db push (000005), затем import-reference (cost), затем тесты БД списаний.
+## Шаг 3б-4 (итог)
+- Тест диспетчера чинён в app.test.js: он был заглушкой «woSubmit = Невідома дія» до Task 8;
+  теперь ждёт 'Оновіть сторінку і спробуйте ще раз'. api/index.js менялся только 4 case.
+- woOpenedAll_ = wo_late === woToday_() (ДД.ММ.РРРР) - совпадает. settings: wo_late строка ДД.ММ.РРРР,
+  wo_books {edrpou: {id, name}}.
+- woMine: оригинал читает только лист «Списания» (архив ночью уносит старше 31 дня) = окно 31 день.
+- Шаг 4 [готово, НЕ применено]: supabase/migrations/20261019000005_writeoff.sql - products.cost,
+  writeoffs (deleted_at, exported_at, частичный unique doc_id), writeoff_lines, admin_log,
+  submit_writeoff_tx (advisory lock + unique_violation -> duplicate). Тест: server/test/migration-writeoff.test.js.
+- Дальше шаг 5: server/src/data.js - woResult (без удалённых), submitWriteoffTx, woDocsOfStore,
+  woFind, woMarkDeleted (update ... where deleted_at is null), adminLog; тесты с базой - пропуск,
+  если таблицы writeoffs нет (миграция ещё не применена). Проверить, что import-reference заполняет products.cost.
+- Четверг владельцу: supabase db push (000005), затем import-reference (cost), затем тесты БД списаний.
