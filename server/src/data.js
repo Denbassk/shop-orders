@@ -112,8 +112,40 @@ function createData(sb, { now = Date.now } = {}) {
       .lt('requested_at', olderThan.toISOString()).gt('requested_at', notBefore.toISOString()));
   }
 
+  // --- вигрузка в сирі листи (export/raw.js) ---
+  const isDirty = (o) => !o.exported_at || Date.parse(o.exported_at) < Date.parse(o.changed_at);
+
+  // Замовлення напрямку, що чекають вигрузки, разом з УСІМА замовленнями їхніх груп (точка, день) і рядками;
+  // stores - усі точки (також вимкнені: замовлення від них уже є в базі).
+  // exported_at < changed_at у PostgREST не порівняти, тому беремо невигружені + останні 3 дні і рахуємо тут.
+  async function exportSnapshot(dir) {
+    const since = R.kyivNow(new Date(now() - 3 * 86400000)).day;
+    const sel = 'id,order_id,dir,store_id,order_date,status,is_addon,created_at,changed_at,exported_at,order_lines(line_no,barcode,name,price,qty)';
+    const recent = must('orders', await sb.from('orders').select(sel).eq('dir', dir).or(`exported_at.is.null,order_date.gte.${since}`));
+    const dirty = recent.filter(isDirty);
+    let orders = [];
+    if (dirty.length) {
+      const pairs = new Set(dirty.map((o) => o.store_id + '|' + o.order_date));
+      const storeIds = [...new Set(dirty.map((o) => o.store_id))];
+      const days = [...new Set(dirty.map((o) => o.order_date))];
+      const all = must('orders', await sb.from('orders').select(sel).eq('dir', dir).in('store_id', storeIds).in('order_date', days));
+      orders = all.filter((o) => pairs.has(o.store_id + '|' + o.order_date))
+        .map(({ order_lines, ...o }) => ({ ...o, lines: order_lines || [] }));
+    }
+    const stores = orders.length ? must('stores', await sb.from('stores').select('*')).map(rowToStore) : [];
+    return { orders, stores };
+  }
+
+  // exported_at = changed_at вигруженої версії: зміна після читання лишає замовлення невигруженим
+  async function markExported(items) {
+    await Promise.all(items.map(async (it) => {
+      must('orders.exported_at', await sb.from('orders').update({ exported_at: it.exported_at }).eq('id', it.id));
+    }));
+  }
+
   return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
-    orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate };
+    orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate,
+    exportSnapshot, markExported };
 }
 
 module.exports = { createData };

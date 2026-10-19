@@ -27,4 +27,13 @@ async function resendLateMails(env) {
   return out;
 }
 
-module.exports = { resendLateMails };
+// Один тік: вигрузка всіх напрямків + довідправка листів. Збій однієї частини не зупиняє іншу.
+async function tick(env, exportAll) {
+  const [exp, mail] = await Promise.allSettled([exportAll(env), resendLateMails(env)]);
+  return {
+    export: exp.status === 'fulfilled' ? exp.value : { error: String(exp.reason && exp.reason.message) },
+    mail: mail.status === 'fulfilled' ? mail.value : { error: String(mail.reason && mail.reason.message) },
+  };
+}
+
+module.exports = { resendLateMails, tick };

@@ -20,6 +20,19 @@ function createApp(opts = {}) {
   const approve = opts.approve || ((query) => runtime().approve(query));
   const approveForm = opts.approveForm || ((query) => runtime().approveForm(query));
 
+  // POST /jobs/tick (x-jobs-secret): вигрузка всіх напрямків + довідправка листів про дозвіл. Викликає cron у GitHub Actions.
+  const tick = opts.tick || (() => runtime().tick());
+  app.post('/jobs/tick', async (req, res, next) => {
+    try {
+      const secret = opts.jobsSecret !== undefined ? opts.jobsSecret : process.env.JOBS_SECRET;
+      if (!secret) return res.status(503).json({ ok: false, error: 'JOBS_SECRET не задано' });
+      const got = String(req.get('x-jobs-secret') || '');
+      const a = Buffer.from(got), b = Buffer.from(secret);
+      if (a.length !== b.length || !require('node:crypto').timingSafeEqual(a, b)) return res.status(403).json({ ok: false, error: 'Forbidden' });
+      res.json({ ok: true, ...(await tick()) });
+    } catch (e) { next(e); }
+  });
+
   app.get('/health', (req, res) => {
     res.json({ ok: true, region: process.env.FLY_REGION || null, time: new Date().toISOString() });
   });

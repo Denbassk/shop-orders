@@ -58,6 +58,18 @@ async function firstSheetTitle(spreadsheetId) {
   return res.data.sheets[0].properties.title;
 }
 
+// sheetId вкладки за назвою (не змінюється, тому кеш процесу)
+const _sheetIds = new Map();
+async function sheetIdOf(spreadsheetId, title) {
+  const key = spreadsheetId + '|' + title;
+  if (_sheetIds.has(key)) return _sheetIds.get(key);
+  const res = await sheetsClient().spreadsheets.get({ spreadsheetId, fields: 'sheets.properties(sheetId,title)' }, REQ);
+  const hit = res.data.sheets.find((s) => s.properties.title === title);
+  if (!hit) throw new Error('Не знайдено лист "' + title + '"');
+  _sheetIds.set(key, hit.properties.sheetId);
+  return hit.properties.sheetId;
+}
+
 const a1q = (sheet, range) => `'${String(sheet).replace(/'/g, "''")}'!${range}`;
 
-module.exports = { sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, a1q, TIMEOUT_MS };
+module.exports = { sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, sheetIdOf, a1q, TIMEOUT_MS };

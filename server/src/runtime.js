@@ -6,8 +6,12 @@ const { createVegPrices } = require('./vegPrices');
 const { createLate } = require('./late');
 const { createMailer } = require('./mail');
 const { approvePage, approveForm } = require('./pages/approve');
-const { queueExport } = require('./export/queue');
-const { getValues, firstSheetTitle, a1q } = require('./google');
+const { createExportQueue } = require('./export/queue');
+const { exportDir, exportAll } = require('./export/raw');
+const { resolveTarget, exportTargetMode } = require('./export/target');
+const { tick } = require('./jobs');
+const googleApi = require('./google');
+const { getValues, firstSheetTitle, a1q } = googleApi;
 const { DIRECTIONS } = require('./directions');
 
 function createMailTransport(user, pass) {
@@ -42,8 +46,23 @@ function createRuntime() {
   // фонові завдання (лист про дозвіл): помилки вже оброблені в задачі, тут лише щоб не було unhandled rejection
   const defer = (p) => { Promise.resolve(p).catch(() => {}); };
 
+  // Вигрузка в сирі листи. EXPORT_TARGET: 'test' (за замовчуванням) або 'live'.
+  // EXPORT_GOOGLE_OFF=1 - перевірочна підміна: Google «лежить» (замовлення лишаються невигруженими до наступного tick).
+  const target = resolveTarget(exportTargetMode());
+  console.log('вигрузка в сирі листи: ' + target.mode);
+  const googleForExport = {
+    ...googleApi,
+    ...Object.fromEntries(['getValues', 'appendValues', 'batchUpdate', 'sheetIdOf'].map((m) => [m, (...a) => {
+      if (process.env.EXPORT_GOOGLE_OFF) return Promise.reject(new Error('Google вимкнено (EXPORT_GOOGLE_OFF)'));
+      return googleApi[m](...a);
+    }])),
+  };
+  const exportEnv = () => ({ data, google: googleForExport, target, at: new Date() });
+  const queueExport = createExportQueue({ run: (dir) => exportDir(dir, exportEnv()) });
+
   const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport, defer });
-  return { getEnv, approve: (query) => approvePage(query, getEnv()), approveForm: (query) => approveForm(query, getEnv()) };
+  const tickJob = () => tick({ ...getEnv(), ...exportEnv() }, exportAll);
+  return { getEnv, tick: tickJob, approve: (query) => approvePage(query, getEnv()), approveForm: (query) => approveForm(query, getEnv()) };
 }
 
 module.exports = { createRuntime };
