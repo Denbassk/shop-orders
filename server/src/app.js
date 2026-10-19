@@ -1,26 +1,37 @@
-// Express-сервер shop-orders. Каркас: /health і заглушка /api (дії підуть у Task 3+).
+// Express-сервер shop-orders: /health, POST /api (дії продавця).
 const express = require('express');
 
-function createApp() {
+// opts.api - (action, payload) => Promise<конверт>; за замовчуванням бойовий, створюється при першому запиті
+function createApp(opts = {}) {
   const app = express();
   app.disable('x-powered-by');
-  // Застосунок шле JSON з Content-Type: text/plain (як до Apps Script) - приймаємо обидва
-  app.use(express.json({ type: ['application/json', 'text/plain'], limit: '1mb' }));
+
+  let api = opts.api;
+  const getApi = () => {
+    if (!api) {
+      const { createApi } = require('./api');
+      const { createRuntime } = require('./runtime');
+      api = createApi(createRuntime().getEnv);
+    }
+    return api;
+  };
 
   app.get('/health', (req, res) => {
     res.json({ ok: true, region: process.env.FLY_REGION || null, time: new Date().toISOString() });
   });
 
-  app.post('/api', (req, res) => {
-    res.json({ ok: false, error: 'Невідома дія' });
+  // Застосунок шле JSON з Content-Type: text/plain (як до Apps Script); розбираємо самі, як doPost:
+  // не JSON -> порожнє тіло -> "Невідома дія: undefined"
+  app.post('/api', express.text({ type: () => true, limit: '1mb' }), async (req, res) => {
+    let body = {};
+    try { body = JSON.parse(req.body) || {}; } catch (e) { body = {}; }
+    res.json(await getApi()(body.action, body.payload));
   });
 
   app.use((req, res) => res.status(404).json({ ok: false, error: 'Not found' }));
 
-  // некоректний JSON у тілі тощо: той самий конверт, без стека
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
-    if (err && err.type === 'entity.parse.failed') return res.json({ ok: false, error: 'Невідома дія' });
     console.error('помилка запиту:', err && err.message);
     res.status(500).json({ ok: false, error: 'Помилка сервера' });
   });

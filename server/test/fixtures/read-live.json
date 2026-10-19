@@ -1,0 +1,6508 @@
+{
+ "capturedAt": "2026-10-19T07:19:11.258Z",
+ "bootstrap": {
+  "ok": true,
+  "data": {
+   "stores": [
+    {
+     "id": "м харків вул амосова 5а",
+     "label": "Амосова, 5А",
+     "code": "1",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул астрономічна 44 г",
+     "label": "Астрономічна, 44 Г",
+     "code": "2",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків пр т байрона 138 1",
+     "label": "Байрона, 138/1",
+     "code": "31",
+     "ua": true,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків пр т байрона 156",
+     "label": "Байрона, 156",
+     "code": "32",
+     "ua": true,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків пр т байрона 163 а",
+     "label": "Байрона, 163 А",
+     "code": "33",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул богдана хмельницького 8",
+     "label": "Богдана Хмельницького, 8",
+     "code": "3",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул грозненська 38",
+     "label": "Болградська, 38",
+     "code": "13",
+     "ua": true,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул бучми 32",
+     "label": "Бучми, 32",
+     "code": "4",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків вул бучми 32б1",
+     "label": "Бучми, 32Б1",
+     "code": "5",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків вул бучми 52",
+     "label": "Бучми, 52",
+     "code": "6",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул валентинівська 24 б",
+     "label": "Валентинівська, 24 Б",
+     "code": "7",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків вул валентинівська 50 а",
+     "label": "Валентинівська, 50 А",
+     "code": "8",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "производство семенка",
+     "label": "Виробництво (Семенка)",
+     "code": "",
+     "ua": false,
+     "directions": [
+      "veg"
+     ],
+     "ordered": {
+      "veg": false
+     },
+     "dayOk": {
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": false
+    },
+    {
+     "id": "м харків вул гарібальді 1",
+     "label": "Гарібальді, 1",
+     "code": "9",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул гвардій широнінців 54",
+     "label": "Гвардій Широнінців, 54",
+     "code": "10",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків пл героїв небесної сотні 14 1",
+     "label": "Героїв Небесної Сотні, 14/1",
+     "code": "29",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: неділя, середа."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків пр т героїв харкова 160",
+     "label": "Героїв Харкова, 160",
+     "code": "34",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул зернова 6 5",
+     "label": "Зернова, 6/5",
+     "code": "38",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": false,
+      "veg": true
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул зубенка 23",
+     "label": "Зубенка, 23",
+     "code": "14",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків вул зубенка 31в5",
+     "label": "Зубенка, 31В5",
+     "code": "15",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків пров іскринський 19 в",
+     "label": "Іскринський, 19 В",
+     "code": "30",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: неділя, середа."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків вул качанівська 19",
+     "label": "Качанівська, 19",
+     "code": "16",
+     "ua": true,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул краснодарська 171 з",
+     "label": "Краснодарська, 171/З",
+     "code": "17",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул михайля семенка 17",
+     "label": "Михайля Семенка, 17",
+     "code": "18",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул нескорених 33",
+     "label": "Нескорених, 33",
+     "code": "12",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": true,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків вул ньютона 102",
+     "label": "Ньютона, 102",
+     "code": "19",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул ньютона 111",
+     "label": "Ньютона, 111",
+     "code": "20",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул олімпійська 9а",
+     "label": "Олімпійська, 9А",
+     "code": "21",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул переяславська 23",
+     "label": "Переяславська, 23",
+     "code": "22",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: середа."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків пр т петра григоренка 37",
+     "label": "Петра Григоренка, 37",
+     "code": "35",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул полевая 83",
+     "label": "Полевая, 83 (Магазин)",
+     "code": "40",
+     "ua": false,
+     "directions": [
+      "bakery"
+     ],
+     "ordered": {
+      "bakery": false
+     },
+     "dayOk": {
+      "bakery": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул роганська 130 4",
+     "label": "Роганська, 130/4",
+     "code": "24",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул роганська 148",
+     "label": "Роганська, 148",
+     "code": "25",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул салтівське шосе 264 в",
+     "label": "Салтівське Шосе, 264 В",
+     "code": "26",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків вул танкопія 16",
+     "label": "Танкопія, 16",
+     "code": "27",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків пров тарасівський 10",
+     "label": "Тарасівський, 10",
+     "code": "39",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    },
+    {
+     "id": "м харків пр т тракторобудівників 95",
+     "label": "Тракторобудівників, 95",
+     "code": "37",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків вул шевченко 341",
+     "label": "Шевченко, 341",
+     "code": "28",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": false
+     },
+     "dayOff": {
+      "veg": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+     },
+     "wo": true
+    },
+    {
+     "id": "м харків пр т ювілейний 67",
+     "label": "Ювілейний, 67",
+     "code": "36",
+     "ua": false,
+     "directions": [
+      "bread",
+      "nbhz",
+      "bakery",
+      "veg"
+     ],
+     "ordered": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "dayOk": {
+      "bread": true,
+      "nbhz": true,
+      "bakery": true,
+      "veg": true
+     },
+     "dayOff": {},
+     "wo": true
+    }
+   ],
+   "directions": {
+    "bread": {
+     "key": "bread",
+     "title": "Хліб Рома",
+     "subtitle": "ЧП Рома",
+     "color": "#8D6E63",
+     "unit": "шт",
+     "deadline": "16:00",
+     "step": 1,
+     "minOrder": 400,
+     "hasCategories": false,
+     "closed": false,
+     "dayOffTag": "Не ваш день"
+    },
+    "nbhz": {
+     "key": "nbhz",
+     "title": "Хліб НБХЗ",
+     "subtitle": "Новобаварський хлібозавод",
+     "color": "#5D4037",
+     "unit": "шт",
+     "deadline": "17:30",
+     "step": 1,
+     "minOrder": 0,
+     "hasCategories": false,
+     "closed": false,
+     "dayOffTag": "Не ваш день"
+    },
+    "bakery": {
+     "key": "bakery",
+     "title": "Випічка і кулінарія",
+     "subtitle": "власне виробництво",
+     "color": "#E65100",
+     "unit": "шт",
+     "deadline": "13:00",
+     "step": 1,
+     "minOrder": 0,
+     "hasCategories": true,
+     "closed": false,
+     "dayOffTag": "Вихідний"
+    },
+    "veg": {
+     "key": "veg",
+     "title": "Овочі і фрукти",
+     "subtitle": "від постачальника",
+     "color": "#2E7D32",
+     "unit": "кг",
+     "deadline": "18:00",
+     "step": 1,
+     "minOrder": 750,
+     "hasCategories": false,
+     "closed": false,
+     "dayOffTag": "Не ваш день"
+    }
+   },
+   "version": "2026-10-15-1",
+   "today": "19.10.2026",
+   "testMode": false,
+   "woDeadline": "13:00"
+  }
+ },
+ "refresh": [
+  {
+   "payload": {
+    "dir": "bread",
+    "storeId": "м харків вул амосова 5а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bread",
+    "storeId": "м харків вул астрономічна 44 г"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bread",
+    "storeId": "м харків пр т байрона 163 а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": true
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "nbhz",
+    "storeId": "м харків вул амосова 5а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "nbhz",
+    "storeId": "м харків вул астрономічна 44 г"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "nbhz",
+    "storeId": "м харків пр т байрона 163 а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": true
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bakery",
+    "storeId": "м харків вул амосова 5а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bakery",
+    "storeId": "м харків вул астрономічна 44 г"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bakery",
+    "storeId": "м харків пр т байрона 163 а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": true
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "veg",
+    "storeId": "м харків вул амосова 5а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "veg",
+    "storeId": "м харків пр т байрона 138 1"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "veg",
+    "storeId": "м харків пр т байрона 163 а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": true
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "veg",
+    "storeId": "м харків вул астрономічна 44 г"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": false
+    }
+   }
+  },
+  {
+   "payload": {},
+   "response": {
+    "ok": true,
+    "data": {
+     "version": "2026-10-15-1",
+     "today": "19.10.2026",
+     "ordered": {
+      "м харків вул амосова 5а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул астрономічна 44 г": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 138 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 156": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т байрона 163 а": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул богдана хмельницького 8": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул грозненська 38": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 32б1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул бучми 52": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 24 б": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул валентинівська 50 а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "производство семенка": {
+       "veg": false
+      },
+      "м харків вул гарібальді 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул гвардій широнінців 54": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пл героїв небесної сотні 14 1": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т героїв харкова 160": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул зернова 6 5": {
+       "bread": true,
+       "nbhz": true,
+       "bakery": false,
+       "veg": true
+      },
+      "м харків вул зубенка 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул зубенка 31в5": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров іскринський 19 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул качанівська 19": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул краснодарська 171 з": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул михайля семенка 17": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул нескорених 33": {
+       "bread": false,
+       "nbhz": true,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 102": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул ньютона 111": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул олімпійська 9а": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків вул переяславська 23": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т петра григоренка 37": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": true
+      },
+      "м харків вул полевая 83": {
+       "bakery": false
+      },
+      "м харків вул роганська 130 4": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул роганська 148": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул салтівське шосе 264 в": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул танкопія 16": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пров тарасівський 10": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків пр т тракторобудівників 95": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      },
+      "м харків вул шевченко 341": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": true,
+       "veg": false
+      },
+      "м харків пр т ювілейний 67": {
+       "bread": false,
+       "nbhz": false,
+       "bakery": false,
+       "veg": false
+      }
+     },
+     "closed": {
+      "bread": false,
+      "nbhz": false,
+      "bakery": false,
+      "veg": false
+     },
+     "late": "none",
+     "lateLeft": 0,
+     "locked": null
+    }
+   }
+  }
+ ],
+ "products": [
+  {
+   "payload": {
+    "dir": "bread",
+    "storeId": "м харків вул амосова 5а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "bread",
+     "unit": "шт",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "16:00",
+     "minOrder": 400,
+     "categories": [],
+     "products": [
+      {
+       "id": "4820041527030",
+       "name": "Батон \"Цільнозерновий\" половина виробу нарізана скибками 0,225 кг",
+       "price": 15.9,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041520581",
+       "name": "Батон Гірчичний нарізаний 0,400 кг",
+       "price": 24.06,
+       "category": null,
+       "availability": null,
+       "box": "10"
+      },
+      {
+       "id": "4820041523964",
+       "name": "Лаваш (круглий) 10 шт (0,180 кг)",
+       "price": 23.64,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041521229",
+       "name": "Лаваш Кавказький 0,200 кг",
+       "price": 17.76,
+       "category": null,
+       "availability": null,
+       "box": "40"
+      },
+      {
+       "id": "4820041523063",
+       "name": "Лаваш Кавказький 4 шт*0,05 кг (0,200 кг)",
+       "price": 21.48,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041524688",
+       "name": "Лаваш цільнозерновий (круглий) 10 шт (0,180 кг)",
+       "price": 23.76,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041527054",
+       "name": "Пиріжок Домашній з м'ясом 0,075 кг",
+       "price": 14.76,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041526439",
+       "name": "Пиріжок з вишнею 0,075 кг",
+       "price": 12.48,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521410",
+       "name": "Пиріжок з капустою 0,075 кг",
+       "price": 10.5,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521489",
+       "name": "Пиріжок з картоплею 0,085 кг",
+       "price": 10.5,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041520321",
+       "name": "Пиріжок з маком 0,075 кг",
+       "price": 14.64,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041528419",
+       "name": "Пиріжок з начинкою із шоколадним смаком 0,085 кг",
+       "price": 14.04,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521823",
+       "name": "Пиріжок з полуницею 0,075 кг",
+       "price": 14.04,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041526446",
+       "name": "Пиріжок зі смородиною 0,075кг",
+       "price": 12.48,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041522387",
+       "name": "Сушки малютка \"Флора\" 0,300кг",
+       "price": 32.16,
+       "category": null,
+       "availability": null,
+       "box": "24"
+      },
+      {
+       "id": "4820041522370",
+       "name": "Сушки човничок \"Флора\" 0,300кг",
+       "price": 32.16,
+       "category": null,
+       "availability": null,
+       "box": "24"
+      },
+      {
+       "id": "4820041526118",
+       "name": "Хліб \"Гетьманський\", частина виробу, нарізана скибками 0,300кг",
+       "price": 24.12,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041523278",
+       "name": "Хліб \"Родзинка\" частина виробу, нарізана скибкамии 0,280 кг",
+       "price": 23.82,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041526873",
+       "name": "Хліб \"Салтівський\" без дріжджів \"Рома\" половина виробу, нарізана скибками 0,400 кг",
+       "price": 23.34,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041522615",
+       "name": "Хліб Болгарський 0,255 кг",
+       "price": 26.46,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041525098",
+       "name": "Хліб Орільський 1/2 нарізаний 0,275 кг",
+       "price": 14.76,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041525081",
+       "name": "Хліб Орільський нарізаний 0,550 кг",
+       "price": 29.04,
+       "category": null,
+       "availability": null,
+       "box": "10"
+      },
+      {
+       "id": "4820041522608",
+       "name": "Хліб Соняшниковий 0,280 кг",
+       "price": 23.76,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": false,
+     "locked": false,
+     "canRequestLate": false,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bread",
+    "storeId": "м харків вул астрономічна 44 г"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "bread",
+     "unit": "шт",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "16:00",
+     "minOrder": 400,
+     "categories": [],
+     "products": [
+      {
+       "id": "4820041527030",
+       "name": "Батон \"Цільнозерновий\" половина виробу нарізана скибками 0,225 кг",
+       "price": 15.9,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041520581",
+       "name": "Батон Гірчичний нарізаний 0,400 кг",
+       "price": 24.06,
+       "category": null,
+       "availability": null,
+       "box": "10"
+      },
+      {
+       "id": "4820041523964",
+       "name": "Лаваш (круглий) 10 шт (0,180 кг)",
+       "price": 23.64,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041521229",
+       "name": "Лаваш Кавказький 0,200 кг",
+       "price": 17.76,
+       "category": null,
+       "availability": null,
+       "box": "40"
+      },
+      {
+       "id": "4820041523063",
+       "name": "Лаваш Кавказький 4 шт*0,05 кг (0,200 кг)",
+       "price": 21.48,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041524688",
+       "name": "Лаваш цільнозерновий (круглий) 10 шт (0,180 кг)",
+       "price": 23.76,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041527054",
+       "name": "Пиріжок Домашній з м'ясом 0,075 кг",
+       "price": 14.76,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041526439",
+       "name": "Пиріжок з вишнею 0,075 кг",
+       "price": 12.48,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521410",
+       "name": "Пиріжок з капустою 0,075 кг",
+       "price": 10.5,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521489",
+       "name": "Пиріжок з картоплею 0,085 кг",
+       "price": 10.5,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041520321",
+       "name": "Пиріжок з маком 0,075 кг",
+       "price": 14.64,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041528419",
+       "name": "Пиріжок з начинкою із шоколадним смаком 0,085 кг",
+       "price": 14.04,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521823",
+       "name": "Пиріжок з полуницею 0,075 кг",
+       "price": 14.04,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041526446",
+       "name": "Пиріжок зі смородиною 0,075кг",
+       "price": 12.48,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041522387",
+       "name": "Сушки малютка \"Флора\" 0,300кг",
+       "price": 32.16,
+       "category": null,
+       "availability": null,
+       "box": "24"
+      },
+      {
+       "id": "4820041522370",
+       "name": "Сушки човничок \"Флора\" 0,300кг",
+       "price": 32.16,
+       "category": null,
+       "availability": null,
+       "box": "24"
+      },
+      {
+       "id": "4820041526118",
+       "name": "Хліб \"Гетьманський\", частина виробу, нарізана скибками 0,300кг",
+       "price": 24.12,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041523278",
+       "name": "Хліб \"Родзинка\" частина виробу, нарізана скибкамии 0,280 кг",
+       "price": 23.82,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041526873",
+       "name": "Хліб \"Салтівський\" без дріжджів \"Рома\" половина виробу, нарізана скибками 0,400 кг",
+       "price": 23.34,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041522615",
+       "name": "Хліб Болгарський 0,255 кг",
+       "price": 26.46,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041525098",
+       "name": "Хліб Орільський 1/2 нарізаний 0,275 кг",
+       "price": 14.76,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041525081",
+       "name": "Хліб Орільський нарізаний 0,550 кг",
+       "price": 29.04,
+       "category": null,
+       "availability": null,
+       "box": "10"
+      },
+      {
+       "id": "4820041522608",
+       "name": "Хліб Соняшниковий 0,280 кг",
+       "price": 23.76,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": false,
+     "locked": false,
+     "canRequestLate": false,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bread",
+    "storeId": "м харків пр т байрона 163 а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "bread",
+     "unit": "шт",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "16:00",
+     "minOrder": 400,
+     "categories": [],
+     "products": [
+      {
+       "id": "4820041527030",
+       "name": "Батон \"Цільнозерновий\" половина виробу нарізана скибками 0,225 кг",
+       "price": 15.9,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041520581",
+       "name": "Батон Гірчичний нарізаний 0,400 кг",
+       "price": 24.06,
+       "category": null,
+       "availability": null,
+       "box": "10"
+      },
+      {
+       "id": "4820041523964",
+       "name": "Лаваш (круглий) 10 шт (0,180 кг)",
+       "price": 23.64,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041521229",
+       "name": "Лаваш Кавказький 0,200 кг",
+       "price": 17.76,
+       "category": null,
+       "availability": null,
+       "box": "40"
+      },
+      {
+       "id": "4820041523063",
+       "name": "Лаваш Кавказький 4 шт*0,05 кг (0,200 кг)",
+       "price": 21.48,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041524688",
+       "name": "Лаваш цільнозерновий (круглий) 10 шт (0,180 кг)",
+       "price": 23.76,
+       "category": null,
+       "availability": null,
+       "box": "30"
+      },
+      {
+       "id": "4820041527054",
+       "name": "Пиріжок Домашній з м'ясом 0,075 кг",
+       "price": 14.76,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041526439",
+       "name": "Пиріжок з вишнею 0,075 кг",
+       "price": 12.48,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521410",
+       "name": "Пиріжок з капустою 0,075 кг",
+       "price": 10.5,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521489",
+       "name": "Пиріжок з картоплею 0,085 кг",
+       "price": 10.5,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041520321",
+       "name": "Пиріжок з маком 0,075 кг",
+       "price": 14.64,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041528419",
+       "name": "Пиріжок з начинкою із шоколадним смаком 0,085 кг",
+       "price": 14.04,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041521823",
+       "name": "Пиріжок з полуницею 0,075 кг",
+       "price": 14.04,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041526446",
+       "name": "Пиріжок зі смородиною 0,075кг",
+       "price": 12.48,
+       "category": null,
+       "availability": null,
+       "box": "46"
+      },
+      {
+       "id": "4820041522387",
+       "name": "Сушки малютка \"Флора\" 0,300кг",
+       "price": 32.16,
+       "category": null,
+       "availability": null,
+       "box": "24"
+      },
+      {
+       "id": "4820041522370",
+       "name": "Сушки човничок \"Флора\" 0,300кг",
+       "price": 32.16,
+       "category": null,
+       "availability": null,
+       "box": "24"
+      },
+      {
+       "id": "4820041526118",
+       "name": "Хліб \"Гетьманський\", частина виробу, нарізана скибками 0,300кг",
+       "price": 24.12,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041523278",
+       "name": "Хліб \"Родзинка\" частина виробу, нарізана скибкамии 0,280 кг",
+       "price": 23.82,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041526873",
+       "name": "Хліб \"Салтівський\" без дріжджів \"Рома\" половина виробу, нарізана скибками 0,400 кг",
+       "price": 23.34,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041522615",
+       "name": "Хліб Болгарський 0,255 кг",
+       "price": 26.46,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      },
+      {
+       "id": "4820041525098",
+       "name": "Хліб Орільський 1/2 нарізаний 0,275 кг",
+       "price": 14.76,
+       "category": null,
+       "availability": null,
+       "box": "-"
+      },
+      {
+       "id": "4820041525081",
+       "name": "Хліб Орільський нарізаний 0,550 кг",
+       "price": 29.04,
+       "category": null,
+       "availability": null,
+       "box": "10"
+      },
+      {
+       "id": "4820041522608",
+       "name": "Хліб Соняшниковий 0,280 кг",
+       "price": 23.76,
+       "category": null,
+       "availability": null,
+       "box": "18"
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": true,
+     "locked": true,
+     "canRequestLate": true,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "nbhz",
+    "storeId": "м харків вул амосова 5а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "nbhz",
+     "unit": "шт",
+     "hidePrice": true,
+     "step": 1,
+     "deadline": "17:30",
+     "minOrder": 0,
+     "categories": [],
+     "products": [
+      {
+       "id": "батон дорожній 0,400г",
+       "name": "Батон Дорожній 0,400г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон класичний 0,350г",
+       "name": "Батон Класичний 0,350г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон на кефірі 0,200г",
+       "name": "Батон На Кефірі 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон нар. молочний 0,400г",
+       "name": "Батон Нар. Молочний 0,400г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон новобаварський 0,450г",
+       "name": "Батон Новобаварський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон слобожанський 0,450г",
+       "name": "Батон Слобожанський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон студентський 0,300г",
+       "name": "Батон Студентський 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "круасани полуниця 0,200г",
+       "name": "Круасани Полуниця 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "круасани шоколад 0,200г",
+       "name": "Круасани Шоколад 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб баварський 0,350г",
+       "name": "Хліб Баварський 0,350г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб гусарик 0,450г",
+       "name": "Хліб Гусарик 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб нб білий 0,500г",
+       "name": "Хліб НБ Білий 0,500г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб пш.жит.особливий 0,500г",
+       "name": "Хліб Пш.Жит.Особливий 0,500г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб сергіївський 0,450г",
+       "name": "Хліб Сергіївський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "булка квіточка 0,300г",
+       "name": "Булка Квіточка 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "булка квіточка креміко 0,300г",
+       "name": "Булка Квіточка Креміко 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "рулет вишня 0,320г",
+       "name": "Рулет Вишня 0,320г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "рулет мак 0,320г",
+       "name": "Рулет Мак 0,320г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": false,
+     "locked": false,
+     "canRequestLate": false,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "nbhz",
+    "storeId": "м харків вул астрономічна 44 г"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "nbhz",
+     "unit": "шт",
+     "hidePrice": true,
+     "step": 1,
+     "deadline": "17:30",
+     "minOrder": 0,
+     "categories": [],
+     "products": [
+      {
+       "id": "батон дорожній 0,400г",
+       "name": "Батон Дорожній 0,400г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон класичний 0,350г",
+       "name": "Батон Класичний 0,350г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон на кефірі 0,200г",
+       "name": "Батон На Кефірі 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон нар. молочний 0,400г",
+       "name": "Батон Нар. Молочний 0,400г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон новобаварський 0,450г",
+       "name": "Батон Новобаварський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон слобожанський 0,450г",
+       "name": "Батон Слобожанський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон студентський 0,300г",
+       "name": "Батон Студентський 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "круасани полуниця 0,200г",
+       "name": "Круасани Полуниця 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "круасани шоколад 0,200г",
+       "name": "Круасани Шоколад 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб баварський 0,350г",
+       "name": "Хліб Баварський 0,350г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб гусарик 0,450г",
+       "name": "Хліб Гусарик 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб нб білий 0,500г",
+       "name": "Хліб НБ Білий 0,500г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб пш.жит.особливий 0,500г",
+       "name": "Хліб Пш.Жит.Особливий 0,500г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб сергіївський 0,450г",
+       "name": "Хліб Сергіївський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "булка квіточка 0,300г",
+       "name": "Булка Квіточка 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "булка квіточка креміко 0,300г",
+       "name": "Булка Квіточка Креміко 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "рулет вишня 0,320г",
+       "name": "Рулет Вишня 0,320г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "рулет мак 0,320г",
+       "name": "Рулет Мак 0,320г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": false,
+     "locked": false,
+     "canRequestLate": false,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "nbhz",
+    "storeId": "м харків пр т байрона 163 а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "nbhz",
+     "unit": "шт",
+     "hidePrice": true,
+     "step": 1,
+     "deadline": "17:30",
+     "minOrder": 0,
+     "categories": [],
+     "products": [
+      {
+       "id": "батон дорожній 0,400г",
+       "name": "Батон Дорожній 0,400г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон класичний 0,350г",
+       "name": "Батон Класичний 0,350г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон на кефірі 0,200г",
+       "name": "Батон На Кефірі 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон нар. молочний 0,400г",
+       "name": "Батон Нар. Молочний 0,400г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон новобаварський 0,450г",
+       "name": "Батон Новобаварський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон слобожанський 0,450г",
+       "name": "Батон Слобожанський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "батон студентський 0,300г",
+       "name": "Батон Студентський 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "круасани полуниця 0,200г",
+       "name": "Круасани Полуниця 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "круасани шоколад 0,200г",
+       "name": "Круасани Шоколад 0,200г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб баварський 0,350г",
+       "name": "Хліб Баварський 0,350г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб гусарик 0,450г",
+       "name": "Хліб Гусарик 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб нб білий 0,500г",
+       "name": "Хліб НБ Білий 0,500г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб пш.жит.особливий 0,500г",
+       "name": "Хліб Пш.Жит.Особливий 0,500г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "хліб сергіївський 0,450г",
+       "name": "Хліб Сергіївський 0,450г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "булка квіточка 0,300г",
+       "name": "Булка Квіточка 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "булка квіточка креміко 0,300г",
+       "name": "Булка Квіточка Креміко 0,300г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "рулет вишня 0,320г",
+       "name": "Рулет Вишня 0,320г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "рулет мак 0,320г",
+       "name": "Рулет Мак 0,320г",
+       "price": 0,
+       "category": null,
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": true,
+     "locked": true,
+     "canRequestLate": true,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bakery",
+    "storeId": "м харків вул амосова 5а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "bakery",
+     "unit": "шт",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "13:00",
+     "minOrder": 0,
+     "categories": [
+      "Випічка",
+      "Кулінарія"
+     ],
+     "products": [
+      {
+       "id": "2984670066468",
+       "name": "Випічка Пампушка з часником 300г",
+       "price": 37.5,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670068158",
+       "name": "Випічка Сосиска в тісті 1шт",
+       "price": 29.5,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2938080087278",
+       "name": "Випічка Хліб Гарбузовий 0,500гр",
+       "price": 40,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2938080086820",
+       "name": "Кулінарія Борщ український 0,450гр",
+       "price": 48,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670066598",
+       "name": "Кулінарія Окрошка 480г",
+       "price": 69.6,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "293808007391",
+       "name": "Кулінарія Салат з печінкою 0,180гр",
+       "price": 50,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670066628",
+       "name": "Кулінарія Салат Оселедець під шубою 195г",
+       "price": 50,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": false,
+     "locked": false,
+     "canRequestLate": false,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bakery",
+    "storeId": "м харків вул астрономічна 44 г"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "bakery",
+     "unit": "шт",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "13:00",
+     "minOrder": 0,
+     "categories": [
+      "Випічка",
+      "Кулінарія"
+     ],
+     "products": [
+      {
+       "id": "2984670066468",
+       "name": "Випічка Пампушка з часником 300г",
+       "price": 37.5,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670068158",
+       "name": "Випічка Сосиска в тісті 1шт",
+       "price": 29.5,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2938080087278",
+       "name": "Випічка Хліб Гарбузовий 0,500гр",
+       "price": 40,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2938080086820",
+       "name": "Кулінарія Борщ український 0,450гр",
+       "price": 48,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670066598",
+       "name": "Кулінарія Окрошка 480г",
+       "price": 69.6,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "293808007391",
+       "name": "Кулінарія Салат з печінкою 0,180гр",
+       "price": 50,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670066628",
+       "name": "Кулінарія Салат Оселедець під шубою 195г",
+       "price": 50,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": false,
+     "locked": false,
+     "canRequestLate": false,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "bakery",
+    "storeId": "м харків пр т байрона 163 а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "bakery",
+     "unit": "шт",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "13:00",
+     "minOrder": 0,
+     "categories": [
+      "Випічка",
+      "Кулінарія"
+     ],
+     "products": [
+      {
+       "id": "2984670066468",
+       "name": "Випічка Пампушка з часником 300г",
+       "price": 37.5,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670068158",
+       "name": "Випічка Сосиска в тісті 1шт",
+       "price": 29.5,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2938080087278",
+       "name": "Випічка Хліб Гарбузовий 0,500гр",
+       "price": 40,
+       "category": "Випічка",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2938080086820",
+       "name": "Кулінарія Борщ український 0,450гр",
+       "price": 48,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670066598",
+       "name": "Кулінарія Окрошка 480г",
+       "price": 69.6,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "293808007391",
+       "name": "Кулінарія Салат з печінкою 0,180гр",
+       "price": 50,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "2984670066628",
+       "name": "Кулінарія Салат Оселедець під шубою 195г",
+       "price": 50,
+       "category": "Кулінарія",
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": true,
+     "locked": true,
+     "canRequestLate": true,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "veg",
+    "storeId": "м харків вул амосова 5а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "veg",
+     "unit": "кг",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "18:00",
+     "minOrder": 750,
+     "categories": [],
+     "products": [
+      {
+       "id": "Авокадо Хасс 18",
+       "name": "Авокадо Хасс 18",
+       "price": 123,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Апельсин Турция",
+       "name": "Апельсин Турция",
+       "price": 162,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Буряк",
+       "name": "Буряк",
+       "price": 27,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Груша Дюшес",
+       "name": "Груша Дюшес",
+       "price": 165,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Капуста білоголова",
+       "name": "Капуста білоголова",
+       "price": 31.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Капуста Пекінська",
+       "name": "Капуста Пекінська",
+       "price": 52.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Картопля",
+       "name": "Картопля",
+       "price": 25.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Морква",
+       "name": "Морква",
+       "price": 30,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Огірок колючка (Машенька)",
+       "name": "Огірок колючка (Машенька)",
+       "price": 105,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Перець червоний",
+       "name": "Перець червоний",
+       "price": 115.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Помідор гілка",
+       "name": "Помідор гілка",
+       "price": 120,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Помідор рожевий",
+       "name": "Помідор рожевий",
+       "price": 132,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Цибуля ріпчаста",
+       "name": "Цибуля ріпчаста",
+       "price": 31.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Цибуля синя",
+       "name": "Цибуля синя",
+       "price": 60,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Часник",
+       "name": "Часник",
+       "price": 262.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Яблуко Голден",
+       "name": "Яблуко Голден",
+       "price": 60,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Яблуко Україна",
+       "name": "Яблуко Україна",
+       "price": 42,
+       "category": null,
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": false,
+     "locked": false,
+     "canRequestLate": false,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "veg",
+    "storeId": "м харків пр т байрона 138 1"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "veg",
+     "unit": "кг",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "18:00",
+     "minOrder": 750,
+     "categories": [],
+     "products": [
+      {
+       "id": "Авокадо Хасс 18",
+       "name": "Авокадо Хасс 18",
+       "price": 123,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Апельсин Турция",
+       "name": "Апельсин Турция",
+       "price": 162,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Буряк",
+       "name": "Буряк",
+       "price": 27,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Груша Дюшес",
+       "name": "Груша Дюшес",
+       "price": 165,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Капуста білоголова",
+       "name": "Капуста білоголова",
+       "price": 31.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Капуста Пекінська",
+       "name": "Капуста Пекінська",
+       "price": 52.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Картопля",
+       "name": "Картопля",
+       "price": 25.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Морква",
+       "name": "Морква",
+       "price": 30,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Огірок колючка (Машенька)",
+       "name": "Огірок колючка (Машенька)",
+       "price": 105,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Перець червоний",
+       "name": "Перець червоний",
+       "price": 115.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Помідор гілка",
+       "name": "Помідор гілка",
+       "price": 120,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Помідор рожевий",
+       "name": "Помідор рожевий",
+       "price": 132,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Цибуля ріпчаста",
+       "name": "Цибуля ріпчаста",
+       "price": 31.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Цибуля синя",
+       "name": "Цибуля синя",
+       "price": 60,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Часник",
+       "name": "Часник",
+       "price": 262.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Яблуко Голден",
+       "name": "Яблуко Голден",
+       "price": 60,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Яблуко Україна",
+       "name": "Яблуко Україна",
+       "price": 42,
+       "category": null,
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": false,
+     "locked": false,
+     "canRequestLate": false,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "veg",
+    "storeId": "м харків пр т байрона 163 а"
+   },
+   "response": {
+    "ok": true,
+    "data": {
+     "dir": "veg",
+     "unit": "кг",
+     "hidePrice": false,
+     "step": 1,
+     "deadline": "18:00",
+     "minOrder": 750,
+     "categories": [],
+     "products": [
+      {
+       "id": "Авокадо Хасс 18",
+       "name": "Авокадо Хасс 18",
+       "price": 123,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Апельсин Турция",
+       "name": "Апельсин Турция",
+       "price": 162,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Буряк",
+       "name": "Буряк",
+       "price": 27,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Груша Дюшес",
+       "name": "Груша Дюшес",
+       "price": 165,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Капуста білоголова",
+       "name": "Капуста білоголова",
+       "price": 31.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Капуста Пекінська",
+       "name": "Капуста Пекінська",
+       "price": 52.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Картопля",
+       "name": "Картопля",
+       "price": 25.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Морква",
+       "name": "Морква",
+       "price": 30,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Огірок колючка (Машенька)",
+       "name": "Огірок колючка (Машенька)",
+       "price": 105,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Перець червоний",
+       "name": "Перець червоний",
+       "price": 115.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Помідор гілка",
+       "name": "Помідор гілка",
+       "price": 120,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Помідор рожевий",
+       "name": "Помідор рожевий",
+       "price": 132,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Цибуля ріпчаста",
+       "name": "Цибуля ріпчаста",
+       "price": 31.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Цибуля синя",
+       "name": "Цибуля синя",
+       "price": 60,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Часник",
+       "name": "Часник",
+       "price": 262.5,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Яблуко Голден",
+       "name": "Яблуко Голден",
+       "price": 60,
+       "category": null,
+       "availability": null,
+       "box": null
+      },
+      {
+       "id": "Яблуко Україна",
+       "name": "Яблуко Україна",
+       "price": 42,
+       "category": null,
+       "availability": null,
+       "box": null
+      }
+     ],
+     "closed": false,
+     "alreadyOrdered": true,
+     "locked": true,
+     "canRequestLate": true,
+     "lateRequest": "none",
+     "lateLeftMin": 0
+    }
+   }
+  },
+  {
+   "payload": {
+    "dir": "veg",
+    "storeId": "м харків вул астрономічна 44 г"
+   },
+   "response": {
+    "ok": false,
+    "error": "Вибачте, не ваш день для замовлення. Ваші дні: вівторок."
+   }
+  }
+ ]
+}

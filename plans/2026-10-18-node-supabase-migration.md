@@ -30,6 +30,7 @@
 - Секрети - лише у `fly secrets` і GitHub Secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_SA_JSON`, `SMTP_USER`, `SMTP_PASS`, `JOBS_SECRET`, `ADMIN_PASSWORD_HASH`. Локально - `server/.env` (у `.gitignore`). У git і в чаті - нічого.
 - Таблиці бази з RLS без політик (браузер у базу напряму не ходить, лише через сервер).
 - Тестові дані: `store_id` з префіксом `test-`; вигрузка в Google їх пропускає.
+- Fly: деплой лише `fly deploy --remote-only --ha=false` (одна машина; без `--ha=false` Fly створює другу, а нам потрібна одна, що спить). У `server-deploy.yml` це вже так.
 - Apps Script не вимикається, поки не пройде Task 11; до того бойовий `/exec` = `@67`.
 
 ## Review Focus
