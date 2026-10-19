@@ -30,19 +30,20 @@ const DEFAULT_SETTINGS = {
 // Читає з Google і повертає { stores, products: {dir: [...]}, warnings }
 async function readAll() {
   const warnings = [];
+  const dropped = [];
 
   const regRows = await getValues(REGISTRY_ID, a1q(REGISTRY_SHEET, 'A2:T'));
-  const stores = parseStores(regRows);
+  const stores = parseStores(regRows, dropped);
   const seenIds = new Set();
   stores.forEach((s) => { if (seenIds.has(s.id)) warnings.push(`дубль store_id: ${s.id}`); seenIds.add(s.id); });
 
   const products = {};
   for (const dir of ['bread', 'bakery']) {
     const cfg = DIRECTIONS[dir];
-    products[dir] = parseSheetProducts(dir, cfg, await getValues(cfg.spreadsheetId, a1q(cfg.productsSheet, 'A2:F')));
+    products[dir] = parseSheetProducts(dir, cfg, await getValues(cfg.spreadsheetId, a1q(cfg.productsSheet, 'A2:F')), dropped);
   }
   const nb = DIRECTIONS.nbhz;
-  products.nbhz = parseNbhzProducts(await getValues(nb.spreadsheetId, a1q(nb.productsSheet, 'A2:C')));
+  products.nbhz = parseNbhzProducts(await getValues(nb.spreadsheetId, a1q(nb.productsSheet, 'A2:C')), dropped);
 
   const veg = DIRECTIONS.veg;
   const settingsRows = await getValues(veg.spreadsheetId, a1q('Налаштування', 'A2:B'));
@@ -50,7 +51,7 @@ async function readAll() {
   const priceTitle = await firstSheetTitle(veg.priceSpreadsheetId);
   const priceData = await getValues(veg.priceSpreadsheetId, a1q(priceTitle, 'A1:Z'));
   const prices = readVegPrices(priceData);
-  products.veg = parseVegProducts(settingsRows, prices);
+  products.veg = parseVegProducts(settingsRows, prices, dropped);
   if (!products.veg.length) throw new Error('Не знайдено жодної позиції в прайсі постачальника');
 
   // PK (dir,id): повтор штрихкоду/назви - лишаємо перший, активний переважає стоп
@@ -59,15 +60,16 @@ async function readAll() {
     for (const p of products[dir]) {
       const old = byId.get(p.id);
       if (!old) { byId.set(p.id, p); continue; }
-      warnings.push(`${dir}: дубль id "${p.id}" (${p.name})`);
-      if (old.status === 'stop' && p.status === 'active') byId.set(p.id, p);
+      const keep = old.status === 'stop' && p.status === 'active' ? p : old;
+      dropped.push({ dir, row: null, reason: `дубль id "${p.id}"`, name: (keep === p ? old : p).name });
+      byId.set(p.id, keep);
     }
     products[dir] = [...byId.values()];
   }
-  return { stores, products, warnings };
+  return { stores, products, warnings, dropped };
 }
 
-function summarize({ stores, products, warnings }) {
+function summarize({ stores, products, warnings, dropped }) {
   const lines = [];
   const perDir = {};
   stores.forEach((s) => s.directions.forEach((d) => { perDir[d] = (perDir[d] || 0) + 1; }));
@@ -77,6 +79,8 @@ function summarize({ stores, products, warnings }) {
     lines.push(`${dir}: активних ${act}, стоп ${list.length - act}`);
   }
   warnings.forEach((w) => lines.push(`УВАГА: ${w}`));
+  lines.push(`відсіяно рядків: ${dropped.length}`);
+  dropped.forEach((d) => lines.push(`  [${d.dir}] ${d.row ? 'рядок ' + d.row + ': ' : ''}${d.reason} - ${d.name}`));
   return lines.join('\n');
 }
 

@@ -1,15 +1,10 @@
 // Чисті правила розбору таблиць Google -> об'єкти для бази. Без мережі і без бази.
 // Перенос з app/Registry.gs (loadStores_), app/Products.gs, app/VegDays.gs (parseDays_).
 
+const { canonKey, parseDays } = require('../rules');
+
 const UK = 'uk';
 const cmp = (a, b) => String(a).localeCompare(String(b), UK);
-
-function canonKey(s) {
-  return String(s || '').toLowerCase()
-    .replace(/[’'`]/g, '')
-    .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ')
-    .replace(/\s+/g, ' ').trim();
-}
 
 function nameKey(s) {
   return String(s || '').toLowerCase()
@@ -18,22 +13,19 @@ function nameKey(s) {
     .trim();
 }
 
-const DAY_KEYS = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];   // індекс = getDay()
-
-function parseDays(s) {
-  const t = String(s || '').toLowerCase();
-  const out = [];
-  for (let i = 0; i < 7; i++) if (t.indexOf(DAY_KEYS[i]) >= 0) out.push(i);
-  return out;
-}
-
 const str = (v) => String(v == null ? '' : v).trim();
 
 // rows: Довідник, діапазон A2:T, значення UNFORMATTED (галочки = true/false).
 // Повертає об'єкти рівно в формі loadStores_().
-function parseStores(rows) {
+function parseStores(rows, dropped = []) {
   return rows
-    .filter((r) => r[0] === true && str(r[2]))
+    .filter((r, i) => {
+      if (!r.some((c) => str(c))) return false;                       // порожній рядок - не звітуємо
+      const name = str(r[1]) || str(r[2]);
+      if (r[0] !== true) { dropped.push({ dir: 'ТТ', row: i + 2, reason: 'неактивна', name }); return false; }
+      if (!str(r[2])) { dropped.push({ dir: 'ТТ', row: i + 2, reason: 'немає адреси', name }); return false; }
+      return true;
+    })
     .map((r) => {
       const addr = str(r[2]);
       return {
@@ -51,11 +43,17 @@ function parseStores(rows) {
         zone: str(r[18]),
         edrpou: str(r[19]),
         days: { veg: parseDays(r[16]), bakery: parseDays(r[17]) },
+        // сирий текст з Довідника ("Пн, Ср") і примітка (колонка J) - у базу йдуть як є
+        daysText: { veg: str(r[16]), bakery: str(r[17]) },
+        note: str(r[9]),
         directions: [r[6] === true && 'bread', r[13] === true && 'nbhz',
                      r[7] === true && 'bakery', r[8] === true && 'veg'].filter(Boolean),
       };
     })
-    .filter((s) => s.directions.length)
+    .filter((s) => {
+      if (!s.directions.length) dropped.push({ dir: 'ТТ', row: null, reason: 'немає жодного напрямку', name: s.label });
+      return s.directions.length;
+    })
     .sort((a, b) => cmp(a.label, b.label));
 }
 
@@ -64,7 +62,10 @@ function storeToRow(s, sort) {
     store_id: s.id, active: true, label: s.label, address: s.address, code: s.code,
     route: s.route, type: s.type, addr_bread: s.addrBread, addr_bakery: s.addrBakery,
     addr_veg: s.addrVeg, addr_nbhz: s.addrNbhz, route_nbhz: s.routeNbhz, zone: s.zone,
-    edrpou: s.edrpou, days: s.days, directions: s.directions, sort,
+    edrpou: s.edrpou,
+    bread: s.directions.includes('bread'), nbhz: s.directions.includes('nbhz'),
+    bakery: s.directions.includes('bakery'), veg: s.directions.includes('veg'),
+    days_veg: s.daysText.veg, days_bakery: s.daysText.bakery, note: s.note, sort,
   };
 }
 
@@ -83,16 +84,18 @@ function product(o) {
 // Лист "Ассортимент": A статус | B № (випічка - категорія) | C штрихкод | D ціна | E номенклатура | F шт в ящику
 // (випічка - наявність). Правила loadSheetProducts_; відрізняється тим, що «стоп» не відкидається,
 // а потрапляє в базу зі status='stop'. Невалідні (без назви; без штрихкоду/ціни) пропускаються, як і в Apps Script.
-function parseSheetProducts(dirKey, cfg, rows) {
+function parseSheetProducts(dirKey, cfg, rows, dropped = []) {
   const act = [], stop = [];
-  rows.forEach((r) => {
+  rows.forEach((r, i) => {
     const isStop = str(r[0]).toLowerCase() === 'стоп';
     const barcode = str(r[2]);
     let price = parseFloat(String(r[3] == null ? '' : r[3]).replace(',', '.'));
     if (!(price > 0)) price = 0;
     const name = str(r[4]);
-    if (!name) return;
-    if (!isStop && !cfg.allowNoPrice && (!barcode || !(price > 0))) return;
+    const drop = (reason) => dropped.push({ dir: dirKey, row: i + 2, reason, name: name || '(без назви)' });
+    if (!name) { if (r.some((c) => str(c))) drop('немає назви'); return; }
+    if (!isStop && !cfg.allowNoPrice && !barcode) return drop('немає штрихкоду');
+    if (!isStop && !cfg.allowNoPrice && !(price > 0)) return drop('немає ціни');
 
     const item = { id: barcode || nameKey(name), barcode, name, price, status: isStop ? 'stop' : 'active' };
     if (dirKey === 'bakery') {
@@ -116,11 +119,14 @@ function parseSheetProducts(dirKey, cfg, rows) {
 }
 
 // НБХЗ: A Статус | B № | C Номенклатура. Без цін і штрихкодів, порядок рядків збережено.
-function parseNbhzProducts(rows) {
+function parseNbhzProducts(rows, dropped = []) {
   const act = [], stop = [];
-  rows.forEach((r) => {
+  rows.forEach((r, i) => {
     const name = str(r[2]);
-    if (!name) return;
+    if (!name) {
+      if (r.some((c) => str(c))) dropped.push({ dir: 'nbhz', row: i + 2, reason: 'немає назви', name: '(без назви)' });
+      return;
+    }
     const isStop = str(r[0]).toLowerCase() === 'стоп';
     (isStop ? stop : act).push(product({ id: nameKey(name), name, status: isStop ? 'stop' : 'active' }));
   });
@@ -147,20 +153,20 @@ function readVegPrices(data) {
 
 // Овочі (loadVegProducts_): дозволені позиції з листа "Налаштування" (A назва | B 'стоп'),
 // ціни - з прайсу. Позиції без ціни в прайсі пропускаються, як в Apps Script.
-function parseVegProducts(settingsRows, prices) {
+function parseVegProducts(settingsRows, prices, dropped = []) {
   const seen = {}, order = [];
-  settingsRows.forEach((r) => {
+  settingsRows.forEach((r, i) => {
     const name = str(r[0]);
     if (!name) return;
     const k = nameKey(name);
-    if (seen[k]) return;
+    if (seen[k]) { dropped.push({ dir: 'veg', row: i + 2, reason: 'дубль у "Налаштування"', name }); return; }
     seen[k] = { name, stop: str(r[1]).toLowerCase() === 'стоп' };
     order.push(k);
   });
   const act = [], stop = [];
   order.forEach((k) => {
-    if (!(prices[k] > 0)) return;
     const { name, stop: isStop } = seen[k];
+    if (!(prices[k] > 0)) { dropped.push({ dir: 'veg', row: null, reason: 'немає ціни в прайсі', name }); return; }
     (isStop ? stop : act).push(product({ id: name, name, price: prices[k], status: isStop ? 'stop' : 'active' }));
   });
   act.sort((a, b) => cmp(a.name, b.name));
@@ -175,6 +181,6 @@ function numbered(act, stop) {
 }
 
 module.exports = {
-  canonKey, nameKey, parseDays, parseStores, storeToRow,
+  canonKey, parseDays, nameKey, parseStores, storeToRow,
   parseSheetProducts, parseNbhzProducts, readVegPrices, parseVegProducts,
 };

@@ -56,11 +56,14 @@
 
 **Interfaces:**
 - Produces (таблиці):
-  - `stores(store_id text pk, active bool, label, address, code, route, type, addr_bread, addr_bakery, addr_veg, addr_nbhz, route_nbhz, zone, edrpou, days jsonb, directions text[], sort int)` - поля = об'єкт `loadStores_()`;
+  - `stores(store_id text pk, active bool, label, address, code, route, type, addr_bread, addr_bakery, addr_veg, addr_nbhz, route_nbhz, zone, edrpou, bread/nbhz/bakery/veg bool, days_veg text, days_bakery text, note text, sort int)` - колонки як у Довіднику ТТ (міграція `20261019000002_stores_columns.sql`); `days_*` - текст «Пн, Ср» як у листі, у масиви розбирає код (`parseDays` у `rules.js`, `rowToStore` у `db.js` дає об'єкт у формі `loadStores_()`);
   - `products(dir text, id text, barcode, name, price numeric(12,2), category, availability, box, status text default 'active' check in ('active','stop'), sort int, primary key(dir,id))`;
   - `directions(dir pk, cfg jsonb)` - статичні поля `DIRECTIONS` з `app/Config.gs` + `min_order_changes`;
   - `settings(key pk, value jsonb)` - `dirs_off`, `late_all`, `app_version`, `test_mode`, `wo_deadline`;
-  - `orders`, `order_lines`, `late_requests` - як у попередній редакції плану (частковий унікальний індекс `(dir, store_id, order_date) where status='active' and not is_addon`; `exported_at`, `changed_at`).
+  - `orders(id uuid pk default gen_random_uuid(), order_id text not null unique, dir text not null → directions, store_id text not null, order_date date not null, status text not null default 'active' check in ('active','cancelled'), is_addon bool not null default false, total numeric(12,2) not null default 0, result jsonb, created_at timestamptz default now(), changed_at timestamptz default now(), exported_at timestamptz)` - `order_id` = ключ ідемпотентності від клієнта, `result` = збережена відповідь для повтору; `store_id` без FK (тестові точки `test-…`); частковий унікальний індекс `orders_one_active_per_day (dir, store_id, order_date) where status='active' and not is_addon`; індекс вигрузки `orders_export_idx (dir, changed_at) where exported_at is null or exported_at < changed_at`;
+  - `order_lines(id bigint identity pk, order_pk uuid not null → orders(id) on delete cascade, line_no int not null, product_id text not null, barcode text default '', name text not null, price numeric(12,2) default 0, qty numeric(12,3) not null check (qty > 0))`;
+  - `late_requests(id uuid pk, dir → directions, store_id text, req_date date, status text default 'pending' check in ('pending','approved'), requested_at timestamptz default now(), approved_at timestamptz, unique(dir, store_id, req_date))`.
+  - RLS увімкнено на всіх семи таблицях, політик немає. Фактична міграція - `supabase/migrations/20261019000001_schema.sql` (Task 4 опирається на неї, а не на цей опис).
 - Produces: `server/src/google.js` - `sheetsClient()` (сервісний акаунт з `GOOGLE_SA_JSON` або файлу), `getValues(id, a1, {formatted})`, `batchUpdate(id, requests)`, `appendValues(id, a1, rows)`; тайм-аут 30 с.
 - Produces: `node server/scripts/import-reference.js [--dry]` - читає Довідник (`A2:T`, правила `loadStores_`) і листи «Ассортимент» напрямків (правила `loadSheetProducts_`/`loadNbhzSheetProducts_`, разом з `стоп` → `status='stop'`), пише в базу; `--dry` друкує кількості.
 - [ ] **Step 1:** `npx supabase init`, `npx supabase link --project-ref gfbmeevfgxwcgcervdum`, міграція, `npx supabase db push`.
@@ -91,7 +94,7 @@
 
 ### Task 4: `/api` - submitOrder, requestLate, схвалення
 
-**Files:** Create `supabase/migrations/20261019000002_orders_tx.sql`, `server/src/api/submit.js`, `server/src/mail.js`, `server/src/pages/approve.js`, `server/test/api-submit.test.js`
+**Files:** Create `supabase/migrations/20261019000003_orders_tx.sql`, `server/src/api/submit.js`, `server/src/mail.js`, `server/src/pages/approve.js`, `server/test/api-submit.test.js`
 **Interfaces:**
 - SQL `submit_order_tx(p jsonb) returns jsonb` - в одній транзакції: повтор `order_id` → збережений `result` + `duplicate:true`; `replace` → активні замовлення точки за день у `cancelled`, `removed` = їхні рядки; вставка; конфлікт унікального індексу → `{ok:false, reason:'already'}`.
 - `apiSubmitOrder(payload, ctx)` - порядок і тексти перевірок з `apiSubmitOrder_` (вимкнено; не той напрямок; день; дедлайн - два тексти; порожнє; > 500; ціни з `products`; qty до 0,001, > 5000; мінімалка; «вже сьогодні відправлено»), потім `submit_order_tx`, потім `queueExport(dir)` (Task 5) без очікування.
@@ -124,7 +127,7 @@
 
 ### Task 8: Списання
 
-**Files:** Create `supabase/migrations/20261019000003_writeoff.sql`, `server/src/api/writeoff.js` (`WriteOff.gs`, `WriteOffCosts.gs`), `server/src/export/writeoff.js`, тест.
+**Files:** Create `supabase/migrations/20261019000004_writeoff.sql`, `server/src/api/writeoff.js` (`WriteOff.gs`, `WriteOffCosts.gs`), `server/src/export/writeoff.js`, тест.
 **Interfaces:** дії `/api` `woProducts`, `woSubmit`, `woMine`, `woDelete` - ті самі поля і тексти; дедлайн `WO_DEADLINE`; вигрузка в той самий лист, куди пише Apps Script.
 - [ ] **Step 1-4:** тести на кожну дію і дедлайн, реалізація. **Step 5:** commit.
 
@@ -145,6 +148,6 @@
 **Files:** Create `server/scripts/import-today.js`, `.github/workflows/server-backup.yml` (за `D:\Shifts-api\Shifts-api\.github\workflows\backup-db.yml`), `plans/cutover-checklist.md`
 - [ ] **Step 1:** 2-3 робочі дні тіньового режиму: щогодини `import-today.js --shadow` копіює сьогоднішні рядки з сирих листів у базу (лише для порівняння), `rebuild*({target:'test'})` → порівняння з листами Apps Script; розбіжності - виправити.
 - [ ] **Step 2:** бекап-воркфлоу запускається вручну, файл з'являється на Drive.
-- [ ] **Step 3: Переключення (увечері після 18:00):** `import-today.js` (сьогоднішні замовлення в базу, щоб уникнути дублів) → `docs/app-url.js` на Fly → push → перевірка з телефона → тригери Apps Script, що будують звіти й пишуть сирі листи, вимкнути (лишається лише сам `/exec` як відкат) → захист сирих листів (редагує лише сервісний акаунт і власник).
+- [ ] **Step 3: Переключення (увечері після 18:00):** спершу `node server/scripts/import-reference.js --force` (свіжі точки й ассортимент з Google; `--force` затирає правки з Table Editor - тому лише тут, до переключення; після переключення ассортимент і точки правляться тільки в базі, Google-таблиці Довідника/Ассортименту більше не читаються сервером); далі `import-today.js` (сьогоднішні замовлення в базу, щоб уникнути дублів) → `docs/app-url.js` на Fly → push → перевірка з телефона → тригери Apps Script, що будують звіти й пишуть сирі листи, вимкнути (лишається лише сам `/exec` як відкат) → захист сирих листів (редагує лише сервісний акаунт і власник).
 - [ ] **Step 4:** перший день - «Здоровʼя» пульта щогодини до 13:00; відкат = старий `docs/app-url.js` + увімкнути тригери Apps Script.
 - [ ] **Step 5:** через тиждень стабільної роботи - вимкнути Apps Script остаточно (видалити тригери, архівувати проєкт). Commit і push.

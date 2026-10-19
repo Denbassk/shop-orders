@@ -1,0 +1,24 @@
+# Деплой сервера shop-orders на Fly при push у main (як fly-deploy.yml у зарплатному проекті).
+# Секрет репозиторію: FLY_API_TOKEN (fly tokens create deploy -a shop-orders).
+name: Server Deploy
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/**'
+      - '.github/workflows/server-deploy.yml'
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    concurrency: server-deploy-group
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

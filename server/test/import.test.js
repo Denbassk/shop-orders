@@ -12,7 +12,7 @@ const { DIRECTIONS } = require('../src/directions');
 // J примітка | K адр.хліб | L адр.випічка | M адр.овочі | N НБХЗ | O маршрут НБХЗ | P адр.НБХЗ
 // Q дні овочів | R дні випічки | S зона | T ЄДРПОУ
 const REG_ROWS = [
-  [true, 'Магазин Бучми', 'м. Харків вул. Бучми, 32', 'АХ1', 'Р1', 'Магазин', true, true, true, '',
+  [true, 'Магазин Бучми', 'м. Харків вул. Бучми, 32', 'АХ1', 'Р1', 'Магазин', true, true, true, 'Ключ у охорони',
     '', '', '', true, 'Н1', 'Бучми 32 нбхз', 'Пн, Ср', 'Пн, Вт, Ср, Чт, Пт', 'Салтовка', '45672783'],
   [false, 'Закрита точка', 'м. Харків вул. Закрита, 1', '', '', '', true, true, true, '',
     '', '', '', false, '', '', '', '', '', ''],
@@ -60,6 +60,8 @@ test('parseStores: 5 рядків -> 2 точки, поля як у loadStores_'
     zone: 'Салтовка',
     edrpou: '45672783',
     days: { veg: [1, 3], bakery: [1, 2, 3, 4, 5] },
+    daysText: { veg: 'Пн, Ср', bakery: 'Пн, Вт, Ср, Чт, Пт' },
+    note: 'Ключ у охорони',
     directions: ['bread', 'nbhz', 'bakery', 'veg'],
   });
 
@@ -87,8 +89,12 @@ test('storeToRow: рядок таблиці stores', () => {
   assert.equal(row.active, true);
   assert.equal(row.addr_nbhz, 'Бучми 32 нбхз');
   assert.equal(row.route_nbhz, 'Н1');
-  assert.deepEqual(row.days, { veg: [1, 3], bakery: [1, 2, 3, 4, 5] });
-  assert.deepEqual(row.directions, ['bread', 'nbhz', 'bakery', 'veg']);
+  assert.equal(row.days_veg, 'Пн, Ср');
+  assert.equal(row.days_bakery, 'Пн, Вт, Ср, Чт, Пт');
+  assert.equal(row.note, 'Ключ у охорони');
+  assert.deepEqual([row.bread, row.nbhz, row.bakery, row.veg], [true, true, true, true]);
+  assert.equal('directions' in row, false);
+  assert.equal('days' in row, false);
   assert.equal(row.sort, 7);
 });
 
@@ -190,4 +196,33 @@ test('DIRECTIONS: статичний конфіг без функцій, 4 на�
   }
   assert.equal(DIRECTIONS.bakery.spreadsheetId, '1THdB-b4JkXzAKsaVPw8DLrXATlycpFkTgolTmqCOXWo');
   assert.deepEqual(DIRECTIONS.bread.minOrderChanges, [{ from: '01.10.2026', value: 400 }]);
+});
+
+test('rowToStore: колонки Довідника -> форма loadStores_ (дні розбираються в коді)', () => {
+  const { rowToStore } = require('../src/db');
+  const [s] = parseStores([REG_ROWS[0]]);
+  const back = rowToStore(storeToRow(s, 0));
+  assert.deepEqual(back.directions, ['bread', 'nbhz', 'bakery', 'veg']);
+  assert.deepEqual(back.days, { veg: [1, 3], bakery: [1, 2, 3, 4, 5] });
+  assert.equal(back.id, s.id);
+  assert.equal(back.note, 'Ключ у охорони');
+  const only = rowToStore({ ...storeToRow(s, 0), bread: false, nbhz: false, veg: true, days_veg: '' });
+  assert.deepEqual(only.directions, ['bakery', 'veg']);
+  assert.deepEqual(only.days.veg, []);
+});
+
+test('відсіяні рядки: причина, назва, номер рядка', () => {
+  const dropped = [];
+  parseStores(REG_ROWS, dropped);
+  assert.deepEqual(dropped.map((d) => [d.reason, d.name]), [
+    ['неактивна', 'Закрита точка'],
+    ['немає адреси', 'Без адреси'],
+    ['немає жодного напрямку', 'Порожня'],
+  ]);
+  assert.equal(dropped[0].row, 3);                         // REG_ROWS[1] -> рядок 3 листа (A2 = перший)
+  const d2 = [];
+  parseSheetProducts('bread', DIRECTIONS.bread, [['', 1, '', 10, 'Без штрихкоду', ''], ['', 2, '482', 0, 'Без ціни', '']], d2);
+  assert.deepEqual(d2.map((d) => [d.dir, d.reason, d.name]), [
+    ['bread', 'немає штрихкоду', 'Без штрихкоду'], ['bread', 'немає ціни', 'Без ціни'],
+  ]);
 });
