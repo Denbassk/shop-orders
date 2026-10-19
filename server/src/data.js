@@ -68,7 +68,39 @@ function createData(sb, { now = Date.now } = {}) {
       changes.map((c) => ({ dir: 'veg', id: c.id, name: c.name, price: c.price })), { onConflict: 'dir,id' }));
   }
 
-  return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices };
+  // збережена відповідь на order_id (повтор після обриву зв'язку)
+  async function orderResult(orderId) {
+    const rows = must('orders', await sb.from('orders').select('result').eq('order_id', orderId).limit(1));
+    return rows.length ? rows[0].result : null;
+  }
+
+  // чи є активне замовлення точки по напрямку за день (основне або добавка)
+  async function hasOrderToday(dir, storeId, day) {
+    const { count, error } = await sb.from('orders').select('id', { count: 'exact', head: true })
+      .eq('dir', dir).eq('store_id', storeId).eq('order_date', day).eq('status', 'active');
+    if (error) throw new Error('orders: ' + error.message);
+    return count > 0;
+  }
+
+  // атомарний запис замовлення - supabase/migrations/…_orders_tx.sql
+  async function submitOrderTx(p) {
+    return must('submit_order_tx', await sb.rpc('submit_order_tx', { p }));
+  }
+
+  // запит дозволу: pending; approved_at не чіпаємо (upsert оновлює лише передані колонки)
+  async function requestLate(dir, storeId, day, at) {
+    must('late_requests', await sb.from('late_requests').upsert(
+      { dir, store_id: storeId, req_date: day, status: 'pending', requested_at: at.toISOString() }, { onConflict: 'dir,store_id,req_date' }));
+  }
+
+  // дозвіл закупниці: approved_at = зараз (requested_at лишається, або ставиться за замовчуванням, якщо запиту не було)
+  async function approveLate(dir, storeId, day, at) {
+    must('late_requests', await sb.from('late_requests').upsert(
+      { dir, store_id: storeId, req_date: day, status: 'approved', approved_at: at.toISOString() }, { onConflict: 'dir,store_id,req_date' }));
+  }
+
+  return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
+    orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate };
 }
 
 module.exports = { createData };
