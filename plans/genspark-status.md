@@ -1,6 +1,6 @@
 # Состояние работы в Genspark (обновлять каждый шаг)
 
-Обновлено: 19.10.2026. Task 8 (списания), шаг 6.
+Обновлено: 19.10.2026. Task 8 (списания), шаг 7.
 
 ## Как продолжить в новом чате
 Прислать: содержимое этого файла + вывод `git log --oneline -5` + `git status --short`.
@@ -120,3 +120,18 @@ import-reference.js, тестовая вкладка «Списания», POST 
   в settings.wo_books (Table Editor); 3) import-reference --dry -> проверить «випічка» и нет warning
   о себестоимости; 4) import-reference --force (затрёт правки stores/products из Table Editor!).
 - Дальше шаг 7: export/writeoff.js - выгрузка writeoffs в лист «Списания» (WO_HEAD, 14 колонок) + тесты.
+## Шаг 7 (итог)
+- server/src/export/writeoff.js: exportWriteoffs(env), env = { google, data, mode?, log? }.
+  Единица - подача: deleted -> строки с ID удаляются снизу вверх (запасная строка, если удаляются все);
+  живая -> дописывается, если ID нет в колонке A. Одно чтение A:A на таблицу. Даты числами + формат w01 (186-193),
+  текст с апострофом. Сбой формата -> лог, позначка всё равно. Мьютекс. Таблицы по очереди.
+  test-режим -> TEST_EXPORT_SPREADSHEET_ID, вкладка «Списания»; live -> settings.wo_books[edrpou].id.
+- data.js: woExportSnapshot (вью writeoffs_export_pending), woMarkExported (eq changed_at).
+- Миграция 000005 дополнена: view writeoffs_export_pending (security_invoker). Всё ещё НЕ применена.
+- Тесты: export-writeoff.test.js (11), data-wo-export.test.js (2), migration-writeoff +1.
+- Известное ограничение: если позначка удаления старой подачи не встала, а новая с тем же doc_id уже выгружена,
+  повторная обработка удаления сотрёт и строки новой (очень редкий случай, при необходимости - Task 9).
+- ЧЕТВЕРГ ВЛАДЕЛЬЦУ: в тестовой таблице «shop-orders ТЕСТ вигрузки» создать вкладку «Списания»
+  с шапкой WO_HEAD (ID, Подано, Дата списания, Торговая точка, № ТТ, Категория, Штрихкод, Товар,
+  Количество, Цена, Сумма, Сумма +20%, Продавец, Ключ ТТ).
+- Дальше шаг 8: runtime.js (env.queueWoExport -> exportWriteoffs с коалесценцией), jobs.js tick (+ exportWriteoffs).

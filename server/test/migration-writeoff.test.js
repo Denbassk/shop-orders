@@ -38,3 +38,6 @@ test('submit_writeoff_tx читає всі поля, які шле api/writeoff.
   for (const k of ['line_no', 'product_id', 'barcode', 'category', 'name', 'qty', 'price', 'amount', 'amount_plus'])
     assert.ok(s.includes("l->>'" + k + "'"), 'line.' + k);
 });
+test('міграція 000005: невигружені - writeoffs_export_pending (security_invoker)', () => {
+  assert.match(norm(), /create view public\.writeoffs_export_pending with \(security_invoker = true\) as select id from public\.writeoffs where exported_at is null or exported_at < changed_at/);
+});

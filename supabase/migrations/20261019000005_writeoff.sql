@@ -92,3 +92,8 @@ grant execute on function public.submit_writeoff_tx(jsonb) to service_role;
 alter table public.writeoffs      enable row level security;
 alter table public.writeoff_lines enable row level security;
 alter table public.admin_log      enable row level security;
+
+-- невигружені подачі для export/writeoff.js (PostgREST не порівнює дві колонки)
+create view public.writeoffs_export_pending with (security_invoker = true) as
+  select id from public.writeoffs where exported_at is null or exported_at < changed_at;
+revoke all on public.writeoffs_export_pending from anon, authenticated;
