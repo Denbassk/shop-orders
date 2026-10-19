@@ -208,15 +208,31 @@ test('/ok: чужий день -> 400 з текстом Apps Script; невід�
   assert.equal(calls.approved.length, 0);
 });
 
-test('/ok: назва точки екранується; невідома точка показується як id', async () => {
+test('/ok: назва точки екранується', async () => {
   const evil = { ...STORE, id: 'evil', label: '<img src=x onerror=alert(1)>' };
   const { env } = makeEnv({ data: { stores: async () => [evil] } });
   const r = await approvePage(q('bread', 'evil', '2026-10-19'), env);
   assert.ok(r.html.includes('&lt;img src=x onerror=alert(1)&gt;'));
   assert.ok(!r.html.includes('<img'));
-  const unknown = await approvePage(q('bread', 'невідома', '2026-10-19'), env);
-  assert.equal(unknown.status, 200);
-  assert.ok(unknown.html.includes('<br>невідома<br>'));
+});
+
+test('/ok: точки з підписом нема в stores -> 400 і late_requests не створюється (GET і POST)', async () => {
+  const { env, calls } = makeEnv();
+  const query = q('bread', 'невідома', '2026-10-19');          // підпис правильний, точки в базі немає
+  const post = await approvePage(query, env);
+  assert.equal(post.status, 400);
+  assert.ok(post.html.includes('Точку не знайдено'));
+  const get = await approveForm(query, env);
+  assert.equal(get.status, 400);
+  assert.ok(!get.html.includes('<form'));
+  assert.deepEqual(calls.approved, []);
+});
+
+test('/ok: базу точок не прочитано -> 500, дозвіл не видається', async () => {
+  const { env, calls } = makeEnv({ data: { stores: async () => { throw new Error('stores: timeout'); } } });
+  const r = await approvePage(q('bread', STORE.id, '2026-10-19'), env);
+  assert.equal(r.status, 500);
+  assert.deepEqual(calls.approved, []);
 });
 
 test('GET /ok (форма): показує кнопку "Дозволити" з прихованими полями, дозвіл НЕ видає', async () => {

@@ -40,12 +40,14 @@ async function check(query, env) {
   let cfg;
   try { cfg = R.dirCfg(q.dirKey, { directions: await env.data.directions() }); }
   catch (e) { return fail(400, e.message); }
-  let label = q.storeId;
-  try {
-    const s = (await env.data.stores()).find((x) => x.id === q.storeId);
-    if (s) label = s.label;
-  } catch (e) { /* лишаємо id */ }
-  return { q, cfg, label };
+  let store;
+  try { store = (await env.data.stores()).find((x) => x.id === q.storeId); }
+  catch (e) {
+    console.error('/ok: точки не прочитано: ' + e.message);
+    return fail(500, 'Не вдалося перевірити точку. Спробуйте ще раз.');
+  }
+  if (!store) return fail(400, 'Точку не знайдено. Попросіть продавця натиснути кнопку ще раз.');   // підпис вірний, але дозвіл нікому
+  return { q, cfg, label: store.label };
 }
 
 // GET: форма з кнопкою. Дані запиту й підпис - у прихованих полях.
