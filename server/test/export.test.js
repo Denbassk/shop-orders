@@ -44,6 +44,8 @@ function makeGoogle({ fail = {} } = {}) {
     async appendValues(id, a1, rows) {
       maybeFail('append', id);
       const { sh, title } = sheetOf(id, a1);
+      const anchor = Number(a1.match(/!A(\d+)$/)[1]);
+      if (anchor !== sh.rows.length) throw new Error(`якір append ${anchor} != останній заповнений рядок ${sh.rows.length}`);
       const first = sh.rows.length + 1;
       rows.forEach((r) => sh.rows.push(r.map((v) => (typeof v === 'string' && v.startsWith("'") ? v.slice(1) : v))));
       log.push(['append', id, title, rows.length]);

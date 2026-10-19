@@ -122,16 +122,24 @@ async function phaseB() {
   check('submitOrder після дедлайну без дозволу - відмова', denied.body.ok === false && /^Прийом на "Випічка і кулінарія" закрито \(до 13:00\)\. Натисніть "Попросити дозвіл"/.test(denied.body.error), denied.body.error);
 
   const rq = await call(API, 'requestLate', { dir, storeId: ids.a });
-  check('requestLate: pending, лист надіслано', rq.body.ok && rq.body.data.status === 'pending' && rq.body.data.mailed === true, `${JSON.stringify(rq.body.data)} ${rq.ms} мс`);
+  check('requestLate: pending, лист іде у фоні', rq.body.ok && rq.body.data.status === 'pending' && rq.body.data.mailed === true, `${JSON.stringify(rq.body.data)} ${rq.ms} мс`);
+  let lr = null;
+  for (let i = 0; i < 20 && !(lr && lr.mailed_at); i++) { await new Promise((r) => setTimeout(r, 500)); lr = (await sb.from('late_requests').select('status,mailed_at,approved_at').eq('store_id', ids.a).eq('dir', dir).maybeSingle()).data; }
+  check('late_requests.mailed_at поставлено після відправки листа', !!(lr && lr.mailed_at), JSON.stringify(lr));
 
   const p2 = await productsOf(dir, ids.a);
   check('products: lateRequest=pending', p2.lateRequest === 'pending');
 
   const day = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Kyiv' }).format(new Date());
   const link = late.approveUrl(dir, ids.a, day);               // той самий URL, що сервер вклав у лист
-  const ok = await fetch(link);
+  const form = await fetch(link);
+  const formHtml = await form.text();
+  const afterGet = (await sb.from('late_requests').select('status,approved_at').eq('store_id', ids.a).eq('dir', dir).maybeSingle()).data;
+  check('GET /ok (посилання з листа) -> форма з кнопкою, дозвіл НЕ виданий', form.status === 200 && formHtml.includes('<form method="post"') && afterGet.status === 'pending' && !afterGet.approved_at, `${form.status} ${JSON.stringify(afterGet)}`);
+  const u = new URL(link);
+  const ok = await fetch(BASE + '/ok', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(u.searchParams) });
   const html = await ok.text();
-  check('GET /ok (посилання з листа) -> 200 "Дозволено на 30 хв"', ok.status === 200 && html.includes('Дозволено на 30 хв'), String(ok.status));
+  check('POST /ok -> 200 "Дозволено на 30 хв"', ok.status === 200 && html.includes('Дозволено на 30 хв'), String(ok.status));
 
   const p3 = await productsOf(dir, ids.a);
   check('products: approved, lateLeftMin 29-30, locked=false', p3.lateRequest === 'approved' && p3.lateLeftMin >= 29 && p3.lateLeftMin <= 30 && p3.locked === false, `left=${p3.lateLeftMin}`);

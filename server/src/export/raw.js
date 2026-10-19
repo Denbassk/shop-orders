@@ -87,7 +87,7 @@ async function groupRowsInSheet(env, dir, spreadsheetId, sheetName, dmy, addrKey
     g.getValues(spreadsheetId, a1(`A:${last}`), { formatted: true }),
     g.getValues(spreadsheetId, a1('A:A')),
   ]);
-  const out = { nums: [], keys: {} };
+  const out = { nums: [], keys: {}, last: Math.max(dates.length, 1) };   // last - останній заповнений рядок колонки A (якір append)
   for (let i = 1; i < disp.length; i++) {            // 0 - шапка
     const r = disp[i];
     const d = dmyOfSheetCell(dates[i] && dates[i][0] !== undefined && typeof dates[i][0] === 'number' ? dates[i][0] : r[0]);
@@ -157,12 +157,15 @@ async function exportDirLocked(dir, env) {
 
     let wrote = 0, removed = 0;
     if (touched) {
-      let present = await groupRowsInSheet(env, dir, spreadsheetId, sheetName, dmy, key);
-      const sheetId = await env.google.sheetIdOf(spreadsheetId, sheetName);
+      // читання листа і sheetId (кеш процесу) - паралельно: на гарячому шляху кожен запит до Google на рахунку
+      let [present, sheetId] = await Promise.all([
+        groupRowsInSheet(env, dir, spreadsheetId, sheetName, dmy, key),
+        env.google.sheetIdOf(spreadsheetId, sheetName),
+      ]);
       if (rebuild && present.nums.length) {
         await env.google.batchUpdate(spreadsheetId, deleteRequests(sheetId, present.nums));
         removed = present.nums.length;
-        present = { nums: [], keys: {} };
+        present = { nums: [], keys: {}, last: Math.max(present.last - removed, 1) };   // видалені рядки були вище кінця таблиці
       }
       // що з wanted ще немає в листі (множина по групі)
       const used = {}, missing = [];
@@ -174,8 +177,7 @@ async function exportDirLocked(dir, env) {
         if (used[k] > (present.keys[k] || 0)) missing.push(row);
       }
       if (missing.length) {
-        const anchor = Math.max((await env.google.getValues(spreadsheetId, `'${sheetName.replace(/'/g, "''")}'!A:A`)).length, 1);
-        const ap = await env.google.appendValues(spreadsheetId, `'${sheetName.replace(/'/g, "''")}'!A${anchor}`, missing);
+        const ap = await env.google.appendValues(spreadsheetId, `'${sheetName.replace(/'/g, "''")}'!A${present.last}`, missing);
         const at = parseUpdatedRange(ap);
         if (!at) throw new Error('Google не повернув діапазон запису - рядки не підтверджено');
         wrote = missing.length;

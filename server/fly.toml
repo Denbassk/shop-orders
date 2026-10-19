@@ -11,6 +11,7 @@ primary_region = 'fra'
 
 [env]
   PORT = '3000'
+  EXPORT_TARGET = 'test'
 
 [http_service]
   internal_port = 3000

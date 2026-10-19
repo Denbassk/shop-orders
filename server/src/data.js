@@ -121,7 +121,10 @@ function createData(sb, { now = Date.now } = {}) {
   async function exportSnapshot(dir) {
     const since = R.kyivNow(new Date(now() - 3 * 86400000)).day;
     const sel = 'id,order_id,dir,store_id,order_date,status,is_addon,created_at,changed_at,exported_at,order_lines(line_no,barcode,name,price,qty)';
-    const recent = must('orders', await sb.from('orders').select(sel).eq('dir', dir).or(`exported_at.is.null,order_date.gte.${since}`));
+    const [recent, allStores] = await Promise.all([
+      sb.from('orders').select(sel).eq('dir', dir).or(`exported_at.is.null,order_date.gte.${since}`),
+      sb.from('stores').select('*'),
+    ]).then(([a, b]) => [must('orders', a), must('stores', b)]);
     const dirty = recent.filter(isDirty);
     let orders = [];
     if (dirty.length) {
@@ -132,8 +135,7 @@ function createData(sb, { now = Date.now } = {}) {
       orders = all.filter((o) => pairs.has(o.store_id + '|' + o.order_date))
         .map(({ order_lines, ...o }) => ({ ...o, lines: order_lines || [] }));
     }
-    const stores = orders.length ? must('stores', await sb.from('stores').select('*')).map(rowToStore) : [];
-    return { orders, stores };
+    return { orders, stores: orders.length ? allStores.map(rowToStore) : [] };
   }
 
   // exported_at = changed_at вигруженої версії: зміна після читання лишає замовлення невигруженим
