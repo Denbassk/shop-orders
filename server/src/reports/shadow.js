@@ -1,88 +1,106 @@
-// Тіньовий прогін звітів ВК: бойові сирі рядки ЧИТАЮТЬСЯ (нічого в бойову таблицю не пишемо), з них будуються три звіти
-// в ТЕСТОВУ таблицю, потім вони зчитуються назад і порівнюються з бойовими звітами Apps Script комірка в комірку.
-// Хвилини «(оновлено …)» у заголовках звітів відрізняються завжди (різний момент збирання) і з порівняння виключені.
-//   node src/reports/shadow.js          (на Fly: fly ssh console -C "node src/reports/shadow.js")
+// Тіньовий прогін звітів: бойові сирі рядки напрямку ЧИТАЮТЬСЯ (у бойову таблицю нічого не пишемо), з них будуються звіти
+// в ТЕСТОВУ таблицю, потім зчитуються назад і порівнюються з бойовими звітами Apps Script комірка в комірку:
+// значення (з типом), оформлення (колір, жирність, шрифт, вирівнювання, формат числа, рамки), ширини, висоти, закріплення, фільтр.
+// Різниця, яка буває завжди і з порівняння виключена: час збирання («(оновлено 12:56:19)», «Звіт перезібрано о 15:42»),
+// id таблиці і gid у посиланнях на xlsx.
+//   node src/reports/shadow.js [bakery bread veg nbhz]     (на Fly: fly ssh console -C "node src/reports/shadow.js")
 const { loadEnv } = require('../env');
-const R = require('../rules');
 const { DIRECTIONS } = require('../directions');
-const { TEST_EXPORT_SPREADSHEET_ID } = require('../export/target');
+const { TEST_EXPORT_SPREADSHEET_ID, resolveTarget } = require('../export/target');
 const googleApi = require('../google');
-const { dmyOfSheetCell } = require('../export/raw');
-const B = require('./bakery');
-const { writeSheet } = require('./sheetWriter');
+const { diffSheets } = require('./sheetModel');
+const { modelOfPlan } = require('./planModel');
+const { readLive, fetchModels } = require('./liveRead');
+const { writeDir, nbhzLinkName, DIRS } = require('./rebuild');
 
-const SHEETS = [B.BAKERY_ORDERS_SHEET, B.BAKERY_SUMMARY_SHEET, B.BAKERY_ROUTE_SHEET];
+const mask = (s) => s
+  .replace(/\(оновлено \d\d:\d\d:\d\d\)/g, '(оновлено *)')
+  .replace(/Звіт перезібрано о \d\d:\d\d/g, 'Звіт перезібрано о *')
+  .replace(/spreadsheets\/d\/[^/]+\/export\?format=xlsx&gid=\d+/g, 'spreadsheets/d/*/export?format=xlsx&gid=*');
 
-// Google віддає рядки без хвостових порожніх клітинок і без порожніх рядків наприкінці
-function trimGrid(grid) {
-  const out = (grid || []).map((r) => { const x = r.slice(); while (x.length && (x[x.length - 1] === '' || x[x.length - 1] == null)) x.pop(); return x; });
-  while (out.length && !out[out.length - 1].length) out.pop();
-  return out;
-}
-const STAMP = /\(оновлено \d\d:\d\d:\d\d\)/;
-const noStamp = (v) => (typeof v === 'string' ? v.replace(STAMP, '(оновлено *)') : v);
+const VALUE_PROPS = new Set(['v', 'formula', 'link']);
 
-// Порівняння двох сіток A:D. Повертає { cells, diffs: [{row, col, live, ours}] }
-function diffGrids(live, ours, width = 4) {
-  const a = trimGrid(live), b = trimGrid(ours);
-  const diffs = [];
-  const rows = Math.max(a.length, b.length);
-  for (let i = 0; i < rows; i++) {
-    for (let c = 0; c < width; c++) {
-      const x = noStamp(a[i] && a[i][c] !== undefined ? a[i][c] : ''), y = noStamp(b[i] && b[i][c] !== undefined ? b[i][c] : '');
-      if (x !== y) diffs.push({ row: i + 1, col: 'ABCD'[c], live: x, ours: y });
-    }
+// Порівняння моделей листів: liveModels/ourModels - { назва листа: модель }, nameMap - { бойова назва: наша назва }
+// Закріплення колонок задає лише вигрузка НБХЗ; у звітах ВК/хліба/овочів код колонки не закріплює, а в бойових листах лишилось
+// закріплення з давніх версій (frozenCols 5 і 11 у «Заказы ВК» і «Сводная ВК») - воно не результат коду і не порівнюється.
+const skipFor = (dir) => new Set(dir === 'nbhz' ? ['grid'] : ['grid', 'frozenCols']);
+
+// Штрихкоди нижнього блоку «Данные Заказов» (колонка A): в бойовому листі то текст, то число - залежно від залишків формату '@'
+// від попередніх збірок (за однієї й тієї ж програми). Наш вихід - завжди текст з '@'; цифри мають збігатися.
+const looseFor = (dir) => (liveName) => (dir === 'bread' && liveName === 'Данные Заказов'
+  ? (k, p, va, vb, ca, cb) => /,1$/.test(k) && ((p === 'v' && String(va) === String(vb)) || (p === 'nf' && String(ca.v) === String(cb.v)))
+  : null);
+
+function compareModels(liveModels, ourModels, nameMap = {}, opts = {}) {
+  const sheets = {};
+  let totalValue = 0, totalFormat = 0, totalCells = 0;
+  for (const liveName of Object.keys(liveModels)) {
+    const ours = ourModels[nameMap[liveName] || liveName];
+    if (!ours) { sheets[liveName] = { missing: true, valueDiffs: [], formatDiffs: [] }; totalValue++; continue; }
+    const exp = opts.explicit && opts.explicit[nameMap[liveName] || liveName];
+    const pick = (m, keys) => Object.fromEntries(Object.keys(m).filter((k) => keys[k] !== undefined).map((k) => [k, m[k]]));
+    const oursX = exp ? { ...ours, colW: pick(ours.colW, exp.colW), rowH: pick(ours.rowH, exp.rowH) } : ours;
+    const diffs = diffSheets(liveModels[liveName], oursX, { mask, onlyDimsOf: 'b', skip: new Set(['grid', 'frozenCols']), ...opts,
+      loose: opts.looseFor && opts.looseFor(liveName) });
+    const valueDiffs = diffs.filter((d) => VALUE_PROPS.has(d.prop));
+    const formatDiffs = diffs.filter((d) => !VALUE_PROPS.has(d.prop));
+    const cells = new Set([...Object.keys(liveModels[liveName].cells), ...Object.keys(ours.cells)]).size;
+    sheets[liveName] = { cells, valueDiffs, formatDiffs };
+    totalValue += valueDiffs.length; totalFormat += formatDiffs.length; totalCells += cells;
   }
-  return { cells: rows * width, rowsLive: a.length, rowsOurs: b.length, diffs };
+  return { sheets, totalValue, totalFormat, totalCells };
 }
 
-async function shadowBakery({ at = new Date() } = {}) {
-  const cfg = DIRECTIONS.bakery;
+async function shadowDir(dir, { at = new Date() } = {}) {
+  const cfg = DIRECTIONS[dir];
   if (TEST_EXPORT_SPREADSHEET_ID === cfg.spreadsheetId) throw new Error('тестова таблиця збігається з бойовою - зупинка');
-  const k = R.kyivNow(at);
-
-  // один запит - сирі рядки і бойові звіти з одного моменту
-  const ranges = [googleApi.a1q(cfg.rawSheet, 'A:H'), ...SHEETS.map((s) => googleApi.a1q(s, 'A:D'))];
-  const res = await googleApi.sheetsClient().spreadsheets.values.batchGet({
-    spreadsheetId: cfg.spreadsheetId, ranges, valueRenderOption: 'UNFORMATTED_VALUE', dateTimeRenderOption: 'SERIAL_NUMBER',
-  }, { timeout: googleApi.TIMEOUT_MS, retry: false });
-  const [rawVr, ...liveVr] = res.data.valueRanges;
-  const live = Object.fromEntries(SHEETS.map((n, i) => [n, liveVr[i].values || []]));
-  const rawToday = (rawVr.values || []).slice(1).filter((r) => dmyOfSheetCell(r[0]) === k.dmy);
-  const rows = B.normalizeRawRows(rawToday, k.dmy);
+  const live = await readLive(dir, at);
 
   const { loadStores, supabase } = require('../db');
   const stores = await loadStores();
-  const { data: products, error } = await supabase().from('products').select('barcode,name,category,status').eq('dir', 'bakery').order('sort');
+  const { data: products, error } = await supabase().from('products').select('barcode,name,category,status').eq('dir', dir).order('sort');
   if (error) throw new Error('products: ' + error.message);
 
-  const plans = B.buildBakeryReports(rows, { stores, products, now: at });
-  for (const name of SHEETS) await writeSheet(googleApi, TEST_EXPORT_SPREADSHEET_ID, name, plans[name]);
+  const env = { google: googleApi, target: resolveTarget('test'), at, archive: { spreadsheetId: '' } };
+  const written = await writeDir(dir, env, TEST_EXPORT_SPREADSHEET_ID, live.rows, { stores, products }, live.day);
 
-  // назад з тестової таблиці - те, що справді лежить у Google
-  const out = { day: k.dmy, rawRows: rows.length, stores: stores.length, sheets: {} };
-  for (const name of SHEETS) {
-    const back = await googleApi.getValues(TEST_EXPORT_SPREADSHEET_ID, googleApi.a1q(name, 'A:D'));
-    out.sheets[name] = diffGrids(live[name], back);
-    out.sheets[name].liveStamp = (JSON.stringify(live[name].slice(0, 2)).match(/оновлено (\d\d:\d\d:\d\d)/) || [])[1] || null;
-  }
-  out.totalDiffs = SHEETS.reduce((s, n) => s + out.sheets[n].diffs.length, 0);
-  out.totalCells = SHEETS.reduce((s, n) => s + out.sheets[n].cells, 0);
-  return out;
+  // назад з тестової таблиці - те, що справді лежить у Google; однакові межі читання для обох сторін
+  const nameMap = dir === 'nbhz' ? { 'Завантаження': nbhzLinkName(env) } : {};
+  const ourName = (n) => nameMap[n] || n;
+  const extents = Object.keys(live.models).map((name) => {
+    const l = live.sizes.find((s) => s.name === name), o = written.sizes[ourName(name)] || { rows: 0, cols: 0 };
+    return { name, rows: Math.max(l.rows, o.rows), cols: Math.max(l.cols, o.cols) };
+  });
+  const liveModels = await fetchModels(cfg.spreadsheetId, extents);
+  const ourModels = await fetchModels(TEST_EXPORT_SPREADSHEET_ID, extents.map((e) => ({ ...e, name: ourName(e.name) })));
+  const explicit = Object.fromEntries(Object.entries(written.plans).map(([n, p]) => [n, modelOfPlan(p)]));
+  const tally = {};
+  const cmp = compareModels(liveModels, ourModels, nameMap, { skip: skipFor(dir), explicit, liveTextFormat: true, tally, looseFor: looseFor(dir) });
+  cmp.residualTextFormat = tally.residual || 0;
+  cmp.looseCells = tally.loose || 0;
+  return { dir, day: live.dmy, rawRows: live.raw.length, workRows: live.rows.length, stores: stores.length, missing: live.missing, archive: written.archive, ...cmp };
 }
 
-module.exports = { shadowBakery, diffGrids, trimGrid };
+module.exports = { shadowDir, compareModels, mask, skipFor, looseFor };
 
 if (require.main === module) {
   loadEnv();
-  shadowBakery().then((r) => {
-    console.log(`день ${r.day}: сирих рядків ВК (прочитано) ${r.rawRows}, точок у базі ${r.stores}`);
-    for (const n of SHEETS) {
-      const s = r.sheets[n];
-      console.log(`  «${n}»: рядків бойовий ${s.rowsLive} / наш ${s.rowsOurs}, комірок ${s.cells}, розбіжностей ${s.diffs.length}, «оновлено» бойового ${s.liveStamp}`);
-      s.diffs.slice(0, 15).forEach((d) => console.log(`     ${d.col}${d.row}: бойовий=${JSON.stringify(d.live)} наш=${JSON.stringify(d.ours)}`));
+  const dirs = process.argv.slice(2).length ? process.argv.slice(2) : DIRS;
+  (async () => {
+    let bad = 0, cells = 0;
+    for (let i = 0; i < dirs.length; i++) {
+      if (i) await new Promise((r) => setTimeout(r, 20000));            // квота Sheets: 60 читань на хвилину
+      const r = await shadowDir(dirs[i]);
+      console.log(`\n[${r.dir}] день ${r.day}: сирих рядків прочитано ${r.rawRows}, робочих ${r.workRows}, точок у базі ${r.stores}` + (r.missing.length ? `, ЛИСТІВ НЕМАЄ в бойовій: ${r.missing.join(', ')}` : ''));
+      for (const [name, s] of Object.entries(r.sheets)) {
+        if (s.missing) { console.log(`  «${name}»: НЕМАЄ нашого листа`); continue; }
+        console.log(`  «${name}»: комірок ${s.cells}, розбіжностей значень ${s.valueDiffs.length}, оформлення ${s.formatDiffs.length}`);
+        [...s.valueDiffs, ...s.formatDiffs].slice(0, 12).forEach((d) => console.log(`       ${d.cell} ${d.prop}: бойовий=${d.gas} наш=${d.ours}`));
+      }
+      console.log(`  разом: комірок ${r.totalCells}, значень ${r.totalValue}, оформлення ${r.totalFormat}` + (r.looseCells ? `; допуск число/текст у штрихкодах зведення: ${r.looseCells} розб.` : '') + (r.residualTextFormat ? ` (окремо не рахується: залишок текстового формату '@' у бойовому на ${r.residualTextFormat} комірках з текстом)` : ''));
+      bad += r.totalValue + r.totalFormat; cells += r.totalCells;
     }
-    console.log(`РАЗОМ комірок ${r.totalCells}, розбіжностей ${r.totalDiffs}`);
-    process.exitCode = r.totalDiffs ? 1 : 0;
-  }).catch((e) => { console.error('ПОМИЛКА:', e.message); process.exitCode = 2; });
+    console.log(`\nУСЬОГО: комірок ${cells}, розбіжностей ${bad}`);
+    process.exitCode = bad ? 1 : 0;
+  })().catch((e) => { console.error('ПОМИЛКА:', e.message); process.exitCode = 2; });
 }

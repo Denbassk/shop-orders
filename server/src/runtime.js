@@ -9,7 +9,7 @@ const { approvePage, approveForm } = require('./pages/approve');
 const { createExportQueue } = require('./export/queue');
 const { exportDir, exportAll } = require('./export/raw');
 const { resolveTarget, exportTargetMode } = require('./export/target');
-const { rebuildBakeryReports, exportThenReports } = require('./reports/rebuild');
+const { rebuildReports: rebuildDir, rebuildAllReports, exportThenReports } = require('./reports/rebuild');
 const { tick } = require('./jobs');
 const googleApi = require('./google');
 const { getValues, firstSheetTitle, a1q } = googleApi;
@@ -53,17 +53,19 @@ function createRuntime() {
   console.log('вигрузка в сирі листи: ' + target.mode);
   const googleForExport = {
     ...googleApi,
-    ...Object.fromEntries(['getValues', 'appendValues', 'batchUpdate', 'sheetIdOf', 'sheetMeta'].map((m) => [m, (...a) => {
+    ...Object.fromEntries(['getValues', 'appendValues', 'batchUpdate', 'sheetIdOf', 'sheetMeta', 'sheetList', 'sheetDims', 'copySheetTo'].map((m) => [m, (...a) => {
       if (process.env.EXPORT_GOOGLE_OFF) return Promise.reject(new Error('Google вимкнено (EXPORT_GOOGLE_OFF)'));
       return googleApi[m](...a);
     }])),
   };
   const exportEnv = () => ({ data, google: googleForExport, target, at: new Date() });
-  // Звіти ВК збираються з бази в ту саму ціль, що й вигрузка. Після вигрузки ВК - перебудова з дебаунсом 30 с
-  // (не на кожне замовлення: перше замовлення відкриває вікно, усі наступні в ньому входять в одну перебудову).
-  const reportEnv = () => ({ data, google: googleForExport, target, at: new Date() });
-  const rebuildReports = () => rebuildBakeryReports(reportEnv());
-  const queueReports = createExportQueue({ run: rebuildReports, delayMs: Number(process.env.REPORTS_DEBOUNCE_MS) || 30000 });
+  // Звіти напрямків (ВК, хліб, овочі, вигрузка НБХЗ) збираються з бази в ту саму ціль, що й вигрузка. Після вигрузки напрямку -
+  // перебудова його звітів з дебаунсом 30 с (не на кожне замовлення: перше замовлення відкриває вікно, усі наступні в ньому
+  // входять в одну перебудову); у tick - усі напрямки (змінене - пишеться, без змін - пропуск).
+  // NBHZ_ARCHIVE_SPREADSHEET_ID - таблиця-архів вигрузок НБХЗ (її створює власник: сервісний акаунт файлів не створює).
+  const reportEnv = () => ({ data, google: googleForExport, target, at: new Date(), archive: { spreadsheetId: process.env.NBHZ_ARCHIVE_SPREADSHEET_ID || '' } });
+  const rebuildReports = () => rebuildAllReports(reportEnv());
+  const queueReports = createExportQueue({ run: (dir) => rebuildDir(dir, reportEnv()), delayMs: Number(process.env.REPORTS_DEBOUNCE_MS) || 30000 });
   const queueExport = createExportQueue({ run: exportThenReports((dir) => exportDir(dir, exportEnv()), queueReports) });
 
   const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport, defer });

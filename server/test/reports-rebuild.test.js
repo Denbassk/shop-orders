@@ -83,21 +83,23 @@ test('збій Google на другому листі: помилка навер�
   assert.equal(batches(log).length, 5);
 });
 
-test('вигрузка ВК + 5 замовлень поспіль = одна перебудова через 30 с; інші напрямки звітів не ставлять', async () => {
+test('вигрузка + 5 замовлень поспіль = одна перебудова через 30 с на напрямок (коалесценція); кожен напрямок має своє вікно', async () => {
   const timers = [];
   const runs = [], exports = [];
   const queueReports = createExportQueue({ run: async (d) => { runs.push(d); }, delayMs: 30000, setTimer: (fn, ms) => timers.push({ fn, ms }) });
   const run = exportThenReports(async (dir) => { exports.push(dir); return { written: 1 }; }, queueReports);
   for (let i = 0; i < 5; i++) await run('bakery');
-  await run('bread'); await run('veg');
-  assert.deepEqual(exports, ['bakery', 'bakery', 'bakery', 'bakery', 'bakery', 'bread', 'veg']);
-  assert.equal(timers.length, 1, 'один відкладений запуск');
-  assert.equal(timers[0].ms, 30000);
+  await run('bread'); await run('veg'); await run('nbhz'); await run('bread');
+  assert.deepEqual(exports, ['bakery', 'bakery', 'bakery', 'bakery', 'bakery', 'bread', 'veg', 'nbhz', 'bread']);
+  assert.equal(timers.length, 4, 'по одному відкладеному запуску на напрямок: bakery, bread, veg, nbhz');
+  assert.ok(timers.every((t) => t.ms === 30000));
   assert.deepEqual(runs, []);
   timers[0].fn(); await new Promise((r) => setImmediate(r));
   assert.deepEqual(runs, ['bakery']);
   await run('bakery');
-  assert.equal(timers.length, 2, 'після запуску вікно відкривається знову');
+  assert.equal(timers.length, 5, 'після запуску вікно відкривається знову');
+  await run('невідомий');
+  assert.equal(timers.length, 5, 'невідомий напрямок звітів не ставить');
 });
 
 test('вигрузка впала - звіти не ставляться в чергу', async () => {

@@ -73,11 +73,35 @@ async function sheetIdOf(spreadsheetId, title) {
 // Властивості вкладки (sheetId, розмір, умовні формати) або null, якщо вкладки нема
 async function sheetMeta(spreadsheetId, title) {
   const res = await sheetsClient().spreadsheets.get({
-    spreadsheetId, fields: 'sheets(properties(sheetId,title,gridProperties),conditionalFormats)',
+    spreadsheetId, fields: 'sheets(properties(sheetId,title,gridProperties),conditionalFormats,basicFilter)',
   }, REQ);
   return res.data.sheets.find((s) => s.properties.title === title) || null;
 }
 
+// Усі вкладки: [{ sheetId, title, rowCount, columnCount }]
+async function sheetList(spreadsheetId) {
+  const res = await sheetsClient().spreadsheets.get({ spreadsheetId, fields: 'sheets(properties(sheetId,title,gridProperties))' }, REQ);
+  return res.data.sheets.map((s) => ({ sheetId: s.properties.sheetId, title: s.properties.title,
+    rowCount: (s.properties.gridProperties || {}).rowCount, columnCount: (s.properties.gridProperties || {}).columnCount }));
+}
+
+// Ширини колонок A, B і висота рядка 1, які порахував Google (autoResize)
+async function sheetDims(spreadsheetId, title) {
+  const res = await sheetsClient().spreadsheets.get({
+    spreadsheetId, ranges: [a1q(title, 'A1:B1')], fields: 'sheets(properties(title),data(rowMetadata(pixelSize),columnMetadata(pixelSize)))',
+  }, REQ);
+  const sh = res.data.sheets.find((x) => x.properties.title === title);
+  const d = sh && sh.data && sh.data[0];
+  if (!d) throw new Error('нема метаданих вкладки ' + title);
+  return { col1: d.columnMetadata[0].pixelSize, col2: d.columnMetadata[1].pixelSize, row1: d.rowMetadata[0].pixelSize };
+}
+
+// Копія вкладки в іншу таблицю (sheets.copyTo): повертає { sheetId, title } копії
+async function copySheetTo(spreadsheetId, sheetId, destinationSpreadsheetId) {
+  const res = await sheetsClient().spreadsheets.sheets.copyTo({ spreadsheetId, sheetId, requestBody: { destinationSpreadsheetId } }, REQ);
+  return { sheetId: res.data.sheetId, title: res.data.title };
+}
+
 const a1q = (sheet, range) => `'${String(sheet).replace(/'/g, "''")}'!${range}`;
 
-module.exports = { sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, sheetIdOf, sheetMeta, a1q, TIMEOUT_MS };
+module.exports = { sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, sheetIdOf, sheetMeta, sheetList, sheetDims, copySheetTo, a1q, TIMEOUT_MS };

@@ -86,4 +86,4 @@ function valuesOfRequests(reqs) {
   }));
 }
 
-module.exports = { runBakeryGas, valuesOfRequests };
+module.exports = { runBakeryGas, valuesOfRequests, makeKyivDate, KYIV };

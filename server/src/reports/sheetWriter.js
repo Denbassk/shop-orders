@@ -13,7 +13,10 @@ function hexRgb(h) {
            blue: parseInt(h.slice(4, 6), 16) / 255 };
 }
 
-function colIdx(L) { return String(L).toUpperCase().charCodeAt(0) - 65; }
+// A -> 0, Z -> 25, AA -> 26
+function colIdx(L) { return String(L).toUpperCase().split('').reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1; }
+// 0 -> A, 26 -> AA
+function colLetter(i) { let s = ''; for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s; return s; }
 
 function rowRuns(rows) {
   const s = rows.slice().sort((a, b) => a - b), out = [];
@@ -30,9 +33,13 @@ function fmtReq(rg, f) {
   if (f.bg) { cf.backgroundColor = hexRgb(f.bg); fields.push('backgroundColor'); }
   if (f.halign) { cf.horizontalAlignment = f.halign.toUpperCase(); fields.push('horizontalAlignment'); }
   if (f.valign) { cf.verticalAlignment = f.valign.toUpperCase(); fields.push('verticalAlignment'); }
-  if (f.wrap) { cf.wrapStrategy = 'WRAP'; fields.push('wrapStrategy'); }
+  if (f.wrap != null) { cf.wrapStrategy = f.wrap ? 'WRAP' : 'OVERFLOW_CELL'; fields.push('wrapStrategy'); }
+  if (f.rot != null) { cf.textRotation = { angle: f.rot }; fields.push('textRotation'); }
   if (f.num) {
-    cf.numberFormat = f.num === '@' ? { type: 'TEXT', pattern: '@' } : { type: 'NUMBER', pattern: f.num };
+    cf.numberFormat = f.num === '@' ? { type: 'TEXT', pattern: '@' }
+      : f.num === 'dd.mm.yyyy' ? { type: 'DATE', pattern: f.num }
+      : f.num === 'HH:mm:ss' ? { type: 'TIME', pattern: f.num }
+      : { type: 'NUMBER', pattern: f.num };
     fields.push('numberFormat');
   }
   if (f.color) { tf.foregroundColor = hexRgb(f.color); fields.push('textFormat.foregroundColor'); }
@@ -60,6 +67,7 @@ function writerFor(meta, data, width) {
   (meta.conditionalFormats || []).forEach(() => {
     reqs.push({ deleteConditionalFormatRule: { sheetId: sid, index: 0 } });
   });
+  if (meta.basicFilter) reqs.push({ clearBasicFilter: { sheetId: sid } });
   reqs.push({ unmergeCells: { range: { sheetId: sid } } });
   reqs.push({ updateCells: { range: { sheetId: sid }, fields: '*' } });
   if ((gp.rowCount || 0) < n)
@@ -91,18 +99,30 @@ function writerFor(meta, data, width) {
 
   const w = {
     sheetId: sid,
+    grid: { rows: Math.max(gp.rowCount || 0, n), cols: Math.max(gp.columnCount || 0, width) },
     fmt(rows, c1, c2, f) {
       if (rows && !rows.length) return w;
       ranges(rows, c1, c2).forEach((rg) => { reqs.push(fmtReq(rg, f)); });
       return w;
     },
-    border(rows, c1, c2) {
+    // o: { color: '#rrggbb', style: 'SOLID'|'SOLID_MEDIUM', sides: ['top','bottom','left','right','innerHorizontal','innerVertical'] };
+    // без o - чорна суцільна рамка навколо і всередині (setBorder(true, true, true, true, true, true))
+    border(rows, c1, c2, o) {
       if (rows && !rows.length) return w;
-      const b = { style: 'SOLID', color: { red: 0, green: 0, blue: 0 } };
+      o = o || {};
+      const b = { style: o.style || 'SOLID', color: o.color ? hexRgb(o.color) : { red: 0, green: 0, blue: 0 } };
+      const sides = o.sides || ['top', 'bottom', 'left', 'right', 'innerHorizontal', 'innerVertical'];
       ranges(rows, c1, c2).forEach((rg) => {
-        reqs.push({ updateBorders: { range: rg, top: b, bottom: b, left: b, right: b,
-                                     innerHorizontal: b, innerVertical: b } });
+        const req = { range: rg };
+        sides.forEach((sd) => { req[sd] = b; });
+        reqs.push({ updateBorders: req });
       });
+      return w;
+    },
+    // grid - поточний розмір сітки листа (після appendDimension); trimGrid прибирає зайві рядки і колонки справа-знизу
+    trimGrid(nRows, nCols) {
+      if (w.grid.cols > nCols) { reqs.push({ deleteDimension: { range: { sheetId: sid, dimension: 'COLUMNS', startIndex: nCols, endIndex: w.grid.cols } } }); w.grid.cols = nCols; }
+      if (w.grid.rows > nRows) { reqs.push({ deleteDimension: { range: { sheetId: sid, dimension: 'ROWS', startIndex: nRows, endIndex: w.grid.rows } } }); w.grid.rows = nRows; }
       return w;
     },
     rowHeights(px) {
@@ -135,12 +155,17 @@ function writerFor(meta, data, width) {
 async function writeSheet(google, spreadsheetId, sheetName, plan) {
   let meta = await google.sheetMeta(spreadsheetId, sheetName);
   if (!meta) {
-    const r = await google.batchUpdate(spreadsheetId, [{ addSheet: { properties: { title: sheetName } } }]);
+    const props = { title: sheetName };
+    if (plan.sheetIndex != null) props.index = plan.sheetIndex;
+    const r = await google.batchUpdate(spreadsheetId, [{ addSheet: { properties: props } }]);
     meta = { properties: { sheetId: r.replies[0].addSheet.properties.sheetId, gridProperties: { rowCount: 1000, columnCount: 26 } } };
   }
   const w = writerFor(meta, plan.data, plan.width);
   plan.apply(w);
   await google.batchUpdate(spreadsheetId, w.requests());
+  // другий етап для планів, яким потрібні виміри, обчислені Google (autoResize): див. nbhz.js
+  if (plan.afterWrite) await plan.afterWrite({ google, spreadsheetId, sheetId: meta.properties.sheetId, sheetName });
+  return { sheetId: meta.properties.sheetId };
 }
 
-module.exports = { hexRgb, colIdx, rowRuns, fmtReq, gridRange, writerFor, writeSheet };
+module.exports = { hexRgb, colIdx, colLetter, rowRuns, fmtReq, gridRange, writerFor, writeSheet };
