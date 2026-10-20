@@ -1,5 +1,7 @@
 // Express-сервер shop-orders: /health, POST /api (дії продавця), GET /ok (кнопка "Дозволити" з листа).
 const express = require('express');
+const cookieParser = require('cookie-parser');
+const { ADMIN_TOKEN_TTL } = require('./admin/auth');
 
 // opts.api - (action, payload) => Promise<конверт>; opts.approve - (query) => Promise<{status, html}>.
 // За замовчуванням бойові, створюються при першому запиті.
@@ -57,6 +59,32 @@ function createApp(opts = {}) {
     try { sendPage(res, await approve(req.body)); } catch (e) { next(e); }
   });
 
+  // Пульт: POST /admin/api { action, payload } -> { ok, data, ms } (adminApi з app/Admin.gs). Вхід - action 'login' { pin };
+  // сесія - підписаний JWT у cookie adm (HttpOnly, Secure, SameSite=Strict, 12 год). Лише application/json (захист від чужих форм).
+  let adminRt = null;
+  const getAdminRt = () => adminRt || (adminRt = require('./admin/runtime').createAdminRuntime());
+  const adminAuth = () => opts.adminAuth || getAdminRt().auth;
+  const adminApi = () => opts.adminApi || getAdminRt().api;
+  const ADM_COOKIE = 'adm';
+  const admCookie = { httpOnly: true, secure: true, sameSite: 'strict', path: '/admin' };
+  app.post('/admin/api', cookieParser(), express.json({ limit: '1mb' }), async (req, res, next) => {
+    try {
+      if (!req.is('application/json')) return res.status(415).json({ ok: false, error: 'Unsupported Media Type' });
+      const t0 = Date.now();
+      const { action, payload } = req.body || {};
+      if (action === 'login') {
+        let token;
+        try { token = await adminAuth().login('admin', payload && payload.pin); }
+        catch (e) { return res.json({ ok: false, error: e.message, ms: Date.now() - t0 }); }
+        res.cookie(ADM_COOKIE, token, { ...admCookie, maxAge: ADMIN_TOKEN_TTL });
+        return res.json({ ok: true, data: {}, ms: Date.now() - t0 });
+      }
+      try { adminAuth().check(req.cookies && req.cookies[ADM_COOKIE], 'admin'); }
+      catch (e) { return res.json({ ok: false, error: 'AUTH', ms: Date.now() - t0 }); }
+      res.json(await adminApi()(action, payload));
+    } catch (e) { next(e); }
+  });
+  app.post('/admin/logout', (req, res) => { res.clearCookie(ADM_COOKIE, admCookie); res.json({ ok: true }); });
   app.use((req, res) => res.status(404).json({ ok: false, error: 'Not found' }));
 
   // eslint-disable-next-line no-unused-vars

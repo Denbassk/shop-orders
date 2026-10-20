@@ -30,3 +30,9 @@
 - src/admin/auth.js: login(role, pin) / check(token, role). Поле pin и тексты как в Admin.gs ('Невірний PIN', 'Забагато спроб. Спробуйте за годину.', 'PIN ще не задано...'); 5 попыток/час от первой; JWT HS256 12 ч, роль admin | buyer:<dir>; хеш scrypt$salt$hex.
 - Новые секреты (на Fly, в четверг, НЕ в чате): ADMIN_JWT_SECRET, ADMIN_PASSWORD_HASH, BUYER_<DIR>_HASH. Хеш: node scripts/hash-password.js.
 - Зависимости: jsonwebtoken, cookie-parser. Тест server/test/admin-auth.test.js.
+
+## Шаг 2 (итог)
+- POST /admin/api (app.js): только application/json (иначе 415); login {pin} -> cookie adm (JWT, HttpOnly, Secure, SameSite=Strict, Path=/admin, 12 ч), в теле data {} без token; без/с плохой cookie -> {ok:false,error:'AUTH'}; POST /admin/logout стирает cookie.
+- src/admin/index.js createAdminApi(handlers): {ok,data,ms}, 'Невідома дія: x', AUTH не логируется. healthNoteError_ - шаг 5.
+- src/admin/fails.js: счётчик в settings 'admin_fail:<роль>' (без миграции). src/admin/runtime.js: секреты ADMIN_JWT_SECRET, ADMIN_PASSWORD_HASH, BUYER_<DIR>_HASH; data.js/runtime.js НЕ тронуты (меньше конфликтов с Task 8).
+- Для шага 6 (UI): login возвращает {} вместо {token}; запросы fetch JSON с credentials; logout -> POST /admin/logout.
