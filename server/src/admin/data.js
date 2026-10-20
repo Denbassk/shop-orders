@@ -44,7 +44,29 @@ function createAdminData(sb) {
   async function setSetting(key, value) {
     must('settings', await sb.from('settings').upsert({ key, value }));
   }
-  return { dayOrders, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting };
+  // правка замовлення (admEditOrder_): рядки активних замовлень точки за день
+  async function dayStoreLines(dir, storeId, day) {
+    const rows = must('orders', await sb.from('orders').select('id,order_lines(id,name,qty)')
+      .eq('dir', dir).eq('store_id', storeId).eq('order_date', day).eq('status', 'active'));
+    return rows.flatMap((o) => (o.order_lines || []).map((l) => ({ id: l.id, order_pk: o.id, name: l.name, qty: Number(l.qty) })));
+  }
+  // зміна/видалення лише якщо стара кількість та сама (інакше false - «змінився»)
+  async function setLineQty(id, oldQty, qty) {
+    return must('order_lines', await sb.from('order_lines').update({ qty }).eq('id', id).eq('qty', oldQty).select('id')).length > 0;
+  }
+  async function deleteLine(id, oldQty) {
+    return must('order_lines', await sb.from('order_lines').delete().eq('id', id).eq('qty', oldQty).select('id')).length > 0;
+  }
+  // змінені замовлення -> changed_at (вигрузка перебудує рядки точки); порожні -> cancelled
+  async function touchOrders(ids, emptied) {
+    if (!ids.length) return;
+    const ts = new Date().toISOString();
+    const keep = ids.filter((i) => !emptied.includes(i));
+    if (keep.length) must('orders', await sb.from('orders').update({ changed_at: ts }).in('id', keep).eq('status', 'active'));
+    if (emptied.length) must('orders', await sb.from('orders').update({ status: 'cancelled', changed_at: ts }).in('id', emptied).eq('status', 'active'));
+  }
+  return { dayOrders, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
+    dayStoreLines, setLineQty, deleteLine, touchOrders };
 }
 
 module.exports = { createAdminData };

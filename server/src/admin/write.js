@@ -75,4 +75,68 @@ async function admSetDirEnabled(payload, env) {
   return { ok: true, enabled: on };
 }
 
-module.exports = { STORE_NOT_FOUND, admCancelOrder, admOpenStore, admOpenAll, admCloseAll, admSetDirEnabled };
+// Правка замовлення точки (admEditOrder_, AdminTools.gs). row = order_lines.id (картка точки, шаг 3б).
+// Кожен рядок звіряється з базою: є, та сама назва, та сама стара кількість. Не збіглось - помилка до запису.
+// Кількість 0 - рядок прибрано; порожнє замовлення -> cancelled. Рядки в листі перебудовує вигрузка (changed_at).
+async function admEditOrder(payload, env) {
+  const store = await storeOf(payload.storeId, env);
+  const dir = String(payload.dir || '');
+  const cfg = cfgOf(dir);
+  const seen = {};
+  const ch = (Array.isArray(payload.changes) ? payload.changes : []).map((x) => {
+    const q = Number(x.qty), row = Math.floor(Number(x.row));
+    if (!(row >= 1)) throw new Error('Невірний рядок');
+    if (seen[row]) throw new Error('Рядок ' + row + ' указано двічі');
+    seen[row] = 1;
+    if (!isFinite(q) || q < 0) throw new Error('Невірна кількість: ' + x.name);
+    if (dir !== 'veg' && q % 1) throw new Error('Кількість має бути цілою: ' + x.name);
+    return { row, name: String(x.name || ''), oldQty: Number(x.oldQty), qty: Math.round(q * 1000) / 1000 };
+  }).filter((x) => x.qty !== x.oldQty);
+  if (!ch.length) throw new Error('Змін немає');
+
+  const stale = (x) => new Error('Рядок «' + x.name + '» змінився з моменту відкриття. Оновіть екран.');
+  const lines = await env.adm.dayStoreLines(dir, store.id, dayOf(env));
+  const byId = new Map(lines.map((l) => [Number(l.id), l]));
+  ch.forEach((x) => {
+    const l = byId.get(x.row);
+    if (!l) throw new Error('Рядок «' + x.name + '» вже не на місці. Оновіть екран.');
+    if (String(l.name) !== x.name || Number(l.qty) !== x.oldQty) throw stale(x);
+    x.l = l;
+  });
+
+  const log = [], touched = new Set(), gone = new Set();
+  try {
+    for (const x of ch) {
+      if (x.qty <= 0) continue;
+      if (!await env.adm.setLineQty(x.row, x.oldQty, x.qty)) throw stale(x);
+      touched.add(x.l.order_pk);
+      log.push(x.name + ': ' + x.oldQty + ' → ' + x.qty);
+    }
+    const del = ch.filter((x) => x.qty <= 0).sort((a, b) => b.row - a.row);      // як в оригіналі: знизу вгору
+    for (const x of del) {
+      if (!await env.adm.deleteLine(x.row, x.oldQty)) throw stale(x);
+      touched.add(x.l.order_pk); gone.add(x.row);
+      log.push(x.name + ': прибрано (було ' + x.oldQty + ')');
+    }
+  } finally {
+    if (touched.size) {
+      const rest = lines.filter((l) => !gone.has(Number(l.id)));
+      const emptied = [...touched].filter((pk) => !rest.some((l) => l.order_pk === pk));
+      await env.adm.touchOrders([...touched], emptied);
+      try { env.queueExport(dir); } catch (e) { logErr(env, 'queueExport: ' + ((e && e.message) || e)); }
+    }
+  }
+  const left = lines.length - gone.size;
+  await logSafe(env, 'Змінено замовлення', cfg.title + ' / ' + store.label + ': ' + log.join('; ') +
+    (left ? '' : ' - замовлення порожнє, позначку знято'));
+  return { changed: log.length, left };
+}
+
+// Пакетний запит (admBatch_): кілька читань за один виклик; лише ADM_BATCH_OK, не більше 8
+const ADM_BATCH_OK = { today: 1, dirStores: 1, stores: 1, store: 1, schedule: 1, log: 1 };
+async function admBatch(payload, call) {
+  const calls = Array.isArray(payload.calls) ? payload.calls.slice(0, 8) : [];
+  return Promise.all(calls.map((c) => ((!c || !ADM_BATCH_OK[c.a]) ? { ok: false, error: 'not allowed' } : call(c.a, c.p || {}))));
+}
+
+module.exports = { STORE_NOT_FOUND, admCancelOrder, admOpenStore, admOpenAll, admCloseAll, admSetDirEnabled, admEditOrder, admBatch };

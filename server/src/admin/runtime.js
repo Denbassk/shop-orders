@@ -50,6 +50,8 @@ function createAdminRuntime(opts = {}) {
     openAll: (p) => write.admOpenAll(p, env()),
     closeAll: (p) => write.admCloseAll(p, env()),
     setDirEnabled: (p) => write.admSetDirEnabled(p, env()),
+    editOrder: (p) => write.admEditOrder(p, env()),
+    batch: (p) => write.admBatch(p, (a, q) => api(a, q)),
   });
   return { auth, api };
 }
