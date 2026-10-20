@@ -135,3 +135,6 @@ import-reference.js, тестовая вкладка «Списания», POST 
   с шапкой WO_HEAD (ID, Подано, Дата списания, Торговая точка, № ТТ, Категория, Штрихкод, Товар,
   Количество, Цена, Сумма, Сумма +20%, Продавец, Ключ ТТ).
 - Дальше шаг 8: runtime.js (env.queueWoExport -> exportWriteoffs с коалесценцией), jobs.js tick (+ exportWriteoffs).
+## Шаг 7в (итог)
+- Шаг 7 (f2cc93f): правка data.js не применилась (ошибка elseif при вставке в консоль). Дописаны woExportSnapshot (вью writeoffs_export_pending -> writeoffs с рядками, по submitted_at) и woMarkExported (exported_at = changed_at той же версии).
+- Дальше шаг 8: runtime.js (queueWoExport), jobs.js (tick), затем полный прогон и PR.

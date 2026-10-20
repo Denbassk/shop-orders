@@ -195,10 +195,26 @@ function createData(sb, { now = Date.now } = {}) {
   async function adminLog(action, details) {
     must('admin_log', await sb.from('admin_log').insert({ action, details }));
   }
+  // --- вигрузка списань у лист «Списания» (export/writeoff.js). Невигружене = вью writeoffs_export_pending
+  // (exported_at is distinct from changed_at); видалене теж потрапляє - його рядки треба стерти з листа.
+  async function woExportSnapshot() {
+    const ids = must('writeoffs_export_pending', await sb.from('writeoffs_export_pending').select('id')).map((r) => r.id);
+    if (!ids.length) return [];
+    const rows = must('writeoffs', await sb.from('writeoffs').select(WO_SEL + ',deleted_at,changed_at')
+      .in('id', ids).order('submitted_at'));
+    return rows.map(woRow).map((w) => ({ ...w, lines: w.lines.slice().sort((a, b) => a.line_no - b.line_no) }));
+  }
+  // exported_at = changed_at лише для прочитаної версії: змінене після читання лишається невигруженим
+  async function woMarkExported(list) {
+    for (const w of list) {
+      must('writeoffs', await sb.from('writeoffs').update({ exported_at: w.changed_at })
+        .eq('id', w.id).eq('changed_at', w.changed_at));
+    }
+  }
   return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
     orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate,
     exportSnapshot, markExported, reportSnapshot,
-    woResult, submitWriteoffTx, woDocsOfStore, woFind, woMarkDeleted, adminLog };
+    woResult, submitWriteoffTx, woDocsOfStore, woFind, woMarkDeleted, adminLog, woExportSnapshot, woMarkExported };
 }
 
 module.exports = { createData };
