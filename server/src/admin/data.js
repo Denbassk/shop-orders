@@ -25,7 +25,26 @@ function createAdminData(sb) {
   async function adminLog(action, details) {
     must('admin_log', await sb.from('admin_log').insert({ action, details: String(details || '') }));
   }
-  return { dayOrders, logRows, reportAts, setReportAt, adminLog };
+  // скасування замовлень точки за день (admCancelOrder_): active -> cancelled, changed_at = зараз (вигрузка прибере рядки);
+  // removed = рядки лише тих замовлень, які скасував саме цей UPDATE (паралельне скасування не рахується двічі)
+  async function cancelDay(dir, storeId, day) {
+    const rows = must('orders', await sb.from('orders').select('id,order_lines(id)')
+      .eq('dir', dir).eq('store_id', storeId).eq('order_date', day).eq('status', 'active'));
+    if (!rows.length) return 0;
+    const done = must('orders', await sb.from('orders').update({ status: 'cancelled', changed_at: new Date().toISOString() })
+      .in('id', rows.map((r) => r.id)).eq('status', 'active').select('id'));
+    const hit = new Set(done.map((r) => r.id));
+    return rows.filter((r) => hit.has(r.id)).reduce((n, r) => n + (r.order_lines || []).length, 0);
+  }
+  // налаштування без кешу (late_all, dirs_off): читання перед зміною
+  async function getSetting(key) {
+    const rows = must('settings', await sb.from('settings').select('value').eq('key', key).limit(1));
+    return rows.length ? rows[0].value : null;
+  }
+  async function setSetting(key, value) {
+    must('settings', await sb.from('settings').upsert({ key, value }));
+  }
+  return { dayOrders, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting };
 }
 
 module.exports = { createAdminData };

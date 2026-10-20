@@ -62,7 +62,7 @@ function createApp(opts = {}) {
   // Пульт: POST /admin/api { action, payload } -> { ok, data, ms } (adminApi з app/Admin.gs). Вхід - action 'login' { pin };
   // сесія - підписаний JWT у cookie adm (HttpOnly, Secure, SameSite=Strict, 12 год). Лише application/json (захист від чужих форм).
   let adminRt = null;
-  const getAdminRt = () => adminRt || (adminRt = require('./admin/runtime').createAdminRuntime());
+  const getAdminRt = () => adminRt || (adminRt = require('./admin/runtime').createAdminRuntime({ queueExport: (d) => runtime().getEnv().queueExport(d) }));
   const adminAuth = () => opts.adminAuth || getAdminRt().auth;
   const adminApi = () => opts.adminApi || getAdminRt().api;
   const ADM_COOKIE = 'adm';

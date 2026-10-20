@@ -62,3 +62,12 @@
 - ОТЛОЖЕНО до слияния PR #7: report_at обновлять и при автосборке (общий runtime.js/rebuild.js - меняет Task 8).
 - Для шага 6 (UI): AdminJs.html:540 'лист «' + d.sheet + '»' и 'с N-й строки' - sheet теперь '', firstRow = id строки в базе -> убрать/заменить текст.
 - Чтение (шаг 3) готово: today, schedule, stores, dirStores, store, log, report. Дальше шаг 4: изменения + миграция 000006.
+
+## Шаг 4б (итог)
+- src/admin/write.js: cancelOrder, openStore, openAll, closeAll, setDirEnabled - тексты и журнал дословно (Admin.gs).
+- cancelOrder: orders active -> cancelled (changed_at), removed = строки отменённых; строки из листа убирает выгрузка; queueExport из общего runtime через app.js (runtime.js не тронут).
+- openStore = data.approveLate, left = 30. openAll/closeAll = settings.late_all[dir]. setDirEnabled = settings.dirs_off.
+- clearMark НЕ переносится: отдельной отметки нет, «уже заказала» = активный заказ в базе (транзакция). Кнопку убрать в шаге 6.
+- Пульт читает settings без кеша; продавец видит смену в течение 10 с (кеш data.js).
+- Не перенесено пока: safeNoteDeleted_ (лист «Видалення замовлення»), nbhz_export_dirty - не нужен (выгрузка сама).
+- Дальше: шаг 5 - editOrder, card/cardSave, health, restore*, dup*, batch.

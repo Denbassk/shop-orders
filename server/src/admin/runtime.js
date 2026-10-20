@@ -12,12 +12,15 @@ const { createAdminApi } = require('./index');
 const { createAdminData } = require('./data');
 const { createLinks } = require('./links');
 const read = require('./read');
+const write = require('./write');
 
-function createAdminRuntime() {
+function createAdminRuntime(opts = {}) {
   loadEnv();
   const sb = supabase();
   const data = createData(sb);
   const adm = createAdminData(sb);
+  // пульт читає налаштування без 10-секундного кешу: після перемикання екран одразу показує новий стан
+  const dataFresh = { ...data, settings: () => createData(sb).settings() };
   const roles = ['admin', ...Object.keys(DIRECTIONS).map((d) => 'buyer:' + d)];
   const hashes = Object.fromEntries(roles.map((r) => [r, process.env[hashEnvName(r)] || '']).filter(([, h]) => h));
   const auth = createAuth({ secret: process.env.ADMIN_JWT_SECRET || '', hashes, fails: createSbFails(sb) });
@@ -31,7 +34,7 @@ function createAdminRuntime() {
   const env = () => {
     const at = new Date();
     let ats = null;                                   // час збирання звітів - один запит на виклик
-    return { at, data, adm, links, rebuild,
+    return { at, data: dataFresh, adm, links, rebuild, queueExport: opts.queueExport || (() => {}),
       reportAt: async (k) => { ats = ats || adm.reportAts(); return read.reportAtOf((await ats)[k], at); } };
   };
   const api = createAdminApi({
@@ -42,6 +45,11 @@ function createAdminRuntime() {
     store: (p) => read.admStore(p, env()),
     log: () => read.admLogRead(env()),
     report: (p) => read.admReport(p, env()),
+    cancelOrder: (p) => write.admCancelOrder(p, env()),
+    openStore: (p) => write.admOpenStore(p, env()),
+    openAll: (p) => write.admOpenAll(p, env()),
+    closeAll: (p) => write.admCloseAll(p, env()),
+    setDirEnabled: (p) => write.admSetDirEnabled(p, env()),
   });
   return { auth, api };
 }
