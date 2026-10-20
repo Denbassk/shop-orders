@@ -44,6 +44,11 @@ function createAdminData(sb) {
   async function setSetting(key, value) {
     must('settings', await sb.from('settings').upsert({ key, value }));
   }
+  // картка точки (admCard_): рядок stores за store_id, активна чи ні
+  async function storeRow(id) {
+    const rows = must('stores', await sb.from('stores').select('*').eq('store_id', id).limit(1));
+    return rows.length ? rows[0] : null;
+  }
   // правка замовлення (admEditOrder_): рядки активних замовлень точки за день
   async function dayStoreLines(dir, storeId, day) {
     const rows = must('orders', await sb.from('orders').select('id,order_lines(id,name,qty)')
@@ -66,7 +71,7 @@ function createAdminData(sb) {
     if (emptied.length) must('orders', await sb.from('orders').update({ status: 'cancelled', changed_at: ts }).in('id', emptied).eq('status', 'active'));
   }
   return { dayOrders, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
-    dayStoreLines, setLineQty, deleteLine, touchOrders };
+    dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow };
 }
 
 module.exports = { createAdminData };

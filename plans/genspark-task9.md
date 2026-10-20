@@ -79,3 +79,9 @@
 - НЕ переносятся: restoreScan/restoreApply, dupScan/dupApply (чинили лист; на сервере правда - база, выгрузка без дублей), clearMark. Кнопки убрать в шаге 6.
 - cardSave отложен до Task 11 (Довідник ТТ - мастер для боя; писать в него с теста нельзя). card (чтение из базы) - шаг 5в.
 - Дальше 5в: health/healthClear/healthNoteError (без триггеров и буфера), card.
+## Шаг 5в (итог)
+- src/admin/tools.js: health (уровни/тексты AdminTools.gs; без триггеров/буфера/замков; HEALTH_STALE_MIN из app), healthClear, noteError -> settings.health_err (20, 300 симв.), card из базы (row=null, note='').
+- Ошибки пульта (кроме AUTH) пишутся в health_err в фоне (runtime.js apiNoted).
+- ВАЖНО шаг 9 (после слияния PR #7): автосборка отчётов должна писать settings report_at_<dir> (adm.setReportAt), иначе health = «отчёт не собирался».
+- cardSave - Task 11.
+- Дальше шаг 6: UI пульта server/public/admin/ (fetch /admin/api), убрать кнопки clearMark/restore/dup/сохранение карточки.

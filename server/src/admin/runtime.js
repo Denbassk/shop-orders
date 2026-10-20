@@ -13,6 +13,7 @@ const { createAdminData } = require('./data');
 const { createLinks } = require('./links');
 const read = require('./read');
 const write = require('./write');
+const tools = require('./tools');
 
 function createAdminRuntime(opts = {}) {
   loadEnv();
@@ -52,8 +53,17 @@ function createAdminRuntime(opts = {}) {
     setDirEnabled: (p) => write.admSetDirEnabled(p, env()),
     editOrder: (p) => write.admEditOrder(p, env()),
     batch: (p) => write.admBatch(p, (a, q) => api(a, q)),
+    health: () => tools.admHealth(env()),
+    healthClear: () => tools.admHealthClear(env()),
+    card: (p) => tools.admCard(p, env()),
   });
-  return { auth, api };
+  // помилки дій пульта -> «Здоров'я» (healthNoteError_('пульт: ' + action)), AUTH - ні; у фоні, відповідь не чекає
+  const apiNoted = async (a, p) => {
+    const r = await api(a, p);
+    if (!r.ok && r.error !== 'AUTH') tools.noteError(adm, 'пульт: ' + a, r.error, new Date());
+    return r;
+  };
+  return { auth, api: apiNoted };
 }
 
 module.exports = { createAdminRuntime };

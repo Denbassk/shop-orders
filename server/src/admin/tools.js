@@ -1,0 +1,97 @@
+// Інструменти пульта (app/AdminTools.gs): «Здоров'я» (admHealth_, admHealthClear_, healthNoteError_) і картка точки (admCard_).
+// Тригерів, буфера, замків і ScriptProperties на сервері немає - ці частини не переносяться.
+// cardSave - Task 11 (Довідник ТТ лишається головним для бою).
+const { DIRECTIONS } = require('../directions');
+const R = require('../rules');
+const { STORE_NOT_FOUND } = require('./write');
+
+const HEALTH_STALE_MIN = 20;                  // з app/*.gs
+const HEALTH_ERR_KEY = 'health_err';                 // settings: [{ at: 'дд.мм HH:mm', where, msg }], нові першими, до 20
+const BREAD_EDRPOU = '44413718';
+const hmFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const dmFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit' });
+const hmOf = (d) => hmFmt.format(d);
+const dmOf = (d) => dmFmt.format(d).replace('/', '.');
+const minOf = (s) => { const [h, m] = String(s).split(':').map(Number); return h * 60 + m; };
+
+async function admHealth(env) {
+  const at = env.at, day = R.kyivNow(at).day, now = minOf(hmOf(at)), todayDM = dmOf(at);
+  const settings = (await env.data.settings()) || {};
+  let status = null, ats = {};
+  try { status = await env.data.orderedToday(day); } catch (e) { status = null; }
+  try { ats = (await env.adm.reportAts()) || {}; } catch (e) { ats = {}; }
+  const rank = { ok: 0, off: 0, warn: 1, bad: 2 };
+  let worst = 'ok', problems = 0;
+  const bump = (lv) => { if (rank[lv] > rank[worst]) worst = lv; if (rank[lv] > 0) problems++; };
+
+  const dirs = Object.keys(DIRECTIONS).map((k) => {
+    const cfg = DIRECTIONS[k];
+    const d = ats[k] ? new Date(ats[k]) : null;
+    const rep = d && !isNaN(d) && R.kyivNow(d).day === day ? hmOf(d) : '';
+    const ordered = status ? (status[k] ? status[k].size : 0) : -1;
+    const age = rep ? now - minOf(rep) : null;
+    const dl = cfg.deadline ? minOf(cfg.deadline) : 24 * 60;
+    let lv = 'ok', text;
+    if (ordered < 0) { lv = 'bad'; text = 'Не читается база заказов'; }
+    else if (!R.dirEnabled(k, settings)) { lv = 'off'; text = 'Направление выключено'; }
+    else if (ordered > 0 && !rep) { lv = 'bad'; text = 'Есть заказы (' + ordered + ' точек), а отчёт сегодня не собирался'; }
+    else if (ordered > 0 && age > HEALTH_STALE_MIN && now <= dl + 60) {
+      lv = 'warn'; text = 'Отчёт собран ' + age + ' мин назад, в ' + rep + ' · заказали ' + ordered;
+    }
+    else text = (rep ? 'Отчёт в ' + rep : 'Отчёт сегодня не собирался') + ' · заказали ' + ordered;
+    bump(lv);
+    return { key: k, title: cfg.title, level: lv, text };
+  });
+
+  const errors = (Array.isArray(settings[HEALTH_ERR_KEY]) ? settings[HEALTH_ERR_KEY] : [])
+    .map((e) => ({ ...e, today: String(e.at || '').indexOf(todayDM) === 0 }));
+  if (errors.some((e) => e.today)) bump('warn');
+  if (settings.test_mode) bump('bad');
+  return {
+    time: hmOf(at), level: worst,
+    summary: worst === 'ok' ? 'Всё работает' : 'Требует внимания: ' + problems,
+    dirs, triggers: [], errors,
+    sys: { version: String(settings.app_version || ''), test: !!settings.test_mode, keys: Object.keys(settings).length, pct: 0, sess: 0 },
+  };
+}
+
+async function admHealthClear(env) {
+  await env.adm.setSetting(HEALTH_ERR_KEY, []);
+  try { await env.adm.adminLog('Очищено список помилок', ''); } catch (e) { (env.log || console.error)('adminLog: ' + e.message); }
+  return { ok: true };
+}
+
+// healthNoteError_: ніколи не кидає
+async function noteError(adm, where, msg, at = new Date()) {
+  try {
+    const cur = await adm.getSetting(HEALTH_ERR_KEY);
+    const arr = Array.isArray(cur) ? cur.slice() : [];
+    arr.unshift({ at: dmOf(at) + ' ' + hmOf(at), where: String(where), msg: String(msg).slice(0, 300) });
+    await adm.setSetting(HEALTH_ERR_KEY, arr.slice(0, 20));
+  } catch (e) { /* як в оригіналі - мовчки */ }
+}
+
+// Картка точки (admCard_) з бази. row (рядок Довідника) і note (Примітка) у базі немає.
+const CARD_DAYS_OK = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const DAY_BY_NUM = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const CARD_ZONES_OK = ['Салтовка', 'Новые дома', 'Центр', 'не возится'];
+const daysTxt = (a) => { const t = (Array.isArray(a) ? a : []).map((n) => DAY_BY_NUM[n]).filter(Boolean); return CARD_DAYS_OK.filter((d) => t.includes(d)).join(', '); };
+const s = (v) => String(v == null ? '' : v).trim();
+
+async function admCard(payload, env) {
+  const id = String(payload.storeId || '');
+  const r = await env.adm.storeRow(id);
+  if (!r) throw new Error(STORE_NOT_FOUND);
+  const dirs = Array.isArray(r.directions) ? r.directions : [], days = r.days || {};
+  return {
+    id, row: null, label: s(r.label), address: s(r.address),
+    addr: { bread: s(r.addr_bread), bakery: s(r.addr_bakery), veg: s(r.addr_veg), nbhz: s(r.addr_nbhz) },
+    f: { active: r.active === true, label: s(r.label), code: s(r.code), route: s(r.route),
+      bread: dirs.includes('bread'), bakery: dirs.includes('bakery'), veg: dirs.includes('veg'), note: '',
+      nbhz: dirs.includes('nbhz'), routeNbhz: s(r.route_nbhz), daysVeg: daysTxt(days.veg), daysBakery: daysTxt(days.bakery),
+      zone: s(r.zone), edrpou: s(r.edrpou) },
+    zones: CARD_ZONES_OK, defEdrpou: BREAD_EDRPOU,
+  };
+}
+
+module.exports = { HEALTH_STALE_MIN, HEALTH_ERR_KEY, admHealth, admHealthClear, noteError, admCard };
