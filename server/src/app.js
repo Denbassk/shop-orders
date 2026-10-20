@@ -59,6 +59,12 @@ function createApp(opts = {}) {
     try { sendPage(res, await approve(req.body)); } catch (e) { next(e); }
   });
 
+  // Сторінка пульта (зібрана з app/ui скриптом scripts/build-admin.js)
+  app.get(['/admin', '/admin/'], (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(require('path').join(__dirname, '..', 'public', 'admin', 'index.html'));
+  });
+
   // Пульт: POST /admin/api { action, payload } -> { ok, data, ms } (adminApi з app/Admin.gs). Вхід - action 'login' { pin };
   // сесія - підписаний JWT у cookie adm (HttpOnly, Secure, SameSite=Strict, 12 год). Лише application/json (захист від чужих форм).
   let adminRt = null;

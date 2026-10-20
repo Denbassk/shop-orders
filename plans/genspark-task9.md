@@ -85,3 +85,7 @@
 - ВАЖНО шаг 9 (после слияния PR #7): автосборка отчётов должна писать settings report_at_<dir> (adm.setReportAt), иначе health = «отчёт не собирался».
 - cardSave - Task 11.
 - Дальше шаг 6: UI пульта server/public/admin/ (fetch /admin/api), убрать кнопки clearMark/restore/dup/сохранение карточки.
+## Шаг 6б (итог)
+- scripts/build-admin.js: Admin.html + include -> public/admin/index.html; app/ui не меняется; блок в конце переопределяет callNet/doLogin/logout (fetch /admin/api, cookie). После правки app/ui: node scripts/build-admin.js (тест сверяет).
+- GET /admin -> страница, Cache-Control: no-store.
+- Дальше 6в: убрать clearMark/restore/dup/«Сохранить» карточки; wo* - шаг 8.
