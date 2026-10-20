@@ -116,7 +116,7 @@ async function admStores(payload, env) {
 // --- крок 3б: admDirStores_, admStore_, admLogRead_. Замість сирого листа - замовлення дня з бази (env.adm.dayOrders).
 const hmOf = (iso) => { const k = R.kyivNow(new Date(iso)); return pad(k.hh) + ':' + pad(k.mm); };
 const round3 = (x) => Math.round(x * 1000) / 1000;
-const STORE_NOT_FOUND = 'Торгову точку не знайдено';     // звірити з findStore_ (Registry.gs) у кроці 3в
+const STORE_NOT_FOUND = 'Торгову точку не знайдено. Оновіть сторінку.';   // findStore_ (Registry.gs)
 async function safeLink(fn, dir) { if (!fn) return ''; try { return (await fn(dir)) || ''; } catch (e) { return ''; } }
 
 // хто саме замовив по напрямку, а хто ні
@@ -199,4 +199,27 @@ async function admLogRead(env) {
   });
 }
 
-module.exports = { admToday, admDays, admSchedule, admStores, admDirStores, admStore, admLogRead, isUaStore, DAY_RU_FULL };
+// --- крок 3в. Час збирання звіту (settings report_at_<dir>, ISO) -> 'HH:mm', якщо сьогодні за Києвом (reportAt_)
+function reportAtOf(iso, at) {
+  if (!iso) return '';
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return '';
+  const k = R.kyivNow(t);
+  return k.day === R.kyivNow(at).day ? pad(k.hh) + ':' + pad(k.mm) : '';
+}
+
+const REPORT_DIRS = ['bread', 'bakery', 'veg', 'nbhz'];
+// Зібрати звіт напрямку просто зараз (admReport_). env.rebuild(dir, { force }) - reports/rebuild.js
+async function admReport(payload, env) {
+  payload = payload || {};
+  const dir = String(payload.dir || '');
+  const cfg = R.dirCfg(dir, { directions: await env.data.directions() });
+  if (REPORT_DIRS.indexOf(dir) < 0) throw new Error('Невідомий напрямок');
+  await env.rebuild(dir, { force: true });
+  const iso = new Date(env.at).toISOString();
+  try { await env.adm.setReportAt(dir, iso); } catch (e) { console.error('час звіту: ' + e.message); }        // markReport_
+  try { await env.adm.adminLog('Зібрано звіт', cfg.title); } catch (e) { console.error('журнал: ' + e.message); }  // adminLog_
+  return { at: reportAtOf(iso, env.at), xlsx: await safeLink((env.links || {}).xlsx, dir) };
+}
+
+module.exports = { admToday, admDays, admSchedule, admStores, admDirStores, admStore, admLogRead, admReport, reportAtOf, isUaStore, DAY_RU_FULL };

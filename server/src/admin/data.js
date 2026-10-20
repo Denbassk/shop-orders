@@ -11,7 +11,21 @@ function createAdminData(sb) {
   async function logRows(limit) {
     return must('admin_log', await sb.from('admin_log').select('at,action,details').order('at', { ascending: false }).limit(limit));
   }
-  return { dayOrders, logRows };
+  // час збирання звітів: settings 'report_at_<dir>' (як ScriptProperties report_at_<dir> у markReport_), ISO
+  async function reportAts() {
+    const out = {};
+    must('settings', await sb.from('settings').select('key,value').like('key', 'report_at_%'))
+      .forEach((r) => { out[r.key.slice('report_at_'.length)] = r.value; });
+    return out;
+  }
+  async function setReportAt(dir, iso) {
+    must('settings', await sb.from('settings').upsert({ key: 'report_at_' + dir, value: iso }));
+  }
+  // «Журнал дій» (adminLog_)
+  async function adminLog(action, details) {
+    must('admin_log', await sb.from('admin_log').insert({ action, details: String(details || '') }));
+  }
+  return { dayOrders, logRows, reportAts, setReportAt, adminLog };
 }
 
 module.exports = { createAdminData };

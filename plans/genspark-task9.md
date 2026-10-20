@@ -55,3 +55,10 @@
 - src/admin/data.js: dayOrders(dir, day) (активные заказы дня с строками), logRows(n) (admin_log). data.js общий НЕ тронут.
 - read.js: admDirStores, admStore, admLogRead. Отличия: из базы вместо сырого листа; store.rows[].row = order_lines.id (для editOrder), sheet '' и firstRow = id первой строки; marked = есть активный заказ; xlsx/sheetUrl через env.links (пока не подключено -> ''); STORE_NOT_FOUND временный - сверить с findStore_.
 - 3в: report (rebuild + ссылки xlsx через target), текст findStore_.
+
+## Шаг 3в (итог)
+- src/admin/links.js: xlsx листа отчёта (bread 'Заказы', bakery 'Заказы ВК', veg 'Замовлення Овочі', nbhz 'Вивантаження дд.мм.рррр') и /edit - в цель EXPORT_TARGET (до Task 11 тестовая); нет листа/сбой -> ''.
+- read.js admReport: dirCfg -> 'Невідомий напрямок' -> rebuildReports(force) -> settings report_at_<dir> (ISO) -> admin_log 'Зібрано звіт' (сбой журнала/времени не ломает) -> {at, xlsx}. reportAtOf: HH:mm если сегодня. STORE_NOT_FOUND = текст findStore_ дословно.
+- ОТЛОЖЕНО до слияния PR #7: report_at обновлять и при автосборке (общий runtime.js/rebuild.js - меняет Task 8).
+- Для шага 6 (UI): AdminJs.html:540 'лист «' + d.sheet + '»' и 'с N-й строки' - sheet теперь '', firstRow = id строки в базе -> убрать/заменить текст.
+- Чтение (шаг 3) готово: today, schedule, stores, dirStores, store, log, report. Дальше шаг 4: изменения + миграция 000006.
