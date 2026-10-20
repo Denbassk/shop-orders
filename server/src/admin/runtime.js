@@ -6,20 +6,25 @@ const { DIRECTIONS } = require('../directions');
 const { createAuth, hashEnvName } = require('./auth');
 const { createSbFails } = require('./fails');
 const { createAdminApi } = require('./index');
+const { createAdminData } = require('./data');
 const read = require('./read');
 
 function createAdminRuntime() {
   loadEnv();
   const sb = supabase();
   const data = createData(sb);
+  const adm = createAdminData(sb);
   const roles = ['admin', ...Object.keys(DIRECTIONS).map((d) => 'buyer:' + d)];
   const hashes = Object.fromEntries(roles.map((r) => [r, process.env[hashEnvName(r)] || '']).filter(([, h]) => h));
   const auth = createAuth({ secret: process.env.ADMIN_JWT_SECRET || '', hashes, fails: createSbFails(sb) });
-  const env = () => ({ at: new Date(), data });
+  const env = () => ({ at: new Date(), data, adm });
   const api = createAdminApi({
     today: () => read.admToday(env()),
     schedule: (p) => read.admSchedule(p, env()),
     stores: (p) => read.admStores(p, env()),
+    dirStores: (p) => read.admDirStores(p, env()),
+    store: (p) => read.admStore(p, env()),
+    log: () => read.admLogRead(env()),
   });
   return { auth, api };
 }

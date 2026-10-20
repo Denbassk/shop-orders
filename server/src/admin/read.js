@@ -113,4 +113,90 @@ async function admStores(payload, env) {
   }));
 }
 
-module.exports = { admToday, admDays, admSchedule, admStores, isUaStore, DAY_RU_FULL };
+// --- крок 3б: admDirStores_, admStore_, admLogRead_. Замість сирого листа - замовлення дня з бази (env.adm.dayOrders).
+const hmOf = (iso) => { const k = R.kyivNow(new Date(iso)); return pad(k.hh) + ':' + pad(k.mm); };
+const round3 = (x) => Math.round(x * 1000) / 1000;
+const STORE_NOT_FOUND = 'Торгову точку не знайдено';     // звірити з findStore_ (Registry.gs) у кроці 3в
+async function safeLink(fn, dir) { if (!fn) return ''; try { return (await fn(dir)) || ''; } catch (e) { return ''; } }
+
+// хто саме замовив по напрямку, а хто ні
+async function admDirStores(payload, env) {
+  payload = payload || {};
+  const dir = String(payload.dir || '');
+  const { stores, ctx } = await load(env);
+  const cfg = R.dirCfg(dir, ctx);
+  const n = R.kyivNow(env.at);
+  const hasTime = (dir === 'bakery' || dir === 'veg');
+  const agg = {};
+  (await env.adm.dayOrders(dir, n.day)).forEach((o) => {
+    if (!o.lines.length) return;
+    const a = agg[o.store_id] || (agg[o.store_id] = { n: 0, qty: 0, time: '' });
+    o.lines.forEach((l) => { a.n++; a.qty += Number(l.qty) || 0; });
+    if (hasTime) a.time = hmOf(o.created_at);                // замовлення за created_at - лишається останнє
+  });
+  const done = [], wait = [], off = [];
+  stores.forEach((s) => {
+    if (s.directions.indexOf(dir) < 0) return;
+    const d = admDays(dir, s, ctx);
+    const a = agg[s.id];
+    const row = { id: s.id, label: s.label, ua: isUaStore(s), code: s.code, route: s.route,
+      n: a ? a.n : 0, qty: a ? round3(a.qty) : 0, time: a ? a.time : '',
+      days: d.label, next: d.next, dayOk: d.today };
+    // не їхній день: показуємо окремо, а не ховаємо
+    if (!d.today) { off.push(row); return; }
+    if (a) done.push(row); else wait.push(row);
+  });
+  done.sort((a, b) => (b.time || '').localeCompare(a.time || '') || byLabel(a, b));
+  wait.sort(byLabel);
+  off.sort(byLabel);
+  const links = env.links || {};
+  return { dir, title: cfg.title, unit: cfg.unit, done, wait, off,
+    byDays: !!cfg.orderDays, dow: DAY_RU_FULL[n.dow],
+    xlsx: await safeLink(links.xlsx, dir), sheetUrl: await safeLink(links.sheetUrl, dir) };
+}
+
+// картка точки. row - id рядка замовлення в базі (для editOrder), sheet/firstRow - без сирого листа
+async function admStore(payload, env) {
+  payload = payload || {};
+  const { stores, ctx, isOrd } = await load(env);
+  const store = stores.find((s) => s.id === String(payload.storeId));
+  if (!store) throw new Error(STORE_NOT_FOUND);
+  const dir = String(payload.dir || store.directions[0]);
+  const cfg = R.dirCfg(dir, ctx);
+  const n = R.kyivNow(env.at);
+  const [orders, lateRows] = await Promise.all([env.adm.dayOrders(dir, n.day), env.data.lateRows(dir, store.id)]);
+  const rows = [];
+  orders.filter((o) => o.store_id === store.id).forEach((o) => o.lines.forEach((l) => {
+    rows.push({ row: l.id, name: String(l.name == null ? '' : l.name), qty: Number(l.qty) || 0 });
+  }));
+  let qty = 0;
+  rows.forEach((x) => { qty += x.qty; });
+  const pairCtx = { ...ctx, lateRows };
+  return {
+    id: store.id, label: store.label, ua: isUaStore(store), code: store.code,
+    route: store.route, zone: store.zone, directions: store.directions,
+    dir, dirTitle: cfg.title, unit: cfg.unit, today: n.dmy,
+    sheet: '', firstRow: rows.length ? rows[0].row : 0,
+    rows, qty: round3(qty),
+    marked: isOrd(dir, store),
+    dayOk: R.dayAllowed(dir, store, pairCtx),
+    schedule: store.directions.map((k) => {
+      const d = admDays(k, store, ctx);
+      const c = R.dirCfg(k, ctx);
+      return { dir: k, title: c.title, deadline: c.deadline || '', days: d.label, today: d.today, next: d.next };
+    }),
+    closed: R.deadlinePassed(dir, store.id, pairCtx),
+    lateLeft: R.lateLeftMin(dir, store.id, pairCtx),
+  };
+}
+
+// журнал у пульті: 30 останніх, нові першими
+async function admLogRead(env) {
+  const rows = await env.adm.logRows(30);
+  return rows.map((x) => {
+    const k = R.kyivNow(new Date(x.at));
+    return { when: k.dmy + ' ' + pad(k.hh) + ':' + pad(k.mm), what: String(x.action || ''), details: String(x.details || '') };
+  });
+}
+
+module.exports = { admToday, admDays, admSchedule, admStores, admDirStores, admStore, admLogRead, isUaStore, DAY_RU_FULL };

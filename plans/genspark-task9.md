@@ -46,3 +46,12 @@
 - src/admin/read.js: admToday, admDays, admSchedule, admStores - дословно из Admin.gs; 'заказала' = orders в базе по store_id; порядок направлений как в DIRECTIONS; reportAt пока '' (env.reportAt - источник выяснить в 3б).
 - src/admin/runtime.js: действия today, schedule, stores. Тест server/test/admin-read.test.js.
 - 3б: dirStores, store (строки заказа за день из базы вместо сырого листа), log (admin_log - таблица из миграции Task 8!), report (rebuild + xlsx gid).
+
+## Миграция 000005 применена владельцем (20.10, SQL Editor, одной транзакцией)
+- В базе: writeoffs, writeoff_lines, admin_log, вью writeoffs_export_pending, products.cost, submit_writeoff_tx; строка 20261019000005 в supabase_migrations.schema_migrations - db push её пропустит. Код Task 8 на Fly НЕ задеплоен, import-reference НЕ запускался (products.cost пуст).
+- Новые миграции Task 9 (000006) - тоже через SQL Editor: один блок begin..commit + запись в журнал + проверка.
+
+## Шаг 3б (итог)
+- src/admin/data.js: dayOrders(dir, day) (активные заказы дня с строками), logRows(n) (admin_log). data.js общий НЕ тронут.
+- read.js: admDirStores, admStore, admLogRead. Отличия: из базы вместо сырого листа; store.rows[].row = order_lines.id (для editOrder), sheet '' и firstRow = id первой строки; marked = есть активный заказ; xlsx/sheetUrl через env.links (пока не подключено -> ''); STORE_NOT_FOUND временный - сверить с findStore_.
+- 3в: report (rebuild + ссылки xlsx через target), текст findStore_.
