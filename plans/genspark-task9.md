@@ -41,3 +41,8 @@
 - PR Task 8: https://github.com/Denbassk/shop-orders/pull/7 (открыт, НЕ сливать до четверга).
 - Пароль пульта: те же 4 цифры, пользуется только владелец; хеш scrypt (node scripts/hash-password.js) -> секрет ADMIN_PASSWORD_HASH на Fly в четверг.
 - 3 [в работе] Чтение: today, stores, dirStores, store, schedule, log, report.
+
+## Шаг 3а (итог)
+- src/admin/read.js: admToday, admDays, admSchedule, admStores - дословно из Admin.gs; 'заказала' = orders в базе по store_id; порядок направлений как в DIRECTIONS; reportAt пока '' (env.reportAt - источник выяснить в 3б).
+- src/admin/runtime.js: действия today, schedule, stores. Тест server/test/admin-read.test.js.
+- 3б: dirStores, store (строки заказа за день из базы вместо сырого листа), log (admin_log - таблица из миграции Task 8!), report (rebuild + xlsx gid).
