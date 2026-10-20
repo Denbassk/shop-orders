@@ -23,3 +23,10 @@
 - WriteOffAdminJs.html / admWo*_ - последними, после слияния Task 8.
 - 1 [готово] Разведка: списки функций UI и сервера.
 - 1б [в работе] Чтение adminApi, входа и обёртки call.
+## План Task 9
+- 1 модуль входа (src/admin/auth.js) | 2 /admin/api: конверт {ok,data,ms}, cookie, login, счётчик в базе | 3 чтение: today, stores, dirStores, store, schedule, log, report | 4 изменения + миграция 000006 (admin_cancel_day, admin_set_qty): cancelOrder, editOrder, clearMark, openStore, openAll, closeAll, setDirEnabled, card, cardSave | 5 health, healthClear, restore*, dup*, batch | 6 UI server/public/admin (fetch) | 7 /buyer/<dir> | 8 wo* после слияния Task 8 | 9 PR.
+
+## Шаг 1 (итог)
+- src/admin/auth.js: login(role, pin) / check(token, role). Поле pin и тексты как в Admin.gs ('Невірний PIN', 'Забагато спроб. Спробуйте за годину.', 'PIN ще не задано...'); 5 попыток/час от первой; JWT HS256 12 ч, роль admin | buyer:<dir>; хеш scrypt$salt$hex.
+- Новые секреты (на Fly, в четверг, НЕ в чате): ADMIN_JWT_SECRET, ADMIN_PASSWORD_HASH, BUYER_<DIR>_HASH. Хеш: node scripts/hash-password.js.
+- Зависимости: jsonwebtoken, cookie-parser. Тест server/test/admin-auth.test.js.
