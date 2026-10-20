@@ -41,3 +41,10 @@ test('GET /admin -> сторінка пульта, без кешу', async () =>
     assert.ok((await r.text()).includes('Пульт Фемелі Маркет'));
   } finally { srv.close(); }
 });
+test('build: прибрані кнопки (бэкап, дублі, позначка, збереження картки) приховані і не шлють запитів', () => {
+  const html = build();
+  const tail = html.slice(html.indexOf('shop-orders: на сервері немає'));
+  for (const sel of ['#t-restore', `[onclick*="'restore'"]`, `[onclick*="'dups'"]`, '[onclick*="askClearMark"]', '[onclick="askCard()"]']) assert.ok(tail.includes(sel), sel);
+  assert.ok(html.lastIndexOf('function askCard()') > html.indexOf('function askCard()'), 'askCard перевизначено після оригіналу');
+  assert.ok(!/function askCard\(\)[^}]*cardSave/.test(tail));
+});

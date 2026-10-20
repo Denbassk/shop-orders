@@ -89,3 +89,7 @@
 - scripts/build-admin.js: Admin.html + include -> public/admin/index.html; app/ui не меняется; блок в конце переопределяет callNet/doLogin/logout (fetch /admin/api, cookie). После правки app/ui: node scripts/build-admin.js (тест сверяет).
 - GET /admin -> страница, Cache-Control: no-store.
 - Дальше 6в: убрать clearMark/restore/dup/«Сохранить» карточки; wo* - шаг 8.
+## Шаг 6в (итог)
+- Кнопки бэкап/дубли/снять отметку/сохранить карточку скрыты CSS при сборке (app/ui не тронут); askCard/askClearMark -> подсказка.
+- .env: ADMIN_JWT_SECRET, ADMIN_PASSWORD_HASH (новый PIN, не из чата). Четверг: те же -> fly secrets.
+- Дальше шаг 7: страница закупщицы /buyer/<dir>.

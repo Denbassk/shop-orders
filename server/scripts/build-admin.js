@@ -8,7 +8,13 @@ const path = require('node:path');
 const UI = path.join(__dirname, '..', '..', 'app', 'ui');
 const OUT = path.join(__dirname, '..', 'public', 'admin', 'index.html');
 
-const SHIM = `<script>
+const SHIM = `<!-- shop-orders: на сервері немає: бэкап, дублі, позначка, збереження картки - кнопки приховано -->
+<style>
+#t-restore,[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"],[onclick="askCard()"]{display:none!important}
+</style>
+<script>
+function askCard(){ toast('Сохранение карточки - после переезда. Пока правьте Довідник ТТ.'); }
+function askClearMark(){ toast('Отметок больше нет: отмените заказ или откройте приём точке.'); }
 // ===== shop-orders: зв'язок з сервером замість Apps Script (вхід - cookie, токена в сторінці немає) =====
 function adminPost_(action, payload) {
   return fetch('/admin/api', {
