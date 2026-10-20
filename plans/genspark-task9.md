@@ -36,3 +36,8 @@
 - src/admin/index.js createAdminApi(handlers): {ok,data,ms}, 'Невідома дія: x', AUTH не логируется. healthNoteError_ - шаг 5.
 - src/admin/fails.js: счётчик в settings 'admin_fail:<роль>' (без миграции). src/admin/runtime.js: секреты ADMIN_JWT_SECRET, ADMIN_PASSWORD_HASH, BUYER_<DIR>_HASH; data.js/runtime.js НЕ тронуты (меньше конфликтов с Task 8).
 - Для шага 6 (UI): login возвращает {} вместо {token}; запросы fetch JSON с credentials; logout -> POST /admin/logout.
+
+## Решения владельца (20.10)
+- PR Task 8: https://github.com/Denbassk/shop-orders/pull/7 (открыт, НЕ сливать до четверга).
+- Пароль пульта: те же 4 цифры, пользуется только владелец; хеш scrypt (node scripts/hash-password.js) -> секрет ADMIN_PASSWORD_HASH на Fly в четверг.
+- 3 [в работе] Чтение: today, stores, dirStores, store, schedule, log, report.
