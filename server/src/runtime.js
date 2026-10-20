@@ -11,6 +11,7 @@ const { exportDir, exportAll } = require('./export/raw');
 const { resolveTarget, exportTargetMode } = require('./export/target');
 const { rebuildReports: rebuildDir, rebuildAllReports, exportThenReports } = require('./reports/rebuild');
 const { tick } = require('./jobs');
+const { exportWriteoffs } = require('./export/writeoff');
 const googleApi = require('./google');
 const { getValues, firstSheetTitle, a1q } = googleApi;
 const { DIRECTIONS } = require('./directions');
@@ -67,9 +68,12 @@ function createRuntime() {
   const rebuildReports = () => rebuildAllReports(reportEnv());
   const queueReports = createExportQueue({ run: (dir) => rebuildDir(dir, reportEnv()), delayMs: Number(process.env.REPORTS_DEBOUNCE_MS) || 30000 });
   const queueExport = createExportQueue({ run: exportThenReports((dir) => exportDir(dir, exportEnv()), queueReports) });
+  // Вигрузка списань у лист «Списания» (export/writeoff.js): одна черга 'wo', 2 с як у замовлень; недовигружене підхопить tick.
+  const woExport = () => exportWriteoffs(exportEnv());
+  const queueWoExport = createExportQueue({ run: woExport });
 
-  const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport, defer });
-  const tickJob = () => tick({ ...getEnv(), ...exportEnv(), rebuildReports }, exportAll);
+  const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport, queueWoExport, defer });
+  const tickJob = () => tick({ ...getEnv(), ...exportEnv(), rebuildReports, exportWriteoffs: woExport }, exportAll);
   return { getEnv, tick: tickJob, approve: (query) => approvePage(query, getEnv()), approveForm: (query) => approveForm(query, getEnv()) };
 }
 

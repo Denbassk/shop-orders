@@ -138,3 +138,8 @@ import-reference.js, тестовая вкладка «Списания», POST 
 ## Шаг 7в (итог)
 - Шаг 7 (f2cc93f): правка data.js не применилась (ошибка elseif при вставке в консоль). Дописаны woExportSnapshot (вью writeoffs_export_pending -> writeoffs с рядками, по submitted_at) и woMarkExported (exported_at = changed_at той же версии).
 - Дальше шаг 8: runtime.js (queueWoExport), jobs.js (tick), затем полный прогон и PR.
+
+## Шаг 8 (итог)
+- jobs.js: tick вызывает env.exportWriteoffs, результат out.writeoffs; сбой не ломает остальное; без него ответ прежний.
+- runtime.js: queueWoExport (очередь 'wo', 2 с) в getEnv - её вызывают woSubmit/woDelete; та же выгрузка в tick. Тест server/test/jobs-writeoff.test.js.
+- Дальше: шаг 9 - полный прогон, push genspark/task-8 (по команде владельца), PR в migration/node-supabase.
