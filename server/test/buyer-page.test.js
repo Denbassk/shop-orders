@@ -7,7 +7,7 @@ const html = () => fs.readFileSync(PAGE, 'utf8');
 
 test('сторінка закупниці: fetch /buyer/<dir>/api з cookie, усі дії, без Apps Script', () => {
   const h = html();
-  for (const s of ["'/buyer/' + DIR + '/api'", "credentials: 'same-origin'", "call('today'", "call('remove'", "call('editOrder'",
+  for (const s of ["'/buyer/' + DIR + '/' + KEY + '/api'", "credentials: 'same-origin'", "call('today'", "call('remove'", "call('editOrder'",
     "call('products'", "call('setProduct'", "action: 'login'", "'/buyer/' + DIR + '/logout'"]) assert.ok(h.includes(s), s);
   assert.ok(!h.includes('google.script'));
 });
@@ -31,16 +31,11 @@ async function withApp(fn) {
   finally { if (srv.closeAllConnections) srv.closeAllConnections(); srv.close(); }
 }
 
-test('GET /buyer/bakery -> 200 html, no-store', async () => {
+test('GET /buyer/bakery без ключа -> 404 (сторінка лише за секретним посиланням)', async () => {
   await withApp(async (base) => {
-    const r = await fetch(base + '/buyer/bakery');
-    assert.equal(r.status, 200);
-    assert.match(r.headers.get('content-type'), /text\/html/);
-    assert.equal(r.headers.get('cache-control'), 'no-store');
-    assert.ok((await r.text()).includes('Замовили сьогодні'));
+    for (const u of ['/buyer/bakery', '/buyer/bakery/']) { const r = await fetch(base + u); assert.equal(r.status, 404, u); await r.text(); }
   });
 });
-
 test('GET /buyer/xxx -> 404', async () => {
   await withApp(async (base) => { assert.equal((await fetch(base + '/buyer/xxx')).status, 404); });
 });

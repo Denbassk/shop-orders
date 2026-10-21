@@ -91,41 +91,25 @@ function createApp(opts = {}) {
     } catch (e) { next(e); }
   });
   app.post('/admin/logout', (req, res) => { res.clearCookie(ADM_COOKIE, admCookie); res.json({ ok: true }); });
-  // Сторінка закупниці (server/public/buyer/index.html): напрямок - з адреси; невідомий -> 404
-  app.get(['/buyer/:dir', '/buyer/:dir/'], (req, res) => {
-    if (!Object.prototype.hasOwnProperty.call(require('./directions').DIRECTIONS, req.params.dir)) return res.status(404).json({ ok: false, error: 'Not found' });
+  // Сторінка закупниці: секретне посилання /buyer/<dir>/<ключ> без PIN (src/buyer/link.js, BUYER_LINK_SECRET).
+  // Невідомий напрямок, невірний або чужий ключ -> 404. Дії: POST /buyer/<dir>/<ключ>/api { action, payload } -> { ok, data, ms }.
+  const buyerLink = require('./buyer/link');
+  const linkSecret = () => (opts.buyerLinkSecret !== undefined ? opts.buyerLinkSecret : process.env.BUYER_LINK_SECRET || '');
+  const linkOk = (req) => buyerLink.verifyBuyerKey(req.params.dir, req.params.key, linkSecret());
+  const buyerApi = (dir) => (opts.buyerApi ? opts.buyerApi(dir) : getAdminRt().buyerApi(dir));
+  app.get('/buyer/:dir/:key', (req, res) => {
+    if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Not found' });
     res.set('Cache-Control', 'no-store');
+    res.set('Referrer-Policy', 'no-referrer');
     res.sendFile(require('path').join(__dirname, '..', 'public', 'buyer', 'index.html'));
   });
-  // Сторінка закупниці: POST /buyer/<dir>/api { action, payload } -> { ok, data, ms }. Вхід - 'login' { pin } (BUYER_<DIR>_HASH);
-  // cookie buy лише для /buyer/<dir>; без входу або з токеном іншого напрямку -> 401.
-  const BUY_COOKIE = 'buy';
-  const buyCookie = (dir) => ({ httpOnly: true, secure: true, sameSite: 'strict', path: '/buyer/' + dir });
-  const isDir = (d) => Object.prototype.hasOwnProperty.call(require('./directions').DIRECTIONS, d);
-  const buyerApi = (dir) => (opts.buyerApi ? opts.buyerApi(dir) : getAdminRt().buyerApi(dir));
-  app.post('/buyer/:dir/api', cookieParser(), express.json({ limit: '1mb' }), async (req, res, next) => {
+  app.post('/buyer/:dir/:key/api', express.json({ limit: '1mb' }), async (req, res, next) => {
     try {
-      const dir = req.params.dir;
-      if (!isDir(dir)) return res.status(404).json({ ok: false, error: 'Not found' });
+      if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Посилання недійсне' });
       if (!req.is('application/json')) return res.status(415).json({ ok: false, error: 'Unsupported Media Type' });
-      const t0 = Date.now();
       const { action, payload } = req.body || {};
-      const role = 'buyer:' + dir;
-      if (action === 'login') {
-        let token;
-        try { token = await adminAuth().login(role, payload && payload.pin); }
-        catch (e) { return res.json({ ok: false, error: e.message, ms: Date.now() - t0 }); }
-        res.cookie(BUY_COOKIE, token, { ...buyCookie(dir), maxAge: ADMIN_TOKEN_TTL });
-        return res.json({ ok: true, data: {}, ms: Date.now() - t0 });
-      }
-      try { adminAuth().check(req.cookies && req.cookies[BUY_COOKIE], role); }
-      catch (e) { return res.status(401).json({ ok: false, error: 'AUTH', ms: Date.now() - t0 }); }
-      res.json(await buyerApi(dir)(action, payload));
+      res.json(await buyerApi(req.params.dir)(action, payload));
     } catch (e) { next(e); }
-  });
-  app.post('/buyer/:dir/logout', (req, res) => {
-    if (isDir(req.params.dir)) res.clearCookie(BUY_COOKIE, buyCookie(req.params.dir));
-    res.json({ ok: true });
   });
   app.use((req, res) => res.status(404).json({ ok: false, error: 'Not found' }));
 

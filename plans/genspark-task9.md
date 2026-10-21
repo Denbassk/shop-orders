@@ -104,3 +104,20 @@
 - server/public/buyer/index.html (GET /buyer/<dir>, no-store, неизвестный dir -> 404): вход PIN, «Замовили сьогодні» (Видалити с confirm, тексты ⏳/❌ DeleteSheet.gs, ответ ✅/⚠ с сервера; «Змінити кількість» -> editOrder), «Асортимент» (поиск, цена, стоп, наличие ВК). Данные в HTML - через esc(); confirm/toast - простой текст (textContent).
 - Тест server/test/buyer-page.test.js. Посмотреть локально: в .env BUYER_<DIR>_HASH (например BUYER_BAKERY_HASH), localhost:3000/buyer/bakery.
 - Дальше шаг 8: wo* в пульте (нужен код Task 8 - после слияния PR #7 или rebase), шаг 9: проверка и PR.
+## Сверка с планом (21.10)
+- Перечитаны plans/2026-10-18-node-supabase-migration.md и plans/HANDOFF-genspark.md.
+- Task 8: PR #7 (genspark/task-8 -> migration/node-supabase) открыт, не слит. Миграция 000005 применена вручную через SQL Editor (журнал: 20261019000005; таблицы writeoffs, writeoff_lines, admin_log, вью writeoffs_export_pending, products.cost, submit_writeoff_tx).
+- Task 9 готово: /admin (сборка из app/ui, fetch /admin/api, PIN -> JWT cookie), today/schedule/stores/dirStores/store/log, cancelOrder/openStore/openAll/closeAll/setDirEnabled, editOrder/batch, health/healthClear/card; /buyer (7а API, 7б страница).
+- Отличие от плана: admin_cancel_day/admin_set_qty сделаны не RPC, а UPDATE с условием в admin/data.js; changed_at ставится -> выгрузка.
+- РАСХОЖДЕНИЕ с HANDOFF: там вкладка «Точки» = правка stores (галочки, дни, маршрут, зона, примечание). У нас cardSave отложен до Task 11 -> решение владельца.
+- Не переносятся: clearMark, restoreScan/Apply, dupScan/Apply (кнопки скрыты).
+- Осталось Task 9: 7в вход закупщиц по ссылке; 8 wo* в пульте (woBrief, woStats, woStore, woDelete, woOpen, woArchive, woSetup) - после слияния PR #7; 9 report_at_<dir> из автосборки отчётов; 10 PR genspark/task-9.
+- Task 10 (сайт продавца, build-front.js) можно делать в Genspark.
+- Секреты Fly к четвергу: ADMIN_JWT_SECRET, ADMIN_PASSWORD_HASH, BUYER_LINK_SECRET (в план Global Constraints не внесены).
+- PowerShell: r = псевдоним Invoke-History (не называть функции R); else писать на той же строке, что и }.
+## Шаг 7в (итог)
+- Решение владельца: закупщицам без PIN. Вход = секретная ссылка /buyer/<dir>/<ключ>, ключ = HMAC-SHA256(BUYER_LINK_SECRET, 'buyer|'+dir), base64url, 24 симв. (src/buyer/link.js).
+- Без ключа / неверный / чужой dir -> 404. API: POST /buyer/<dir>/<ключ>/api. Cookie buy, login, BUYER_<DIR>_HASH не нужны.
+- Ссылки: node scripts/buyer-links.js [https://адрес] - НЕ в чат. Смена BUYER_LINK_SECRET отзывает все ссылки. Локально секрет уже в .env.
+- Страница: KEY из адреса, окно PIN и «Вийти» скрыты CSS (код входа остался мёртвым).
+- Тесты: buyer-link.test.js (5), buyer-page: без ключа -> 404.

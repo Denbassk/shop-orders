@@ -115,32 +115,6 @@ async function withApp(opts, fn) {
 const post = (url, body, cookie) => fetch(url, { method: 'POST',
   headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) });
 
-test('http закупниці: без cookie -> 401 AUTH; невідомий напрямок -> 404', async () => {
-  const calls = [];
-  await withApp({ adminAuth: fakeAuth(), buyerApi: (dir) => async (a) => { calls.push([dir, a]); return { ok: true, data: {}, ms: 0 }; } }, async (base) => {
-    let r = await post(base + '/buyer/bakery/api', { action: 'today' });
-    assert.equal(r.status, 401); assert.equal((await r.json()).error, 'AUTH');
-    r = await post(base + '/buyer/xxx/api', { action: 'today' });
-    assert.equal(r.status, 404);
-    assert.equal(calls.length, 0);
-  });
-});
-
-test('http закупниці: вхід -> cookie лише свого напрямку; чужий токен -> 401', async () => {
-  const calls = [];
-  await withApp({ adminAuth: fakeAuth(), buyerApi: (dir) => async (a) => { calls.push([dir, a]); return { ok: true, data: { dir }, ms: 0 }; } }, async (base) => {
-    let r = await post(base + '/buyer/bakery/api', { action: 'login', payload: { pin: '0000' } });
-    assert.equal((await r.json()).error, 'Невірний PIN');
-    r = await post(base + '/buyer/bakery/api', { action: 'login', payload: { pin: '1234' } });
-    const sc = r.headers.get('set-cookie') || '';
-    assert.ok(sc.includes('buy=') && sc.includes('Path=/buyer/bakery') && sc.includes('HttpOnly'), sc);
-    r = await post(base + '/buyer/bakery/api', { action: 'today' }, 'buy=tok-buyer-bakery');
-    assert.equal(r.status, 200); assert.deepEqual(calls, [['bakery', 'today']]);
-    r = await post(base + '/buyer/bread/api', { action: 'today' }, 'buy=tok-buyer-bakery');
-    assert.equal(r.status, 401); assert.equal(calls.length, 1);
-  });
-});
-
 test('runtime: дії закупниці підключені (today, remove, editOrder з dir із cookie, products, setProduct)', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'admin', 'runtime.js'), 'utf8');
   for (const s of ['buyerApi', 'today: () => buyer.buyerToday', 'remove:', "editOrder: (p) => write.admEditOrder({ ...(p || {}), dir }", 'products:', 'setProduct:']) assert.ok(src.includes(s), s);
