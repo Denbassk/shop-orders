@@ -75,7 +75,22 @@ input:focus{border-color:#16181D}
 label.pick{display:flex;align-items:center;gap:14px;padding:15px 16px;margin:14px 0 18px;cursor:pointer}
 label.pick input{width:24px;height:24px;accent-color:#E11B22;flex:none}
 .toast{position:fixed;left:16px;right:16px;bottom:104px;z-index:60;max-width:528px;margin:0 auto;background:#16181D;color:#fff;border-radius:16px;padding:14px 16px;font-size:15px;box-shadow:0 8px 24px rgba(12,14,18,.3)}
-@media (min-width:900px){
+.item.sel{background:#FFF5F5}
+.item.sel::after{content:'';position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:0 4px 4px 0;background:#E11B22}
+.rpb{border:0;background:none;padding:0;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.rpb[disabled]{cursor:default;opacity:.55}
+.rpbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:4px}
+.rpbar input{flex:1 1 240px;padding:12px 14px}
+.tblw{overflow:auto;max-height:72vh;background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(22,24,29,.09)}
+table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-content;min-width:100%}
+.gs th,.gs td{padding:8px 11px;border-bottom:1px solid #EEF0F3;white-space:nowrap;text-align:left;vertical-align:top;background:#fff}
+.gs th{position:sticky;top:0;z-index:2;background:#16181D;color:#fff;font-weight:600;white-space:normal;min-width:60px;max-width:180px}
+.gs td.n{text-align:right;font-variant-numeric:tabular-nums}
+.gs tr.sec td{background:#F1F2F4;font-weight:700}
+.gs tr.tot td{background:#FFF7E6;font-weight:700}
+.gs.fc th:first-child,.gs.fc tr:not(.sec) td:first-child{position:sticky;left:0;z-index:1;box-shadow:1px 0 0 #E4E6EA}
+.gs.fc th:first-child{z-index:3}
+.hint a{color:#1a73e8}@media (min-width:900px){
   .hdrin,.dirs,.wrap,.tabs{max-width:980px}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
   .cols .card + .card{margin-top:0}
@@ -283,17 +298,87 @@ function askCloseAll() {
 }
 
 // ---- Звіти ----
-async function showReports() {
-  const i = S.info || {};
-  view(section('Звіт', '<div class="info">' + esc(i.reportAt ? 'Звіт зібрано о ' + i.reportAt : 'Сьогодні звіт ще не збирався') +
-    '<span class="s">' + esc('Лист «' + (SHEETS[S.dir] || '') + '»') + '</span></div>') +
-    '<div><button class="btn dark" onclick="download()">Скачати Excel</button><button class="btn ghost" onclick="askReport()">Перезібрати звіт</button></div>' +
-    '<div class="note">Поки що звіти - у тестовій таблиці (до переїзду).</div>');
+// ---- Звіти: листи Google (src/buyer/sheets.js), лише перегляд ----
+const RP = { dir: '', list: null, key: '', data: null, q: '', t: 0 };
+const NUM_RE = /^-?[\d\s\u00a0]+([.,]\d+)?( ?(грн|шт|кг|%))?$/;
+const TOT_RE = /^(разом|всього|итого|всего|итог|загалом)/i;
+function rpCard(s, k) {
+  return '<div class="item' + (s.key === RP.key ? ' sel' : '') + '">' +
+    '<button class="grow rpb" ' + (s.missing ? 'disabled' : 'onclick="rpPick(' + k + ')"') + '><span class="t">' + esc(s.title) +
+    '</span><span class="s">' + esc(s.about || '') + '</span></button>' +
+    (s.missing ? '<span class="pill off">немає листа</span>' : '<button class="btn sm dark" onclick="download(' + k + ')">⬇ Excel</button>') + '</div>';
 }
-async function download() {
-  toast('⏳ Готую файл…');
+async function showReports(fresh) {
+  if (RP.dir !== S.dir) { RP.dir = S.dir; RP.key = ''; RP.data = null; RP.q = ''; }
+  const l = RP.list = await call('sheets', { fresh: !!fresh }, 60000);
+  const ok = l.sheets.filter((s) => !s.missing);
+  if (!ok.some((s) => s.key === RP.key)) { const m = ok.find((s) => s.main) || ok[0]; RP.key = m ? m.key : ''; RP.data = null; }
+  const grp = (g) => l.sheets.map((s, k) => [s, k]).filter(([s]) => (s.group || 'report') === g);
+  const rep = grp('report'), ext = grp('extra');
+  let h = section('Звіти', '<div class="card">' + rep.map(([s, k]) => rpCard(s, k)).join('') + '</div>');
+  if (ext.length) h += section('Довідники і службові листи', '<div class="card">' + ext.map(([s, k]) => rpCard(s, k)).join('') + '</div>');
+  h += l.mode === 'target'
+    ? '<div class="note">Тестова таблиця (BUYER_SHEETS=target).</div><button class="btn ghost" onclick="askReport()">Перезібрати звіт</button>'
+    : '<div class="hint">Бойові таблиці, лише перегляд. Звіти збирає Apps Script кожні 5 хвилин.</div>';
+  h += '<div id="rpv">' + (RP.key ? '<div class="spin">Завантажую лист…</div>' : '<div class="note">Листів у таблиці не знайдено.</div>') + '</div>';
+  view(h);
+  if (RP.key) rpLoad(fresh);
+}
+function rpPick(k) { RP.key = RP.list.sheets[k].key; RP.q = ''; RP.data = null; showReports().catch(fail); }
+async function rpLoad(fresh) {
+  const key = RP.key, dir = S.dir;
+  if (fresh === true && RP.data) toast('⏳ Оновлюю лист…');
   try {
-    const r = await fetch(BASE + '/xlsx/' + S.dir, { cache: 'no-store' });
+    const d = await call('sheet', { key, fresh: !!fresh }, 60000);
+    if (key !== RP.key || dir !== S.dir) return;
+    RP.data = d; rpDraw();
+  } catch (e) { const b = document.getElementById('rpv'); if (b) b.innerHTML = '<div class="bad">' + esc(e.message) + '</div>'; }
+}
+function rpSplit() {
+  const rows = RP.data.rows.filter((r) => r.some((v) => v.trim() !== ''));
+  const hi = rows.findIndex((r) => r.filter((v) => v.trim() !== '').length >= 2);
+  return { cap: hi > 0 ? rows.slice(0, hi).map((r) => r.filter((v) => v.trim()).join(' ')).join(' · ') : '',
+    head: hi >= 0 ? rows[hi] : null, body: hi >= 0 ? rows.slice(hi + 1) : rows };
+}
+function rpDraw() {
+  const box = document.getElementById('rpv'), d = RP.data;
+  if (!box || !d) return;
+  const k = RP.list.sheets.findIndex((s) => s.key === RP.key);
+  const sp = rpSplit();
+  box.innerHTML = section(d.title, (sp.cap ? '<div class="hint">' + esc(sp.cap) + '</div>' : '') +
+    '<div class="rpbar"><input type="search" placeholder="Пошук: точка, товар, маршрут" value="' + esc(RP.q) + '" oninput="rpSearch(this.value)">' +
+    '<button class="btn sm ghost" onclick="rpLoad(true)">Оновити</button>' +
+    '<button class="btn sm dark" onclick="download(' + k + ')">Скачати Excel</button></div>' +
+    '<div class="hint" id="rpc"></div><div class="tblw" id="rpt"></div>');
+  rpTable();
+}
+function rpSearch(v) { RP.q = v; clearTimeout(RP.t); RP.t = setTimeout(rpTable, 200); }
+function rpTable() {
+  const d = RP.data, t = document.getElementById('rpt'), c = document.getElementById('rpc');
+  if (!d || !t) return;
+  const { head, body } = rpSplit(), w = d.width, LIM = 1500;
+  const q = RP.q.trim().toLowerCase();
+  const shown = q ? body.filter((r) => r.join(' ').toLowerCase().includes(q)) : body;
+  const tr = (r) => {
+    const ne = r.filter((v) => v.trim() !== '');
+    if (w > 2 && ne.length === 1 && !NUM_RE.test(ne[0].trim())) return '<tr class="sec"><td colspan="' + w + '">' + esc(ne[0]) + '</td></tr>';
+    const tot = r.some((v) => TOT_RE.test(v.trim()));
+    return '<tr' + (tot ? ' class="tot"' : '') + '>' + r.map((v) => '<td' + (NUM_RE.test(v.trim()) ? ' class="n"' : '') + '>' + esc(v) + '</td>').join('') + '</tr>';
+  };
+  t.innerHTML = '<table class="gs' + (w > 5 ? ' fc' : '') + '">' +
+    (head ? '<thead><tr>' + head.map((v) => '<th>' + esc(v) + '</th>').join('') + '</tr></thead>' : '') +
+    '<tbody>' + shown.slice(0, LIM).map(tr).join('') + '</tbody></table>';
+  const at = d.at ? new Date(d.at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
+  c.innerHTML = esc(shown.length + ' рядків' + (q ? ' з ' + body.length : '') + (at ? ' · прочитано о ' + at : '') +
+    (d.cut ? ' · у листі більше 3000 рядків' : '') + (shown.length > LIM ? ' · показано ' + LIM + ', решта - в Excel' : '')) +
+    (RP.list.url ? ' · <a href="' + esc(RP.list.url) + '" target="_blank" rel="noopener">відкрити в Google</a>' : '');
+}
+async function download(k) {
+  const s = RP.list && RP.list.sheets[k];
+  if (!s) return;
+  toast('⏳ Готую файл «' + s.title + '»…');
+  try {
+    const r = await fetch(BASE + '/xlsx/' + S.dir + '?key=' + encodeURIComponent(s.key), { cache: 'no-store' });
     if (!r.ok) { let j = null; try { j = await r.json(); } catch (e) { j = null; } throw new Error((j && j.error) || ('Помилка ' + r.status)); }
     const m = /filename\*=UTF-8''([^;]+)/.exec(r.headers.get('content-disposition') || '');
     const url = URL.createObjectURL(await r.blob());
@@ -309,7 +394,6 @@ function askReport() {
     go('reports');
   }, true);
 }
-
 // ---- Асортимент ----
 function prodSub(p) {
   return money(p.price) + ' грн' + (p.category ? ' · ' + p.category : '') + (p.availability ? ' · ' + p.availability : '') + (p.barcode ? ' · ' + p.barcode : '');

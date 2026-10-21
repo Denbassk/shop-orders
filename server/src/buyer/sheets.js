@@ -1,20 +1,38 @@
-// Листи Google на сторінці закупниці: каталог звітів напрямку, вміст листа таблицею, посилання на xlsx одного листа.
+// Листи Google на сторінці закупниці: каталог листів напрямку, вміст листа таблицею, посилання на xlsx одного листа.
 // Лише читання (values.get, FORMATTED_VALUE - як бачить людина). Джерело - BUYER_SHEETS: live (бойові таблиці,
 // за замовчуванням) або target (та сама ціль, що вигрузка; до Task 11 - тестова).
+// group: report - звіти (немає листа - показуємо «немає»), extra - довідники і службові (немає - не показуємо).
 const CATALOG = {
   bread: [
     { key: 'orders', sheet: 'Заказы', about: 'Для постачальника: по магазинах, ЄДРПОУ і номер ТТ', main: true },
     { key: 'summary', sheet: 'Данные Заказов', about: 'По маршрутах і позиціях, хто не замовив' },
+    { key: 'routes', sheet: 'Маршруты и Магазины', about: 'Довідник: маршрути, магазини, номери ТТ', group: 'extra' },
+    { key: 'check', sheet: '_Сверка_ТТ', about: 'Звірка точок з Довідником', group: 'extra' },
+    { key: 'errors', sheet: '_Лог_Ошибок', about: 'Журнал помилок таблиці', group: 'extra' },
+    { key: 'assort', sheet: 'Ассортимент', about: 'Лист асортименту в Google', group: 'extra' },
   ],
-  nbhz: [{ key: 'export', nbhz: true, about: 'Матриця ТТ × асортимент для заводу', main: true }],
+  nbhz: [
+    { key: 'export', nbhz: true, about: 'Матриця ТТ × асортимент для заводу', main: true },
+    { key: 'routes', sheet: 'Маршрути', about: 'Маршрути і адреси заводу', group: 'extra' },
+    { key: 'check', sheet: '_Сверка_НБХЗ', about: 'Звірка точок НБХЗ', group: 'extra' },
+    { key: 'assort', sheet: 'Ассортимент', about: 'Лист асортименту в Google', group: 'extra' },
+  ],
   bakery: [
     { key: 'orders', sheet: 'Заказы ВК', about: 'По точках: що і скільки', main: true },
     { key: 'summary', sheet: 'Сводная ВК', about: 'По позиціях: разом штук і гривень' },
     { key: 'routes', sheet: 'Маршрути ВК', about: 'Для машини розвозки: маршрут, товар, точка' },
+    { key: 'writeoffs', sheet: 'Списания', about: 'Списання', group: 'extra' },
+    { key: 'deleted', sheet: 'Видалення замовлення', about: 'Журнал видалених замовлень', group: 'extra' },
+    { key: 'addr', sheet: 'Адреса ТТ', about: 'Адреси точок', group: 'extra' },
+    { key: 'errors', sheet: '_Лог_Ошибок', about: 'Журнал помилок таблиці', group: 'extra' },
+    { key: 'assort', sheet: 'Ассортимент', about: 'Лист асортименту в Google', group: 'extra' },
   ],
   veg: [
     { key: 'orders', sheet: 'Замовлення Овочі', about: 'По точках', main: true },
     { key: 'summary', sheet: 'Зведена Овочі', about: 'По позиціях' },
+    { key: 'settings', sheet: 'Налаштування', about: 'Налаштування таблиці овочів', group: 'extra' },
+    { key: 'addr', sheet: 'Адреса ТТ', about: 'Адреси точок', group: 'extra' },
+    { key: 'errors', sheet: '_Лог_Помилок_Овочі', about: 'Журнал помилок таблиці', group: 'extra' },
   ],
 };
 const NBHZ_RE = /^Вивантаження (\d{2})\.(\d{2})\.(\d{4})$/;
@@ -57,19 +75,20 @@ function createBuyerSheets({ google, sourceId, mode = 'live', ttlMs = 60000, now
       const byTitle = new Map(tabs.map((t) => [t.title, t]));
       const out = [];
       cat.forEach((c) => {
+        const group = c.group || 'report';
         if (c.nbhz) {
           const days = tabs.map((t) => ({ t, m: NBHZ_RE.exec(t.title) })).filter((x) => x.m)
             .map((x) => ({ t: x.t, d: x.m[3] + x.m[2] + x.m[1] }))
             .sort((a, b) => b.d.localeCompare(a.d)).slice(0, NBHZ_DAYS);
-          if (!days.length) out.push({ key: c.key, title: 'Вивантаження', about: c.about, main: !!c.main, missing: true });
+          if (!days.length) out.push({ key: c.key, title: 'Вивантаження', about: c.about, main: !!c.main, group, missing: true });
           days.forEach((x, i) => out.push({ key: c.key + ':' + x.t.title.slice(-10), title: x.t.title, sheet: x.t.title,
-            gid: x.t.sheetId, about: c.about, main: !!c.main && i === 0, rows: x.t.rowCount, cols: x.t.columnCount }));
+            gid: x.t.sheetId, about: c.about, main: !!c.main && i === 0, group, rows: x.t.rowCount, cols: x.t.columnCount }));
           return;
         }
         const t = byTitle.get(c.sheet);
-        out.push(t
-          ? { key: c.key, title: c.sheet, sheet: c.sheet, gid: t.sheetId, about: c.about, main: !!c.main, rows: t.rowCount, cols: t.columnCount }
-          : { key: c.key, title: c.sheet, about: c.about, main: !!c.main, missing: true });
+        if (t) out.push({ key: c.key, title: c.sheet, sheet: c.sheet, gid: t.sheetId, about: c.about, main: !!c.main, group,
+          rows: t.rowCount, cols: t.columnCount });
+        else if (group === 'report') out.push({ key: c.key, title: c.sheet, about: c.about, main: !!c.main, group, missing: true });
       });
       return { dir, mode, url: BASE + id + '/edit', sheets: out };
     });
@@ -78,7 +97,7 @@ function createBuyerSheets({ google, sourceId, mode = 'live', ttlMs = 60000, now
   async function entry(dir, key) {
     const l = await list(dir);
     const e = key ? l.sheets.find((s) => s.key === String(key)) : l.sheets.find((s) => s.main && !s.missing);
-    if (!e || e.missing) throw new Error('Лист звіту не знайдено' + (e ? ': ' + e.title : '') + '. Можливо, звіт ще не зібрано.');
+    if (!e || e.missing) throw new Error('Лист не знайдено' + (e ? ': ' + e.title : '') + '. Можливо, звіт ще не зібрано.');
     return e;
   }
 
