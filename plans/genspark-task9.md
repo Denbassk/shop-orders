@@ -166,3 +166,106 @@
 
 Перевірити в четвер: BUYER_SHEETS=live читає бойові таблиці (лише читання) - узгодити.
 Відкрите: хто дозволяє овочам після дедлайну; у листі «Маршрути» НБХЗ «Бучмы 33Б1» -> «32Б1».
+## Excel без «3,» і пульт (21.10.2026, вечір)
+
+- Excel листа збирає сервер (src/buyer/xlsxLocal.js) з очищених значень sheets.read, без залежностей.
+  Цілі до 7 цифр і числа з комою - числами; довші цифри (штрихкоди, ЄДРПОУ) - текстом.
+  Шапка закріплена, рядки РАЗОМ/ВСЬОГО/ЗАГАЛОМ жирні. Підключено через fetchFn у createXlsx
+  (ім'я файлу і перевірки старі). Не вдалось - Google, як раніше (лог «[xlsxLocal] fallback»).
+  BUYER_XLSX=google у .env - завжди Google. app/ і бойові таблиці не чіпали.
+- Пульт (server/public/admin, вхід за паролем) - ТІЛЬКИ для власника (Денис).
+  Закупниці працюють лише на /buyer за своїм посиланням; пульт їм не дають.
+- Точки: редагування через Supabase Table Editor (коміт 7b52219).
+### Діагностика пульта і точок (авто, 21.10.2026 22:12)
+
+```text
+===== ПУЛЬТ: файли public/admin =====
+public\admin\index.html  89427 байт
+===== ПУЛЬТ: коміти =====
+3168978 Task 9: buyer - Excel листа збирає сервер з очищених значень (без «3,»), Google лише як запасний шлях
+604af29 Task 9: buyer - Сьогодні: зведення з листів Google; без коми після цілих
+497c825 Task 9: buyer - каталог листів звітів, читання листа, Excel будь-якого листа
+ac5f204 Task 9: дві закупниці (bakery, hlib) - одне посилання на людину; запити дозволу, прийом, звіт і Excel через сервер
+8a4e388 Task 9: сторінка закупниці - API /buyer/<dir>/api (хто замовив, видалення, правка, асортимент), вхід за паролем напрямку
+cc4fbd0 Task 9: пульт - приховано кнопки, яких немає на сервері (бэкап, дублі, позначка, збереження картки)
+9f28b43 Task 9: сторінка пульта /admin - збірка з app/ui, зв'язок через fetch і cookie
+f2c9475 Task 9: пульт - здоров'я (health/healthClear, помилки пульта), картка точки (card) з бази
+8e4fcad Task 9: пульт - правка замовлення (editOrder), пакетний запит (batch); restore/dup не переносяться
+1f6bbef Task 9: пульт - скасування замовлення, дозвіл точці, прийом усім, вмикання напрямку (clearMark не переноситься)
+e031b26 Task 9: пульт - зібрати звіт (report), посилання xlsx/таблиця, час збирання, текст findStore_
+fd1904a Task 9: пульт - хто замовив, картка точки, журнал (dirStores, store, log)
+6751620 Task 9: пульт - екрани Сегодня, График, пошук точок (today, schedule, stores)
+cb41f69 Task 9: маршрут /admin/api - вхід з cookie, диспетчер {ok,data,ms}, лічильник спроб у settings
+11cc3ad Task 9: вхід у пульт і для закупниці (src/admin/auth.js), хеш пароля, тести
+===== ПУЛЬТ: маршрути /admin в app.js =====
+app.js:4: const { ADMIN_TOKEN_TTL } = require('***');
+app.js:63: app.get(['/admin', '/admin/'], (req, res) => {
+app.js:68: // Пульт: POST /admin/api { action, payload } -> { ok, data, ms } (adminApi з app/Admin.gs). Вхід - action 'login' { pin };
+app.js:71: const getAdminRt = () => adminRt || (adminRt = require('***').createAdminRuntime({ queueExport: (d) => runtime().getEnv().queueExport(d) }));
+app.js:75: const admCookie = { httpOnly: true, secure: true, sameSite: 'strict', path: '/admin' };
+app.js:76: app.post('/admin/api'***'1mb' }), async (req, res, next) => {
+app.js:93: app.post('***', (req, res) => { res.clearCookie(ADM_COOKIE, admCookie); res.json({ ok: true }); });
+===== ПУЛЬТ: вхід (пароль, cookie) =====
+app.js:3: const cookieParser = require('***');
+app.js:4: const { ADMIN_TOKEN_TTL } = require('***');
+app.js:69: // сесія - підписаний JWT у cookie adm (HttpOnly, Secure, SameSite=Strict, 12 год). Лише application/json (захист від чужих форм).
+app.js:74: const ADM_COOKIE = 'adm';
+app.js:75: const admCookie = { httpOnly: true, secure: true, sameSite: 'strict', path: '/admin' };
+app.js:76: app.post('/admin/api'***'1mb' }), async (req, res, next) => {
+app.js:85: res.cookie(ADM_COOKIE, token, { ...admCookie, maxAge: ADMIN_TOKEN_TTL });
+app.js:88: try { adminAuth().check(req.cookies && req.cookies[ADM_COOKIE], 'admin'); }
+app.js:93: app.post('***', (req, res) => { res.clearCookie(ADM_COOKIE, admCookie); res.json({ ok: true }); });
+auth.js:2: // PIN у ScriptProperties -> хеш у секреті (ADMIN_PASSWORD_HASH, BUYER_<DIR>_HASH); токен adm_<uuid> -> підписаний JWT (12 год).
+auth.js:3: // Лічильник невдалих спроб (admin_fail: { n, ts першої }) - через fails { get, set, del } (у бойовому - база).
+auth.js:7: const ADMIN_TOKEN_TTL = 12 * 60 * 60 * 1000;      // 12 годин
+auth.js:8: const ADMIN_FAIL_MAX = 5;                         // спроб на годину
+auth.js:11: function hashPassword(pw, salt = crypto.randomBytes(16).toString('hex')) {
+auth.js:14: function verifyPassword(pw, stored) {
+auth.js:20: // 'admin'***'buyer:bread' -> BUYER_BREAD_HASH
+auth.js:22: return role === 'admin' ? '***' : 'BUYER_'***':'***'_HASH';
+auth.js:34: if (!secret) throw new Error('***');
+auth.js:37: if ((o.n || 0) >= ADMIN_FAIL_MAX) throw new Error('***');
+auth.js:38: if (!verifyPassword(String(pin || '').trim(), real)) {
+auth.js:44: return jwt.sign({ role, iat, exp: iat + ADMIN_TOKEN_TTL / 1000 }, secret, { algorithm: 'HS256' });
+auth.js:58: module.exports = { createAuth, hashPassword, verifyPassword, hashEnvName, memoryFails, ADMIN_TOKEN_TTL, ADMIN_FAIL_MAX };
+data.js:10: // «Журнал дій» (admin_log, міграція 000005): нові першими
+data.js:12: return must('admin_log'***'admin_log').select('***').order('at', { ascending: false }).limit(limit));
+data.js:26: must('admin_log'***'admin_log'***'') }));
+===== ПУЛЬТ: тести =====
+admin-api.test.js
+admin-auth.test.js
+admin-edit.test.js
+admin-page.test.js
+admin-read.test.js
+admin-read2.test.js
+admin-report.test.js
+admin-tools.test.js
+admin-write.test.js
+===== ТОЧКИ: згадки в пульті =====
+index.html: 48
+===== .env: лише назви змінних =====
+ADMIN_JWT_SECRET
+ADMIN_PASSWORD_HASH
+BUYER_LINK_SECRET
+===== task-9 відносно origin/migration/node-supabase =====
+3168978 Task 9: buyer - Excel листа збирає сервер з очищених значень (без «3,»), Google лише як запасний шлях
+7a2e9f0 Пам'ять: Task 9 - підсумок, відкат формату, заборони Genspark
+604af29 Task 9: buyer - Сьогодні: зведення з листів Google; без коми після цілих
+619c529 Task 9: buyer - вкладка Звіти: листи Google таблицею, пошук, Excel кожного листа, службові листи
+497c825 Task 9: buyer - каталог листів звітів, читання листа, Excel будь-якого листа
+79d0fcc Task 9: сторінка закупниці у стилі пульта - вкладки Сьогодні/Дозволи/Прийом/Звіти/Асортимент, перемикач напрямків, автооновлення
+ac5f204 Task 9: дві закупниці (bakery, hlib) - одне посилання на людину; запити дозволу, прийом, звіт і Excel через сервер
+7b52219 Genspark: пауза Task 9 (точки - Table Editor, wo* після PR #7)
+2d28f40 Task 9: сервер читає .env при запуску (посилання закупниць локально давали 404)
+ee2a819 Task 9: закупниці без PIN - секретне посилання /buyer/<dir>/<ключ> (HMAC), scripts/buyer-links.js; звірка з планом
+babfc46 Task 9: сторінка закупниці /buyer/<dir> - хто замовив, видалення, правка кількості, асортимент
+8a4e388 Task 9: сторінка закупниці - API /buyer/<dir>/api (хто замовив, видалення, правка, асортимент), вхід за паролем напрямку
+cc4fbd0 Task 9: пульт - приховано кнопки, яких немає на сервері (бэкап, дублі, позначка, збереження картки)
+9f28b43 Task 9: сторінка пульта /admin - збірка з app/ui, зв'язок через fetch і cookie
+f2c9475 Task 9: пульт - здоров'я (health/healthClear, помилки пульта), картка точки (card) з бази
+8e4fcad Task 9: пульт - правка замовлення (editOrder), пакетний запит (batch); restore/dup не переносяться
+1f6bbef Task 9: пульт - скасування замовлення, дозвіл точці, прийом усім, вмикання напрямку (clearMark не переноситься)
+e031b26 Task 9: пульт - зібрати звіт (report), посилання xlsx/таблиця, час збирання, текст findStore_
+fd1904a Task 9: пульт - хто замовив, картка точки, журнал (dirStores, store, log)
+6751620 Task 9: пульт - екрани Сегодня, График, пошук точок (today, schedule, stores)
+```
