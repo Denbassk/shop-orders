@@ -40,3 +40,5 @@ src/reports має збігатися з боєм (reports-golden), логіку
 - Пульт (server/public/admin, вхід за паролем) - ТІЛЬКИ для власника (Денис).
   Закупниці працюють лише на /buyer за своїм посиланням; пульт їм не дають.
 - Точки: редагування через Supabase Table Editor (коміт 7b52219).
+- Пульт ГОТОВИЙ (коміти 11cc3ad..cc4fbd0, 9 файлів admin-*.test.js): вхід за ADMIN_PASSWORD_HASH, cookie adm 12 год, 5 спроб/год, роль admin. Доробок не треба.
+- Гілку genspark/task-9 запушено 21.10.2026; PR - у migration/node-supabase.

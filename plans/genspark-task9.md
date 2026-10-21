@@ -269,3 +269,6 @@ e031b26 Task 9: пульт - зібрати звіт (report), посиланн�
 fd1904a Task 9: пульт - хто замовив, картка точки, журнал (dirStores, store, log)
 6751620 Task 9: пульт - екрани Сегодня, График, пошук точок (today, schedule, stores)
 ```
+
+- Пульт ГОТОВИЙ (коміти 11cc3ad..cc4fbd0, 9 файлів admin-*.test.js): вхід за ADMIN_PASSWORD_HASH, cookie adm 12 год, 5 спроб/год, роль admin. Доробок не треба.
+- Гілку genspark/task-9 запушено 21.10.2026; PR - у migration/node-supabase.
