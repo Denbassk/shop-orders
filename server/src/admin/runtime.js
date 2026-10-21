@@ -63,7 +63,17 @@ function createAdminRuntime(opts = {}) {
     if (!r.ok && r.error !== 'AUTH') tools.noteError(adm, 'пульт: ' + a, r.error, new Date());
     return r;
   };
-  return { auth, api: apiNoted };
+  // сторінка закупниці: напрямок - лише з підпису cookie (app.js), не з запиту
+  const buyer = require('../buyer/api');
+  const buyerApis = {};
+  const buyerApi = (dir) => buyerApis[dir] || (buyerApis[dir] = createAdminApi({
+    today: () => buyer.buyerToday(dir, env()),
+    remove: (p) => buyer.buyerDelete(dir, p, env()),
+    editOrder: (p) => write.admEditOrder({ ...(p || {}), dir }, env()),
+    products: () => buyer.buyerProducts(dir, env()),
+    setProduct: (p) => buyer.buyerSetProduct(dir, p, env()),
+  }));
+  return { auth, api: apiNoted, buyerApi };
 }
 
 module.exports = { createAdminRuntime };

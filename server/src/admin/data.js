@@ -70,8 +70,15 @@ function createAdminData(sb) {
     if (keep.length) must('orders', await sb.from('orders').update({ changed_at: ts }).in('id', keep).eq('status', 'active'));
     if (emptied.length) must('orders', await sb.from('orders').update({ status: 'cancelled', changed_at: ts }).in('id', emptied).eq('status', 'active'));
   }
+  // асортимент напрямку для закупниці - без кешу; правка лише ціни/стоп/наявності
+  async function dirProducts(dir) {
+    return must('products', await sb.from('products').select('id,barcode,name,price,category,availability,box,status,sort').eq('dir', dir));
+  }
+  async function setProduct(dir, id, patch) {
+    return must('products', await sb.from('products').update(patch).eq('dir', dir).eq('id', id).select('id')).length > 0;
+  }
   return { dayOrders, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
-    dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow };
+    dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow, dirProducts, setProduct };
 }
 
 module.exports = { createAdminData };

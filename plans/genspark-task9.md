@@ -93,3 +93,10 @@
 - Кнопки бэкап/дубли/снять отметку/сохранить карточку скрыты CSS при сборке (app/ui не тронут); askCard/askClearMark -> подсказка.
 - .env: ADMIN_JWT_SECRET, ADMIN_PASSWORD_HASH (новый PIN, не из чата). Четверг: те же -> fly secrets.
 - Дальше шаг 7: страница закупщицы /buyer/<dir>.
+
+## Шаг 7а (итог)
+- src/buyer/api.js: today (delTodayOrders_/delSheetRefresh_: «N поз. · qty од. · HH:mm», время только ВК/овощи), remove (delCancelOrder_: тексты ✅/⚠ и журнал «Видалено з таблиці» дословно), products, setProduct (цена/стоп/наличие ВК; новое, оригинала нет; журнал «Змінено асортимент»).
+- editOrder закупщицы = admEditOrder, dir только из cookie. admin/data.js: dirProducts, setProduct. runtime.js: buyerApi(dir).
+- app.js: POST /buyer/<dir>/api, login {pin} -> BUYER_<DIR>_HASH, cookie buy с path /buyer/<dir>; без входа/чужой dir -> 401; неизвестный dir -> 404. Миграция не нужна.
+- До Task 11 правку асортимента перезапишет import-reference --force. Продавец видит новую цену через <=30 с (кеш products).
+- Дальше 7б: страница server/public/buyer/index.html (GET /buyer/<dir>).
