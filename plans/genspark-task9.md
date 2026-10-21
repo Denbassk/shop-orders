@@ -100,3 +100,7 @@
 - app.js: POST /buyer/<dir>/api, login {pin} -> BUYER_<DIR>_HASH, cookie buy с path /buyer/<dir>; без входа/чужой dir -> 401; неизвестный dir -> 404. Миграция не нужна.
 - До Task 11 правку асортимента перезапишет import-reference --force. Продавец видит новую цену через <=30 с (кеш products).
 - Дальше 7б: страница server/public/buyer/index.html (GET /buyer/<dir>).
+## Шаг 7б (итог)
+- server/public/buyer/index.html (GET /buyer/<dir>, no-store, неизвестный dir -> 404): вход PIN, «Замовили сьогодні» (Видалити с confirm, тексты ⏳/❌ DeleteSheet.gs, ответ ✅/⚠ с сервера; «Змінити кількість» -> editOrder), «Асортимент» (поиск, цена, стоп, наличие ВК). Данные в HTML - через esc(); confirm/toast - простой текст (textContent).
+- Тест server/test/buyer-page.test.js. Посмотреть локально: в .env BUYER_<DIR>_HASH (например BUYER_BAKERY_HASH), localhost:3000/buyer/bakery.
+- Дальше шаг 8: wo* в пульте (нужен код Task 8 - после слияния PR #7 или rebase), шаг 9: проверка и PR.

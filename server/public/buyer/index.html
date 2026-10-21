@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Закупниця - Фемелі Маркет</title>
+<style>
+body{font-family:system-ui,Arial,sans-serif;margin:0;background:#F1F2F4;color:#16181D}
+.wrap{max-width:560px;margin:0 auto;padding:12px 12px 90px}
+h1{font-size:20px;margin:8px 0}
+.card{background:#fff;border-radius:14px;padding:12px;margin:8px 0;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:6px}
+.sub{color:#5f6368;font-size:13px}
+button{border:0;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;background:#E8EAED}
+button.red{background:#D32F2F;color:#fff}
+button.main,.tabs button.on{background:#16181D;color:#fff}
+input{font-size:15px;padding:6px;border:1px solid #ccc;border-radius:8px}
+input.n{width:80px}
+.tabs{display:flex;gap:6px;margin:8px 0}
+.stop{color:#D32F2F;font-weight:600}
+.hide{display:none}
+#msg{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;max-width:520px;width:calc(100% - 32px);box-sizing:border-box;background:#16181D;color:#fff;padding:10px 14px;border-radius:12px;display:none}
+</style></head><body>
+<div class="wrap">
+  <div id="login" class="card hide">
+    <h1>Вхід для закупниці</h1>
+    <input id="pin" type="password" inputmode="numeric" placeholder="PIN">
+    <button class="main" onclick="doLogin()">Увійти</button>
+    <div id="lerr" class="sub"></div>
+  </div>
+  <div id="app" class="hide">
+    <div class="row"><h1 id="title"></h1><button onclick="logout()">Вийти</button></div>
+    <div class="tabs">
+      <button id="t-today" onclick="tab('today')">Замовили сьогодні</button>
+      <button id="t-products" onclick="tab('products')">Асортимент</button>
+    </div>
+    <div id="view"></div>
+  </div>
+</div>
+<div id="msg"></div>
+<script>
+const DIR = location.pathname.split('/')[2] || '';
+const API = '/buyer/' + DIR + '/api';
+const S = { tab: 'today', today: null, products: null };
+const $ = (id) => document.getElementById(id);
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function toast(t) { const m = $('msg'); m.textContent = t; m.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => { m.style.display = 'none'; }, 7000); }
+function showLogin() { $('app').classList.add('hide'); $('login').classList.remove('hide'); $('pin').focus(); }
+function showApp() { $('login').classList.add('hide'); $('app').classList.remove('hide'); }
+function spin() { $('view').innerHTML = '<div class="sub">Завантаження…</div>'; }
+function fail(e) { if (!$('login').classList.contains('hide')) return; $('view').innerHTML = '<div class="card">❌ ' + esc(e.message) + ' <button onclick="tab(S.tab)">Ще раз</button></div>'; }
+
+async function call(action, payload) {
+  const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
+    body: JSON.stringify({ action, payload: payload || {} }) });
+  let j; try { j = await r.json(); } catch (e) { j = { ok: false, error: 'Помилка сервера (' + r.status + ')' }; }
+  if (j.error === 'AUTH') { showLogin(); throw new Error('Потрібно увійти знову'); }
+  if (!j.ok) throw new Error(j.error || 'Помилка');
+  return j.data;
+}
+async function doLogin() {
+  const pin = $('pin').value.trim(); $('lerr').textContent = '';
+  try {
+    const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
+      body: JSON.stringify({ action: 'login', payload: { pin } }) });
+    const j = await r.json();
+    if (!j.ok) { $('lerr').textContent = j.error || 'Помилка'; return; }
+    $('pin').value = ''; showApp(); tab(S.tab);
+  } catch (e) { $('lerr').textContent = e.message; }
+}
+async function logout() {
+  try { await fetch('/buyer/' + DIR + '/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+  showLogin();
+}
+function tab(t) {
+  S.tab = t;
+  $('t-today').className = t === 'today' ? 'on' : '';
+  $('t-products').className = t === 'products' ? 'on' : '';
+  (t === 'today' ? loadToday : loadProducts)();
+}
+
+// --- замовили сьогодні (DeleteSheet.gs) ---
+async function loadToday() {
+  spin();
+  try { S.today = await call('today'); $('title').textContent = S.today.title; showApp(); if (S.tab === 'today') renderToday(); }
+  catch (e) { fail(e); }
+}
+function renderToday() {
+  const d = S.today;
+  if (!d.stores.length) { $('view').innerHTML = '<div class="card sub">Сьогодні ще ніхто не замовляв.</div>'; return; }
+  $('view').innerHTML = '<div class="sub">Замовили сьогодні: ' + d.stores.length + '</div>' + d.stores.map((s, i) =>
+    '<div class="card" id="st' + i + '"><div class="row"><div><b>' + esc(s.label) + '</b><div class="sub">' + esc(s.sub) + '</div></div>' +
+    '<button class="red" onclick="askDelete(' + i + ')">Видалити</button></div>' +
+    '<details><summary class="sub">Змінити кількість</summary>' + s.lines.map((l) =>
+      '<div class="row"><span>' + esc(l.name) + '</span><input class="n" type="number" min="0" step="' + (DIR === 'veg' ? '0.001' : '1') +
+      '" value="' + esc(l.qty) + '" data-row="' + esc(l.row) + '" data-name="' + esc(l.name) + '" data-old="' + esc(l.qty) + '"></div>').join('') +
+    '<div class="row"><button class="main" onclick="saveEdit(' + i + ')">Зберегти кількість</button></div></details></div>').join('');
+}
+async function askDelete(i) {
+  const s = S.today.stores[i];
+  if (!confirm('Видалити замовлення за сьогодні: ' + s.label + '?\nТТ зможе замовити знову.')) return;
+  toast('⏳ Видаляю замовлення: ' + s.label + ' …');
+  try { const r = await call('remove', { storeId: s.storeId }); toast(r.message); loadToday(); }
+  catch (e) { toast('❌ Не вдалось видалити: ' + e.message); }
+}
+async function saveEdit(i) {
+  const s = S.today.stores[i];
+  const changes = [...document.querySelectorAll('#st' + i + ' input[data-row]')].map((x) => ({
+    row: Number(x.dataset.row), name: x.dataset.name, oldQty: Number(x.dataset.old), qty: Number(String(x.value).replace(',', '.')) }))
+    .filter((c) => c.qty !== c.oldQty);
+  if (!changes.length) { toast('Змін немає'); return; }
+  try { const r = await call('editOrder', { storeId: s.storeId, changes }); toast('Збережено: ' + s.label + ' (змін ' + r.changed + ')'); loadToday(); }
+  catch (e) { toast('❌ ' + e.message); }
+}
+
+// --- асортимент ---
+async function loadProducts() {
+  spin();
+  try { S.products = await call('products'); $('title').textContent = S.products.title; showApp(); if (S.tab === 'products') renderProducts(); }
+  catch (e) { fail(e); }
+}
+function renderProducts() {
+  $('view').innerHTML = '<input id="q" placeholder="Пошук товару або штрихкоду" oninput="renderList()" style="width:100%;box-sizing:border-box"><div id="plist"></div>';
+  renderList();
+}
+function renderList() {
+  const d = S.products, q = $('q').value.trim().toLowerCase();
+  const html = d.products.map((p, i) => ({ p, i })).filter((x) => !q || x.p.name.toLowerCase().includes(q) || x.p.barcode.includes(q)).map(({ p, i }) =>
+    '<div class="card" id="pr' + i + '"><div><b>' + esc(p.name) + '</b> ' + (p.stop ? '<span class="stop">стоп</span>' : '') +
+    '<div class="sub">' + esc(p.barcode) + (p.category ? ' · ' + esc(p.category) : '') + '</div></div>' +
+    '<div class="row"><label>Ціна <input class="n" data-f="price" inputmode="decimal" value="' + esc(p.price) + '"></label>' +
+    '<label><input type="checkbox" data-f="stop"' + (p.stop ? ' checked' : '') + '> стоп</label>' +
+    (d.hasAvailability ? '<label>Наявність <input data-f="availability" style="width:90px" value="' + esc(p.availability) + '"></label>' : '') +
+    '<button class="main" onclick="saveProduct(' + i + ')">Зберегти</button></div></div>').join('');
+  $('plist').innerHTML = html || '<div class="card sub">Нічого не знайдено.</div>';
+}
+async function saveProduct(i) {
+  const p = S.products.products[i], el = $('pr' + i), f = (n) => el.querySelector('[data-f="' + n + '"]');
+  const pay = { id: p.id };
+  const pr = String(f('price').value).trim();
+  if (Number(pr.replace(',', '.')) !== p.price || pr === '') pay.price = pr;
+  if (f('stop').checked !== p.stop) pay.stop = f('stop').checked;
+  if (f('availability') && f('availability').value.trim() !== p.availability) pay.availability = f('availability').value.trim();
+  if (Object.keys(pay).length === 1) { toast('Змін немає'); return; }
+  try {
+    const r = await call('setProduct', pay);
+    if (r.price !== undefined) p.price = r.price;
+    if (r.status) p.stop = r.status === 'stop';
+    if (r.availability !== undefined) p.availability = r.availability;
+    toast('Збережено: ' + p.name); renderList();
+  } catch (e) { toast('❌ ' + e.message); }
+}
+
+$('pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+tab('today');
+</script>
+</body></html>

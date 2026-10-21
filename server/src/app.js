@@ -91,6 +91,12 @@ function createApp(opts = {}) {
     } catch (e) { next(e); }
   });
   app.post('/admin/logout', (req, res) => { res.clearCookie(ADM_COOKIE, admCookie); res.json({ ok: true }); });
+  // Сторінка закупниці (server/public/buyer/index.html): напрямок - з адреси; невідомий -> 404
+  app.get(['/buyer/:dir', '/buyer/:dir/'], (req, res) => {
+    if (!Object.prototype.hasOwnProperty.call(require('./directions').DIRECTIONS, req.params.dir)) return res.status(404).json({ ok: false, error: 'Not found' });
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(require('path').join(__dirname, '..', 'public', 'buyer', 'index.html'));
+  });
   // Сторінка закупниці: POST /buyer/<dir>/api { action, payload } -> { ok, data, ms }. Вхід - 'login' { pin } (BUYER_<DIR>_HASH);
   // cookie buy лише для /buyer/<dir>; без входу або з токеном іншого напрямку -> 401.
   const BUY_COOKIE = 'buy';
