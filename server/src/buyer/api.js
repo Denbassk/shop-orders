@@ -94,4 +94,37 @@ async function buyerSetProduct(dir, p, env) {
   return { id: cur.id, ...patch };
 }
 
-module.exports = { buyerToday, buyerDelete, buyerProducts, buyerSetProduct };
+// Запити дозволу за сьогодні - замість листа закупниці з кнопкою «Дозволити» (LateRequest.gs).
+// Чекають - першими, далі діючі дозволи (LATE_TTL_MIN) і прострочені.
+async function buyerLate(dir, env) {
+  cfgOf(dir);
+  const now = env.at.getTime();
+  const ttl = R.LATE_TTL_MIN * 60000;
+  const [rows, stores] = await Promise.all([env.adm.dayLate(dir, dayOf(env)), env.data.stores()]);
+  const byId = new Map(stores.map((s) => [s.id, s]));
+  const rank = { pending: 0, approved: 1, expired: 2 };
+  const list = rows.map((r) => {
+    const left = r.approved_at ? ttl - (now - new Date(r.approved_at).getTime()) : 0;
+    const status = r.status === 'approved' ? (left > 0 ? 'approved' : 'expired') : 'pending';
+    return { storeId: r.store_id, label: (byId.get(r.store_id) || {}).label || r.store_id, status,
+      time: hm(r.requested_at), leftMin: status === 'approved' ? Math.ceil(left / 60000) : 0, t: r.requested_at || '' };
+  }).sort((a, b) => (rank[a.status] - rank[b.status]) || String(b.t).localeCompare(String(a.t)));
+  return { dir, pending: list.filter((x) => x.status === 'pending').length, list: list.map(({ t, ...x }) => x) };
+}
+
+// Шапка сторінки: дедлайн за розкладом напрямку, прийом усім сьогодні (late_all), час останньої збірки звіту.
+async function buyerInfo(dir, env) {
+  const cfg = cfgOf(dir);
+  const lateAll = (await env.adm.getSetting('late_all')) || {};
+  const deadline = cfg.deadline || '';
+  let reportAt = '';
+  try {
+    const v = env.reportAt ? await env.reportAt(dir) : '';
+    reportAt = typeof v === 'string' ? v : (v && (v.text || v.hm)) || '';
+  } catch (e) { reportAt = ''; }
+  return { dir, title: cfg.title, color: cfg.color || '', unit: cfg.unit || '', deadline,
+    closed: !!deadline && HM.format(env.at) >= deadline, openAll: lateAll[dir] === dayOf(env),
+    lateRequest: !!cfg.lateRequest, reportAt, hasAvailability: dir === 'bakery' };
+}
+
+module.exports = { buyerToday, buyerDelete, buyerProducts, buyerSetProduct, buyerLate, buyerInfo };

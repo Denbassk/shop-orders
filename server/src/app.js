@@ -91,27 +91,50 @@ function createApp(opts = {}) {
     } catch (e) { next(e); }
   });
   app.post('/admin/logout', (req, res) => { res.clearCookie(ADM_COOKIE, admCookie); res.json({ ok: true }); });
-  // Сторінка закупниці: секретне посилання /buyer/<dir>/<ключ> без PIN (src/buyer/link.js, BUYER_LINK_SECRET).
-  // Невідомий напрямок, невірний або чужий ключ -> 404. Дії: POST /buyer/<dir>/<ключ>/api { action, payload } -> { ok, data, ms }.
+  // Сторінки закупниць: секретне посилання /buyer/<код>/<ключ> без PIN (src/buyer/link.js, src/buyer/people.js).
+  // Код - закупниця: bakery - ВК; hlib - хліб Рома, НБХЗ, овочі. Невідомий код, невірний або чужий ключ -> 404.
+  // Дії: POST /buyer/<код>/<ключ>/api { action, payload: { dir, ... } } -> { ok, data, ms }; dir - лише зі свого списку, інакше 403.
+  // Excel: GET /buyer/<код>/<ключ>/xlsx/<dir> - файл листа звіту бере сервер (сервісний акаунт).
   const buyerLink = require('./buyer/link');
+  const people = require('./buyer/people');
+  const DIRS_ALL = require('./directions').DIRECTIONS;
   const linkSecret = () => (opts.buyerLinkSecret !== undefined ? opts.buyerLinkSecret : process.env.BUYER_LINK_SECRET || '');
-  const linkOk = (req) => buyerLink.verifyBuyerKey(req.params.dir, req.params.key, linkSecret());
+  const linkOk = (req) => buyerLink.verifyBuyerKey(req.params.code, req.params.key, linkSecret());
   const buyerApi = (dir) => (opts.buyerApi ? opts.buyerApi(dir) : getAdminRt().buyerApi(dir));
-  app.get('/buyer/:dir/:key', (req, res) => {
+  const buyerXlsx = (dir) => (opts.buyerXlsx ? opts.buyerXlsx(dir) : getAdminRt().buyerXlsx(dir));
+  const noStore = (res) => { res.set('Cache-Control', 'no-store'); res.set('Referrer-Policy', 'no-referrer'); };
+  app.get('/buyer/:code/:key', (req, res) => {
     if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Not found' });
-    res.set('Cache-Control', 'no-store');
-    res.set('Referrer-Policy', 'no-referrer');
+    noStore(res);
     res.sendFile(require('path').join(__dirname, '..', 'public', 'buyer', 'index.html'));
   });
-  app.post('/buyer/:dir/:key/api', express.json({ limit: '1mb' }), async (req, res, next) => {
+  app.post('/buyer/:code/:key/api', express.json({ limit: '1mb' }), async (req, res, next) => {
     try {
       if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Посилання недійсне' });
       if (!req.is('application/json')) return res.status(415).json({ ok: false, error: 'Unsupported Media Type' });
       const { action, payload } = req.body || {};
-      res.json(await buyerApi(req.params.dir)(action, payload));
+      const who = people.buyerOf(req.params.code);
+      if (action === 'me') {
+        return res.json({ ok: true, ms: 0, data: { code: req.params.code, title: who.title,
+          dirs: who.dirs.map((d) => ({ dir: d, title: DIRS_ALL[d].title, color: DIRS_ALL[d].color || '', unit: DIRS_ALL[d].unit || '' })) } });
+      }
+      const dir = people.dirOf(req.params.code, (payload || {}).dir);
+      if (!dir) return res.status(403).json({ ok: false, error: 'Цей напрямок недоступний за посиланням' });
+      res.json(await buyerApi(dir)(action, payload));
     } catch (e) { next(e); }
   });
-  app.use((req, res) => res.status(404).json({ ok: false, error: 'Not found' }));
+  app.get('/buyer/:code/:key/xlsx/:dir', async (req, res) => {
+    if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Not found' });
+    const dir = people.dirOf(req.params.code, req.params.dir);
+    if (!dir || dir !== req.params.dir) return res.status(404).json({ ok: false, error: 'Not found' });
+    try {
+      const f = await buyerXlsx(dir);
+      noStore(res);
+      res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.set('Content-Disposition', 'attachment; filename="report.xlsx"; filename*=UTF-8\'\'' + encodeURIComponent(f.name));
+      res.send(f.buf);
+    } catch (e) { res.status(502).json({ ok: false, error: (e && e.message) || 'Помилка сервера' }); }
+  });  app.use((req, res) => res.status(404).json({ ok: false, error: 'Not found' }));
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {

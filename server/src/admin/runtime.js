@@ -20,6 +20,7 @@ function createAdminRuntime(opts = {}) {
   const sb = supabase();
   const data = createData(sb);
   const adm = createAdminData(sb);
+  adm.dayLate = require('../buyer/data').dayLateOf(sb);   // запити дозволу за день - сторінка закупниці
   // пульт читає налаштування без 10-секундного кешу: після перемикання екран одразу показує новий стан
   const dataFresh = { ...data, settings: () => createData(sb).settings() };
   const roles = ['admin', ...Object.keys(DIRECTIONS).map((d) => 'buyer:' + d)];
@@ -72,8 +73,19 @@ function createAdminRuntime(opts = {}) {
     editOrder: (p) => write.admEditOrder({ ...(p || {}), dir }, env()),
     products: () => buyer.buyerProducts(dir, env()),
     setProduct: (p) => buyer.buyerSetProduct(dir, p, env()),
+    info: () => buyer.buyerInfo(dir, env()),
+    late: () => buyer.buyerLate(dir, env()),
+    approve: (p) => write.admOpenStore({ ...(p || {}), dir }, env()),
+    openAll: () => write.admOpenAll({ dir }, env()),
+    closeAll: () => write.admCloseAll({ dir }, env()),
+    report: () => read.admReport({ dir }, env()),
   }));
-  return { auth, api: apiNoted, buyerApi };
+  // Excel листа звіту для закупниці - через сервісний акаунт (src/buyer/xlsx.js); токен створюється при першому скачуванні
+  const xlsxMod = require('../buyer/xlsx');
+  let tokenFn = null;
+  const token = () => { tokenFn = tokenFn || xlsxMod.googleToken(require('googleapis').google, googleApi.loadCredentials()); return tokenFn(); };
+  const buyerXlsx = (dir) => xlsxMod.createXlsx({ links, token, titleOf: (d) => DIRECTIONS[d].title })(dir);
+  return { auth, api: apiNoted, buyerApi, buyerXlsx };
 }
 
 module.exports = { createAdminRuntime };

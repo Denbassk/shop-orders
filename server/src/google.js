@@ -104,4 +104,4 @@ async function copySheetTo(spreadsheetId, sheetId, destinationSpreadsheetId) {
 
 const a1q = (sheet, range) => `'${String(sheet).replace(/'/g, "''")}'!${range}`;
 
-module.exports = { sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, sheetIdOf, sheetMeta, sheetList, sheetDims, copySheetTo, a1q, TIMEOUT_MS };
+module.exports = { loadCredentials, sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, sheetIdOf, sheetMeta, sheetList, sheetDims, copySheetTo, a1q, TIMEOUT_MS };

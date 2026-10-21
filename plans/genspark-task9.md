@@ -130,3 +130,11 @@
 - Ждёт PR #7: шаг 8 (wo* в пульте), шаг 9 (report_at_<dir> из автосборки). Потом шаг 10: PR genspark/task-9 -> migration/node-supabase.
 - Дальше Genspark: Task 10 (сайт продавца) в ветке genspark/task-10 от migration/node-supabase, память plans/genspark-task10.md.
 - На ветке task-10 страницы закупщицы и пульта локально НЕТ (они в task-9) - это нормально.
+## Шаг 8а (итог)
+- Решение владельца 21.10: две закупщицы, одна ссылка на человека: /buyer/bakery/<ключ> (ВК, ключ прежний), /buyer/hlib/<ключ> (Хліб Рома, НБХЗ, Овочі). src/buyer/people.js (BUYERS, dirOf). Ссылки bread/nbhz/veg недействительны (не раздавались).
+- API: payload.dir только из списка закупщицы, иначе 403; без dir - первое направление. Действие me - имя и направления.
+- Новые действия: info, late (запросы дозволу за день вместо письма; adm.dayLate из src/buyer/data.js), approve/openAll/closeAll/report = функции пульта.
+- Excel: GET /buyer/<код>/<ключ>/xlsx/<dir> через сервисный аккаунт (src/buyer/xlsx.js); google.js экспортирует loadCredentials. Живой Google не проверен.
+- Почта: SMTP-секреты на Fly не задаём; код писем не удалён.
+- PowerShell: не искать 'ℹ' в выводе (кодировка) - шаблон '(?m)\bfail (\d+)\s*$'.
+- Дальше 8б: новая страница в стиле пульта.
