@@ -65,6 +65,10 @@ function createAdminRuntime(opts = {}) {
     return r;
   };
   // сторінка закупниці: напрямок - лише з підпису cookie (app.js), не з запиту
+  // листи Google для сторінки закупниці: бойові таблиці (за замовчуванням) або ціль вигрузки (BUYER_SHEETS=target)
+  const sheetsMode = process.env.BUYER_SHEETS === 'target' ? 'target' : 'live';
+  const buyerSheets = require('../buyer/sheets').createBuyerSheets({ google: googleApi, mode: sheetsMode,
+    sourceId: (d) => (sheetsMode === 'target' ? target.spreadsheetId(d) : DIRECTIONS[d].spreadsheetId) });
   const buyer = require('../buyer/api');
   const buyerApis = {};
   const buyerApi = (dir) => buyerApis[dir] || (buyerApis[dir] = createAdminApi({
@@ -79,12 +83,14 @@ function createAdminRuntime(opts = {}) {
     openAll: () => write.admOpenAll({ dir }, env()),
     closeAll: () => write.admCloseAll({ dir }, env()),
     report: () => read.admReport({ dir }, env()),
+    sheets: (p) => buyerSheets.list(dir, { fresh: !!(p && p.fresh) }),
+    sheet: (p) => buyerSheets.read(dir, (p || {}).key, { fresh: !!(p && p.fresh) }),
   }));
   // Excel листа звіту для закупниці - через сервісний акаунт (src/buyer/xlsx.js); токен створюється при першому скачуванні
   const xlsxMod = require('../buyer/xlsx');
   let tokenFn = null;
   const token = () => { tokenFn = tokenFn || xlsxMod.googleToken(require('googleapis').google, googleApi.loadCredentials()); return tokenFn(); };
-  const buyerXlsx = (dir) => xlsxMod.createXlsx({ links, token, titleOf: (d) => DIRECTIONS[d].title })(dir);
+  const buyerXlsx = (dir, key) => xlsxMod.createXlsx({ sheets: buyerSheets, token })(dir, key);
   return { auth, api: apiNoted, buyerApi, buyerXlsx };
 }
 

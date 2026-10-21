@@ -101,7 +101,7 @@ function createApp(opts = {}) {
   const linkSecret = () => (opts.buyerLinkSecret !== undefined ? opts.buyerLinkSecret : process.env.BUYER_LINK_SECRET || '');
   const linkOk = (req) => buyerLink.verifyBuyerKey(req.params.code, req.params.key, linkSecret());
   const buyerApi = (dir) => (opts.buyerApi ? opts.buyerApi(dir) : getAdminRt().buyerApi(dir));
-  const buyerXlsx = (dir) => (opts.buyerXlsx ? opts.buyerXlsx(dir) : getAdminRt().buyerXlsx(dir));
+  const buyerXlsx = (dir, key) => (opts.buyerXlsx ? opts.buyerXlsx(dir, key) : getAdminRt().buyerXlsx(dir, key));
   const noStore = (res) => { res.set('Cache-Control', 'no-store'); res.set('Referrer-Policy', 'no-referrer'); };
   app.get('/buyer/:code/:key', (req, res) => {
     if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Not found' });
@@ -128,7 +128,7 @@ function createApp(opts = {}) {
     const dir = people.dirOf(req.params.code, req.params.dir);
     if (!dir || dir !== req.params.dir) return res.status(404).json({ ok: false, error: 'Not found' });
     try {
-      const f = await buyerXlsx(dir);
+      const f = await buyerXlsx(dir, typeof req.query.key === 'string' ? req.query.key.slice(0, 40) : undefined);
       noStore(res);
       res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.set('Content-Disposition', 'attachment; filename="report.xlsx"; filename*=UTF-8\'\'' + encodeURIComponent(f.name));
