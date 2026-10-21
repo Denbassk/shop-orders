@@ -91,7 +91,7 @@ function createAdminRuntime(opts = {}) {
   const xlsxMod = require('../buyer/xlsx');
   let tokenFn = null;
   const token = () => { tokenFn = tokenFn || xlsxMod.googleToken(require('googleapis').google, googleApi.loadCredentials()); return tokenFn(); };
-  const buyerXlsx = (dir, key) => xlsxMod.createXlsx({ sheets: buyerSheets, token })(dir, key);
+  const buyerXlsx = (dir, key) => xlsxMod.createXlsx({ fetchFn: process.env.BUYER_XLSX === 'google' ? undefined : require('../buyer/xlsxLocal').fetchFor(buyerSheets, dir, key),  sheets: buyerSheets, token })(dir, key);
   return { auth, api: apiNoted, buyerApi, buyerXlsx };
 }
 
