@@ -1,9 +1,10 @@
 'use strict';
-// Excel листа звіту для закупниці БЕЗ «3,».
-// Google віддає xlsx з форматом 0.### (ціле 3 -> «3,»). app/ і бойові таблиці в Genspark не міняємо,
-// тому файл збирається тут з уже прочитаних значень листа (sheets.read), без залежностей.
-// Підключено через fetchFn у createXlsx: ім'я файлу, перевірки і відповідь лишаються як були.
-// Не вдалось зібрати - качаємо файл у Google, як раніше. BUYER_XLSX=google - завжди Google.
+// Excel листа звіту для закупниці БЕЗ «3,», з УСІМ оформленням Google.
+// Качаємо xlsx у Google (кольори, рамки, ширини, об'єднання - як у таблиці) і міняємо лише
+// формат кількості «0.###» (ціле 3 -> «3,») на General у xl/styles.xml. app/ не чіпаємо.
+// Відповідь не xlsx (сторінка входу, помилка) - повертаємо як є, xlsx.js покаже помилку.
+// buildXlsx - запасний збирач з голих значень, зараз не використовується.
+// BUYER_XLSX=google - файл Google без правки.
 const zlib = require('zlib');
 
 const CT = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -162,19 +163,66 @@ function asResponse(buf) {
     arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.length), buffer: async () => buf };
 }
 
-// fetchFn для createXlsx: замість завантаження з Google - збираємо файл з поточних значень листа
+const TRAIL = /^[#0,]*\.#+$/;   // 0.###, #,##0.### - роздільник видно і в цілих
+function fixStyles(xml) {
+  let n = 0;
+  const out = String(xml).replace(/formatCode="([^"]*)"/g, (m, code) => (TRAIL.test(code) ? (n++, 'formatCode="General"') : m));
+  return { xml: out, n };
+}
+
+function unzip(buf) {
+  let e = buf.length - 22;
+  while (e >= 0 && buf.readUInt32LE(e) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('не zip');
+  const cnt = buf.readUInt16LE(e + 10); let p = buf.readUInt32LE(e + 16);
+  const files = [];
+  for (let i = 0; i < cnt; i++) {
+    if (buf.readUInt32LE(p) !== 0x02014b50) throw new Error('зламаний zip');
+    const method = buf.readUInt16LE(p + 10), cs = buf.readUInt32LE(p + 20);
+    const nl = buf.readUInt16LE(p + 28), xl = buf.readUInt16LE(p + 30), cl = buf.readUInt16LE(p + 32), lo = buf.readUInt32LE(p + 42);
+    const name = buf.subarray(p + 46, p + 46 + nl).toString('utf8');
+    const ds = lo + 30 + buf.readUInt16LE(lo + 26) + buf.readUInt16LE(lo + 28);
+    const raw = buf.subarray(ds, ds + cs);
+    const data = method === 0 ? Buffer.from(raw) : (method === 8 ? zlib.inflateRawSync(raw) : null);
+    if (!data) throw new Error('метод стиснення ' + method);
+    files.push({ name, data });
+    p += 46 + nl + xl + cl;
+  }
+  return files;
+}
+
+function fixXlsx(buf) {
+  const files = unzip(buf);
+  const st = files.find((x) => x.name === 'xl/styles.xml');
+  if (!st) return buf;
+  const r = fixStyles(st.data.toString('utf8'));
+  if (!r.n) return buf;
+  st.data = Buffer.from(r.xml, 'utf8');
+  return zip(files);
+}
+
+function reply(res, buf) {
+  const h = {};
+  if (res.headers && typeof res.headers.forEach === 'function') res.headers.forEach((v, k) => { if (!/^content-(length|encoding)$/i.test(k)) h[String(k).toLowerCase()] = v; });
+  else h['content-type'] = (res.headers && res.headers.get && res.headers.get('content-type')) || CT;
+  if (typeof Response === 'function') { const r = new Response(buf, { status: res.status || 200, headers: h }); r.buffer = async () => buf; return r; }
+  return { ok: true, status: res.status || 200, headers: { get: (k) => (h[String(k).toLowerCase()] != null ? h[String(k).toLowerCase()] : null) },
+    arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.length), buffer: async () => buf };
+}
+
+// fetchFn для createXlsx: файл Google + General замість 0.###. sheets/dir/key лишені для сумісності виклику.
 function fetchFor(sheets, dir, key, realFetch) {
-  const fallback = realFetch || ((u, o) => fetch(u, o));
+  const get = realFetch || ((u, o) => fetch(u, o));
   return async (url, opts) => {
-    try {
-      const r = await sheets.read(dir, key, { fresh: true });
-      const title = (r && !Array.isArray(r) && (r.title || r.name)) || key || 'Звіт';
-      return asResponse(buildXlsx(pickRows(r), title));
-    } catch (e) {
-      console.warn('[xlsxLocal] fallback to Google:', e && e.message);
-      return fallback(url, opts);
+    const res = await get(url, opts);
+    if (!res || !res.ok || typeof res.arrayBuffer !== 'function') return res;
+    const buf = Buffer.from(await res.arrayBuffer());
+    let out = buf;
+    if (buf.length > 4 && buf.readUInt32LE(0) === 0x04034b50) {
+      try { out = fixXlsx(buf); } catch (e) { console.warn('[xlsxLocal] не вдалось прибрати «3,», файл як є:', e && e.message); out = buf; }
     }
+    return reply(res, out);
   };
 }
 
-module.exports = { CT, crc32, colName, toCell, sheetName, pickRows, buildXlsx, zip, fetchFor };
+module.exports = { CT, crc32, colName, toCell, sheetName, pickRows, buildXlsx, zip, unzip, fixStyles, fixXlsx, fetchFor };
