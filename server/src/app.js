@@ -122,6 +122,7 @@ function createApp(opts = {}) {
 }
 
 if (require.main === module) {
+  try { process.loadEnvFile(require('path').join(__dirname, '..', '.env')); } catch (e) { /* .env немає (Fly) - секрети з оточення */ }
   const port = +process.env.PORT || 3000;
   createApp().listen(port, '0.0.0.0', () => console.log(`shop-orders слухає :${port}`));
 }
