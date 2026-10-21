@@ -2,6 +2,7 @@
 // Лише читання (values.get, FORMATTED_VALUE - як бачить людина). Джерело - BUYER_SHEETS: live (бойові таблиці,
 // за замовчуванням) або target (та сама ціль, що вигрузка; до Task 11 - тестова).
 // group: report - звіти (немає листа - показуємо «немає»), extra - довідники і службові (немає - не показуємо).
+const SUM = require('./summary');
 const CATALOG = {
   bread: [
     { key: 'orders', sheet: 'Заказы', about: 'Для постачальника: по магазинах, ЄДРПОУ і номер ТТ', main: true },
@@ -46,9 +47,15 @@ function colName(n) {
   return s;
 }
 
+// «3,» -> «3»: формат чисел у звітах ВК показує кому після цілого
+function clean(v) {
+  const x = v == null ? '' : String(v);
+  return /^-?\d[\d\s\u00a0]*,$/.test(x.trim()) ? x.trim().slice(0, -1) : x;
+}
+
 // прибрати порожній хвіст рядків і колонок, вирівняти ширину
 function trim(values) {
-  const rows = (values || []).map((r) => (r || []).map((v) => (v == null ? '' : String(v))));
+  const rows = (values || []).map((r) => (r || []).map(clean));
   while (rows.length && rows[rows.length - 1].every((v) => v.trim() === '')) rows.pop();
   let w = 0;
   rows.forEach((r) => { for (let i = r.length - 1; i >= 0; i--) if (r[i].trim() !== '') { w = Math.max(w, i + 1); break; } });
@@ -119,7 +126,23 @@ function createBuyerSheets({ google, sourceId, mode = 'live', ttlMs = 60000, now
     return { url: BASE + sourceId(dir) + '/export?format=xlsx&gid=' + e.gid, title: e.title };
   }
 
-  return { list, read, xlsxUrl };
+  // Зведення для вкладки «Сьогодні» (src/buyer/summary.js); лист, якого немає, - null
+  async function summary(dir, { fresh = false } = {}) {
+    const l = await list(dir, { fresh });
+    const get = async (key) => { if (!key) return null; try { return (await read(dir, key, { fresh })).rows; } catch (e) { return null; } };
+    const firstOf = (p) => l.sheets.find((x) => x.key.startsWith(p) && !x.missing);
+    let out;
+    try {
+      if (dir === 'bread') out = SUM.bread({ orders: await get('orders'), summary: await get('summary') });
+      else if (dir === 'nbhz') { const e = firstOf('export:'); out = SUM.nbhz({ exportRows: await get(e && e.key), routes: await get('routes'), title: e ? e.title : '' }); }
+      else if (dir === 'bakery') out = SUM.bakery({ orders: await get('orders'), summary: await get('summary'), routes: await get('routes') });
+      else if (dir === 'veg') out = SUM.veg({ orders: await get('orders'), summary: await get('summary') });
+      else out = { stats: [], top: [], groups: null, missing: null };
+    } catch (e) { out = { stats: [], top: [], groups: null, missing: null, note: e.message }; }
+    return { dir, mode, at: new Date(now()).toISOString(), url: l.url, ...out };
+  }
+
+  return { list, read, xlsxUrl, summary };
 }
 
-module.exports = { createBuyerSheets, CATALOG, colName, trim };
+module.exports = { createBuyerSheets, CATALOG, colName, trim, clean };

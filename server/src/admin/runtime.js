@@ -85,6 +85,7 @@ function createAdminRuntime(opts = {}) {
     report: () => read.admReport({ dir }, env()),
     sheets: (p) => buyerSheets.list(dir, { fresh: !!(p && p.fresh) }),
     sheet: (p) => buyerSheets.read(dir, (p || {}).key, { fresh: !!(p && p.fresh) }),
+    summary: (p) => buyerSheets.summary(dir, { fresh: !!(p && p.fresh) }),
   }));
   // Excel листа звіту для закупниці - через сервісний акаунт (src/buyer/xlsx.js); токен створюється при першому скачуванні
   const xlsxMod = require('../buyer/xlsx');

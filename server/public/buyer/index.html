@@ -90,7 +90,13 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .gs tr.tot td{background:#FFF7E6;font-weight:700}
 .gs.fc th:first-child,.gs.fc tr:not(.sec) td:first-child{position:sticky;left:0;z-index:1;box-shadow:1px 0 0 #E4E6EA}
 .gs.fc th:first-child{z-index:3}
-.hint a{color:#1a73e8}@media (min-width:900px){
+.hint a{color:#1a73e8}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.kpi{background:#fff;border-radius:18px;padding:14px 16px;box-shadow:0 1px 3px rgba(22,24,29,.09)}
+.kpi b{display:block;font-size:24px;font-weight:800;line-height:1.15}
+.kpi span{display:block;font-size:12.5px;color:#7A828E;margin-top:4px}
+#tdsum{margin-bottom:26px}
+#tdsum .cols{display:flex;flex-direction:column;gap:18px}
+@media (min-width:900px){#tdsum .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}}@media (min-width:900px){
   .hdrin,.dirs,.wrap,.tabs{max-width:980px}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
   .cols .card + .card{margin-top:0}
@@ -196,7 +202,7 @@ async function go(tab) {
 }
 
 // ---- Сьогодні ----
-async function showToday() {
+async function showTodayBase() {
   const d = S.today = await call('today');
   if (!d.stores.length) return view(section('Замовили сьогодні', '<div class="info">Сьогодні ще ніхто не замовив.</div>'));
   view(section('Замовили сьогодні · ' + d.stores.length, '<div class="cols">' + d.stores.map((s, i) =>
@@ -298,6 +304,40 @@ function askCloseAll() {
 }
 
 // ---- Звіти ----
+// ---- Сьогодні: зведення з листів Google (src/buyer/summary.js) ----
+const fmtN = (n) => (n == null ? '' : Number(n).toLocaleString('uk-UA', { maximumFractionDigits: 2 }));
+async function showToday() {
+  await showTodayBase();
+  const dir = S.dir;
+  const host = document.querySelector('.wrap');
+  if (!host || S.tab !== 'today') return;
+  let box = document.getElementById('tdsum');
+  if (!box) { host.insertAdjacentHTML('afterbegin', '<div id="tdsum"><div class="spin">Читаю таблицю Google…</div></div>'); box = document.getElementById('tdsum'); }
+  try {
+    const d = await call('summary', {}, 60000);
+    if (dir !== S.dir || S.tab !== 'today') return;
+    box.innerHTML = tdHtml(d);
+  } catch (e) { box.innerHTML = '<div class="note">' + esc('Таблиця Google: ' + e.message) + '</div>'; }
+}
+function tdRow(name, val) {
+  return '<div class="item"><span class="grow"><span class="t">' + name + '</span></span><span class="pill off">' + val + '</span></div>';
+}
+function tdHtml(d) {
+  const at = d.at ? new Date(d.at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
+  let h = '<div class="sec">З таблиці Google' + (d.note ? ' · ' + esc(d.note) : '') + (at ? ' · ' + esc(at) : '') + '</div>';
+  if (d.stats && d.stats.length) h += '<div class="kpis">' + d.stats.map((s) => '<div class="kpi"><b>' + esc(s.v) + '</b><span>' + esc(s.k) + '</span></div>').join('') + '</div>';
+  else if (d.note) return h + '<div class="note">' + esc(d.note) + '</div>';
+  const u = d.unit ? ' ' + d.unit : '';
+  const cols = [];
+  if (d.missing) cols.push(section(d.missingTitle + ' (' + d.missing.length + ')', d.missing.length
+    ? '<div class="card">' + d.missing.map((m) => '<div class="item"><span class="grow"><span class="t">' + esc(m) + '</span></span><span class="pill closed">немає</span></div>').join('') + '</div>'
+    : '<div class="ok">Замовили всі точки</div>'));
+  if (d.top && d.top.length) cols.push(section('Топ позицій', '<div class="card">' +
+    d.top.map((x) => tdRow(esc(x.name), esc(fmtN(x.qty) + u + (x.sum != null ? ' · ' + fmtN(x.sum) + ' грн' : '')))).join('') + '</div>'));
+  if (d.groups && d.groups.list && d.groups.list.length) cols.push(section(d.groups.title, '<div class="card">' +
+    d.groups.list.map((x) => tdRow(esc(x.name), esc(fmtN(x.qty) + u))).join('') + '</div>'));
+  return h + '<div class="cols">' + cols.join('') + '</div>';
+}
 // ---- Звіти: листи Google (src/buyer/sheets.js), лише перегляд ----
 const RP = { dir: '', list: null, key: '', data: null, q: '', t: 0 };
 const NUM_RE = /^-?[\d\s\u00a0]+([.,]\d+)?( ?(грн|шт|кг|%))?$/;
