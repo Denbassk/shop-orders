@@ -124,3 +124,9 @@
 ## Шаг 7г (итог)
 - Ссылки закупщиц давали 404 локально: npm start = node src/app.js, .env при запуске не читался, BUYER_LINK_SECRET пуст -> все ключи отклоняются.
 - Исправление: app.js (блок require.main) - process.loadEnvFile при запуске; без файла (Fly) - молча. Проверено фактом через npm start: 4 ссылки -> 200, чужой ключ -> 404.
+## Пауза Task 9 (21.10)
+- Последний коммит: 2d28f40. Тесты 324 / 322 / 2 («золото» Task 7). Ссылки закупщиц проверены фактом (npm start): 4 x 200, чужой ключ 404.
+- Вкладка «Точки» (правка stores): вариант Б - пока Table Editor Supabase; в пульте позже (cardSave). Владелец может переиграть.
+- Ждёт PR #7: шаг 8 (wo* в пульте), шаг 9 (report_at_<dir> из автосборки). Потом шаг 10: PR genspark/task-9 -> migration/node-supabase.
+- Дальше Genspark: Task 10 (сайт продавца) в ветке genspark/task-10 от migration/node-supabase, память plans/genspark-task10.md.
+- На ветке task-10 страницы закупщицы и пульта локально НЕТ (они в task-9) - это нормально.
