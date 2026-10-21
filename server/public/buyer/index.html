@@ -1,157 +1,374 @@
-<!doctype html>
-<html lang="uk"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Закупниця - Фемелі Маркет</title>
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Закупівля · Фемелі Маркет</title>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-body{font-family:system-ui,Arial,sans-serif;margin:0;background:#F1F2F4;color:#16181D}
-.wrap{max-width:560px;margin:0 auto;padding:12px 12px 90px}
-h1{font-size:20px;margin:8px 0}
-.card{background:#fff;border-radius:14px;padding:12px;margin:8px 0;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:6px}
-.sub{color:#5f6368;font-size:13px}
-button{border:0;border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer;background:#E8EAED}
-button.red{background:#D32F2F;color:#fff}
-button.main,.tabs button.on{background:#16181D;color:#fff}
-input{font-size:15px;padding:6px;border:1px solid #ccc;border-radius:8px}
-input.n{width:80px}
-.tabs{display:flex;gap:6px;margin:8px 0}
-.stop{color:#D32F2F;font-weight:600}
-.hide{display:none}
-#msg{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;max-width:520px;width:calc(100% - 32px);box-sizing:border-box;background:#16181D;color:#fff;padding:10px 14px;border-radius:12px;display:none}
-</style><style>#login,[onclick*="logout"]{display:none!important}</style>
-</head><body>
-<div class="wrap">
-  <div id="login" class="card hide">
-    <h1>Вхід для закупниці</h1>
-    <input id="pin" type="password" inputmode="numeric" placeholder="PIN">
-    <button class="main" onclick="doLogin()">Увійти</button>
-    <div id="lerr" class="sub"></div>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:#F1F2F4;color:#16181D;font-size:16px;line-height:1.45;font-family:'Golos Text',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2{margin:0;letter-spacing:-.015em}
+button{font-family:inherit;font-size:inherit;color:inherit}
+.hdr{position:sticky;top:0;z-index:20;background:#16181D;color:#fff;padding:14px 16px 16px}
+.hdrin{display:flex;align-items:center;gap:12px;max-width:560px;margin:0 auto}
+.hdr h1{font-size:23px;font-weight:800;line-height:1.2}
+.hdr .sub{font-size:13px;color:#A6ACB6;margin-top:5px}
+.icobtn{flex:none;width:46px;height:46px;border:0;border-radius:15px;background:#2C2F36;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.icobtn:active{background:#3A3E47}
+.dirs{display:flex;gap:9px;overflow-x:auto;max-width:560px;margin:12px auto 0}
+.dirs:empty{display:none}
+.chip{flex:none;border:1px solid #3A3E47;border-radius:24px;padding:10px 15px;font-size:14.5px;font-weight:500;background:#2C2F36;color:#fff;cursor:pointer;white-space:nowrap}
+.chip.on{background:#fff;color:#16181D;border-color:#fff;font-weight:600}
+.chip b{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:10px;background:#E11B22;color:#fff;font-size:12px}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 120px}
+.grid{display:flex;flex-direction:column;gap:26px}
+.sec{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7A828E;margin:0 0 12px 4px}
+.card{background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(22,24,29,.09);overflow:hidden}
+.card + .card{margin-top:12px}
+.item{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:15px 16px;border:0;background:#fff;text-align:left;cursor:pointer;position:relative}
+.item + .item::before{content:'';position:absolute;left:16px;right:0;top:0;height:1px;background:#EEF0F3}
+button.item:active{background:#F7F8FA}
+div.item{cursor:default}
+.t{display:block;font-size:16px;font-weight:600;line-height:1.3}
+.s{display:block;font-size:13.5px;color:#7A828E;margin-top:6px;line-height:1.4}
+.grow{flex-grow:1;min-width:0}
+.pill{flex:none;font-size:12px;font-weight:600;border-radius:10px;padding:7px 11px;white-space:nowrap}
+.pill.open{color:#166B3A;background:#E6F4EC}
+.pill.closed{color:#8E1418;background:#FDECEC}
+.pill.off{color:#4A5058;background:#E7E9ED}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:56px;border:0;border-radius:16px;background:#E11B22;color:#fff;font-size:17px;font-weight:600;cursor:pointer}
+.btn:active{background:#C4161C}
+.btn.dark{background:#16181D}
+.btn.ghost{background:#fff;color:#16181D;box-shadow:0 1px 3px rgba(22,24,29,.09);height:52px}
+.btn[disabled]{background:#C9CCD2;cursor:default}
+.btn + .btn{margin-top:12px}
+.btn.sm{flex:none;width:auto;height:42px;padding:0 14px;font-size:14px;border-radius:12px;margin-top:0}
+.acts{display:flex;gap:10px;padding:0 16px 16px}
+.acts .btn{margin-top:0;height:46px;font-size:15px}
+input[type=search],input[type=text]{width:100%;padding:16px;border:1px solid #DCE0E5;border-radius:16px;background:#fff;font-family:inherit;font-size:16px;color:#16181D;outline:none}
+input:focus{border-color:#16181D}
+.qty{flex:none;width:96px!important;padding:12px!important;text-align:right}
+.row{display:flex;align-items:center;gap:12px;padding:10px 16px}
+.row + .row{border-top:1px solid #EEF0F3}
+.lbl{font-size:13px;color:#7A828E;margin:14px 4px 8px}
+.hint{font-size:13.5px;color:#7A828E;margin:12px 4px 18px}
+.note,.bad,.ok{border-radius:18px;padding:16px;font-size:14.5px;line-height:1.5}
+.note{background:#FFF7E6;border:1px solid #F0D49A;color:#6B4A00}
+.bad{background:#FDF2F2;border:1px solid #F3C3C5;color:#8E1418}
+.ok{background:#E6F4EC;border:1px solid #B5DCC4;color:#14602F}
+.info{background:#fff;border-radius:20px;padding:18px 16px;font-size:15px;line-height:1.55;box-shadow:0 1px 3px rgba(22,24,29,.09)}
+.spin{padding:56px 16px;text-align:center;color:#7A828E;font-size:15px}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid #E4E6EA;padding:9px 6px calc(12px + env(safe-area-inset-bottom));display:flex;max-width:560px;margin:0 auto}
+.tab{flex-grow:1;flex-basis:0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0;color:#7A828E;font-size:11.5px;font-weight:500;cursor:pointer;position:relative}
+.tab.on{color:#E11B22;font-weight:600}
+.badge{position:absolute;top:0;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:#E11B22;color:#fff;font-size:11px;font-weight:700;padding:0 5px;display:flex;align-items:center;justify-content:center}
+.badge[hidden]{display:none}
+.mask{position:fixed;inset:0;z-index:50;background:rgba(12,14,18,.62);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:#fff;border-radius:28px 28px 0 0;padding:12px 20px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(12,14,18,.3)}
+.grip{width:46px;height:5px;border-radius:3px;background:#DCE0E5;margin:0 auto 18px}
+.sheet h2{font-size:22px;font-weight:800;margin-bottom:8px}
+.sheet .sub{font-size:14.5px;color:#5A626D;margin-bottom:18px}
+label.pick{display:flex;align-items:center;gap:14px;padding:15px 16px;margin:14px 0 18px;cursor:pointer}
+label.pick input{width:24px;height:24px;accent-color:#E11B22;flex:none}
+.toast{position:fixed;left:16px;right:16px;bottom:104px;z-index:60;max-width:528px;margin:0 auto;background:#16181D;color:#fff;border-radius:16px;padding:14px 16px;font-size:15px;box-shadow:0 8px 24px rgba(12,14,18,.3)}
+@media (min-width:900px){
+  .hdrin,.dirs,.wrap,.tabs{max-width:980px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  .cols .card + .card{margin-top:0}
+}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="hdrin">
+    <div class="grow"><h1 id="title">Закупівля</h1><div class="sub" id="subtitle"></div></div>
+    <button class="icobtn" onclick="go(S.tab)" aria-label="Оновити">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
   </div>
-  <div id="app" class="hide">
-    <div class="row"><h1 id="title"></h1><button onclick="logout()">Вийти</button></div>
-    <div class="tabs">
-      <button id="t-today" onclick="tab('today')">Замовили сьогодні</button>
-      <button id="t-products" onclick="tab('products')">Асортимент</button>
-    </div>
-    <div id="view"></div>
-  </div>
+  <div class="dirs" id="dirs"></div>
 </div>
-<div id="msg"></div>
+<div class="wrap"><div class="grid" id="view"><div class="spin">Завантаження…</div></div></div>
+<div class="tabs">
+  <button class="tab on" id="t-today" onclick="go('today')"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>Сьогодні</button>
+  <button class="tab" id="t-late" onclick="go('late')"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Дозволи<span class="badge" id="bdg" hidden></span></button>
+  <button class="tab" id="t-accept" onclick="go('accept')"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Прийом</button>
+  <button class="tab" id="t-reports" onclick="go('reports')"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13h6M9 17h6"/></svg>Звіти</button>
+  <button class="tab" id="t-products" onclick="go('products')"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>Асортимент</button>
+</div>
+<div id="modal"></div>
 <script>
-const DIR = location.pathname.split('/')[2] || '';
-const KEY = location.pathname.split('/')[3] || ''; const API = '/buyer/' + DIR + '/' + KEY + '/api';
-const S = { tab: 'today', today: null, products: null };
+const CODE = location.pathname.split('/')[2] || '';
+const KEY = location.pathname.split('/')[3] || '';
+const BASE = '/buyer/' + CODE + '/' + KEY;
+const API = BASE + '/api';
+const SHEETS = { bread: 'Заказы', bakery: 'Заказы ВК', veg: 'Замовлення Овочі', nbhz: 'Вивантаження (сьогоднішня дата)' };
+const S = { me: null, dir: '', tab: 'today', info: null, today: null, late: null, products: null, q: '', pend: {}, lastPend: -1 };
 const $ = (id) => document.getElementById(id);
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function toast(t) { const m = $('msg'); m.textContent = t; m.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => { m.style.display = 'none'; }, 7000); }
-function showLogin() { $('app').classList.add('hide'); $('login').classList.remove('hide'); $('pin').focus(); }
-function showApp() { $('login').classList.add('hide'); $('app').classList.remove('hide'); }
-function spin() { $('view').innerHTML = '<div class="sub">Завантаження…</div>'; }
-function fail(e) { if (!$('login').classList.contains('hide')) return; $('view').innerHTML = '<div class="card">❌ ' + esc(e.message) + ' <button onclick="tab(S.tab)">Ще раз</button></div>'; }
+const money = (n) => (Number(n) || 0).toFixed(2);
 
-async function call(action, payload) {
-  const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
-    body: JSON.stringify({ action, payload: payload || {} }) });
-  let j; try { j = await r.json(); } catch (e) { j = { ok: false, error: 'Помилка сервера (' + r.status + ')' }; }
-  if (j.error === 'AUTH') { showLogin(); throw new Error('Потрібно увійти знову'); }
-  if (!j.ok) throw new Error(j.error || 'Помилка');
-  return j.data;
-}
-async function doLogin() {
-  const pin = $('pin').value.trim(); $('lerr').textContent = '';
+async function call(action, payload, ms) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ms || 25000);
   try {
-    const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin',
-      body: JSON.stringify({ action: 'login', payload: { pin } }) });
-    const j = await r.json();
-    if (!j.ok) { $('lerr').textContent = j.error || 'Помилка'; return; }
-    $('pin').value = ''; showApp(); tab(S.tab);
-  } catch (e) { $('lerr').textContent = e.message; }
-}
-async function logout() {
-  try { await fetch('/buyer/' + DIR + '/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
-  showLogin();
-}
-function tab(t) {
-  S.tab = t;
-  $('t-today').className = t === 'today' ? 'on' : '';
-  $('t-products').className = t === 'products' ? 'on' : '';
-  (t === 'today' ? loadToday : loadProducts)();
+    const r = await fetch(API, { method: 'POST', cache: 'no-store', signal: ctl.signal, headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action, payload: Object.assign({ dir: S.dir }, payload || {}) }) });
+    let j = null;
+    try { j = await r.json(); } catch (e) { j = null; }
+    if (!j) throw new Error('Сервер не відповідає (' + r.status + ')');
+    if (!j.ok) throw new Error(j.error || 'Помилка');
+    return j.data;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Сервер не відповідає. Спробуйте ще раз.');
+    throw e;
+  } finally { clearTimeout(timer); }
 }
 
-// --- замовили сьогодні (DeleteSheet.gs) ---
-async function loadToday() {
-  spin();
-  try { S.today = await call('today'); $('title').textContent = S.today.title; showApp(); if (S.tab === 'today') renderToday(); }
-  catch (e) { fail(e); }
+function toast(text) {
+  const old = document.querySelector('.toast'); if (old) old.remove();
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = text;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 4000);
 }
-function renderToday() {
-  const d = S.today;
-  if (!d.stores.length) { $('view').innerHTML = '<div class="card sub">Сьогодні ще ніхто не замовляв.</div>'; return; }
-  $('view').innerHTML = '<div class="sub">Замовили сьогодні: ' + d.stores.length + '</div>' + d.stores.map((s, i) =>
-    '<div class="card" id="st' + i + '"><div class="row"><div><b>' + esc(s.label) + '</b><div class="sub">' + esc(s.sub) + '</div></div>' +
-    '<button class="red" onclick="askDelete(' + i + ')">Видалити</button></div>' +
-    '<details><summary class="sub">Змінити кількість</summary>' + s.lines.map((l) =>
-      '<div class="row"><span>' + esc(l.name) + '</span><input class="n" type="number" min="0" step="' + (DIR === 'veg' ? '0.001' : '1') +
-      '" value="' + esc(l.qty) + '" data-row="' + esc(l.row) + '" data-name="' + esc(l.name) + '" data-old="' + esc(l.qty) + '"></div>').join('') +
-    '<div class="row"><button class="main" onclick="saveEdit(' + i + ')">Зберегти кількість</button></div></details></div>').join('');
+function view(h) { $('view').innerHTML = h; }
+function section(title, inner) { return '<div><div class="sec">' + esc(title) + '</div>' + inner + '</div>'; }
+function fail(e) { view('<div class="bad">' + esc((e && e.message) || e) + '</div>'); }
+function closeSheet() { $('modal').innerHTML = ''; }
+function openSheet(build) {
+  $('modal').innerHTML = '<div class="mask" onclick="if (event.target === this) closeSheet()"><div class="sheet"><div class="grip"></div><div id="sh"></div></div></div>';
+  build($('sh'));
 }
-async function askDelete(i) {
+function askSheet(title, sub, okText, fn, dark) {
+  openSheet((el) => {
+    el.innerHTML = '<h2 id="shh"></h2><div class="sub" id="shsub"></div><button class="btn' + (dark ? ' dark' : '') + '" id="shok"></button><button class="btn ghost" onclick="closeSheet()">Скасувати</button>';
+    $('shh').textContent = title; $('shsub').textContent = sub; $('shok').textContent = okText;
+    $('shok').onclick = () => { closeSheet(); fn(); };
+  });
+}
+const cur = () => (S.me ? S.me.dirs.find((d) => d.dir === S.dir) : null);
+
+function head() {
+  const i = S.info, d = cur();
+  $('title').textContent = d ? d.title : 'Закупівля';
+  let sub = '';
+  if (i) {
+    sub = i.openAll ? 'Прийом відкрито всім до кінця дня' : (i.deadline ? (i.closed ? 'Прийом закрито о ' + i.deadline : 'Прийом до ' + i.deadline) : 'Без дедлайну');
+    if (i.reportAt) sub += ' · звіт о ' + i.reportAt;
+  }
+  $('subtitle').textContent = sub;
+}
+function chips() {
+  if (!S.me || S.me.dirs.length < 2) { $('dirs').innerHTML = ''; return; }
+  $('dirs').innerHTML = S.me.dirs.map((d, k) => '<button class="chip' + (d.dir === S.dir ? ' on' : '') + '" onclick="setDir(' + k + ')">' + esc(d.title) + (S.pend[d.dir] ? '<b>' + esc(S.pend[d.dir]) + '</b>' : '') + '</button>').join('');
+}
+function setDir(k) {
+  S.dir = S.me.dirs[k].dir;
+  try { localStorage.setItem('buyer_dir_' + CODE, S.dir); } catch (e) { /* приватний режим */ }
+  S.today = S.late = S.products = S.info = null; S.q = '';
+  chips(); go(S.tab);
+}
+
+const TABS = { today: showToday, late: showLate, accept: showAccept, reports: showReports, products: showProducts };
+async function go(tab) {
+  S.tab = tab;
+  Object.keys(TABS).forEach((t) => $('t-' + t).classList.toggle('on', t === tab));
+  view('<div class="spin">Завантаження…</div>');
+  try { S.info = await call('info'); head(); await TABS[tab](); } catch (e) { fail(e); }
+}
+
+// ---- Сьогодні ----
+async function showToday() {
+  const d = S.today = await call('today');
+  if (!d.stores.length) return view(section('Замовили сьогодні', '<div class="info">Сьогодні ще ніхто не замовив.</div>'));
+  view(section('Замовили сьогодні · ' + d.stores.length, '<div class="cols">' + d.stores.map((s, i) =>
+    '<div class="card"><div class="item"><span class="grow"><span class="t">' + esc(s.label) + '</span><span class="s">' + esc(s.sub) + '</span></span></div>' +
+    '<div class="acts"><button class="btn ghost" onclick="askEdit(' + i + ')">Змінити кількість</button><button class="btn" onclick="askDel(' + i + ')">Видалити</button></div></div>').join('') + '</div>'));
+}
+function askDel(i) {
   const s = S.today.stores[i];
-  if (!confirm('Видалити замовлення за сьогодні: ' + s.label + '?\nТТ зможе замовити знову.')) return;
-  toast('⏳ Видаляю замовлення: ' + s.label + ' …');
-  try { const r = await call('remove', { storeId: s.storeId }); toast(r.message); loadToday(); }
-  catch (e) { toast('❌ Не вдалось видалити: ' + e.message); }
+  askSheet('Видалити замовлення?', s.label + ' · ' + s.sub, 'Видалити', async () => {
+    toast('⏳ Видаляю замовлення: ' + s.label + '…');
+    try { const r = await call('remove', { storeId: s.storeId }); toast(r.message); } catch (e) { toast('❌ ' + e.message); }
+    showToday().catch(fail);
+  });
+}
+function askEdit(i) {
+  const s = S.today.stores[i];
+  const mode = S.dir === 'veg' ? 'decimal' : 'numeric';
+  openSheet((el) => {
+    el.innerHTML = '<h2>Змінити кількість</h2><div class="sub" id="shsub"></div><div class="card">' + s.lines.map((l, k) =>
+      '<label class="row"><span class="grow t">' + esc(l.name) + '</span><input class="qty" id="q' + k + '" type="text" inputmode="' + mode + '" value="' + esc(l.qty) + '"></label>').join('') +
+      '</div><div class="hint">0 - прибрати рядок. Якщо прибрати все, замовлення буде скасовано.</div><button class="btn dark" id="shok">Зберегти</button><button class="btn ghost" onclick="closeSheet()">Скасувати</button>';
+    $('shsub').textContent = s.label + ' · ' + s.sub;
+    $('shok').onclick = () => saveEdit(i);
+  });
 }
 async function saveEdit(i) {
-  const s = S.today.stores[i];
-  const changes = [...document.querySelectorAll('#st' + i + ' input[data-row]')].map((x) => ({
-    row: Number(x.dataset.row), name: x.dataset.name, oldQty: Number(x.dataset.old), qty: Number(String(x.value).replace(',', '.')) }))
-    .filter((c) => c.qty !== c.oldQty);
-  if (!changes.length) { toast('Змін немає'); return; }
-  try { const r = await call('editOrder', { storeId: s.storeId, changes }); toast('Збережено: ' + s.label + ' (змін ' + r.changed + ')'); loadToday(); }
-  catch (e) { toast('❌ ' + e.message); }
+  const s = S.today.stores[i], changes = [];
+  for (let k = 0; k !== s.lines.length; k++) {
+    const l = s.lines[k];
+    const raw = String($('q' + k).value).trim().replace(',', '.');
+    const q = raw === '' ? 0 : Number(raw);
+    if (!(isFinite(q) && q >= 0)) return toast('Невірна кількість: ' + l.name);
+    if (q !== l.qty) { const c = Object.assign({}, l); c.oldQty = l.qty; c.qty = q; changes.push(c); }
+  }
+  if (!changes.length) return toast('Змін немає');
+  const b = $('shok'); b.disabled = true; b.textContent = 'Зберігаю…';
+  try {
+    const r = await call('editOrder', { storeId: s.storeId, changes });
+    closeSheet(); toast(r && r.left === 0 ? 'Збережено. Замовлення порожнє - скасовано.' : 'Збережено');
+  } catch (e) { b.disabled = false; b.textContent = 'Зберегти'; return toast('❌ ' + e.message); }
+  showToday().catch(fail);
 }
 
-// --- асортимент ---
-async function loadProducts() {
-  spin();
-  try { S.products = await call('products'); $('title').textContent = S.products.title; showApp(); if (S.tab === 'products') renderProducts(); }
-  catch (e) { fail(e); }
+// ---- Дозволи ----
+function lateSub(x) {
+  return 'попросила о ' + x.time + (x.status === 'pending' ? ' · чекає' : x.status === 'approved' ? ' · дозволено' : ' · дозвіл минув');
 }
-function renderProducts() {
-  $('view').innerHTML = '<input id="q" placeholder="Пошук товару або штрихкоду" oninput="renderList()" style="width:100%;box-sizing:border-box"><div id="plist"></div>';
-  renderList();
+async function showLate() {
+  const d = S.late = await call('late');
+  S.pend[S.dir] = d.pending; badge();
+  const i = S.info || {};
+  let h = i.lateRequest === false ? '<div class="note">У цьому напрямку кнопки «Попросити дозвіл» у продавця немає.</div>' : '';
+  h += d.list.length ? section('Запити на дозвіл сьогодні', '<div class="card">' + d.list.map((x, k) =>
+    '<div class="item"><span class="grow"><span class="t">' + esc(x.label) + '</span><span class="s">' + esc(lateSub(x)) + '</span></span>' +
+    (x.status === 'approved' ? '<span class="pill open">' + esc('діє ще ' + x.leftMin + ' хв') + '</span>'
+      : '<button class="btn sm" onclick="approve(' + k + ')">' + (x.status === 'pending' ? 'Дозволити на 30 хв' : 'Ще 30 хв') + '</button>') + '</div>').join('') + '</div>')
+    : '<div class="info">Запитів на дозвіл сьогодні немає.</div>';
+  view(h);
 }
-function renderList() {
-  const d = S.products, q = $('q').value.trim().toLowerCase();
-  const html = d.products.map((p, i) => ({ p, i })).filter((x) => !q || x.p.name.toLowerCase().includes(q) || x.p.barcode.includes(q)).map(({ p, i }) =>
-    '<div class="card" id="pr' + i + '"><div><b>' + esc(p.name) + '</b> ' + (p.stop ? '<span class="stop">стоп</span>' : '') +
-    '<div class="sub">' + esc(p.barcode) + (p.category ? ' · ' + esc(p.category) : '') + '</div></div>' +
-    '<div class="row"><label>Ціна <input class="n" data-f="price" inputmode="decimal" value="' + esc(p.price) + '"></label>' +
-    '<label><input type="checkbox" data-f="stop"' + (p.stop ? ' checked' : '') + '> стоп</label>' +
-    (d.hasAvailability ? '<label>Наявність <input data-f="availability" style="width:90px" value="' + esc(p.availability) + '"></label>' : '') +
-    '<button class="main" onclick="saveProduct(' + i + ')">Зберегти</button></div></div>').join('');
-  $('plist').innerHTML = html || '<div class="card sub">Нічого не знайдено.</div>';
+async function approve(k) {
+  const x = S.late.list[k];
+  try { const r = await call('approve', { storeId: x.storeId }); toast('Дозволено на ' + ((r && r.left) || 30) + ' хв: ' + x.label); } catch (e) { toast('❌ ' + e.message); }
+  showLate().catch(fail);
 }
-async function saveProduct(i) {
-  const p = S.products.products[i], el = $('pr' + i), f = (n) => el.querySelector('[data-f="' + n + '"]');
-  const pay = { id: p.id };
-  const pr = String(f('price').value).trim();
-  if (Number(pr.replace(',', '.')) !== p.price || pr === '') pay.price = pr;
-  if (f('stop').checked !== p.stop) pay.stop = f('stop').checked;
-  if (f('availability') && f('availability').value.trim() !== p.availability) pay.availability = f('availability').value.trim();
-  if (Object.keys(pay).length === 1) { toast('Змін немає'); return; }
+function badge() {
+  const n = Object.values(S.pend).reduce((a, b) => a + (b || 0), 0);
+  const b = $('bdg'); b.textContent = n; b.hidden = !n;
+  if (S.lastPend >= 0 && n > S.lastPend) { toast('Нова заявка на дозвіл'); if (navigator.vibrate) navigator.vibrate(200); }
+  S.lastPend = n; chips();
+}
+async function pollLate() {
+  if (!S.me) return;
+  await Promise.all(S.me.dirs.map((d) => call('late', { dir: d.dir }).then((r) => { S.pend[d.dir] = r.pending; if (d.dir === S.dir) S.late = r; }).catch(() => {})));
+  badge();
+}
+
+// ---- Прийом ----
+async function showAccept() {
+  const i = S.info || {};
+  const ask = i.lateRequest ? ' Точки можуть попросити дозвіл - вкладка «Дозволи».' : '';
+  const st = i.openAll ? '<div class="ok">Прийом відкрито всім точкам до кінця дня.</div>'
+    : i.closed ? '<div class="bad">' + esc('Прийом закрито о ' + i.deadline + '.' + ask) + '</div>'
+    : '<div class="info">' + esc(i.deadline ? 'Прийом триває до ' + i.deadline + '.' : 'Дедлайну немає.') + '</div>';
+  const btn = i.openAll ? '<button class="btn dark" onclick="askCloseAll()">Повернути звичайний режим</button>'
+    : '<button class="btn" onclick="askOpenAll()">Відкрити прийом усім до кінця дня</button>';
+  view(section('Прийом сьогодні', st) + '<div>' + btn + '</div>');
+}
+function askOpenAll() {
+  askSheet('Відкрити прийом усім?', 'Усі точки зможуть замовляти й після дедлайну - до кінця дня.', 'Відкрити', async () => {
+    try { await call('openAll'); toast('Прийом відкрито всім до кінця дня'); } catch (e) { toast('❌ ' + e.message); }
+    go('accept');
+  });
+}
+function askCloseAll() {
+  askSheet('Повернути звичайний режим?', 'Після дедлайну точки знову не зможуть замовити без дозволу.', 'Повернути', async () => {
+    try { await call('closeAll'); toast('Звичайний режим повернуто'); } catch (e) { toast('❌ ' + e.message); }
+    go('accept');
+  }, true);
+}
+
+// ---- Звіти ----
+async function showReports() {
+  const i = S.info || {};
+  view(section('Звіт', '<div class="info">' + esc(i.reportAt ? 'Звіт зібрано о ' + i.reportAt : 'Сьогодні звіт ще не збирався') +
+    '<span class="s">' + esc('Лист «' + (SHEETS[S.dir] || '') + '»') + '</span></div>') +
+    '<div><button class="btn dark" onclick="download()">Скачати Excel</button><button class="btn ghost" onclick="askReport()">Перезібрати звіт</button></div>' +
+    '<div class="note">Поки що звіти - у тестовій таблиці (до переїзду).</div>');
+}
+async function download() {
+  toast('⏳ Готую файл…');
   try {
-    const r = await call('setProduct', pay);
-    if (r.price !== undefined) p.price = r.price;
-    if (r.status) p.stop = r.status === 'stop';
-    if (r.availability !== undefined) p.availability = r.availability;
-    toast('Збережено: ' + p.name); renderList();
+    const r = await fetch(BASE + '/xlsx/' + S.dir, { cache: 'no-store' });
+    if (!r.ok) { let j = null; try { j = await r.json(); } catch (e) { j = null; } throw new Error((j && j.error) || ('Помилка ' + r.status)); }
+    const m = /filename\*=UTF-8''([^;]+)/.exec(r.headers.get('content-disposition') || '');
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a'); a.href = url; a.download = m ? decodeURIComponent(m[1]) : 'report.xlsx';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast('Файл завантажено');
   } catch (e) { toast('❌ ' + e.message); }
 }
+function askReport() {
+  askSheet('Перезібрати звіт?', 'Звіт збереться заново із замовлень за сьогодні. Це може тривати до хвилини.', 'Перезібрати', async () => {
+    toast('⏳ Перезбираю звіт…');
+    try { await call('report', {}, 150000); toast('✅ Звіт перезібрано'); } catch (e) { toast('❌ ' + e.message); }
+    go('reports');
+  }, true);
+}
 
-$('pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
-tab('today');
+// ---- Асортимент ----
+function prodSub(p) {
+  return money(p.price) + ' грн' + (p.category ? ' · ' + p.category : '') + (p.availability ? ' · ' + p.availability : '') + (p.barcode ? ' · ' + p.barcode : '');
+}
+async function showProducts() {
+  S.products = await call('products');
+  view('<div><input type="search" id="pq" placeholder="Пошук: назва або штрихкод" value="' + esc(S.q) + '" oninput="S.q = this.value; renderProducts()"></div>' +
+    '<div id="plist"></div><div class="note">Поки працює стара система, зміни тут можуть перезаписатися з листа «Ассортимент».</div>');
+  renderProducts();
+}
+function renderProducts() {
+  const box = $('plist'); if (!box || !S.products) return;
+  const q = S.q.trim().toLowerCase();
+  const list = S.products.products.map((p, i) => [p, i]).filter(([p]) => !q || (p.name + ' ' + p.barcode).toLowerCase().includes(q));
+  box.innerHTML = list.length ? section('Товари · ' + list.length, '<div class="card">' + list.slice(0, 300).map(([p, i]) =>
+    '<button class="item" onclick="askProduct(' + i + ')"><span class="grow"><span class="t">' + esc(p.name) + '</span><span class="s">' + esc(prodSub(p)) + '</span></span>' +
+    (p.stop ? '<span class="pill closed">стоп</span>' : '') + '</button>').join('') + '</div>') : '<div class="info">Нічого не знайдено</div>';
+}
+function askProduct(i) {
+  const p = S.products.products[i], av = S.products.hasAvailability;
+  openSheet((el) => {
+    el.innerHTML = '<h2 id="shh"></h2><div class="sub" id="shsub"></div><div class="lbl">Ціна, грн</div><input id="pp" type="text" inputmode="decimal">' +
+      '<label class="pick card"><input id="ps" type="checkbox"><span class="grow t">Стоп - продавці не бачать товар</span></label>' +
+      (av ? '<div class="lbl">Наявність</div><input id="pa" type="text" maxlength="60">' : '') +
+      '<div class="hint"></div><button class="btn dark" id="shok">Зберегти</button><button class="btn ghost" onclick="closeSheet()">Скасувати</button>';
+    $('shh').textContent = p.name; $('shsub').textContent = prodSub(p);
+    $('pp').value = money(p.price); $('ps').checked = !!p.stop;
+    if (av) $('pa').value = p.availability || '';
+    $('shok').onclick = () => saveProduct(i);
+  });
+}
+async function saveProduct(i) {
+  const p = S.products.products[i], av = S.products.hasAvailability;
+  const body = { id: p.id, price: $('pp').value, stop: $('ps').checked };
+  if (av) body.availability = $('pa').value;
+  const b = $('shok'); b.disabled = true; b.textContent = 'Зберігаю…';
+  try {
+    const r = await call('setProduct', body);
+    if ('price' in r) p.price = r.price;
+    if ('status' in r) p.stop = r.status === 'stop';
+    if ('availability' in r) p.availability = r.availability;
+    closeSheet(); toast('Збережено: ' + p.name); renderProducts();
+  } catch (e) { b.disabled = false; b.textContent = 'Зберегти'; toast('❌ ' + e.message); }
+}
+
+// ---- старт і автооновлення ----
+async function start() {
+  try { S.me = await call('me'); } catch (e) { return fail(e); }
+  let saved = '';
+  try { saved = localStorage.getItem('buyer_dir_' + CODE) || ''; } catch (e) { saved = ''; }
+  S.dir = S.me.dirs.some((d) => d.dir === saved) ? saved : S.me.dirs[0].dir;
+  chips(); go('today'); pollLate();
+}
+setInterval(() => {
+  if (document.hidden || !S.me || $('modal').innerHTML) return;
+  pollLate().then(() => { if (S.tab === 'late' && S.late) showLate().catch(() => {}); });
+  if (S.tab === 'today') call('info').then((i) => { S.info = i; head(); return showToday(); }).catch(() => {});
+}, 30000);
+start();
 </script>
-<script>if ($('app').classList.contains('hide')) { showApp(); tab(S.tab); }</script>
-</body></html>
+</body>
+</html>

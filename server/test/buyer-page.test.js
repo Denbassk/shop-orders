@@ -2,40 +2,35 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const PAGE = path.join(__dirname, '..', 'public', 'buyer', 'index.html');
-const html = () => fs.readFileSync(PAGE, 'utf8');
+const { createApp } = require('../src/app');
+const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
 
-test('сторінка закупниці: fetch /buyer/<dir>/api з cookie, усі дії, без Apps Script', () => {
-  const h = html();
-  for (const s of ["'/buyer/' + DIR + '/' + KEY + '/api'", "credentials: 'same-origin'", "call('today'", "call('remove'", "call('editOrder'",
-    "call('products'", "call('setProduct'", "action: 'login'", "'/buyer/' + DIR + '/logout'"]) assert.ok(h.includes(s), s);
-  assert.ok(!h.includes('google.script'));
+test('сторінка закупниці: адреса з посилання, усі дії, Excel через сервер, без Apps Script і PIN', () => {
+  for (const s of ["location.pathname.split('/')[3]", "'/buyer/' + CODE + '/' + KEY", "call('me'", "call('info'", "call('today'",
+    "call('remove'", "call('editOrder'", "call('late'", "call('approve'", "call('openAll'", "call('closeAll'", "call('report'",
+    "call('products'", "call('setProduct'", "'/xlsx/'", 'setInterval(']) assert.ok(html.includes(s), s);
+  assert.ok(!html.includes('google.script'));
+  assert.ok(!html.includes("action: 'login'"));
+  assert.ok(!html.includes('<?'));
 });
 
-test('сторінка закупниці: тексти DeleteSheet.gs, усе з бази - через esc()', () => {
-  const h = html();
-  for (const s of ['Замовили сьогодні', '⏳ Видаляю замовлення: ', '❌ Не вдалось видалити: ', 'function esc(']) assert.ok(h.includes(s), s);
-  assert.ok(!/\$\{\s*[a-z]\.(label|name|sub|barcode)\s*\}/.test(h), 'дані без esc');
-  // HTML збирається лише в рядках з '<'; confirm/toast - простий текст (textContent), там esc не потрібен
-  const htmlLines = h.split('\n').filter((l) => l.includes('<')).join('\n');
-  assert.ok(!/'\s*\+\s*[a-z]\.(label|name|sub|barcode|category|availability)\s*\+/.test(htmlLines), 'дані без esc');
-  assert.ok(h.includes('m.textContent = t'), 'toast - через textContent');
+test('сторінка закупниці: стиль пульта (Golos, нижні вкладки, панель знизу), ширше на великому екрані', () => {
+  for (const s of ['Golos Text', 'class="tabs"', '.sheet{', '@media (min-width:900px)', 'name="viewport"']) assert.ok(html.includes(s), s);
 });
 
-const appMod = require('../src/app');
-const createApp = appMod.createApp || appMod;
-async function withApp(fn) {
-  const srv = createApp({}).listen(0);
+test('сторінка закупниці: текст DeleteSheet.gs; дані з бази в HTML лише через esc()', () => {
+  assert.ok(html.includes('⏳ Видаляю замовлення: '));
+  assert.ok(html.includes('function esc('));
+  const bad = html.split('\n').filter((l) => /\.(label|name|sub|category|availability|barcode)\b/.test(l) && l.includes('<') && !l.includes('esc('));
+  assert.deepEqual(bad, []);
+});
+
+test('GET /buyer/bakery без ключа і /buyer/xxx -> 404', async () => {
+  const srv = createApp({ buyerLinkSecret: 's' }).listen(0, '127.0.0.1');
   await new Promise((r) => srv.once('listening', r));
-  try { await fn('http://127.0.0.1:' + srv.address().port); }
-  finally { if (srv.closeAllConnections) srv.closeAllConnections(); srv.close(); }
-}
-
-test('GET /buyer/bakery без ключа -> 404 (сторінка лише за секретним посиланням)', async () => {
-  await withApp(async (base) => {
-    for (const u of ['/buyer/bakery', '/buyer/bakery/']) { const r = await fetch(base + u); assert.equal(r.status, 404, u); await r.text(); }
-  });
-});
-test('GET /buyer/xxx -> 404', async () => {
-  await withApp(async (base) => { assert.equal((await fetch(base + '/buyer/xxx')).status, 404); });
+  const b = 'http://127.0.0.1:' + srv.address().port;
+  try {
+    assert.equal((await fetch(b + '/buyer/bakery')).status, 404);
+    assert.equal((await fetch(b + '/buyer/xxx')).status, 404);
+  } finally { await new Promise((r) => srv.close(r)); }
 });
