@@ -27,17 +27,20 @@ async function resendLateMails(env) {
   return out;
 }
 
-// Один тік: вигрузка всіх напрямків + довідправка листів + перебудова звітів ВК (env.rebuildReports). Збій однієї частини не зупиняє іншу.
+// Один тік: вигрузка всіх напрямків + довідправка листів + перебудова звітів ВК (env.rebuildReports)
+// + вигрузка списань у лист «Списания» (env.exportWriteoffs). Збій однієї частини не зупиняє іншу.
 async function tick(env, exportAll) {
-  const [exp, mail, rep] = await Promise.allSettled([exportAll(env), resendLateMails(env),
-    env.rebuildReports ? env.rebuildReports() : Promise.resolve(null)]);
+  const [exp, mail, rep, wo] = await Promise.allSettled([exportAll(env), resendLateMails(env),
+    env.rebuildReports ? env.rebuildReports() : Promise.resolve(null),
+    env.exportWriteoffs ? env.exportWriteoffs() : Promise.resolve(null)]);
   const out = {
     export: exp.status === 'fulfilled' ? exp.value : { error: String(exp.reason && exp.reason.message) },
     mail: mail.status === 'fulfilled' ? mail.value : { error: String(mail.reason && mail.reason.message) },
   };
   if (rep.status === 'rejected') { out.reports = { error: String(rep.reason && rep.reason.message) }; console.error('звіти ВК: ' + out.reports.error); }
   else if (rep.value) out.reports = rep.value;
+  if (wo.status === 'rejected') { out.writeoffs = { error: String(wo.reason && wo.reason.message) }; console.error('вигрузка списань: ' + out.writeoffs.error); }
+  else if (wo.value) out.writeoffs = wo.value;
   return out;
 }
-
 module.exports = { resendLateMails, tick };

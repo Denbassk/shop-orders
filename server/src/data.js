@@ -162,9 +162,59 @@ function createData(sb, { now = Date.now } = {}) {
     };
   }
 
+  // --- списання (api/writeoff.js, міграція 000005). Видалене (deleted_at) не існує для продавця. ---
+  const WO_SEL = 'id,doc_id,store_id,store_label,store_code,edrpou,wo_date,seller,total,submitted_at,' +
+    'writeoff_lines(line_no,product_id,barcode,category,name,qty,price,amount,amount_plus)';
+  const woRow = ({ writeoff_lines, ...w }) => ({ ...w, lines: writeoff_lines || [] });
+
+  // збережена відповідь на docId (як oid_wo_<docId>; видалення його знімає)
+  async function woResult(docId) {
+    const rows = must('writeoffs', await sb.from('writeoffs').select('result').eq('doc_id', docId).is('deleted_at', null).limit(1));
+    return rows.length ? rows[0].result : null;
+  }
+  async function submitWriteoffTx(p) {
+    return must('submit_writeoff_tx', await sb.rpc('submit_writeoff_tx', { p }));
+  }
+  // «Мої списання»: лист «Списания» тримає wo_date >= сьогодні-31 (woArchive_: d < cut -> архів)
+  async function woDocsOfStore(storeId, sinceDay) {
+    return must('writeoffs', await sb.from('writeoffs').select(WO_SEL)
+      .eq('store_id', storeId).is('deleted_at', null).gte('wo_date', sinceDay)).map(woRow);
+  }
+  async function woFind(docId) {
+    const rows = must('writeoffs', await sb.from('writeoffs').select(WO_SEL).eq('doc_id', docId).is('deleted_at', null).limit(1));
+    return rows.length ? woRow(rows[0]) : null;
+  }
+  // true - видалили ми; false - уже видалене паралельно (UPDATE не зачепив рядок)
+  async function woMarkDeleted(id) {
+    const ts = new Date(now()).toISOString();
+    const rows = must('writeoffs', await sb.from('writeoffs').update({ deleted_at: ts, changed_at: ts })
+      .eq('id', id).is('deleted_at', null).select('id'));
+    return rows.length > 0;
+  }
+  // «Журнал дій» (adminLog_)
+  async function adminLog(action, details) {
+    must('admin_log', await sb.from('admin_log').insert({ action, details }));
+  }
+  // --- вигрузка списань у лист «Списания» (export/writeoff.js). Невигружене = вью writeoffs_export_pending
+  // (exported_at is distinct from changed_at); видалене теж потрапляє - його рядки треба стерти з листа.
+  async function woExportSnapshot() {
+    const ids = must('writeoffs_export_pending', await sb.from('writeoffs_export_pending').select('id')).map((r) => r.id);
+    if (!ids.length) return [];
+    const rows = must('writeoffs', await sb.from('writeoffs').select(WO_SEL + ',deleted_at,changed_at')
+      .in('id', ids).order('submitted_at'));
+    return rows.map(woRow).map((w) => ({ ...w, lines: w.lines.slice().sort((a, b) => a.line_no - b.line_no) }));
+  }
+  // exported_at = changed_at лише для прочитаної версії: змінене після читання лишається невигруженим
+  async function woMarkExported(list) {
+    for (const w of list) {
+      must('writeoffs', await sb.from('writeoffs').update({ exported_at: w.changed_at })
+        .eq('id', w.id).eq('changed_at', w.changed_at));
+    }
+  }
   return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
     orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate,
-    exportSnapshot, markExported, reportSnapshot };
+    exportSnapshot, markExported, reportSnapshot,
+    woResult, submitWriteoffTx, woDocsOfStore, woFind, woMarkDeleted, adminLog, woExportSnapshot, woMarkExported };
 }
 
 module.exports = { createData };

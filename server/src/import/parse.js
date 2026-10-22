@@ -69,6 +69,13 @@ function storeToRow(s, sort) {
   };
 }
 
+// WriteOff.gs woProducts_: колонка собівартості - перша з заголовком /собів|себест/i; немає -> -1
+function costIdxOf(header) {
+  let idx = -1;
+  (header || []).forEach((h, i) => { if (idx < 0 && /собів|себест/i.test(String(h))) idx = i; });
+  return idx;
+}
+
 const STOP_OFFSET = 1000;   // стоп-позиції йдуть після активних
 
 function product(o) {
@@ -84,7 +91,8 @@ function product(o) {
 // Лист "Ассортимент": A статус | B № (випічка - категорія) | C штрихкод | D ціна | E номенклатура | F шт в ящику
 // (випічка - наявність). Правила loadSheetProducts_; відрізняється тим, що «стоп» не відкидається,
 // а потрапляє в базу зі status='stop'. Невалідні (без назви; без штрихкоду/ціни) пропускаються, як і в Apps Script.
-function parseSheetProducts(dirKey, cfg, rows, dropped = []) {
+function parseSheetProducts(dirKey, cfg, rows, dropped = [], header = null) {
+  const costIdx = dirKey === 'bakery' ? costIdxOf(header) : -1;   // собівартість - для списань
   const act = [], stop = [];
   rows.forEach((r, i) => {
     const isStop = str(r[0]).toLowerCase() === 'стоп';
@@ -105,7 +113,9 @@ function parseSheetProducts(dirKey, cfg, rows, dropped = []) {
     } else {
       item.box = str(r[5]);
     }
-    (isStop ? stop : act).push(product(item));
+    const out = product(item);
+    if (costIdx >= 0) out.cost = Math.round((parseFloat(String(r[costIdx] == null ? '' : r[costIdx]).replace(',', '.')) || 0) * 100) / 100;
+    (isStop ? stop : act).push(out);
   });
 
   // keepOrder: порядок рядків у таблиці = порядок колонок у формі заводу
@@ -182,5 +192,5 @@ function numbered(act, stop) {
 
 module.exports = {
   canonKey, parseDays, nameKey, parseStores, storeToRow,
-  parseSheetProducts, parseNbhzProducts, readVegPrices, parseVegProducts,
+  parseSheetProducts, parseNbhzProducts, readVegPrices, parseVegProducts, costIdxOf,
 };
