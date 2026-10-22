@@ -124,7 +124,9 @@ async function buyerInfo(dir, env) {
   } catch (e) { reportAt = ''; }
   return { dir, title: cfg.title, color: cfg.color || '', unit: cfg.unit || '', deadline,
     closed: !!deadline && HM.format(env.at) >= deadline, openAll: lateAll[dir] === dayOf(env),
-    lateRequest: !!cfg.lateRequest, reportAt, hasAvailability: dir === 'bakery' };
+    lateRequest: !!cfg.lateRequest, reportAt, hasAvailability: dir === 'bakery',
+    rules: { byDays: !!cfg.orderDays, dayOffText: cfg.dayOffText || '', unit: cfg.unit || '', lateMin: R.LATE_TTL_MIN,
+      minOrder: (cfg.minOrderChanges && cfg.minOrderChanges.length ? cfg.minOrderChanges[cfg.minOrderChanges.length - 1].value : cfg.minOrder) || 0 } };
 }
 
 module.exports = { buyerToday, buyerDelete, buyerProducts, buyerSetProduct, buyerLate, buyerInfo };
