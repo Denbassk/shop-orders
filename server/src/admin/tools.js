@@ -46,11 +46,20 @@ async function admHealth(env) {
   const errors = (Array.isArray(settings[HEALTH_ERR_KEY]) ? settings[HEALTH_ERR_KEY] : [])
     .map((e) => ({ ...e, today: String(e.at || '').indexOf(todayDM) === 0 }));
   if (errors.some((e) => e.today)) bump('warn');
+  // «Тригери» на сервері - це автоперевірка /jobs/tick (GitHub cron кожні 10 хв, вікно 07:00-22:00 за Києвом); час останнього tick пише runtime
+  const nowKyiv = R.kyivNow(at), inWindow = nowKyiv.hh >= 7 && nowKyiv.hh < 22;
+  const lt = settings.last_tick ? new Date(settings.last_tick) : null;
+  const ltMin = lt && !isNaN(lt) ? Math.round((at.getTime() - lt.getTime()) / 60000) : null;
+  let tl = 'ok', tt;
+  if (ltMin === null) { tl = inWindow ? 'warn' : 'ok'; tt = 'tick ще не запускалась' + (inWindow ? ' - перевірити GitHub cron (secret JOBS_SECRET, workflow server-tick у гілці main)' : ' (поза вікном 07-22)'); }
+  else if (inWindow && ltMin > 25) { tl = 'warn'; tt = 'остання перевірка ' + ltMin + ' хв тому - cron GitHub не працює? Невигружені замовлення і звіти не підхоплюються'; }
+  else tt = 'остання перевірка ' + ltMin + ' хв тому' + (ltMin <= 25 ? '' : ' (поза вікном 07-22)');
+  bump(tl);
   if (settings.test_mode) bump('bad');
   return {
     time: hmOf(at), level: worst,
     summary: worst === 'ok' ? 'Всё работает' : 'Требует внимания: ' + problems,
-    dirs, triggers: [], errors,
+    dirs, triggers: [{ name: 'Автоперевірка сервера (tick кожні 10 хв)', level: tl, text: tt }], errors,
     sys: { version: String(settings.app_version || ''), test: !!settings.test_mode, keys: Object.keys(settings).length, pct: 0, sess: 0 },
   };
 }

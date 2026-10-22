@@ -82,6 +82,7 @@ function createRuntime() {
   const tickJob = async () => {
     const res = await tick({ ...getEnv(), ...exportEnv(), rebuildReports, exportWriteoffs: woExport }, exportAll);
     for (const x of collectTickErrors(res)) await noteError(adm, 'tick: ' + x.where, x.msg);
+    try { await adm.setSetting('last_tick', new Date().toISOString()); } catch (e) { console.error('last_tick: ' + e.message); }
     return res;
   };
   return { getEnv, tick: tickJob, approve: (query) => approvePage(query, getEnv()), approveForm: (query) => approveForm(query, getEnv()) };

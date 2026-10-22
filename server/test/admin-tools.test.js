@@ -15,7 +15,7 @@ const byKey = (r) => Object.fromEntries(r.dirs.map((d) => [d.key, d]));
 function mkEnv(o = {}) {
   const st = { log: [], set: o.set || {} };
   const env = { at: AT, log: () => {},
-    data: { settings: async () => o.settings || { app_version: 'v1' },
+    data: { settings: async () => ({ ...(o.noTick ? {} : { last_tick: new Date(AT.getTime() - 3 * 60000).toISOString() }), ...(o.settings || { app_version: 'v1' }) }),
       orderedToday: async (d) => { st.day = d; if (o.failOrders) throw new Error('x'); return o.ordered || {}; } },
     adm: { reportAts: async () => o.ats || {}, adminLog: async (a, d) => { st.log.push([a, d]); },
       getSetting: async (k) => { if (o.failGet) throw new Error('db'); return k in st.set ? st.set[k] : null; },
@@ -35,13 +35,13 @@ function fakeSb(responses) {
   } };
 }
 
-test('health: усе гаразд -> ok, «Всё работает», 4 напрямки, без тригерів', async () => {
-  const { env, st } = mkEnv();
+test('health: усе гаразд -> ok, «Всё работает», 4 напрямки, автоперевірка tick свіжа', async () => {
+  const { env, st } = mkEnv({ settings: { app_version: 'v1', last_tick: new Date(AT.getTime() - 5 * 60000).toISOString() } });
   const r = await T.admHealth(env);
   assert.equal(r.level, 'ok'); assert.equal(r.summary, 'Всё работает'); assert.equal(r.time, '10:00');
   assert.deepEqual(r.dirs.map((d) => d.key), Object.keys(DIRECTIONS));
   assert.deepEqual(r.dirs[0], { key: 'bread', title: DIRECTIONS.bread.title, level: 'ok', text: 'Отчёт сегодня не собирался · заказали 0' });
-  assert.deepEqual(r.triggers, []); assert.equal(r.sys.version, 'v1'); assert.equal(r.sys.test, false);
+  assert.deepEqual(r.triggers.map((x) => [x.name, x.level]), [['Автоперевірка сервера (tick кожні 10 хв)', 'ok']]); assert.match(r.triggers[0].text, /5 хв тому/); assert.equal(r.sys.version, 'v1'); assert.equal(r.sys.test, false);
   assert.equal(st.day, DAY);
 });
 
@@ -130,4 +130,12 @@ test('runtime: health, healthClear, card підключені; cardSave ні; п
   const src = fs.readFileSync(path.join(__dirname, '../src/admin/runtime.js'), 'utf8');
   for (const a of ['health:', 'healthClear:', 'card:']) assert.ok(src.includes(a), a);
   assert.ok(!src.includes('cardSave:')); assert.ok(src.includes('noteError'));
+});
+test('health: автоперевірка tick - застаріла (> 25 хв у вікні 07-22) або не запускалась -> warn з поясненням; вночі - ok', async () => {
+  const stale = await T.admHealth(mkEnv({ settings: { app_version: 'v1', last_tick: new Date(AT.getTime() - 40 * 60000).toISOString() } }).env);
+  assert.equal(stale.triggers[0].level, 'warn'); assert.match(stale.triggers[0].text, /40 хв/); assert.equal(stale.level, 'warn');
+  const none = await T.admHealth(mkEnv({ noTick: true }).env);
+  assert.equal(none.triggers[0].level, 'warn'); assert.match(none.triggers[0].text, /ще не запускалась/);
+  const night = mkEnv({ noTick: true }).env; night.at = new Date('2026-10-20T03:00:00+03:00');
+  assert.equal((await T.admHealth(night)).triggers[0].level, 'ok');
 });
