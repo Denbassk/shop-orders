@@ -250,13 +250,8 @@ function breadDownloadPlan(opts) {
   const apply = (w) => {
     w.fmt([1], 'A', 'A', { size: 16, bold: true });
     w.fmt([2], 'A', 'A', { color: '#6b7280' });
-    link.forEach((l) => {
-      w.raw({ updateCells: {
-        start: { sheetId: w.sheetId, rowIndex: l.row - 1, columnIndex: 0 }, fields: 'textFormatRuns',
-        rows: [{ values: [{ textFormatRuns: [{ startIndex: 0, format: { link: { uri: l.url }, fontSize: l.size, bold: true,
-          foregroundColor: { red: 0x1a / 255, green: 0x73 / 255, blue: 0xe8 / 255 }, underline: true } }] }] }],
-      } });
-    });
+    // посилання - формат комірки (так Google віддає setRichTextValue().setLinkUrl() з Apps Script)
+    link.forEach((l) => { w.fmt([l.row], 'A', 'A', { link: l.url, size: l.size, bold: true, color: '#1a73e8', underline: true }); });
     w.fmt([7, 8, 9], 'A', 'A', { color: '#6b7280', size: 10 });
     w.colWidths([620]);
     w.raw({ updateSheetProperties: { properties: { sheetId: w.sheetId, gridProperties: { hideGridlines: true } },

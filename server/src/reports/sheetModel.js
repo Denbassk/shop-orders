@@ -6,7 +6,7 @@
 const key = (r, c) => r + ',' + c;
 
 function newSheet(name, id) {
-  return { name, id, cells: {}, colW: {}, rowH: {}, frozenRows: 0, frozenCols: 0, filter: null, hidden: false, maxRows: 1000, maxCols: 26, merges: 0 };
+  return { name, id, cells: {}, edges: {}, colW: {}, rowH: {}, frozenRows: 0, frozenCols: 0, filter: null, hidden: false, maxRows: 1000, maxCols: 26, merges: 0 };
 }
 const cellOf = (sh, r, c) => sh.cells[key(r, c)] || (sh.cells[key(r, c)] = {});
 function each(r1, c1, r2, c2, fn) { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) fn(r, c); }
@@ -16,19 +16,16 @@ const hex = (h) => { h = String(h).toLowerCase(); if (h.length === 4) h = '#' + 
 const rgbHex = (c) => '#' + ['red', 'green', 'blue'].map((k) => Math.round((c && c[k] || 0) * 255).toString(16).padStart(2, '0')).join('');
 
 // ---------- рамки ----------
+// Рамка - це РЕБРО між двома комірками (Google зберігає її в одній з них). Модель тримає ребра: 'h,r,c' - горизонтальне ребро
+// під рядком r у колонці c (r=0 - над першим рядком), 'v,r,c' - вертикальне праворуч від колонки c у рядку r. Остання запис перемагає.
 function applyBorders(sh, r1, c1, r2, c2, b) {
   // b: { top, bottom, left, right, vertical, horizontal } - опис ('SOLID#000000'), null - прибрати, undefined - не чіпати
-  const set = (r, c, side, v) => { if (v === undefined) return; const cell = cellOf(sh, r, c); if (v === null) delete cell[side]; else cell[side] = v; };
-  each(r1, c1, r2, c2, (r, c) => {
-    if (r === r1) set(r, c, 'bT', b.top);
-    if (r === r2) set(r, c, 'bB', b.bottom);
-    if (c === c1) set(r, c, 'bL', b.left);
-    if (c === c2) set(r, c, 'bR', b.right);
-    if (c > c1) set(r, c, 'bL', b.vertical);
-    if (c < c2) set(r, c, 'bR', b.vertical);
-    if (r > r1) set(r, c, 'bT', b.horizontal);
-    if (r < r2) set(r, c, 'bB', b.horizontal);
-  });
+  const e = sh.edges || (sh.edges = {});
+  const set = (k, v) => { if (v === undefined) return; if (v === null) delete e[k]; else e[k] = v; };
+  for (let c = c1; c <= c2; c++) { set('h,' + (r1 - 1) + ',' + c, b.top); set('h,' + r2 + ',' + c, b.bottom); }
+  for (let r = r1; r <= r2; r++) { set('v,' + r + ',' + (c1 - 1), b.left); set('v,' + r + ',' + c2, b.right); }
+  for (let r = r1; r <= r2; r++) for (let c = c1; c < c2; c++) set('v,' + r + ',' + c, b.vertical);
+  for (let r = r1; r < r2; r++) for (let c = c1; c <= c2; c++) set('h,' + r + ',' + c, b.horizontal);
 }
 
 // ---------- модель з запитів Sheets API ----------
@@ -55,6 +52,8 @@ function applyFormat(cell, f, fields) {
   if (has('textFormat.bold') && tf.bold !== undefined) cell.bold = !!tf.bold;
   if (has('textFormat.fontSize') && tf.fontSize) cell.size = tf.fontSize;
   if (has('textFormat.fontFamily') && tf.fontFamily) cell.font = tf.fontFamily;
+  if (has('textFormat.underline') && tf.underline !== undefined) cell.ul = !!tf.underline;
+  if (has('textFormat.link') && tf.link) cell.link = tf.link.uri;
 }
 
 function bordDesc(b) { return b ? b.style + '#' + rgbHex(b.color).slice(1) : undefined; }
@@ -68,7 +67,7 @@ function applyRequests(sh, reqs) {
     if (type === 'unmergeCells' || type === 'deleteConditionalFormatRule') return;
     if (type === 'updateCells') {
       if (v.range && !v.start) {                       // updateCells range=whole + fields '*' -> clear
-        if (v.fields === '*') { sh.cells = {}; return; }
+        if (v.fields === '*') { sh.cells = {}; sh.edges = {}; return; }
         return;
       }
       const r0 = v.start.rowIndex + 1, c0 = v.start.columnIndex + 1;
@@ -141,12 +140,12 @@ function applyRequests(sh, reqs) {
 // 'textFormat.bold' залишається, 'textFormat' -> усі textFormat.*
 function expand(list) {
   const out = [];
-  list.forEach((f) => { if (f === 'textFormat') out.push('textFormat.foregroundColor', 'textFormat.bold', 'textFormat.fontSize', 'textFormat.fontFamily'); else out.push(f); });
+  list.forEach((f) => { if (f === 'textFormat') out.push('textFormat.foregroundColor', 'textFormat.bold', 'textFormat.fontSize', 'textFormat.fontFamily', 'textFormat.underline', 'textFormat.link'); else out.push(f); });
   return out;
 }
 
 // ---------- порівняння ----------
-const CELL_PROPS = ['v', 'formula', 'link', 'bg', 'color', 'bold', 'size', 'font', 'ha', 'va', 'nf', 'rot', 'wrap', 'bT', 'bB', 'bL', 'bR'];
+const CELL_PROPS = ['v', 'formula', 'link', 'ul', 'bg', 'color', 'bold', 'size', 'font', 'ha', 'va', 'nf', 'rot', 'wrap'];
 const fmtVal = (x) => (x === undefined ? '∅' : JSON.stringify(x));
 const normFormula = (f) => String(f).replace(/"\s*[;,]\s*"/g, '","');
 
@@ -173,6 +172,10 @@ function diffSheets(a, b, opts = {}) {
         diffs.push({ cell: k, prop: p, gas: fmtVal(va), ours: fmtVal(vb) });
       }
     });
+  });
+  new Set([...Object.keys(a.edges || {}), ...Object.keys(b.edges || {})]).forEach((k) => {
+    const va = (a.edges || {})[k], vb = (b.edges || {})[k];
+    if (va !== vb) diffs.push({ cell: 'рамка ' + k, prop: 'border', gas: fmtVal(va), ours: fmtVal(vb) });
   });
   const dim = (name, ma, mb) => {
     if (opts.skip && opts.skip.has(name)) return;
@@ -219,8 +222,11 @@ function modelFromGridData(sh, name) {
     const f = cv.userEnteredFormat;
     if (f) {
       applyFormat(cell, f, null);
-      const b = f.borders || {};
-      [['top', 'bT'], ['bottom', 'bB'], ['left', 'bL'], ['right', 'bR']].forEach(([side, p]) => { if (b[side] && b[side].style && b[side].style !== 'NONE') cell[p] = bordDesc(b[side]); });
+      const b = f.borders || {}, r = i + 1, c = j + 1, ok = (x) => x && x.style && x.style !== 'NONE';
+      if (ok(b.top)) m.edges['h,' + (r - 1) + ',' + c] = bordDesc(b.top);
+      if (ok(b.bottom)) m.edges['h,' + r + ',' + c] = bordDesc(b.bottom);
+      if (ok(b.left)) m.edges['v,' + r + ',' + (c - 1)] = bordDesc(b.left);
+      if (ok(b.right)) m.edges['v,' + r + ',' + c] = bordDesc(b.right);
     }
     if (cv.textFormatRuns && cv.textFormatRuns.length) {
       const run = cv.textFormatRuns[0].format || {};

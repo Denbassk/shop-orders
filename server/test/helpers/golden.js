@@ -11,7 +11,25 @@ const nbhz = require('../../src/reports/nbhz');
 const { DIRECTIONS } = require('../../src/directions');
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures');
-const loadFixture = (dir, day) => JSON.parse(fs.readFileSync(path.join(FIXTURES, `${dir}-${day}.json`), 'utf8'));
+// Фікстури, зняті до переходу моделі на ребра рамок, мали bT/bB/bL/bR у комірках - переводимо в ребра при читанні.
+function upgradeModel(m) {
+  if (m.edges) return m;
+  m.edges = {};
+  for (const k of Object.keys(m.cells)) {
+    const [r, c] = k.split(',').map(Number), cell = m.cells[k];
+    if (cell.bT) m.edges['h,' + (r - 1) + ',' + c] = cell.bT;
+    if (cell.bB) m.edges['h,' + r + ',' + c] = cell.bB;
+    if (cell.bL) m.edges['v,' + r + ',' + (c - 1)] = cell.bL;
+    if (cell.bR) m.edges['v,' + r + ',' + c] = cell.bR;
+    delete cell.bT; delete cell.bB; delete cell.bL; delete cell.bR;
+  }
+  return m;
+}
+const loadFixture = (dir, day) => {
+  const fx = JSON.parse(fs.readFileSync(path.join(FIXTURES, `${dir}-${day}.json`), 'utf8'));
+  for (const m of Object.values(fx.models)) upgradeModel(m);
+  return fx;
+};
 
 // { бойова назва листа: план } з сирих рядків фікстури. stores/products - як їх повертає rowToStore / таблиця products
 function plansFor(dir, fx) {
@@ -39,7 +57,10 @@ function compareFixture(dir, fx) {
   const plans = plansFor(dir, fx);
   const ours = Object.fromEntries(Object.entries(plans).map(([n, p]) => [n, modelOf(p)]));
   const tally = {};
-  const res = compareModels(fx.models, ours, {}, { ...(dir === 'nbhz' ? AUTO_NBHZ : { skip: skipFor(dir) }), liveTextFormat: true, tally, looseFor: looseFor(dir) });
+  const base = dir === 'nbhz' ? AUTO_NBHZ : { skip: skipFor(dir) };
+  // фікстури 19.10 зняті до того, як модель читала textFormat.link/underline - ці дві властивості в них не знімались (modelVersion < 2)
+  const skip = fx.modelVersion >= 2 ? base.skip : new Set([...base.skip, 'link', 'ul']);
+  const res = compareModels(fx.models, ours, {}, { ...base, skip, liveTextFormat: true, tally, looseFor: looseFor(dir) });
   res.residualTextFormat = tally.residual || 0;
   res.looseCells = tally.loose || 0;
   return res;

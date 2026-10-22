@@ -41,7 +41,7 @@ const stampsIn = (values) => {
   const { data: products, error } = await supabase().from('products').select('barcode,name,category,status').eq('dir', dir).order('sort');
   if (error) throw new Error(error.message);
 
-  const fx = { dir, day: live.day, dmy: live.dmy, takenAt: live.takenAt, sheetIds, raw: live.raw, values: live.values, models: live.models, stores, products,
+  const fx = { modelVersion: 2, dir, day: live.day, dmy: live.dmy, takenAt: live.takenAt, sheetIds, raw: live.raw, values: live.values, models: live.models, stores, products,
     note: 'raw = сирі рядки за день (UNFORMATTED); values = значення A:… звітів Apps Script (один batchGet з raw); models = значення+оформлення цих листів (spreadsheets.get); stores/products - з бази' };
   const file = out || path.join(FIXTURES, `${dir}-${live.day}.json`);
   fs.writeFileSync(file, JSON.stringify(fx));

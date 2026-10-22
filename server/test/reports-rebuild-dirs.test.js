@@ -55,7 +55,7 @@ test('хліб: «Заказы», «Данные Заказов» і «Зава�
   const adds = batches(log).filter((b) => b[2][0].addSheet).map((b) => b[2][0].addSheet.properties);
   assert.deepEqual(adds.map((p) => p.title), ['Заказы', 'Данные Заказов', 'Завантаження']);
   assert.equal(adds[2].index, 0, 'лист «Завантаження» першим');
-  const links = batches(log).flatMap((b) => b[2]).filter((q) => q.updateCells && q.updateCells.fields === 'textFormatRuns').map((q) => q.updateCells.rows[0].values[0].textFormatRuns[0].format.link.uri);
+  const links = batches(log).flatMap((b) => b[2]).filter((q) => q.repeatCell && q.repeatCell.cell.userEnteredFormat.textFormat && q.repeatCell.cell.userEnteredFormat.textFormat.link).map((q) => q.repeatCell.cell.userEnteredFormat.textFormat.link.uri);
   assert.deepEqual(links.map((u) => u.replace(/^.*gid=/, '')), ['100', '101'], 'gid «Заказы» і «Данные Заказов»');
   assert.ok(texts(log).includes('Звіт перезібрано о 17:45'));
 });

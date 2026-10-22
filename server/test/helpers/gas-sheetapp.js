@@ -88,7 +88,13 @@ function createSpreadsheetApp(books, opts) {
       clearDataValidations() { return rng; },
       setRichTextValue(rt) {
         const cell = cellOf(sh, r1, c1);
-        cell.v = rt.text; cell.link = rt.url; cell.rt = rt.style;
+        // Google віддає посилання і стиль на рівні формату комірки (textFormat.link/underline/...), не окремими прогонами
+        cell.v = rt.text; cell.link = rt.url;
+        const st = rt.style || {};
+        if (st.size !== undefined) cell.size = st.size;
+        if (st.bold !== undefined) cell.bold = st.bold;
+        if (st.color !== undefined) cell.color = st.color;
+        if (st.underline !== undefined) cell.ul = st.underline;
         return rng;
       },
       setFormula(f) { cellOf(sh, r1, c1).formula = f; return rng; },
@@ -100,7 +106,7 @@ function createSpreadsheetApp(books, opts) {
     const api = {
       getName: () => sh.name,
       getSheetId: () => sh.id,
-      clear() { sh.cells = {}; sh.filter = null; return api; },
+      clear() { sh.cells = {}; sh.edges = {}; sh.filter = null; return api; },
       clearConditionalFormatRules() { return api; },
       getRange(a, b, c, d) {
         if (typeof a === 'string') { const [r1, c1, r2, c2] = parseA1(a); return rangeOf(sh, r1, c1, r2 - r1 + 1, c2 - c1 + 1); }

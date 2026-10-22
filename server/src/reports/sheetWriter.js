@@ -46,6 +46,8 @@ function fmtReq(rg, f) {
   if (f.bold != null) { tf.bold = !!f.bold; fields.push('textFormat.bold'); }
   if (f.size) { tf.fontSize = f.size; fields.push('textFormat.fontSize'); }
   if (f.font) { tf.fontFamily = f.font; fields.push('textFormat.fontFamily'); }
+  if (f.underline != null) { tf.underline = !!f.underline; fields.push('textFormat.underline'); }
+  if (f.link) { tf.link = { uri: f.link }; fields.push('textFormat.link'); }
   if (Object.keys(tf).length) cf.textFormat = tf;
   return { repeatCell: { range: rg, cell: { userEnteredFormat: cf },
     fields: fields.map((x) => 'userEnteredFormat.' + x).join(',') } };
