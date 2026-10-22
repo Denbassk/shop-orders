@@ -12,6 +12,8 @@ const { exportDir, exportAll } = require('./export/raw');
 const { resolveTarget, exportTargetMode } = require('./export/target');
 const { rebuildReports: rebuildDir, rebuildAllReports, exportThenReports } = require('./reports/rebuild');
 const { tick } = require('./jobs');
+const { noteError } = require('./admin/tools');
+const { errorText, collectTickErrors } = require('./errors');
 const { exportWriteoffs } = require('./export/writeoff');
 const googleApi = require('./google');
 const { getValues, firstSheetTitle, a1q } = googleApi;
@@ -68,14 +70,20 @@ function createRuntime() {
   const adm = createAdminData(supabase());
   const reportEnv = () => ({ data, google: googleForExport, target, at: new Date(), markReport: (dir, at) => adm.setReportAt(dir, at.toISOString()), archive: { spreadsheetId: process.env.NBHZ_ARCHIVE_SPREADSHEET_ID || '' } });
   const rebuildReports = () => rebuildAllReports(reportEnv());
-  const queueReports = createExportQueue({ run: (dir) => rebuildDir(dir, reportEnv()), delayMs: Number(process.env.REPORTS_DEBOUNCE_MS) || 30000 });
-  const queueExport = createExportQueue({ run: exportThenReports((dir) => exportDir(dir, exportEnv()), queueReports) });
+  // «Сервісне меню»: помилки фонових задач йдуть у екран «Здоров'я» пульта (settings.health_err), не лише в лог
+  const noteErr = (where) => (dir, e) => noteError(adm, where + (dir ? ' ' + dir : ''), errorText(e));
+  const queueReports = createExportQueue({ run: (dir) => rebuildDir(dir, reportEnv()), delayMs: Number(process.env.REPORTS_DEBOUNCE_MS) || 30000, onError: noteErr('звіт') });
+  const queueExport = createExportQueue({ run: exportThenReports((dir) => exportDir(dir, exportEnv()), queueReports), onError: noteErr('вигрузка') });
   // Вигрузка списань у лист «Списания» (export/writeoff.js): одна черга 'wo', 2 с як у замовлень; недовигружене підхопить tick.
   const woExport = () => exportWriteoffs(exportEnv());
-  const queueWoExport = createExportQueue({ run: woExport });
+  const queueWoExport = createExportQueue({ run: woExport, onError: noteErr('списання') });
 
   const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport, queueWoExport, defer });
-  const tickJob = () => tick({ ...getEnv(), ...exportEnv(), rebuildReports, exportWriteoffs: woExport }, exportAll);
+  const tickJob = async () => {
+    const res = await tick({ ...getEnv(), ...exportEnv(), rebuildReports, exportWriteoffs: woExport }, exportAll);
+    for (const x of collectTickErrors(res)) await noteError(adm, 'tick: ' + x.where, x.msg);
+    return res;
+  };
   return { getEnv, tick: tickJob, approve: (query) => approvePage(query, getEnv()), approveForm: (query) => approveForm(query, getEnv()) };
 }
 

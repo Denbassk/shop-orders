@@ -66,7 +66,11 @@ async function noteError(adm, where, msg, at = new Date()) {
   try {
     const cur = await adm.getSetting(HEALTH_ERR_KEY);
     const arr = Array.isArray(cur) ? cur.slice() : [];
-    arr.unshift({ at: dmOf(at) + ' ' + hmOf(at), where: String(where), msg: String(msg).slice(0, 300) });
+    const base = String(msg).slice(0, 300), top = arr[0];
+    if (top && top.where === String(where) && (top.raw || top.msg) === base) {      // така сама помилка підряд: не множимо, а лічимо повтори
+      const n = (top.count || 1) + 1;
+      arr[0] = { ...top, raw: base, count: n, at: dmOf(at) + ' ' + hmOf(at), msg: base + ' (×' + n + ')' };
+    } else arr.unshift({ at: dmOf(at) + ' ' + hmOf(at), where: String(where), msg: base });
     await adm.setSetting(HEALTH_ERR_KEY, arr.slice(0, 20));
   } catch (e) { /* як в оригіналі - мовчки */ }
 }

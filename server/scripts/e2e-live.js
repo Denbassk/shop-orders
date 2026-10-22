@@ -109,7 +109,8 @@ async function run(dir) {
   if (prev && rows[0]) {
     const [fp, fo] = [await cellFormats(cfg.spreadsheetId, rawSheet(dir), prev.n), await cellFormats(cfg.spreadsheetId, rawSheet(dir), rows[0].n)];
     const cols = dir === 'bakery' || dir === 'veg' ? [0, 1] : [0];
-    const diffs = cols.filter((c) => JSON.stringify(fp[c] && fp[c].nf) !== JSON.stringify(fo[c] && fo[c].nf) || (fp[c] && fo[c] && fp[c].ev !== fo[c].ev));
+    const diffs = cols.filter((c) => JSON.stringify(fp[c] && fp[c].nf).toLowerCase() !== JSON.stringify(fo[c] && fo[c].nf).toLowerCase() ||     // dd.MM.yyyy і dd.mm.yyyy - той самий формат дати
+       (fp[c] && fo[c] && fp[c].ev !== fo[c].ev));
     check('тип і формат дати (і часу) нових рядків = як у сусіднього бойового рядка', diffs.length === 0, diffs.map((c) => `кол.${c + 1}: бойовий ${JSON.stringify(fp[c])} наш ${JSON.stringify(fo[c])}`).join(' | '));
   }
 
@@ -141,8 +142,9 @@ async function run(dir) {
   await sleep(33000);
   if (dir === 'nbhz') await adminReport(dir);
   else await tick();
-  await sleep(5000);
-  const after = await readLive(dir, new Date());
+  // tick пересобирає напрямки по черзі (кожен 3-6 с) - чекаємо, поки наш напрямок дійде, до 60 с
+  let after = await readLive(dir, new Date());
+  for (let i = 0; i < 12 && normValues(after.values) !== normBefore; i++) { await sleep(5000); after = await readLive(dir, new Date()); }
   const rowsAfter = (await sheetRows(dir)).length;
   check('рядків у бойовому сирому листі стільки ж, як було', rowsAfter === rowsBefore, `було ${rowsBefore}, стало ${rowsAfter}`);
   check('бойовий звіт повернувся до стану ДО (значення, без часу збирання)', normValues(after.values) === normBefore);
