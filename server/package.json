@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
     "googleapis": "^186.0.0",
+    "jsonwebtoken": "^9.0.3",
     "nodemailer": "^10.1.7"
   },
   "main": "src/app.js"
