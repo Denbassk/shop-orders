@@ -87,6 +87,7 @@ function createAdminRuntime(opts = {}) {
     sheet: (p) => buyerSheets.read(dir, (p || {}).key, { fresh: !!(p && p.fresh) }),
     summary: (p) => buyerSheets.summary(dir, { fresh: !!(p && p.fresh) }),
     // плитки точок: хто замовив / чекаємо / не їхній день (admDirStores пульта), без посилань на Google
+    writeoffs: (p) => require('../buyer/writeoffs').stats(dir, p || {}),
     board: () => read.admDirStores({ dir }, { ...env(), links: {} }),
   }));
   // Excel листа звіту для закупниці - через сервісний акаунт (src/buyer/xlsx.js); токен створюється при першому скачуванні

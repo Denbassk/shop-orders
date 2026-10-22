@@ -195,7 +195,31 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .dr.isok{border-color:color-mix(in srgb,var(--ok) 55%,transparent)!important;background:var(--okb)!important}
 .ds.ok{color:var(--ok)!important;font-weight:700}
 .sumd .sec .dot{display:inline-block;vertical-align:middle;margin-right:4px}
-</style>
+.wof{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:4px 0 16px}
+.wog{display:flex;flex-wrap:wrap;gap:6px}
+.wob{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:7px 13px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,background .15s,box-shadow .15s}
+.wob:hover{transform:translateY(-2px);box-shadow:var(--sh)}
+.wob.on{background:var(--tx);color:var(--sf);border-color:var(--tx)}
+.wogrid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));margin-top:18px;align-items:start}
+.wocard{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
+.wocard.wide{grid-column:1/-1}
+.woh{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+.rk{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--ln)}
+.woh+.rk{border-top:0}
+.rn{width:24px;height:24px;flex:none;display:grid;place-items:center;border-radius:8px;font-size:12px;font-weight:800;color:var(--mu);background:var(--sf2)}
+.rn.t3{color:var(--bad);background:var(--badb)}
+.rb{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.rt{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs{font-size:12px;color:var(--mu)}
+.rbar{height:5px;border-radius:3px;background:var(--sf2);overflow:hidden;margin-top:2px}
+.rbar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),var(--bad))}
+.rv{font-weight:800;white-space:nowrap}
+.wod{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:6px}
+.wdc{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.wdc i{display:block;width:100%;max-width:30px;border-radius:5px 5px 0 0;background:var(--teal);opacity:.8;transition:opacity .15s,background .15s}
+.wdc:hover i{opacity:1;background:var(--bad)}
+.wdc span{font-size:10px;color:var(--mu);margin-top:4px;white-space:nowrap;height:12px}
+@media (max-width:560px){.wogrid{grid-template-columns:1fr}.wod{height:110px}.wof{gap:8px}}</style>
 </head>
 <body>
 <header class="hdr">
@@ -325,11 +349,12 @@ function setDir(k) {
   S.late = S.products = null; S.info = S.infos[S.dir] || null; S.q = ''; S.f = 'all';
   chips(); head(); go(S.tab);
 }
-const TABS = { today: showToday, late: showLate, accept: showAccept, reports: showReports, products: showProducts };
+const TABS = { today: showToday, late: showLate, accept: showAccept, reports: showReports, products: showProducts, wo: showWo };
 async function go(tab) {
   S.tab = tab;
+  woNav();
   chips();
-  Object.keys(TABS).forEach((t) => $('t-' + t).classList.toggle('on', t === tab));
+  Object.keys(TABS).forEach((t) => ($('t-' + t) || document.createElement('i')).classList.toggle('on', t === tab));
   view('<div class="spin">Завантаження…</div>');
   S.anim = true;
   try { S.info = await call('info'); S.infos[S.dir] = S.info; head(); await TABS[tab](); } catch (e) { fail(e); }
@@ -747,7 +772,67 @@ async function showProducts() {
     '<div id="plist"></div><div class="note">Поки працює стара система, зміни тут можуть перезаписатися з листа «Ассортимент».</div>');
   renderProducts();
 }
-function renderProducts() {
+const WO = { days: 7, entity: '', cat: '', data: null, force: false };
+function woNav() {
+  if ($('t-wo') || !S.me || !S.me.dirs.some((d) => d.dir === 'bakery')) return;
+  const pb = $('t-products'); if (!pb) return;
+  const nb = pb.cloneNode(false); nb.id = 't-wo'; nb.classList.remove('on'); nb.setAttribute('onclick', "go('wo')");
+  nb.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v5M14 11v5"/></svg><span>Списання</span>';
+  pb.after(nb);
+}
+function woChip(on, label, k, v) { return '<button class="wob' + (on ? ' on' : '') + '" data-k="' + k + '" data-v="' + v + '" onclick="woSet(this)">' + esc(label) + '</button>'; }
+function woFilters() {
+  const d = WO.data || {};
+  $('wof').innerHTML = '<div class="wof"><div class="wog">' + [[1, 'Сьогодні'], [7, '7 днів'], [31, '31 день'], [90, '90 днів']].map((x) => woChip(WO.days === x[0], x[1], 'days', x[0])).join('') + '</div>' +
+    '<div class="wog">' + woChip(!WO.entity, 'Усі юрособи', 'entity', '') + (d.entities || []).map((e, i) => woChip(WO.entity === e, e, 'entity', i)).join('') + '</div>' +
+    '<div class="wog">' + woChip(!WO.cat, 'Усі категорії', 'cat', '') + (d.cats || []).map((c, i) => woChip(WO.cat === c, c, 'cat', i)).join('') + '</div>' +
+    '<button class="wob" onclick="WO.force=true;showWo()">↻ Оновити</button></div>';
+}
+function woSet(el) {
+  const k = el.dataset.k; let v = el.dataset.v;
+  if (k === 'days') v = +v; else if (v !== '') v = (k === 'entity' ? WO.data.entities : WO.data.cats)[+v] || '';
+  WO[k] = v; if ($('wov')) $('wov').style.opacity = '.5';
+  showWo().finally(() => { if ($('wov')) $('wov').style.opacity = ''; });
+}
+function woRank(title, list) {
+  if (!list || !list.length) return '';
+  const mx = Math.max(1, ...list.map((x) => x.sum));
+  return '<div class="wocard"><div class="woh">' + esc(title) + '</div>' + list.map((x, i) =>
+    '<div class="rk"><span class="rn' + (i < 3 ? ' t3' : '') + '">' + (i + 1) + '</span><span class="rb"><span class="rt">' + esc(x.name) + '</span><span class="rs">' + esc(fmtN(x.qty) + ' шт · подач ' + x.docs + ' · +20%: ' + fmtN(x.sum20) + ' грн') + '</span><span class="rbar"><i style="width:' + Math.max(2, Math.round(x.sum / mx * 100)) + '%"></i></span></span><span class="rv">' + esc(fmtN(x.sum)) + ' грн</span></div>').join('') + '</div>';
+}
+function woDays(list) {
+  if (!list || list.length < 2) return '';
+  const mx = Math.max(1, ...list.map((x) => x.sum)), step = list.length > 31 ? 7 : 1;
+  return '<div class="wocard wide"><div class="woh">По днях, грн</div><div class="wod">' + list.map((x, i) =>
+    '<div class="wdc" title="' + esc(x.name.slice(8, 10) + '.' + x.name.slice(5, 7) + ': ' + fmtN(x.sum) + ' грн, ' + fmtN(x.qty) + ' шт') + '"><i style="height:' + Math.max(3, Math.round(x.sum / mx * 100)) + '%"></i><span>' + (i % step ? '' : esc(x.name.slice(8, 10) + '.' + x.name.slice(5, 7))) + '</span></div>').join('') + '</div></div>';
+}
+function woRecent(list) {
+  if (!list || !list.length) return '';
+  return '<div class="wocard wide"><div class="woh">Останні подачі</div>' + list.map((x) =>
+    '<div class="rk"><span class="rb"><span class="rt">' + esc(x.store) + '</span><span class="rs">' + esc([x.day.slice(8, 10) + '.' + x.day.slice(5, 7) + (x.time ? ' ' + x.time : ''), x.seller, x.entity, x.items + ' поз. · ' + fmtN(x.qty) + ' шт'].join(' · ')) + '</span></span><span class="rv">' + esc(fmtN(x.sum)) + ' грн</span></div>').join('') + '</div>';
+}
+function woDraw(d) {
+  const t = d.total || {};
+  let h = '';
+  if (d.errors && d.errors.length) h += '<div class="note">' + esc('Не прочитано: ' + d.errors.join('; ')) + '</div>';
+  h += '<div class="kpis">' + kpi(fmtN(t.sum || 0), 'грн за собівартістю') + kpi(fmtN(t.sum20 || 0), 'грн +20%') + kpi(fmtN(t.qty || 0), 'штук') +
+    kpi(String(t.docs || 0), 'подач') + kpi(String(t.stores || 0), 'точок списували') + kpi(String(d.todayStores || 0), 'точок подали сьогодні') + '</div>';
+  if (!t.docs) { $('wov').innerHTML = h + '<div class="note">За цей період списань немає.</div>'; return; }
+  h += '<div class="wogrid">' + woDays(d.days) + woRank('Точки - хто більше списує', d.stores) + woRank('Товари', d.products) + woRank('Продавці', d.sellers) +
+    woRank('Категорії', d.byCat) + (d.byEntity && d.byEntity.length > 1 ? woRank('Юрособи', d.byEntity) : '') + woRecent(d.recent) + '</div>';
+  h += '<div class="note sm">' + esc('Джерело - таблиці списань (' + (d.books || []).join(', ') + '), лише читання. Період ' + d.from.split('-').reverse().join('.') + ' - ' + d.to.split('-').reverse().join('.') + (WO.days > 31 ? ', з архівом' : '')) + '</div>';
+  $('wov').innerHTML = h;
+}
+async function showWo() {
+  if (!$('wov')) view('<div id="wof"></div><div id="wov"><div class="spin">Читаю таблиці списань…</div></div>');
+  woFilters();
+  const force = WO.force; WO.force = false;
+  let d;
+  try { d = await call('writeoffs', { days: WO.days, entity: WO.entity, cat: WO.cat, fresh: force }, 90000); }
+  catch (e) { if ($('wov')) $('wov').innerHTML = '<div class="note">' + esc(e.message) + '</div>'; return; }
+  if (S.tab !== 'wo' || !$('wov')) return;
+  WO.data = d; woFilters(); woDraw(d);
+}function renderProducts() {
   const box = $('plist'); if (!box || !S.products) return;
   const q = S.q.trim().toLowerCase();
   const list = S.products.products.map((p, i) => [p, i]).filter(([p]) => !q || (p.name + ' ' + p.barcode + ' ' + (p.category || '')).toLowerCase().includes(q));
