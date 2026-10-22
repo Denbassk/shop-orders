@@ -157,7 +157,9 @@ async function admStoreCard(payload, env) {
         const rows = [];
         let qty = 0, time = '';
         mine.forEach((o) => { o.lines.forEach((l) => { rows.push({ row: l.id, name: String(l.name == null ? '' : l.name), qty: Number(l.qty) || 0 }); qty += Number(l.qty) || 0; }); if (hasTime) time = hmOf(o.created_at); });
-        order = { src: 'db', n: rows.length, qty: round3(qty), time, canEdit: true, rows };
+        // замовлення, імпортовані з листів Google (import-today.js), - це замовлення Apps Script: скасувати/змінити їх треба там
+        const ext = mine.every((o) => String(o.order_id || '').startsWith('import-'));
+        order = { src: ext ? 'google' : 'db', n: rows.length, qty: round3(qty), time, canEdit: !ext, rows: ext ? [] : rows };
       } else if (g && g[k] && g[k].get && g[k].get(store.id)) {
         const v = g[k].get(store.id);
         order = { src: 'google', n: v.n, qty: round3(v.qty), time: hasTime ? v.time : '', canEdit: false, rows: [] };

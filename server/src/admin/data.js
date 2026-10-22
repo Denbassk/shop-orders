@@ -3,7 +3,7 @@ function createAdminData(sb) {
   const must = (what, r) => { if (r.error) throw new Error(what + ': ' + r.error.message); return r.data || []; };
   // активні замовлення напрямку за день (основні й добавки) з рядками - замість хвоста сирого листа
   async function dayOrders(dir, day) {
-    return must('orders', await sb.from('orders').select('id,store_id,is_addon,created_at,order_lines(id,line_no,name,qty)')
+    return must('orders', await sb.from('orders').select('id,order_id,store_id,is_addon,created_at,order_lines(id,line_no,name,qty)')
       .eq('dir', dir).eq('order_date', day).eq('status', 'active').order('created_at'))
       .map(({ order_lines, ...o }) => ({ ...o, lines: (order_lines || []).slice().sort((a, b) => a.line_no - b.line_no) }));
   }

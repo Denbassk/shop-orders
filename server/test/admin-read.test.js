@@ -131,6 +131,9 @@ test('storeCard: реквізити, компанія (ЮА/Фемелі), гр�
   assert.deepEqual(bread.order.rows.map((r) => r.row), [11, 12]);
   assert.deepEqual([veg.order.src, veg.order.n, veg.order.qty, veg.order.time, veg.order.canEdit], ['google', 4, 20.5, '09:15', false], 'замовлення з таблиці Google змінювати з нового пульта не можна');
   assert.equal(veg.byDays, true);
+  e.adm.dayOrders = async (dir) => (dir === 'bread' ? [{ order_id: 'import-2026-10-20-bread-s2', store_id: 's2', created_at: '2026-10-20T07:10:00Z', lines: [{ id: 21, name: 'Хліб', qty: 4 }] }] : []);
+  const imp = await admStoreCard({ storeId: 's2' }, e);
+  assert.deepEqual([imp.dirs[0].order.src, imp.dirs[0].order.canEdit, imp.dirs[0].order.n, imp.dirs[0].order.qty], ['google', false, 1, 4], 'імпортоване з листа = замовлення Apps Script, змінювати не можна');
   const f = await admStoreCard({ storeId: 's1' }, e);
   assert.equal(f.store.company, 'Фемелі');
   assert.equal(f.dirs[0].order, null, 'не замовляла');
