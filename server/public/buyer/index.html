@@ -190,6 +190,11 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .bm.all{cursor:default;transform:translateY(0)}.bm.all:hover{transform:translateY(0);box-shadow:none}.bm.all .dot+.dot{margin-left:-3px}
 .pgrid{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));align-items:start}
 @media (max-width:460px){.pgrid{grid-template-columns:1fr}}
+.tile.st-ok{border-color:color-mix(in srgb,var(--ok) 45%,var(--ln))!important;background:color-mix(in srgb,var(--ok) 8%,var(--sf))!important;box-shadow:inset 4px 0 0 var(--ok)}
+.tile.st-ok::before{background:var(--ok)!important}
+.dr.isok{border-color:color-mix(in srgb,var(--ok) 55%,transparent)!important;background:var(--okb)!important}
+.ds.ok{color:var(--ok)!important;font-weight:700}
+.sumd .sec .dot{display:inline-block;vertical-align:middle;margin-right:4px}
 </style>
 </head>
 <body>
@@ -302,9 +307,9 @@ function head() {
   const st = stOf(i);
   $('subtitle').textContent = (S.me && S.me.title ? S.me.title + ' · ' : '') + (i ? st.t : '') + (i && i.reportAt ? ' · звіт о ' + i.reportAt : '');
   document.documentElement.style.setProperty('--dc', colorOf(S.dir));
-  if (isShared()) { $('title').textContent = S.tab === 'late' ? 'Дозволи' : 'Прийом'; $('subtitle').textContent = 'Усі напрямки: ' + S.me.dirs.map((d) => d.title).join(', '); }
+  if (isShared()) { $('title').textContent = ({ late: 'Дозволи', accept: 'Прийом', today: 'Сьогодні' })[S.tab] || ''; $('subtitle').textContent = 'Усі напрямки: ' + S.me.dirs.map((d) => d.title).join(', '); }
 }
-function isShared() { return (S.tab === 'late' || S.tab === 'accept') && !!S.me && S.me.dirs.length > 1; }
+function isShared() { return (S.tab === 'late' || S.tab === 'accept' || S.tab === 'today') && !!S.me && S.me.dirs.length > 1; }
 function chips() {
   if (!S.me) return;
   if (isShared()) {
@@ -352,14 +357,14 @@ function storesAll() {
       let s = m.get(r.id);
       if (!s) { s = { id: r.id, label: r.label, route: r.route || '', code: r.code || '', ua: !!r.ua, d: {} }; m.set(r.id, s); }
       if (r.ua) s.ua = true;
-      s.d[d.dir] = { st, n: r.n, qty: r.qty, time: r.time, days: r.days, next: r.next };
+      s.d[d.dir] = { st, gs: !!r.gs, n: r.n, qty: r.qty, time: r.time, days: r.days, next: r.next };
     }));
   });
   Object.keys(S.lates).forEach((dir) => (S.lates[dir].list || []).forEach((x) => { const s = m.get(x.storeId); if (s && s.d[dir]) s.d[dir].late = x; }));
   return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, 'uk'));
 }
 function cellOf(dir, c) {
-  if (c.st === 'ok') return { cls: 'ok', t: '✓ ' + fmtN(c.qty) + ' ' + unitOf(dir) + (c.time ? ' · ' + c.time : '') };
+  if (c.st === 'ok') return { cls: 'ok', t: 'Зроблено' + (c.gs ? '' : (c.qty != null ? ' · ' + fmtN(c.qty) + ' ' + unitOf(dir) : '') + (c.time ? ' · ' + c.time : '')) };
   if (c.late && c.late.status === 'pending') return { cls: 'late', t: 'просить дозвіл' };
   if (c.late && c.late.status === 'approved') return { cls: 'late', t: 'дозвіл ' + c.late.leftMin + ' хв' };
   if (c.st === 'off') return { cls: 'off', t: c.next ? 'наступне ' + ua(c.next) : 'не сьогодні' };
@@ -379,15 +384,56 @@ async function showTodayBase(quiet) {
       '<div class="tools"><input type="search" id="tq" placeholder="Пошук: адреса, маршрут, код" value="' + esc(S.tq) + '" oninput="S.tq = this.value; renderTiles()"><div class="fl" id="fl"></div></div>' +
       '<div class="tiles" id="tiles"></div></div><div id="tdtop"></div></div>');
   }
+  gsApply();
   $('ov').innerHTML = ovHtml();
   S.tiles = storesAll(); renderTiles();
-  const dir = S.dir;
-  if (S.sums[dir]) sumDraw(S.sums[dir]); else $('tdsum').innerHTML = '<div class="spin sm">Читаю таблицю Google…</div>';
-  try {
-    const d = await call('summary', {}, 60000);
-    S.sums[dir] = d;
-    if (dir === S.dir && S.tab === 'today' && $('tdsum')) sumDraw(d);
-  } catch (e) { if (dir === S.dir && $('tdsum')) $('tdsum').innerHTML = '<div class="note">' + esc('Таблиця Google: ' + e.message) + '</div>'; }
+  const ds = S.me.dirs.map((d) => d.dir).filter((x) => isShared() || x === S.dir);
+  if (isShared()) sumAll(); else if (S.sums[S.dir]) sumDraw(S.sums[S.dir]); else $('tdsum').innerHTML = '<div class="spin sm">Читаю таблицю Google…</div>';
+  const er = {};
+  await Promise.all(ds.map((x) => call('summary', { dir: x }, 60000).then((d) => { S.sums[x] = d; }).catch((e) => { er[x] = e.message; })));
+  if (S.tab !== 'today' || !$('tdsum')) return;
+  gsApply();
+  $('ov').innerHTML = ovHtml(); S.tiles = storesAll(); renderTiles();
+  if (isShared()) sumAll(er);
+  else if (er[S.dir]) $('tdsum').innerHTML = '<div class="note">' + esc('Таблиця Google: ' + er[S.dir]) + '</div>';
+  else if (S.sums[S.dir]) sumDraw(S.sums[S.dir]);
+}
+function aggCls(s) {
+  const cs = S.me.dirs.filter((d) => s.d[d.dir]).map((d) => cellOf(d.dir, s.d[d.dir]).cls);
+  return ['ok', 'late', 'wait', 'off'].find((z) => cs.includes(z)) || 'none';
+}
+function gsn(v) {
+  return String(v || '').split(' · ')[0].toLowerCase().replace(/\(.*?\)/g, ' ')
+    .replace(/(^|[^a-zа-яіїєґ])(м|г|вул|вулиця|ул|улица|пр|просп|проспект|пров|пер|пл|площа|бул|бульвар|харків|харьков|магазин|юа)(?=[^a-zа-яіїєґ]|$)/gi, ' ')
+    .replace(/[^a-zа-яіїєґ0-9]/gi, '');
+}
+function gsApply() {
+  S.gsNote = {};
+  S.me.dirs.forEach((d) => {
+    const b = S.boards[d.dir], x = S.sums[d.dir];
+    if (!b || b.error || !b.wait || !x || !Array.isArray(x.missing)) return;
+    const miss = x.missing.map(gsn).filter(Boolean);
+    const hit = (m, r) => { const n = gsn(r.label); return !!n && (m === n || m.endsWith(n)); };
+    const all = b.wait.concat(b.done || [], b.off || []);
+    const lost = miss.filter((m) => !all.some((r) => hit(m, r))).length;
+    if (lost > 2) { S.gsNote[d.dir] = lost; return; }
+    const stay = [], moved = [];
+    b.wait.forEach((r) => (miss.some((m) => hit(m, r)) ? stay : moved).push(r));
+    if (!moved.length) return;
+    b.wait = stay;
+    b.done = (b.done || []).concat(moved.map((r) => Object.assign({}, r, { gs: true })));
+  });
+}
+function sumAll(er) {
+  er = er || {};
+  $('tdsum').innerHTML = '<div class="stack sm">' + S.me.dirs.map((d) => {
+    const x = S.sums[d.dir], e = er[d.dir], ln = (S.gsNote || {})[d.dir];
+    const body = e ? '<div class="note">' + esc('Таблиця Google: ' + e) + '</div>'
+      : !x ? '<div class="spin sm">Читаю таблицю Google…</div>'
+      : (x.stats && x.stats.length ? '<div class="kpis">' + x.stats.map((s) => kpi(s.v, s.k)).join('') + '</div>' : '<div class="note">' + esc(x.note || 'Немає даних') + '</div>');
+    return '<div class="sumd" style="--c:' + colorOf(d.dir) + '"><div class="sec"><span class="dot"></span> ' + esc(d.title) + ' <small>' + esc('з таблиці Google' + (x && x.note ? ' · ' + x.note : '') + (ln ? ' · не зіставлено адрес: ' + ln : '')) + '</small></div>' + body + '</div>';
+  }).join('') + '</div>';
+  if ($('tdtop')) $('tdtop').innerHTML = '';
 }
 function ovHtml() {
   return '<div class="ov">' + S.me.dirs.map((d, k) => {
@@ -404,8 +450,9 @@ const FL = [['all', 'Усі'], ['ok', 'Замовили'], ['wait', 'Чекає�
 function match(s, f) {
   if (f === 'all') return true;
   if (f === 'ua') return !!s.ua;
-  const c = s.d[S.dir];
-  return !!c && cellOf(S.dir, c).cls === f;
+  const g = ({ done: 'ok', ordered: 'ok' })[f] || f;
+  const cs = S.me.dirs.filter((d) => s.d[d.dir]).map((d) => cellOf(d.dir, s.d[d.dir]).cls);
+  return g === 'off' ? cs.length > 0 && cs.every((z) => z === 'off') : cs.includes(g);
 }
 function setF(f) { S.f = f; renderTiles(); }
 function renderTiles() {
@@ -420,10 +467,10 @@ function renderTiles() {
   box.innerHTML = list.length ? list.map((s) => tileHtml(s, S.tiles.indexOf(s))).join('') : '<div class="info">Нічого не знайдено</div>';
 }
 function tileHtml(s, k) {
-  const c = s.d[S.dir], x = c ? cellOf(S.dir, c) : null;
+  const x = { cls: aggCls(s) };
   const rows = S.me.dirs.filter((d) => s.d[d.dir]).map((d) => {
     const y = cellOf(d.dir, s.d[d.dir]);
-    return '<div class="dr' + (d.dir === S.dir ? ' cur' : '') + '" style="--c:' + colorOf(d.dir) + '"><span class="dot"></span><span class="dn">' + esc(SHORT[d.dir] || d.title) + '</span><span class="ds ' + y.cls + '">' + esc(y.t) + '</span></div>';
+    return '<div class="dr' + (d.dir === S.dir && !isShared() ? ' cur' : '') + (y.cls === 'ok' ? ' isok' : '') + '" style="--c:' + colorOf(d.dir) + '"><span class="dot"></span><span class="dn">' + esc(SHORT[d.dir] || d.title) + '</span><span class="ds ' + y.cls + '">' + esc(y.t) + '</span></div>';
   }).join('');
   return '<button class="tile st-' + (x ? x.cls : 'none') + '" onclick="openStore(' + k + ')"><div class="tt">' + esc(s.label) + '</div>' + ((s.route || s.ua) ? '<div class="tr">' + esc(s.route || '') + (s.ua ? '<span class="ua">ЮА Маркет</span>' : '') + '</div>' : '') + '<div class="dl">' + rows + '</div></button>';
 }
@@ -457,9 +504,9 @@ function openStore(k) {
 function sdHtml(s, k, d, j) {
   const c = s.d[d.dir], x = c ? cellOf(d.dir, c) : null;
   let a = '';
-  if (c && c.st === 'ok') a = '<button class="btn sm ghost" onclick="askEdit(' + k + ',' + j + ')">Змінити кількість</button><button class="btn sm" onclick="askDel(' + k + ',' + j + ')">Видалити</button>';
+  if (c && c.st === 'ok' && !c.gs) a = '<button class="btn sm ghost" onclick="askEdit(' + k + ',' + j + ')">Змінити кількість</button><button class="btn sm" onclick="askDel(' + k + ',' + j + ')">Видалити</button>';
   else if (c && c.late && c.late.status !== 'approved') a = '<button class="btn sm" onclick="approveS(' + k + ',' + j + ')">Дозволити на 30 хв</button>';
-  const info = c ? 'Дні: ' + ua(c.days) + (c.st === 'ok' ? ' · ' + c.n + ' поз. · ' + fmtN(c.qty) + ' ' + unitOf(d.dir) : '') : 'Точка не працює з цим напрямком';
+  const info = c ? 'Дні: ' + ua(c.days) + (c.gs ? ' · замовлено (за таблицею Google)' : '') + (c.st === 'ok' && !c.gs ? ' · ' + c.n + ' поз. · ' + fmtN(c.qty) + ' ' + unitOf(d.dir) : '') : 'Точка не працює з цим напрямком';
   return '<div class="sd" style="--c:' + colorOf(d.dir) + '"><div class="sdh"><span class="dot"></span><b>' + esc(d.title) + '</b><span class="ds ' + (x ? x.cls : 'off') + '">' + esc(x ? x.t : '—') + '</span></div><div class="sds">' + esc(info) + '</div>' + (a ? '<div class="ta">' + a + '</div>' : '') + '</div>';
 }
 async function approveS(k, j) {
