@@ -52,5 +52,6 @@ test('вкладка «Магазини»: перемикач Плитки | Т�
   const html = build();
   for (const f of ["call('storesTable')", 'window.stMode', 'Відкрити Довідник', 'Таблиця', 'Лише перегляд']) assert.ok(html.includes(f), f);
   assert.ok(html.lastIndexOf('call(\'storesTable\')') > html.lastIndexOf('function loadStores('), 'перевизначення loadStores - після оригіналу');
-  assert.ok(!/call\('(cardSave|saveStore)/.test(html), 'таблиця нічого не зберігає');
+  const mine = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'admin-stores.html'), 'utf8');
+  assert.ok(!/call\('(?!storesTable)/.test(mine), 'блок «Магазини» викликає лише storesTable - нічого не зберігає');
 });
