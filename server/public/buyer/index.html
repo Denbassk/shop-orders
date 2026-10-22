@@ -185,6 +185,11 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 }
 @media (min-width:1100px){.rpgrid{display:grid;grid-template-columns:360px minmax(0,1fr);align-items:start}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.ua{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:7px;font-size:11px;font-weight:800;letter-spacing:.02em;color:#1D4ED8;background:rgba(29,78,216,.1);border:1px solid rgba(29,78,216,.25);vertical-align:1px}
+[data-theme=dark] .ua{color:#93C5FD;background:rgba(147,197,253,.12);border-color:rgba(147,197,253,.3)}
+.bm.all{cursor:default;transform:translateY(0)}.bm.all:hover{transform:translateY(0);box-shadow:none}.bm.all .dot+.dot{margin-left:-3px}
+.pgrid{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));align-items:start}
+@media (max-width:460px){.pgrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -297,9 +302,16 @@ function head() {
   const st = stOf(i);
   $('subtitle').textContent = (S.me && S.me.title ? S.me.title + ' · ' : '') + (i ? st.t : '') + (i && i.reportAt ? ' · звіт о ' + i.reportAt : '');
   document.documentElement.style.setProperty('--dc', colorOf(S.dir));
+  if (isShared()) { $('title').textContent = S.tab === 'late' ? 'Дозволи' : 'Прийом'; $('subtitle').textContent = 'Усі напрямки: ' + S.me.dirs.map((d) => d.title).join(', '); }
 }
+function isShared() { return (S.tab === 'late' || S.tab === 'accept') && !!S.me && S.me.dirs.length > 1; }
 function chips() {
   if (!S.me) return;
+  if (isShared()) {
+    const n = Object.values(S.pend).reduce((a, b) => a + (b || 0), 0);
+    $('dirs').innerHTML = '<div class="bm on all" style="--c:var(--teal)">' + S.me.dirs.map((d) => '<span class="dot" style="--c:' + colorOf(d.dir) + '"></span>').join('') + 'Усі напрямки' + (n ? '<b>' + esc(n) + '</b>' : '') + '</div>';
+    return;
+  }
   $('dirs').innerHTML = S.me.dirs.map((d, k) => '<button class="bm' + (d.dir === S.dir ? ' on' : '') + '" style="--c:' + colorOf(d.dir) + '" onclick="setDir(' + k + ')"><span class="dot"></span>' + esc(d.title) + (S.pend[d.dir] ? '<b>' + esc(S.pend[d.dir]) + '</b>' : '') + '</button>').join('');
 }
 function setDir(k) {
@@ -311,6 +323,7 @@ function setDir(k) {
 const TABS = { today: showToday, late: showLate, accept: showAccept, reports: showReports, products: showProducts };
 async function go(tab) {
   S.tab = tab;
+  chips();
   Object.keys(TABS).forEach((t) => $('t-' + t).classList.toggle('on', t === tab));
   view('<div class="spin">Завантаження…</div>');
   S.anim = true;
@@ -337,7 +350,8 @@ function storesAll() {
     if (!b || b.error) return;
     [['ok', b.done], ['wait', b.wait], ['off', b.off]].forEach(([st, list]) => (list || []).forEach((r) => {
       let s = m.get(r.id);
-      if (!s) { s = { id: r.id, label: r.label, route: r.route || '', code: r.code || '', d: {} }; m.set(r.id, s); }
+      if (!s) { s = { id: r.id, label: r.label, route: r.route || '', code: r.code || '', ua: !!r.ua, d: {} }; m.set(r.id, s); }
+      if (r.ua) s.ua = true;
       s.d[d.dir] = { st, n: r.n, qty: r.qty, time: r.time, days: r.days, next: r.next };
     }));
   });
@@ -386,9 +400,10 @@ function ovHtml() {
       '<div class="ovs ' + st.cls + '">' + esc(st.t) + '</div></button>';
   }).join('') + '</div>';
 }
-const FL = [['all', 'Усі'], ['ok', 'Замовили'], ['wait', 'Чекаємо'], ['late', 'Дозволи'], ['off', 'Не їхній день']];
+const FL = [['all', 'Усі'], ['ok', 'Замовили'], ['wait', 'Чекаємо'], ['late', 'Дозволи'], ['off', 'Не їхній день'], ['ua', 'ЮА Маркет']];
 function match(s, f) {
   if (f === 'all') return true;
+  if (f === 'ua') return !!s.ua;
   const c = s.d[S.dir];
   return !!c && cellOf(S.dir, c).cls === f;
 }
@@ -399,7 +414,7 @@ function renderTiles() {
   if (b && b.error) { box.innerHTML = '<div class="bad">' + esc('Точки: ' + b.error + ' (перезапустіть сервер: npm start)') + '</div>'; return; }
   const q = S.tq.trim().toLowerCase();
   const base = S.tiles.filter((s) => !q || (s.label + ' ' + s.route + ' ' + s.code).toLowerCase().includes(q));
-  $('fl').innerHTML = FL.map(([f, t]) => '<button class="fchip' + (S.f === f ? ' on' : '') + '" onclick="setF(\'' + f + '\')">' + esc(t) + '<i>' + base.filter((s) => match(s, f)).length + '</i></button>').join('');
+  $('fl').innerHTML = FL.filter(([f]) => f !== 'ua' || S.tiles.some((s) => s.ua)).map(([f, t]) => '<button class="fchip' + (S.f === f ? ' on' : '') + '" onclick="setF(\'' + f + '\')">' + esc(t) + '<i>' + base.filter((s) => match(s, f)).length + '</i></button>').join('');
   const list = base.filter((s) => match(s, S.f));
   $('tdcnt').textContent = list.length + ' з ' + S.tiles.length;
   box.innerHTML = list.length ? list.map((s) => tileHtml(s, S.tiles.indexOf(s))).join('') : '<div class="info">Нічого не знайдено</div>';
@@ -410,7 +425,7 @@ function tileHtml(s, k) {
     const y = cellOf(d.dir, s.d[d.dir]);
     return '<div class="dr' + (d.dir === S.dir ? ' cur' : '') + '" style="--c:' + colorOf(d.dir) + '"><span class="dot"></span><span class="dn">' + esc(SHORT[d.dir] || d.title) + '</span><span class="ds ' + y.cls + '">' + esc(y.t) + '</span></div>';
   }).join('');
-  return '<button class="tile st-' + (x ? x.cls : 'none') + '" onclick="openStore(' + k + ')"><div class="tt">' + esc(s.label) + '</div>' + (s.route ? '<div class="tr">' + esc(s.route) + '</div>' : '') + '<div class="dl">' + rows + '</div></button>';
+  return '<button class="tile st-' + (x ? x.cls : 'none') + '" onclick="openStore(' + k + ')"><div class="tt">' + esc(s.label) + '</div>' + ((s.route || s.ua) ? '<div class="tr">' + esc(s.route || '') + (s.ua ? '<span class="ua">ЮА Маркет</span>' : '') + '</div>' : '') + '<div class="dl">' + rows + '</div></button>';
 }
 function tdRow(name, val) {
   return '<div class="item"><span class="grow"><span class="t">' + name + '</span></span><span class="pill off">' + val + '</span></div>';
@@ -435,7 +450,7 @@ function openStore(k) {
   openSheet((el) => {
     el.innerHTML = '<h2 id="shh"></h2><div class="sub" id="shsub"></div><div class="stack sm" id="shb"></div><div style="height:14px"></div><button class="btn ghost" onclick="closeSheet()">Закрити</button>';
     $('shh').textContent = s.label;
-    $('shsub').textContent = [s.route, s.code ? 'код ' + s.code : ''].filter(Boolean).join(' · ') || 'Торгова точка';
+    $('shsub').textContent = [s.route, s.code ? 'код ' + s.code : '', s.ua ? 'ЮА Маркет' : ''].filter(Boolean).join(' · ') || 'Торгова точка';
     $('shb').innerHTML = S.me.dirs.map((d, j) => sdHtml(s, k, d, j)).join('');
   });
 }
@@ -688,10 +703,16 @@ async function showProducts() {
 function renderProducts() {
   const box = $('plist'); if (!box || !S.products) return;
   const q = S.q.trim().toLowerCase();
-  const list = S.products.products.map((p, i) => [p, i]).filter(([p]) => !q || (p.name + ' ' + p.barcode).toLowerCase().includes(q));
-  box.innerHTML = list.length ? section('Товари · ' + list.length, '<div class="cols"><div class="card">' + list.slice(0, 300).map(([p, i]) =>
-    '<button class="item" onclick="askProduct(' + i + ')"><span class="grow"><span class="t">' + esc(p.name) + '</span><span class="s">' + esc(prodSub(p)) + '</span></span>' +
-    (p.stop ? '<span class="pill closed">стоп</span>' : '') + '</button>').join('') + '</div></div>') : '<div class="info">Нічого не знайдено</div>';
+  const list = S.products.products.map((p, i) => [p, i]).filter(([p]) => !q || (p.name + ' ' + p.barcode + ' ' + (p.category || '')).toLowerCase().includes(q));
+  if (!list.length) { box.innerHTML = '<div class="info">Нічого не знайдено</div>'; return; }
+  const groups = new Map();
+  list.forEach((x) => { const c = String(x[0].category || '').trim() || 'Інше'; if (!groups.has(c)) groups.set(c, []); groups.get(c).push(x); });
+  const sub = (p) => money(p.price) + ' грн' + (p.availability ? ' · ' + p.availability : '') + (p.barcode ? ' · ' + p.barcode : '');
+  const item = ([p, i]) => '<button class="item" onclick="askProduct(' + i + ')"><span class="grow"><span class="t">' + esc(p.name) + '</span><span class="s">' + esc(sub(p)) + '</span></span>' + (p.stop ? '<span class="pill closed">стоп</span>' : '') + '</button>';
+  box.innerHTML = '<div class="pgrid">' + [...groups].map(([c, xs]) => {
+    const st = xs.filter(([p]) => p.stop).length;
+    return section(c, '<div class="card">' + xs.slice(0, 300).map(item).join('') + '</div>', xs.length + ' поз.' + (st ? ' · стоп ' + st : ''));
+  }).join('') + '</div>';
 }
 function askProduct(i) {
   const p = S.products.products[i], av = S.products.hasAvailability;
