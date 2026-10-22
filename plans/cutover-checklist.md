@@ -1,0 +1,67 @@
+# Переключення shop-orders з Apps Script на Fly + Supabase: чек-лист (Task 11)
+
+Стан на 22.10.2026. Рішення про день і час переключення - за власником. Нічого з розділу «Переключення» без його команди не виконується.
+
+## 0. Що вже готово і перевірено (22.10)
+
+| Частина | Стан |
+|---|---|
+| `/api` (bootstrap, products, submitOrder, requestLate, `/ok`) | збігся з Apps Script у 302 з 302 запитів (19.10) |
+| Вигрузка в сирі листи | збіглася поле за полем (19.10); ЄДРПОУ/ЮА, добавки, скасування, довигрузка в tick |
+| Звіти ВК, хліб, овочі, вигрузка НБХЗ | золоті фікстури 19.10 (і 22.10 після дедлайнів), shadow на Fly - див. звіт Task 7 |
+| Списання (Task 8) | e2e на Fly: woProducts → woSubmit → дубль → рядки у «Списания» тестової таблиці → woDelete → tick |
+| Пульт `/admin`, сторінки закупниць `/buyer/<код>/<ключ>` (Task 9) | працюють на Fly; «Сегодня» бере хто замовив з бойових сирих листів (лише читання) |
+| Сайт продавця `/` (Task 10) | збирається `scripts/build-front.js`; на Fly пройдено заказ НБХЗ з телефонного розміру 375 px |
+| Імпорт замовлень дня з листів у базу | `scripts/import-today.js`: 126/104/175 рядків хліб/НБХЗ/ВК з листа = з бази, 0 розбіжностей |
+| Бекап бази | `server/scripts/backup-db.cjs`, workflow `server-backup.yml`; локально (`--out`) 10 таблиць, файл перевірено |
+
+## 1. Тіньовий режим (2-3 робочі дні до переключення)
+
+- [ ] Раз на годину: `node server/scripts/import-today.js --apply` (локально або окремим workflow): база має замовлення дня з листів Apps Script.
+- [ ] Після дедлайнів напрямку: `node src/reports/shadow.js <напрямок>` на Fly - 0 значень і 0 оформлення (допуски описані в шапці `shadow.js`).
+- [ ] Порівняти пульт «Сегодня» (з бази і листів) із листами Apps Script - числа збігаються.
+- [ ] Бекап: Actions → Server Backup → Run workflow; файл `Замовлення_база_…json.gz` у папці «Замовлення — база щодня» на Диску.
+
+## 2. Що потрібно від власника до переключення
+
+1. GitHub secrets: `JOBS_SECRET` (cron `server-tick.yml` без нього мовчить), `FLY_API_TOKEN` (`server-deploy.yml`), для бекапу `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `DRIVE_BACKUP_FOLDER_ID` (ті самі, що у зарплатному проєкті).
+2. `settings.wo_books` - JSON `{ЄДРПОУ: {id, name}}` з Apps Script: `Logger.log(PropertiesService.getScriptProperties().getProperty('wo_books'))`. Без нього `woSubmit` відповідає «ще не налаштовано прийом списань».
+3. Порожня таблиця «shop-orders ТЕСТ архів НБХЗ» з доступом редактора для `shop-orders@family-market-analytics.iam.gserviceaccount.com` (id - у `NBHZ_ARCHIVE_SPREADSHEET_ID`) - для перевірки архіву НБХЗ на Fly. Для бою - id таблиці «АРХІВ Вивантаження НБХЗ» (ScriptProperties `nbhz_export_archive_ss`).
+4. Посилання закупниць: `node server/scripts/buyer-links.js https://shop-orders.fly.dev` (у чат не вставляти); дві людини: `bakery` (ВК), `hlib` (Хліб Рома, НБХЗ, Овочі).
+5. Пошта: SMTP-секрети на Fly є, листи про дозвіл ходять на `SMTP_USER` з позначкою [ТЕСТ] для `test-` точок; для бойових точок - перевірити адреси закупниць у `stores`.
+
+## 3. Переключення (ввечері, після всіх дедлайнів: 13:00, 16:00, 17:30, 18:00)
+
+1. [ ] Підтвердити: бекап пройшов, тести `npm test` у `server/` зелені, `fly status` ok.
+2. [ ] `node server/scripts/import-reference.js --dry`, потім `--force`: свіжі точки й асортимент з Google (`--force` затирає правки з Table Editor - тому лише тут). Собівартість списань - `--cost-only`.
+3. [ ] `node server/scripts/import-today.js --apply`: замовлення дня в базі, `exported_at = changed_at` (вигрузка не продублює рядки).
+4. [ ] `fly.toml`: `EXPORT_TARGET = 'live'`, `fly deploy --remote-only --ha=false` (з `server/`). У `live` вигрузка і звіти пишуть у бойові таблиці; `PULT_GOOGLE_ORDERS` вимикається сам.
+5. [ ] У Apps Script вимкнути тригери, що пишуть сирі листи і будують звіти: `refreshBakeryReports`, `refreshBreadReports`, `refreshVegReports`, `e04_refreshExport`, `e03_nbhzExport`, `woNightly`, `vegGuard` (див. `d06_installTriggers`, `v04_installVegGuard`). Сам скрипт НЕ видаляти (відкат).
+6. [ ] `docs/app-url.js`: `window.APP_EXEC_URL = 'https://shop-orders.fly.dev/'`; push у гілку, з якої публікується GitHub Pages; перевірка з телефона: оболонка відкриває Fly, точка → товари → відправка.
+7. [ ] Перший заказ на `test-` точці: рядок у бойовому листі, у пульті «Сегодня» зелений, `/jobs/tick` 200.
+8. [ ] Увімкнути cron: GitHub secret `JOBS_SECRET` задано - `server-tick.yml` працює.
+
+## 4. Перший день
+
+- [ ] Пульт → «Здоров'я системи» щогодини до 13:00; `fly logs` на помилки Google/Supabase.
+- [ ] Закупниці: «Видалити» і «Змінити кількість» на `/buyer/…` - рядок зникає з листа за 30 с.
+- [ ] Звіти ВК/хліб/овочі/НБХЗ оновилися після кожного замовлення (до 40 с).
+
+## 5. Відкат
+
+1. `docs/app-url.js` назад на `…/exec` Apps Script, push.
+2. Увімкнути тригери Apps Script (`d06_installTriggers()`).
+3. Замовлення, прийняті сервером за цей час, уже в листах (вигрузка), у Apps Script нічого не пропаде.
+4. `fly.toml`: `EXPORT_TARGET = 'test'`, deploy.
+
+## 6. Через тиждень стабільної роботи
+
+Вимкнути Apps Script остаточно (видалити тригери, архівувати проєкт), прибрати з пульта «Відкрити Довідник» як основне місце правки: точки правляться в пульті (вкладка «Магазини», правка - наступний блок), Довідник - архів.
+
+## 7. Відомі обмеження і не перенесено
+
+- `vegGuard` (бекап овочів у окрему таблицю, лист про зниклі рядки) - не переноситься: правда тепер у базі, бекап бази щодня.
+- `Archive.gs` (тижнева ротація сирих листів, `dropOldExportSheets`) - на сервері не реалізовано; сирі листи ростуть - потрібне рішення (ротація скриптом або Apps Script лишається лише для архіву).
+- Пульт: `woBrief/woStats/woStore/woDelete/woOpen/woArchive/woSetup` не перенесені (після переключення без даних у базі нема чого показувати); статистику списань закупниця бачить з бойових книг (лише читання).
+- Цикл «скасування останнього замовлення ВК» виправлено на сервері (звіт перебудовується порожнім).
+- Сторінка пульта: редагування точок (`cardSave`) - після переключення, лише вона пише в `stores`.

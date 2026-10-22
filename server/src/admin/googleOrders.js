@@ -72,4 +72,4 @@ function createGoogleOrders({ directions, getValues, a1q, now = Date.now, ttlMs 
   return { byDir };
 }
 
-module.exports = { createGoogleOrders, hmOf };
+module.exports = { createGoogleOrders, hmOf, storeIndex, COLS };
