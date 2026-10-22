@@ -201,8 +201,9 @@ function nbhzLinkPlan({ spreadsheetId, gid, now }) {
   const apply = (w) => {
     w.fmt([1], 'A', 'A', { size: 16, bold: true });
     w.fmt([2], 'A', 'A', { color: '#6b7280' });
+    // роздільник аргументів - «;»: таблиці в локалі ru_RU (як setFormula в Apps Script); з «,» формула дає #ERROR! (Formula parse error)
     w.raw({ updateCells: { start: { sheetId: w.sheetId, rowIndex: 3, columnIndex: 0 }, fields: 'userEnteredValue',
-      rows: [{ values: [{ userEnteredValue: { formulaValue: '=HYPERLINK("' + url + '", "⬇  ЗАВАНТАЖИТИ EXCEL за ' + today + '")' } }] }] } });
+      rows: [{ values: [{ userEnteredValue: { formulaValue: '=HYPERLINK("' + url + '"; "⬇  ЗАВАНТАЖИТИ EXCEL за ' + today + '")' } }] }] } });
     w.fmt([4], 'A', 'A', { size: 14, bold: true, color: '#1a73e8' });
     w.fmt([6, 7], 'A', 'A', { color: '#6b7280', size: 10 });
     w.colWidths([620]);

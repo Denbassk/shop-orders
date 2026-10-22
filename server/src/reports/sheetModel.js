@@ -145,7 +145,7 @@ function expand(list) {
 }
 
 // ---------- порівняння ----------
-const CELL_PROPS = ['v', 'formula', 'link', 'ul', 'bg', 'color', 'bold', 'size', 'font', 'ha', 'va', 'nf', 'rot', 'wrap'];
+const CELL_PROPS = ['v', 'formula', 'fv', 'link', 'ul', 'bg', 'color', 'bold', 'size', 'font', 'ha', 'va', 'nf', 'rot', 'wrap'];
 const fmtVal = (x) => (x === undefined ? '∅' : JSON.stringify(x));
 const normFormula = (f) => String(f).replace(/"\s*[;,]\s*"/g, '","');
 
@@ -158,6 +158,7 @@ function diffSheets(a, b, opts = {}) {
     CELL_PROPS.forEach((p) => {
       if (opts.skip && opts.skip.has(p)) return;
       let va = ca[p], vb = cb[p];
+      if (p === 'fv' && (va === undefined || vb === undefined)) return;           // результат формули порівнюємо, лише коли відомий з обох боків
       if (p === 'formula') { if (va !== undefined) va = normFormula(va); if (vb !== undefined) vb = normFormula(vb); }
       // mask - прибирає з порівняння те, що відрізняється завжди (час збирання, id таблиці і gid у посиланнях)
       if (opts.mask && (p === 'v' || p === 'formula' || p === 'link')) { if (typeof va === 'string') va = opts.mask(va); if (typeof vb === 'string') vb = opts.mask(vb); }
@@ -219,6 +220,8 @@ function modelFromGridData(sh, name) {
       if (uv.formulaValue !== undefined) cell.formula = uv.formulaValue;
       else { const tv = typedValue(uv); if (tv !== undefined) cell.v = tv; }
     }
+    // результат формули (effectiveValue): помилка = '#ERROR!...' - так ловимо формули, що не розібрались у локалі таблиці
+    if (cell.formula && cv.effectiveValue) { const ev = cv.effectiveValue; cell.fv = ev.errorValue ? '#' + (ev.errorValue.type || 'ERROR') + ': ' + (ev.errorValue.message || '') : (ev.stringValue !== undefined ? ev.stringValue : ev.numberValue); }
     const f = cv.userEnteredFormat;
     if (f) {
       applyFormat(cell, f, null);

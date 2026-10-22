@@ -65,3 +65,11 @@ test('залишок формату числа в порожніх комірк�
   assert.equal(r.sheets.S.formatDiffs[0].cell, '3,3');
   assert.equal(tally.residual, 2, 'порожня (2,3) і текст "x" з "@"');
 });
+
+test('результат формули: помилка в нашому листі (#ERROR!) - розбіжність, навіть якщо текст формули збігається', () => {
+  const live = { S: model({ '1,1': { formula: '=HYPERLINK("u"; "t")', fv: 't' } }) };
+  const bad = { S: model({ '1,1': { formula: '=HYPERLINK("u"; "t")', fv: '#ERROR: Formula parse error.' } }) };
+  const ok = { S: model({ '1,1': { formula: '=HYPERLINK("u", "t")', fv: 't' } }) };
+  assert.equal(compareModels(live, ok).totalValue, 0, 'роздільник ; і , в тексті формули не розбіжність, а результат однаковий');
+  assert.ok(compareModels(live, bad).totalValue >= 1);
+});

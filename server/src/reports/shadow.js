@@ -18,7 +18,7 @@ const mask = (s) => s
   .replace(/Звіт перезібрано о \d\d:\d\d/g, 'Звіт перезібрано о *')
   .replace(/spreadsheets\/d\/[^/]+\/export\?format=xlsx&gid=\d+/g, 'spreadsheets/d/*/export?format=xlsx&gid=*');
 
-const VALUE_PROPS = new Set(['v', 'formula', 'link']);
+const VALUE_PROPS = new Set(['v', 'formula', 'fv', 'link']);
 
 // Порівняння моделей листів: liveModels/ourModels - { назва листа: модель }, nameMap - { бойова назва: наша назва }
 // Закріплення колонок задає лише вигрузка НБХЗ; у звітах ВК/хліба/овочів код колонки не закріплює, а в бойових листах лишилось
@@ -42,6 +42,8 @@ function compareModels(liveModels, ourModels, nameMap = {}, opts = {}) {
     const oursX = exp ? { ...ours, colW: pick(ours.colW, exp.colW), rowH: pick(ours.rowH, exp.rowH) } : ours;
     const diffs = diffSheets(liveModels[liveName], oursX, { mask, onlyDimsOf: 'b', skip: new Set(['grid', 'frozenCols']), ...opts,
       loose: opts.looseFor && opts.looseFor(liveName) });
+    // наш лист у Google не повинен мати формул з помилкою (#ERROR!, #NAME? ...)
+    Object.keys(ours.cells).forEach((k) => { const fv = ours.cells[k].fv; if (typeof fv === 'string' && fv.charAt(0) === '#') diffs.push({ cell: k, prop: 'fv', gas: '(формула без помилки)', ours: fv }); });
     const valueDiffs = diffs.filter((d) => VALUE_PROPS.has(d.prop));
     const formatDiffs = diffs.filter((d) => !VALUE_PROPS.has(d.prop));
     const cells = new Set([...Object.keys(liveModels[liveName].cells), ...Object.keys(ours.cells)]).size;

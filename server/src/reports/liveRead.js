@@ -22,7 +22,7 @@ function reportSheets(dir, dmy) {
   throw new Error('невідомий напрямок ' + dir);
 }
 
-const GRID_FIELDS = 'sheets(properties(sheetId,title,gridProperties),basicFilter,data(rowData(values(userEnteredValue,userEnteredFormat,textFormatRuns)),rowMetadata(pixelSize),columnMetadata(pixelSize)))';
+const GRID_FIELDS = 'sheets(properties(sheetId,title,gridProperties),basicFilter,data(rowData(values(userEnteredValue,effectiveValue,userEnteredFormat,textFormatRuns)),rowMetadata(pixelSize),columnMetadata(pixelSize)))';
 
 // Моделі листів з Google (значення як набрані, формати, ширини, закріплення). sheets: [{ name, rows, cols }]
 async function fetchModels(spreadsheetId, sheets) {

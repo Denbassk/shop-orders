@@ -121,3 +121,11 @@ test('normalizeRawRows: лише сьогодні, кількість число
   const raw = [[TODAY, 'М', 'А', '', 'Хліб', 0, '2,5'], ['18.10.2026', 'М', 'А', '', 'Хліб', 0, 1]];
   assert.deepEqual(N.normalizeRawRows(raw, TODAY), [[TODAY, 'М', 'А', '', 'Хліб', 0, 2.5]]);
 });
+
+test('HYPERLINK у листі «Завантаження»: роздільник аргументів «;» (локаль ru_RU, з «,» формула дає #ERROR!)', () => {
+  const plan = N.nbhzLinkPlan({ spreadsheetId: NBHZ_ID, gid: 5, now: NOW });
+  const w = writerFor({ properties: { sheetId: 9, gridProperties: { rowCount: 1000, columnCount: 26 } } }, plan.data, plan.width);
+  plan.apply(w);
+  const f = w.requests().flatMap((q) => (q.updateCells && q.updateCells.rows) || []).flatMap((r) => r.values || []).map((c) => c.userEnteredValue && c.userEnteredValue.formulaValue).filter(Boolean)[0];
+  assert.match(f, /^=HYPERLINK\("[^"]+"; "[^"]+"\)$/);
+});

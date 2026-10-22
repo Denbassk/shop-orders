@@ -134,7 +134,11 @@ async function run(dir) {
     const left = IDS.filter((x) => now.some((y) => String(y.r[2]).toLowerCase().includes(addrOf(x).toLowerCase())));
     check(`після скасування ${id}: його рядки зникли з бойового листа, чужі лишились`, !left.includes(id) && (id === IDS[0] ? left.includes(IDS[1]) : left.length === 0), `tick ${tk.status}, лишилось ${JSON.stringify(left)}`);
   }
-  await sleep(6000);
+  // тестові точки з бази геть і чекаємо кеш stores сервера (30 с): інакше звіт, зібраний до цього, лишає їх у списку «ТТ без замовлень»
+  await sb.from('orders').delete().like('store_id', 'test-lv-%');
+  await sb.from('late_requests').delete().like('store_id', 'test-lv-%');
+  await sb.from('stores').delete().like('store_id', 'test-lv-%');
+  await sleep(33000);
   if (dir === 'nbhz') await adminReport(dir);
   else await tick();
   await sleep(5000);
