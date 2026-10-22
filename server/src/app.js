@@ -59,6 +59,12 @@ function createApp(opts = {}) {
     try { sendPage(res, await approve(req.body)); } catch (e) { next(e); }
   });
 
+  // Сайт продавця (зібраний з app/ui скриптом scripts/build-front.js)
+  app.get('/', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(require('path').join(__dirname, '..', 'public', 'index.html'));
+  });
+
   // Сторінка пульта (зібрана з app/ui скриптом scripts/build-admin.js)
   app.get(['/admin', '/admin/'], (req, res) => {
     res.set('Cache-Control', 'no-store');
