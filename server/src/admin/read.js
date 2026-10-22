@@ -1,7 +1,7 @@
 // Пульт: читання (екрани «Сегодня», «График», пошук точок). Перенос admToday_, admDays_, admSchedule_, admStores_ (app/Admin.gs).
 // env = { at, data, reportAt? (dir) -> 'HH:mm' | '' }. «Замовила» - за orders у базі (store_id), як read.js продавця.
 const R = require('../rules');
-const { DIRECTIONS } = require('../directions');
+const { DIRECTIONS, REGISTRY_ID } = require('../directions');
 
 const UA_EDRPOU = '45672783';
 const isUaStore = (s) => String((s && s.edrpou) || '').replace(/\D/g, '') === UA_EDRPOU;
@@ -16,8 +16,10 @@ async function load(env) {
     d.stores(), d.settings(), d.directions(), d.orderedToday(R.kyivNow(env.at).day)]);
   const ctx = { at: env.at, settings, directions, lateRows: [] };
   const keys = Object.keys(DIRECTIONS).filter((k) => directions[k]);
-  const isOrd = (k, s) => !!(ordered[k] && ordered[k].has(s.id));
-  return { stores, settings, ctx, keys, isOrd };
+  // до переключення замовлення пише Apps Script (у базі їх нема): «замовила» = база АБО сирий лист Google (env.gOrders, лише читання)
+  const g = env.gOrders ? await Promise.resolve(env.gOrders(R.kyivNow(env.at).day, stores)).catch(() => ({})) : {};
+  const isOrd = (k, s) => !!((ordered[k] && ordered[k].has(s.id)) || (g[k] && g[k].has && g[k].has(s.id)));
+  return { stores, settings, ctx, keys, isOrd, g };
 }
 
 // графік точки по напрямку: дні, чи сьогодні, коли наступний
@@ -113,6 +115,19 @@ async function admStores(payload, env) {
   }));
 }
 
+// Вкладка «Магазини», вигляд «Таблиця»: УСІ точки з бази колонками як у Довіднику ТТ (лише перегляд: до переключення правка - у Довіднику Google).
+async function admStoresTable(env) {
+  const rows = (await env.adm.allStores()).map((r) => ({
+    id: r.store_id, active: r.active !== false, label: r.label, address: r.address, code: r.code || '', route: r.route || '', type: r.type || '',
+    zone: r.zone || '', edrpou: r.edrpou || '', ua: isUaStore(r),
+    directions: ['bread', 'nbhz', 'bakery', 'veg'].filter((k) => r[k]),
+    addrBread: r.addr_bread || '', addrBakery: r.addr_bakery || '', addrVeg: r.addr_veg || '', addrNbhz: r.addr_nbhz || '', routeNbhz: r.route_nbhz || '',
+    daysVeg: r.days_veg || '', daysBakery: r.days_bakery || '', note: r.note || '',
+  }));
+  rows.sort(byLabel);
+  return { rows, total: rows.length, registryUrl: 'https://docs.google.com/spreadsheets/d/' + REGISTRY_ID + '/edit' };
+}
+
 // --- крок 3б: admDirStores_, admStore_, admLogRead_. Замість сирого листа - замовлення дня з бази (env.adm.dayOrders).
 const hmOf = (iso) => { const k = R.kyivNow(new Date(iso)); return pad(k.hh) + ':' + pad(k.mm); };
 const round3 = (x) => Math.round(x * 1000) / 1000;
@@ -123,7 +138,7 @@ async function safeLink(fn, dir) { if (!fn) return ''; try { return (await fn(di
 async function admDirStores(payload, env) {
   payload = payload || {};
   const dir = String(payload.dir || '');
-  const { stores, ctx } = await load(env);
+  const { stores, ctx, g } = await load(env);
   const cfg = R.dirCfg(dir, ctx);
   const n = R.kyivNow(env.at);
   const hasTime = (dir === 'bakery' || dir === 'veg');
@@ -134,6 +149,9 @@ async function admDirStores(payload, env) {
     o.lines.forEach((l) => { a.n++; a.qty += Number(l.qty) || 0; });
     if (hasTime) a.time = hmOf(o.created_at);                // замовлення за created_at - лишається останнє
   });
+  // точки, що замовили через Apps Script (сирий лист Google): рядки, кількість і час - з листа; база має пріоритет
+  const fromSheet = (g && g[dir] && g[dir].forEach) ? g[dir] : new Map();
+  fromSheet.forEach((v, id) => { if (!agg[id]) agg[id] = { n: v.n, qty: v.qty, time: hasTime ? v.time : '' }; });
   const done = [], wait = [], off = [];
   stores.forEach((s) => {
     if (s.directions.indexOf(dir) < 0) return;
@@ -222,4 +240,4 @@ async function admReport(payload, env) {
   return { at: reportAtOf(iso, env.at), xlsx: await safeLink((env.links || {}).xlsx, dir) };
 }
 
-module.exports = { admToday, admDays, admSchedule, admStores, admDirStores, admStore, admLogRead, admReport, reportAtOf, isUaStore, DAY_RU_FULL };
+module.exports = { admToday, admDays, admSchedule, admStores, admStoresTable, admDirStores, admStore, admLogRead, admReport, reportAtOf, isUaStore, DAY_RU_FULL };

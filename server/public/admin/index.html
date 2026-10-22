@@ -1827,5 +1827,105 @@ function loadToday() {
   }).catch(fail);
 }
 </script>
+<style>
+.stbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.stbar .seg{display:inline-flex;border:1px solid var(--ln);border-radius:12px;overflow:hidden;background:var(--sf)}
+.stbar .seg button{border:0;background:transparent;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer;color:var(--tx)}
+.stbar .seg button.on{background:var(--acc);color:#fff}
+.stbar .doc{margin-left:auto;padding:9px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--tx);font-weight:600;text-decoration:none}
+.stfl{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.stfl button{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.stfl button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.sttb-wrap{overflow:auto;max-height:calc(100vh - 270px);border:1px solid var(--ln);border-radius:12px;background:var(--sf)}
+.sttb{border-collapse:collapse;font-size:13px;min-width:max-content}
+.sttb th,.sttb td{padding:7px 10px;border-bottom:1px solid var(--ln);white-space:nowrap;text-align:left}
+.sttb th{position:sticky;top:0;background:var(--sf2);z-index:2;font-weight:700}
+.sttb td:first-child,.sttb th:first-child{position:sticky;left:0;background:var(--sf);z-index:1;font-weight:600}
+.sttb th:first-child{background:var(--sf2);z-index:3}
+.sttb tbody tr{cursor:pointer}
+.sttb tbody tr:hover td{background:var(--sf2)}
+.sttb tr.off td{opacity:.5}
+.sttb .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:middle}
+.stnote{color:var(--mu);font-size:13px;margin:0 0 10px}
+</style>
+<script>
+// ===== shop-orders: «Магазини» - перемикач Плитки | Таблиця =====
+var ST = { mode: 'tiles', data: null, q: '', dirs: {}, ua: false, off: false, busy: false };
+(function () {
+  var baseLoadStores = loadStores, baseAtDraw = atDraw;
+
+  function bar() {
+    var url = (ST.data && ST.data.registryUrl) || 'https://docs.google.com/spreadsheets/d/1noOXYRRdxIuY6gd9kicI2OxGU0vJ_kfvLbcVTyqXi6o/edit';
+    return '<div class="stbar" id="stbar"><div class="seg">' +
+      '<button class="' + (ST.mode === 'tiles' ? 'on' : '') + '" onclick="stMode(\'tiles\')">Плитки</button>' +
+      '<button class="' + (ST.mode === 'table' ? 'on' : '') + '" onclick="stMode(\'table\')">Таблиця</button></div>' +
+      '<a class="doc" href="' + attr(url) + '" target="_blank" rel="noopener">Відкрити Довідник</a></div>';
+  }
+
+  loadStores = function (q) {
+    baseLoadStores(q);
+    var v = document.getElementById('view');
+    if (v) v.insertAdjacentHTML('afterbegin', bar());
+  };
+  // атмаунт плиток викликає atDraw: у режимі таблиці малюємо таблицю
+  atDraw = function () { if (ST.mode === 'table') stDraw(); else baseAtDraw(); };
+
+  window.stMode = function (m) {
+    ST.mode = m;
+    var b = document.getElementById('stbar');
+    if (b) b.outerHTML = bar();
+    var host = document.getElementById('adm-t');
+    if (!host) return;
+    if (m === 'table') stDraw(); else baseAtDraw();
+  };
+
+  function stLoad() {
+    if (ST.data || ST.busy) return;
+    ST.busy = true;
+    call('storesTable').then(function (d) { ST.data = d; ST.busy = false; var b = document.getElementById('stbar'); if (b) b.outerHTML = bar(); stDraw(); },
+      function (e) { ST.busy = false; var h = document.getElementById('adm-t'); if (h) h.innerHTML = '<div class="bad">' + esc(e && e.message ? e.message : e) + '</div>'; });
+  }
+
+  function match(r) {
+    if (!ST.off && !r.active) return false;
+    if (ST.ua && !r.ua) return false;
+    var on = Object.keys(ST.dirs).filter(function (k) { return ST.dirs[k]; });
+    for (var i = 0; i < on.length; i++) if (r.directions.indexOf(on[i]) < 0) return false;
+    var q = ST.q.trim().toLowerCase();
+    if (!q) return true;
+    return (r.label + ' ' + r.address + ' ' + r.code + ' ' + r.route + ' ' + r.zone + ' ' + r.addrBread + ' ' + r.addrNbhz).toLowerCase().indexOf(q) >= 0;
+  }
+
+  function stDraw() {
+    var host = document.getElementById('adm-t');
+    if (!host) return;
+    if (!ST.data) { host.innerHTML = '<div class="spin">Загрузка…</div>'; stLoad(); return; }
+    var rows = ST.data.rows.filter(match);
+    var chips = ['bakery', 'bread', 'nbhz', 'veg'].map(function (k) {
+      return '<button class="' + (ST.dirs[k] ? 'on' : '') + '" onclick="stFlt(\'' + k + '\')">' + esc(DIRS[k] ? DIRS[k].short : k) + '</button>';
+    }).join('') +
+      '<button class="' + (ST.ua ? 'on' : '') + '" onclick="stFlt(\'ua\')">ЮА</button>' +
+      '<button class="' + (ST.off ? 'on' : '') + '" onclick="stFlt(\'off\')">Неактивні</button>';
+    var yes = function (r, k) { return r.directions.indexOf(k) >= 0 ? '<span class="dot" style="background:' + (DIRS[k] ? DIRS[k].c : '#999') + '"></span>' : ''; };
+    var head = ['Назва', '№ ТТ', 'Маршрут', 'Зона', 'ВК', 'Хліб', 'НБХЗ', 'Овочі', 'Дні ВК', 'Дні овочів', 'ЄДРПОУ', 'Маршрут НБХЗ', 'Адреса (хліб)', 'Адреса (ВК)', 'Адреса (овочі)', 'Адреса (НБХЗ)', 'Примітка'];
+    var body = rows.map(function (r) {
+      return '<tr class="' + (r.active ? '' : 'off') + '" onclick="go(\'store\',{store:\'' + attr(r.id) + '\',dir:\'\'})"><td>' + esc(r.label) + (r.ua ? UA_TAG : '') + '</td>' +
+        [esc(r.code), esc(r.route), esc(r.zone), yes(r, 'bakery'), yes(r, 'bread'), yes(r, 'nbhz'), yes(r, 'veg'), esc(r.daysBakery), esc(r.daysVeg), esc(r.edrpou), esc(r.routeNbhz),
+          esc(r.addrBread), esc(r.addrBakery), esc(r.addrVeg), esc(r.addrNbhz), esc(r.note)].map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    host.innerHTML = '<div class="stnote">Лише перегляд. Дані з бази сервера; до переїзду правте точки в Довіднику Google (кнопка «Відкрити Довідник»). Рядок — відкрити картку точки.</div>' +
+      '<input id="stq" type="search" placeholder="Пошук: назва, адреса, № ТТ, маршрут" value="' + attr(ST.q) + '" style="margin:0 0 10px">' +
+      '<div class="stfl">' + chips + '</div>' +
+      '<div class="stnote">Показано ' + rows.length + ' з ' + ST.data.total + '</div>' +
+      '<div class="sttb-wrap"><table class="sttb"><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    var inp = document.getElementById('stq');
+    inp.addEventListener('input', function () { ST.q = inp.value; clearTimeout(ST.t); ST.t = setTimeout(function () { var p = inp.selectionStart; stDraw(); var n = document.getElementById('stq'); n.focus(); n.setSelectionRange(p, p); }, 250); });
+  }
+  window.stFlt = function (k) {
+    if (k === 'ua') ST.ua = !ST.ua; else if (k === 'off') ST.off = !ST.off; else ST.dirs[k] = !ST.dirs[k];
+    stDraw();
+  };
+})();
+</script>
 </body>
 </html>

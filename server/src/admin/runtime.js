@@ -32,17 +32,23 @@ function createAdminRuntime(opts = {}) {
   const links = createLinks({ target, sheetIdOf: googleApi.sheetIdOf });
   const reportEnv = () => ({ data, google: googleApi, target, at: new Date(), archive: { spreadsheetId: process.env.NBHZ_ARCHIVE_SPREADSHEET_ID || '' } });
   const rebuild = (dir, o) => rebuildReports(dir, reportEnv(), o);
+  // «Сегодня»/«Хто замовив» до переключення: замовлення пише Apps Script, тож хто замовив - за БОЙОВИМИ сирими листами (лише читання).
+  // PULT_GOOGLE_ORDERS=off вимикає; за замовчуванням увімкнено, поки EXPORT_TARGET не live (після переключення замовлення в базі).
+  const gMode = process.env.PULT_GOOGLE_ORDERS || (exportTargetMode() === 'live' ? 'off' : 'live');
+  const gOrders = gMode === 'off' ? null
+    : require('./googleOrders').createGoogleOrders({ directions: DIRECTIONS, getValues: googleApi.getValues, a1q: googleApi.a1q });
 
   const env = () => {
     const at = new Date();
     let ats = null;                                   // час збирання звітів - один запит на виклик
-    return { at, data: dataFresh, adm, links, rebuild, queueExport: opts.queueExport || (() => {}),
+    return { at, data: dataFresh, adm, links, rebuild, gOrders: gOrders ? (day, stores) => gOrders.byDir(day, stores) : undefined, queueExport: opts.queueExport || (() => {}),
       reportAt: async (k) => { ats = ats || adm.reportAts(); return read.reportAtOf((await ats)[k], at); } };
   };
   const api = createAdminApi({
     today: () => read.admToday(env()),
     schedule: (p) => read.admSchedule(p, env()),
     stores: (p) => read.admStores(p, env()),
+    storesTable: () => read.admStoresTable(env()),
     dirStores: (p) => read.admDirStores(p, env()),
     store: (p) => read.admStore(p, env()),
     log: () => read.admLogRead(env()),

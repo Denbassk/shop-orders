@@ -77,6 +77,13 @@ function build() {
     const i = out.lastIndexOf('</body>');
     out = out.slice(0, i) + body + '\n' + out.slice(i);
   }
+  // вкладка «Магазини»: Плитки | Таблиця (лише перегляд) - з scripts/admin-stores.html, в кінець сторінки
+  const ST = path.join(__dirname, 'admin-stores.html');
+  if (fs.existsSync(ST)) {
+    const i = out.lastIndexOf('</body>');
+    const stHtml = fs.readFileSync(ST, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
+    out = out.slice(0, i) + stHtml + '\n' + out.slice(i);
+  }
   return out;
 }
 

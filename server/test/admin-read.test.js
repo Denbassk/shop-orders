@@ -98,3 +98,20 @@ test('runtime пульта: дії today, schedule, stores підключені'
   assert.match(src, /schedule: \(p\) => read\.admSchedule\(p,/);
   assert.match(src, /stores: \(p\) => read\.admStores\(p,/);
 });
+test('storesTable: усі точки з бази (і неактивні) колонками як у Довіднику, ЮА, посилання на Довідник; сортування за назвою (uk)', async () => {
+  const { admStoresTable } = require('../src/admin/read');
+  const rows = [
+    { store_id: 'b', active: true, label: 'Бучми, 32', address: 'м. Харків вул. Бучми, 32', code: '12', route: 'R1', type: 'Магазин', addr_bread: 'Бучми 32', addr_bakery: 'м. Харків вул. Бучми, 32',
+      addr_veg: 'м. Харків вул. Бучми, 32', addr_nbhz: 'Бучми32', route_nbhz: 'Рогань', zone: 'Центр', edrpou: '45672783', bread: true, nbhz: true, bakery: true, veg: false, days_veg: '', days_bakery: 'Пн, Вт', note: 'ключ у охорони', sort: 2 },
+    { store_id: 'a', active: false, label: 'Амосова, 5А', address: 'м. Харків вул. Амосова, 5А', code: '', route: '', type: 'Магазин', addr_bread: '', addr_bakery: '', addr_veg: '', addr_nbhz: '', route_nbhz: '', zone: '', edrpou: '', bread: true, nbhz: false, bakery: false, veg: true, days_veg: 'Пн', days_bakery: '', note: '', sort: 1 },
+  ];
+  const r = await admStoresTable({ adm: { allStores: async () => rows } });
+  assert.deepEqual(r.rows.map((x) => x.id), ['a', 'b'], 'за назвою');
+  const b = r.rows[1];
+  assert.deepEqual([b.label, b.code, b.route, b.zone, b.ua, b.active, b.note], ['Бучми, 32', '12', 'R1', 'Центр', true, true, 'ключ у охорони']);
+  assert.deepEqual(b.directions, ['bread', 'nbhz', 'bakery']);
+  assert.deepEqual([b.daysVeg, b.daysBakery, b.routeNbhz, b.addrNbhz], ['', 'Пн, Вт', 'Рогань', 'Бучми32']);
+  assert.equal(r.rows[0].active, false);
+  assert.equal(r.registryUrl, 'https://docs.google.com/spreadsheets/d/1noOXYRRdxIuY6gd9kicI2OxGU0vJ_kfvLbcVTyqXi6o/edit');
+  assert.equal(r.total, 2);
+});

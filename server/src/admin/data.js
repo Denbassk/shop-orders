@@ -7,6 +7,10 @@ function createAdminData(sb) {
       .eq('dir', dir).eq('order_date', day).eq('status', 'active').order('created_at'))
       .map(({ order_lines, ...o }) => ({ ...o, lines: (order_lines || []).slice().sort((a, b) => a.line_no - b.line_no) }));
   }
+  // усі точки (і неактивні) - вкладка «Магазини», вигляд «Таблиця»
+  async function allStores() {
+    return must('stores', await sb.from('stores').select('*').order('sort'));
+  }
   // «Журнал дій» (admin_log, міграція 000005): нові першими
   async function logRows(limit) {
     return must('admin_log', await sb.from('admin_log').select('at,action,details').order('at', { ascending: false }).limit(limit));
@@ -77,7 +81,7 @@ function createAdminData(sb) {
   async function setProduct(dir, id, patch) {
     return must('products', await sb.from('products').update(patch).eq('dir', dir).eq('id', id).select('id')).length > 0;
   }
-  return { dayOrders, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
+  return { dayOrders, allStores, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
     dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow, dirProducts, setProduct };
 }
 

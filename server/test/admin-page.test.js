@@ -48,3 +48,9 @@ test('build: прибрані кнопки (бэкап, дублі, познач
   assert.ok(html.lastIndexOf('function askCard()') > html.indexOf('function askCard()'), 'askCard перевизначено після оригіналу');
   assert.ok(!/function askCard\(\)[^}]*cardSave/.test(tail));
 });
+test('вкладка «Магазини»: перемикач Плитки | Таблиця, дані з дії storesTable, кнопка «Відкрити Довідник», лише перегляд', () => {
+  const html = build();
+  for (const f of ["call('storesTable')", 'window.stMode', 'Відкрити Довідник', 'Таблиця', 'Лише перегляд']) assert.ok(html.includes(f), f);
+  assert.ok(html.lastIndexOf('call(\'storesTable\')') > html.lastIndexOf('function loadStores('), 'перевизначення loadStores - після оригіналу');
+  assert.ok(!/call\('(cardSave|saveStore)/.test(html), 'таблиця нічого не зберігає');
+});
