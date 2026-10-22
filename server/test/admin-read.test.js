@@ -115,3 +115,34 @@ test('storesTable: усі точки з бази (і неактивні) кол�
   assert.equal(r.registryUrl, 'https://docs.google.com/spreadsheets/d/1noOXYRRdxIuY6gd9kicI2OxGU0vJ_kfvLbcVTyqXi6o/edit');
   assert.equal(r.total, 2);
 });
+
+test('storeCard: реквізити, компанія (ЮА/Фемелі), графік по напрямках (дні масивом), замовлення сьогодні - з бази або з листа Google', async () => {
+  const { admStoreCard } = require('../src/admin/read');
+  const e = env();
+  e.adm = { allStores: async () => [], dayOrders: async (dir) => (dir === 'bread' ? [{ store_id: 's2', created_at: '2026-10-20T07:10:00Z', lines: [{ id: 11, name: 'Хліб', qty: 3 }, { id: 12, name: 'Батон', qty: 2 }] }] : []) };
+  e.data.lateRows = async () => [];
+  e.gOrders = async () => ({ veg: new Map([['s2', { n: 4, qty: 20.5, time: '09:15' }]]) });
+  const c = await admStoreCard({ storeId: 's2' }, e);
+  assert.deepEqual([c.store.label, c.store.code, c.store.route, c.store.ua, c.store.company, c.store.active], ['Астрономічна, 44', '202', 'R2', true, 'ЮА маркет', true]);
+  assert.deepEqual(c.dirs.map((d) => d.dir), ['bread', 'veg'], 'порядок DIRECTIONS, лише увімкнені напрямки сервера');
+  const bread = c.dirs[0], veg = c.dirs[1];
+  assert.deepEqual([bread.available, bread.byDays, bread.days], [true, false, []]);
+  assert.deepEqual([bread.order.src, bread.order.n, bread.order.qty, bread.order.canEdit], ['db', 2, 5, true]);
+  assert.deepEqual(bread.order.rows.map((r) => r.row), [11, 12]);
+  assert.deepEqual([veg.order.src, veg.order.n, veg.order.qty, veg.order.time, veg.order.canEdit], ['google', 4, 20.5, '09:15', false], 'замовлення з таблиці Google змінювати з нового пульта не можна');
+  assert.equal(veg.byDays, true);
+  const f = await admStoreCard({ storeId: 's1' }, e);
+  assert.equal(f.store.company, 'Фемелі');
+  assert.equal(f.dirs[0].order, null, 'не замовляла');
+});
+
+test('storeCard: неактивна точка береться з allStores; невідома - помилка як у findStore_', async () => {
+  const { admStoreCard } = require('../src/admin/read');
+  const e = env({ stores: [S1] });
+  e.adm = { allStores: async () => [{ store_id: 'x9', active: false, label: 'Стара', address: 'вул. Стара, 1', code: '9', route: '', type: '', zone: '', edrpou: '', bread: true, nbhz: false, bakery: false, veg: false,
+    days_veg: '', days_bakery: '', note: 'закрита', addr_bread: '', addr_bakery: '', addr_veg: '', addr_nbhz: '', route_nbhz: '' }], dayOrders: async () => [] };
+  e.data.lateRows = async () => [];
+  const c = await admStoreCard({ storeId: 'x9' }, e);
+  assert.deepEqual([c.store.active, c.store.note, c.dirs.map((d) => d.available)], [false, 'закрита', [true, false]], 'bread є, veg точці не підключено');
+  await assert.rejects(admStoreCard({ storeId: 'nope' }, e), /Торгову точку не знайдено/);
+});

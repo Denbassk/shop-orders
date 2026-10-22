@@ -2,6 +2,7 @@
 // env = { at, data, reportAt? (dir) -> 'HH:mm' | '' }. «Замовила» - за orders у базі (store_id), як read.js продавця.
 const R = require('../rules');
 const { DIRECTIONS, REGISTRY_ID } = require('../directions');
+const { rowToStore } = require('../db');
 
 const UA_EDRPOU = '45672783';
 const isUaStore = (s) => String((s && s.edrpou) || '').replace(/\D/g, '') === UA_EDRPOU;
@@ -128,6 +129,57 @@ async function admStoresTable(env) {
   return { rows, total: rows.length, registryUrl: 'https://docs.google.com/spreadsheets/d/' + REGISTRY_ID + '/edit' };
 }
 
+// Картка магазину (вкладка «Магазини»): реквізити, компанія за ЄДРПОУ, по кожному напрямку - графік (дні тижня), що сьогодні
+// (замовлення з бази або з листа Google), чи закрито, скільки лишилось на дозвіл. Лише читання.
+const COMPANY = (s) => (isUaStore(s) ? 'ЮА маркет' : 'Фемелі');
+async function admStoreCard(payload, env) {
+  payload = payload || {};
+  const { stores, settings, ctx, keys, isOrd, g } = await load(env);
+  let store = stores.find((x) => x.id === String(payload.storeId)), active = true, note = '';
+  if (!store) {
+    const row = (await env.adm.allStores()).find((r) => r.store_id === String(payload.storeId));
+    if (!row) throw new Error(STORE_NOT_FOUND);
+    store = rowToStore(row); active = row.active !== false;
+  }
+  const full = (await env.adm.allStores()).find((r) => r.store_id === store.id) || {};
+  const n = R.kyivNow(env.at);
+  const dirs = [];
+  for (const k of keys) {
+    const cfg = R.dirCfg(k, ctx);
+    const available = store.directions.indexOf(k) >= 0;
+    const d = admDays(k, store, ctx);
+    const hasTime = (k === 'bakery' || k === 'veg');
+    let order = null, lateRows = [];
+    if (available) {
+      lateRows = await env.data.lateRows(k, store.id);
+      const mine = (await env.adm.dayOrders(k, n.day)).filter((o) => o.store_id === store.id && o.lines.length);
+      if (mine.length) {
+        const rows = [];
+        let qty = 0, time = '';
+        mine.forEach((o) => { o.lines.forEach((l) => { rows.push({ row: l.id, name: String(l.name == null ? '' : l.name), qty: Number(l.qty) || 0 }); qty += Number(l.qty) || 0; }); if (hasTime) time = hmOf(o.created_at); });
+        order = { src: 'db', n: rows.length, qty: round3(qty), time, canEdit: true, rows };
+      } else if (g && g[k] && g[k].get && g[k].get(store.id)) {
+        const v = g[k].get(store.id);
+        order = { src: 'google', n: v.n, qty: round3(v.qty), time: hasTime ? v.time : '', canEdit: false, rows: [] };
+      }
+    }
+    const pairCtx = { ...ctx, lateRows };
+    dirs.push({
+      dir: k, title: cfg.title, color: cfg.color, deadline: cfg.deadline || '', unit: cfg.unit || '', byDays: !!cfg.orderDays,
+      available, enabled: R.dirEnabled(k, settings), days: cfg.orderDays ? R.storeDays(k, store) : [], daysLabel: d.label, next: d.next,
+      dayOk: R.dayAllowed(k, store, pairCtx), closed: R.deadlinePassed(k, store.id, pairCtx), lateLeft: R.lateLeftMin(k, store.id, pairCtx), order,
+    });
+  }
+  return {
+    today: n.dmy,
+    store: { id: store.id, active, label: store.label, address: store.address, code: store.code || '', route: store.route || '', zone: store.zone || '',
+      type: store.type || '', edrpou: store.edrpou || '', ua: isUaStore(store), company: COMPANY(store), directions: store.directions,
+      addrBread: store.addrBread || '', addrBakery: store.addrBakery || '', addrVeg: store.addrVeg || '', addrNbhz: store.addrNbhz || '', routeNbhz: store.routeNbhz || '',
+      note: store.note || full.note || '' },
+    dirs, registryUrl: 'https://docs.google.com/spreadsheets/d/' + REGISTRY_ID + '/edit',
+  };
+}
+
 // --- крок 3б: admDirStores_, admStore_, admLogRead_. Замість сирого листа - замовлення дня з бази (env.adm.dayOrders).
 const hmOf = (iso) => { const k = R.kyivNow(new Date(iso)); return pad(k.hh) + ':' + pad(k.mm); };
 const round3 = (x) => Math.round(x * 1000) / 1000;
@@ -240,4 +292,4 @@ async function admReport(payload, env) {
   return { at: reportAtOf(iso, env.at), xlsx: await safeLink((env.links || {}).xlsx, dir) };
 }
 
-module.exports = { admToday, admDays, admSchedule, admStores, admStoresTable, admDirStores, admStore, admLogRead, admReport, reportAtOf, isUaStore, DAY_RU_FULL };
+module.exports = { admToday, admDays, admSchedule, admStores, admStoresTable, admStoreCard, admDirStores, admStore, admLogRead, admReport, reportAtOf, isUaStore, DAY_RU_FULL };

@@ -48,10 +48,17 @@ test('build: прибрані кнопки (бэкап, дублі, познач
   assert.ok(html.lastIndexOf('function askCard()') > html.indexOf('function askCard()'), 'askCard перевизначено після оригіналу');
   assert.ok(!/function askCard\(\)[^}]*cardSave/.test(tail));
 });
-test('вкладка «Магазини»: перемикач Плитки | Таблиця, дані з дії storesTable, кнопка «Відкрити Довідник», лише перегляд', () => {
+test('вкладка «Магазини»: перемикач Таблиця | Картка, дані з дій storesTable і storeCard, кнопка «Відкрити Довідник», лише перегляд', () => {
   const html = build();
-  for (const f of ["call('storesTable')", 'window.stMode', 'Відкрити Довідник', 'Таблиця', 'Лише перегляд']) assert.ok(html.includes(f), f);
+  for (const f of ["call('storesTable')", 'window.stView', 'Відкрити Довідник', 'Таблиця', 'Лише перегляд']) assert.ok(html.includes(f), f);
   assert.ok(html.lastIndexOf('call(\'storesTable\')') > html.lastIndexOf('function loadStores('), 'перевизначення loadStores - після оригіналу');
   const mine = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'admin-stores.html'), 'utf8');
-  assert.ok(!/call\('(?!storesTable)/.test(mine), 'блок «Магазини» викликає лише storesTable - нічого не зберігає');
+  assert.ok(!/call\('(?!storesTable|storeCard)/.test(mine), 'блок «Магазини» викликає лише storesTable і storeCard - нічого не зберігає');
+});
+
+test('вкладка «Магазини»: картка (реквізити, сьогодні по напрямках, графік днів), нижня вкладка перейменована, плиток у цій вкладці нема', () => {
+  const html = build();
+  for (const f of ["call('storeCard'", 'Скасувати замовлення', 'Відкрити прийом точці', 'Графік і напрямки', 'Реквізити', "'Магазини'", "['Пн', 1]", "['Нд', 0]"]) assert.ok(html.includes(f), f);
+  assert.ok(!html.includes('stMode('), 'вигляд «Плитки» прибрано з вкладки');
+  assert.ok(html.lastIndexOf('loadStore = function') > html.lastIndexOf('function loadStore('), 'екран store веде в нову картку');
 });

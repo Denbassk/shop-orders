@@ -49,6 +49,7 @@ function createAdminRuntime(opts = {}) {
     schedule: (p) => read.admSchedule(p, env()),
     stores: (p) => read.admStores(p, env()),
     storesTable: () => read.admStoresTable(env()),
+    storeCard: (p) => read.admStoreCard(p, env()),
     dirStores: (p) => read.admDirStores(p, env()),
     store: (p) => read.admStore(p, env()),
     log: () => read.admLogRead(env()),
