@@ -232,6 +232,8 @@ function modelFromGridData(sh, name) {
       const run = cv.textFormatRuns[0].format || {};
       if (run.link) { cell.link = run.link.uri; cell.rt = { size: run.fontSize, bold: run.bold, color: run.foregroundColor && rgbHex(run.foregroundColor), underline: run.underline }; }
     }
+    // для формули =HYPERLINK(...) Google сам додає textFormat.link - це похідне від формули, а не окреме оформлення
+    if (cell.formula && /^=HYPERLINK\(/i.test(cell.formula)) { delete cell.link; delete cell.ul; }
     if (Object.keys(cell).length) m.cells[key(i + 1, j + 1)] = cell;
   }));
   (d.columnMetadata || []).forEach((c, i) => { if (c.pixelSize) m.colW[i + 1] = c.pixelSize; });

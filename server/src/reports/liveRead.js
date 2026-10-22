@@ -59,7 +59,8 @@ async function readLive(dir, at = new Date()) {
   present.forEach((s, i) => { values[s.name] = repVr[i].values || []; });
 
   const sizes = present.map((s) => ({ name: s.name, ...extentOf(values[s.name]) }));
-  const models = sizes.length ? await fetchModels(cfg.spreadsheetId, sizes.map((s) => ({ name: s.name, rows: s.rows, cols: s.cols }))) : {};
+  // +3 рядки: Google віддає значення без порожніх рядків наприкінці, а оформлення в них є
+  const models = sizes.length ? await fetchModels(cfg.spreadsheetId, sizes.map((s) => ({ name: s.name, rows: s.rows + 3, cols: s.cols }))) : {};
   return { dir, day: k.day, dmy: k.dmy, takenAt, raw: rawToday, rows: NORMALIZE[dir](rawToday, k.dmy), values, models,
     missing: wanted.filter((s) => !have.has(s.name)).map((s) => s.name), sizes };
 }

@@ -37,9 +37,11 @@ const stampsIn = (values) => {
   const live = await readLive(dir, now);
   if (live.missing.length) throw new Error('у бойовій таблиці нема листів: ' + live.missing.join(', '));
   const sheetIds = Object.fromEntries((await googleApi.sheetList(DIRECTIONS[dir].spreadsheetId)).map((s) => [s.title, s.sheetId]));
-  const stores = await loadStores();
-  const { data: products, error } = await supabase().from('products').select('barcode,name,category,status').eq('dir', dir).order('sort');
-  if (error) throw new Error(error.message);
+  // Точки і асортимент - з ДОВІДНИКА/АССОРТИМЕНТУ Google (те, з чого рахував Apps Script), а не з бази: до переключення правки йдуть у Google,
+  // і база відстає (див. scripts/diff-reference.js). Інакше еталон перевіряв би не код, а дрейф довідника.
+  const ref = await require('./import-reference').readAll();
+  const stores = ref.stores;
+  const products = (ref.products[dir] || []).map((p) => ({ barcode: p.barcode, name: p.name, category: p.category, status: p.status }));
 
   const fx = { modelVersion: 2, dir, day: live.day, dmy: live.dmy, takenAt: live.takenAt, sheetIds, raw: live.raw, values: live.values, models: live.models, stores, products,
     note: 'raw = сирі рядки за день (UNFORMATTED); values = значення A:… звітів Apps Script (один batchGet з raw); models = значення+оформлення цих листів (spreadsheets.get); stores/products - з бази' };
