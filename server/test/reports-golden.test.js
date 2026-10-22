@@ -23,7 +23,8 @@ for (const dir of ['bread', 'veg', 'nbhz']) {
   for (const day of daysOf(dir)) {
     test(`золота фікстура ${dir} ${day}: сирі рядки і всі листи звіту є`, () => {
       const fx = loadFixture(dir, day);
-      assert.ok(fx.raw.length > 20, 'сирих рядків: ' + fx.raw.length);
+      // фікстура порожнього дня (напр. овочі в четвер: 0 рядків) теж еталон - звіт «Замовлень на сьогодні ще немає»
+      assert.ok(fx.raw.length > 20 || fx.raw.length === 0, 'сирих рядків: ' + fx.raw.length);
       assert.deepEqual(Object.keys(fx.models).sort(), sheetsOf(dir, day).slice().sort());
     });
 
@@ -33,7 +34,7 @@ for (const dir of ['bread', 'veg', 'nbhz']) {
       const show = Object.entries(cmp.sheets).flatMap(([n, s]) => (s.missing ? [`«${n}»: нашого листа нема`]
         : [...s.valueDiffs, ...s.formatDiffs].slice(0, 8).map((d) => `«${n}» ${d.cell} ${d.prop}: бойовий=${d.gas} наш=${d.ours}`)));
       assert.equal(cmp.totalValue + cmp.totalFormat, 0, `\n${show.join('\n')}`);
-      assert.ok(cmp.totalCells > 100, 'порівняно комірок: ' + cmp.totalCells);
+      assert.ok(cmp.totalCells > (fx.raw.length ? 100 : 20), 'порівняно комірок: ' + cmp.totalCells);
     });
 
     test(`золото ${dir} ${day}: кількість рядків кожного листа збігається з бойовим`, () => {
@@ -41,7 +42,8 @@ for (const dir of ['bread', 'veg', 'nbhz']) {
       const plans = plansFor(dir, fx);
       for (const [name, vals] of Object.entries(fx.values)) {
         assert.ok(plans[name], 'є план листа ' + name);
-        assert.equal(plans[name].data.length, vals.length, `«${name}»: рядків`);
+        const trimmed = plans[name].data.filter((r, i, all) => all.slice(i).some((x) => x.some((c) => c !== '' && c != null))).length;      // Google не віддає порожні рядки наприкінці
+        assert.equal(trimmed, vals.length, `«${name}»: рядків`);
       }
     });
   }
