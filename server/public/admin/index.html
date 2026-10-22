@@ -1661,5 +1661,171 @@ input:focus{border-color:var(--teal)}
   hdr.insertBefore(b, btns[btns.length - 1]);
 })();
 </script>
+
+<style>
+/* adm-tiles */
+.atop{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;grid-column:1/-1}
+.adir{--c:#888;position:relative;overflow:hidden;display:block;width:100%;text-align:left;border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:18px;padding:14px 16px 14px 20px;box-shadow:var(--sh);cursor:pointer;transition:transform .18s,box-shadow .18s}
+.adir::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+.adir:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.adir .h{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.adir .n{font-size:16px;font-weight:700;line-height:1.25}
+.adir .big{display:block;font-size:30px;font-weight:800;line-height:1;margin-top:10px;letter-spacing:-.02em}
+.adir .big small{font-size:14px;font-weight:600;color:var(--mu)}
+.adir .bar{display:block;margin-top:10px}
+.adir .m{display:block;font-size:12.5px;color:var(--mu);margin-top:8px}
+.atools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.grid>.atools{grid-column:1/-1;margin:0}
+.atools input[type=search]{flex:1 1 240px;max-width:420px;padding:10px 14px;border-radius:12px}
+.achip{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.achip:hover{transform:translateY(-2px);box-shadow:var(--sh)}
+.achip.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+.achip i{font-style:normal;opacity:.6;margin-left:6px}
+.adot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.atiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.atile{--st:var(--ln);display:block;width:100%;text-align:left;background:var(--sf);color:var(--tx);border:1px solid var(--ln);border-top:3px solid var(--st);border-radius:14px;padding:11px 12px;cursor:pointer;transition:transform .16s,box-shadow .16s}
+.atile:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.atile.done{--st:var(--ok);background:color-mix(in srgb,var(--ok) 8%,var(--sf))}
+.atile.wait{--st:var(--warn)}
+.atile .tt{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.atile .nm{font-size:14.5px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.atile .st{flex:none;font-size:11px;font-weight:800;border-radius:8px;padding:3px 7px}
+.atile.done .st{color:var(--ok);background:var(--okb)}
+.atile.wait .st{color:var(--warn);background:var(--warnb)}
+.atile.off .st{color:var(--mu);background:var(--sf2)}
+.atile .mt{display:block;font-size:12px;color:var(--mu);margin-top:3px}
+.atile .ds{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.atile .d{font-size:11.5px;font-weight:700;border-radius:7px;padding:2px 7px 2px 9px}
+.atile .d.y{color:var(--ok);background:var(--okb)}
+.atile .d.w{color:var(--warn);background:var(--warnb)}
+.atile .d.o{color:var(--mu);background:var(--sf2)}
+.uat{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:5px;background:#1565C0;color:#fff;font-size:10.5px;font-weight:800;vertical-align:1px}
+.grid>#adm-t{grid-column:1/-1}
+@media (max-width:520px){.atiles{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.atop{grid-template-columns:1fr 1fr}.adir .big{font-size:24px}}
+</style>
+<script>
+// ===== shop-orders: пульт плитками, як у закупниць. Перевизначає loadToday, loadStores, fillStores, loadSchedule; дані ті ж: today, schedule, stores =====
+var AT = { f: 'all', q: '', dir: '', rows: null, t: 0 };
+function atState(r) {
+  var t = r.cells.filter(function (c) { return c.today && (!AT.dir || c.dir === AT.dir); });
+  var dn = t.filter(function (c) { return c.ordered; }).length;
+  return { today: t.length, done: dn, st: dn ? 'done' : (t.length ? 'wait' : 'off') };
+}
+function atMount(el) {
+  if (!el) return;
+  Promise.all([call('schedule', { dir: '' }), call('stores', { q: '', dir: '' })]).then(function (r) {
+    var by = {};
+    (r[1] || []).forEach(function (s) { by[s.id] = s; });
+    AT.rows = ((r[0] && r[0].rows) || []).map(function (x) {
+      var s = by[x.id] || {};
+      return { id: x.id, label: x.label || s.label || '', ua: !!(x.ua || s.ua), code: s.code || '', route: s.route || '', cells: x.cells || [] };
+    });
+    atDraw();
+  }).catch(function (e) { el.innerHTML = '<div class="bad">' + esc(e && e.message ? e.message : e) + '</div>'; });
+}
+function atList() {
+  return (AT.rows || []).filter(function (r) {
+    return !AT.dir || r.cells.some(function (c) { return c.dir === AT.dir; });
+  }).map(function (r) { r.s = atState(r); return r; });
+}
+function atDraw() {
+  var el = document.getElementById('adm-t');
+  if (!el || !AT.rows) return;
+  var list = atList(), cnt = { all: list.length, done: 0, wait: 0, off: 0, ua: 0 };
+  list.forEach(function (r) { cnt[r.s.st]++; if (r.ua) cnt.ua++; });
+  if (AT.f === 'ua' && !cnt.ua) AT.f = 'all';
+  function chip(k, t) { return '<button class="achip' + (AT.f === k ? ' on' : '') + '" onclick="AT.f=\'' + k + '\';atDraw()">' + t + '<i>' + cnt[k] + '</i></button>'; }
+  function dchip(k, t, c) { return '<button class="achip' + (AT.dir === k ? ' on' : '') + '" onclick="AT.dir=\'' + k + '\';atDraw()">' + (c ? '<span class="adot" style="background:' + c + '"></span>' : '') + esc(t) + '</button>'; }
+  el.innerHTML = '<div class="sec">Точки сегодня</div>' +
+    '<div class="atools"><input id="atq" type="search" placeholder="Адрес, № или маршрут" value="' + esc(AT.q) + '">' +
+    chip('all', 'Все') + chip('done', 'Сделано') + chip('wait', 'Ждём') + chip('off', 'Не сегодня') + (cnt.ua ? chip('ua', 'ЮА') : '') + '</div>' +
+    '<div class="atools">' + dchip('', 'Все направления', '') + ORDER.map(function (k) { return dchip(k, DIRS[k].short, DIRS[k].c); }).join('') + '</div>' +
+    '<div id="atl"></div>';
+  var inp = document.getElementById('atq');
+  inp.addEventListener('input', function () {
+    clearTimeout(AT.t);
+    AT.t = setTimeout(function () { AT.q = inp.value; S.q = inp.value; atTiles(); }, 200);
+  });
+  atTiles();
+}
+function atTiles() {
+  var box = document.getElementById('atl');
+  if (!box) return;
+  var q = String(AT.q || '').trim().toLowerCase();
+  var shown = atList().filter(function (r) {
+    if (AT.f === 'ua' ? !r.ua : (AT.f !== 'all' && r.s.st !== AT.f)) return false;
+    return !q || (r.label + ' ' + r.code + ' ' + r.route).toLowerCase().indexOf(q) >= 0;
+  });
+  box.innerHTML = shown.length ? '<div class="atiles">' + shown.map(atTile).join('') + '</div>' : '<div class="note">Ничего не найдено</div>';
+}
+function atTile(r) {
+  var st = r.s.st, lab = st === 'done' ? 'Сделано' : (st === 'wait' ? 'Ждём' : 'Не сегодня');
+  var ds = r.cells.filter(function (c) { return !AT.dir || c.dir === AT.dir; }).map(function (c) {
+    var m = DIRS[c.dir] || { short: c.dir, c: '#888' };
+    var k = c.ordered ? 'y' : (c.today ? 'w' : 'o');
+    var tip = c.ordered ? 'заказали' : (c.today ? 'можно сегодня до ' + (c.deadline || '—') : 'дни: ' + (c.days || '—') + (c.next ? ' · ' + c.next : ''));
+    return '<span class="d ' + k + '" style="box-shadow:inset 3px 0 0 ' + m.c + '" title="' + attr(tip) + '">' +
+      esc(m.short) + (c.ordered ? ' ✓' : (c.today ? ' до ' + esc(c.deadline || '—') : '')) + '</span>';
+  }).join('');
+  var meta = [r.code ? '№ ' + esc(r.code) : '', r.route ? esc(r.route) : '', r.s.today ? r.s.done + ' из ' + r.s.today + ' сегодня' : ''].filter(Boolean).join(' · ');
+  return '<button class="atile ' + st + '" onclick="go(\'store\',{store:\'' + attr(r.id) + '\',dir:\'' + AT.dir + '\'})">' +
+    '<span class="tt"><span class="nm">' + esc(r.label) + (r.ua ? '<span class="uat">ЮА</span>' : '') + '</span><span class="st">' + lab + '</span></span>' +
+    (meta ? '<span class="mt">' + meta + '</span>' : '') + '<span class="ds">' + ds + '</span></button>';
+}
+function loadStores(q) {
+  setHead('Точки', 'кто что заказал сегодня');
+  if (q != null) AT.q = q;
+  view('<div id="adm-t"><div class="spin">Загрузка…</div></div>');
+  atMount(document.getElementById('adm-t'));
+}
+function fillStores(q) { AT.q = q || ''; atTiles(); }
+function loadSchedule(dir) {
+  S.dir = dir; AT.dir = dir || '';
+  setHead('График', 'кому что доступно сегодня');
+  view('<div id="adm-t"><div class="spin">Загрузка…</div></div>');
+  atMount(document.getElementById('adm-t'));
+}
+function loadToday() {
+  setHead('Сегодня', '');
+  spin();
+  call('today').then(function (d) {
+    S.today = d.today;
+    setHead('Сегодня', d.today + ', ' + d.time);
+    var h = '';
+    var alerts = d.dirs.filter(function (x) { return !x.closed && x.minLeft !== null && x.minLeft > 0 && x.minLeft <= 60 && x.waiting.length; });
+    if (alerts.length) h += '<div class="note">' + alerts.map(function (x) {
+      return 'До дедлайна «' + esc(DIRS[x.key].t) + '» ' + x.minLeft + ' мин. Не заказали ' + x.waiting.length + ' точек.';
+    }).join('<br>') + '</div>';
+    var stale = d.dirs.filter(function (x) { return x.enabled && x.ordered > 0 && !x.reportAt; });
+    if (stale.length) h += '<button class="bad" style="display:block;width:100%;text-align:left;cursor:pointer" onclick="go(\'health\',{})">' +
+      'Заказы есть, а отчёт сегодня не собирался: ' + stale.map(function (x) { return esc(DIRS[x.key] ? DIRS[x.key].short : x.key); }).join(', ') + '. Нажмите, чтобы проверить.</button>';
+    h += '<div class="atop">' + ORDER.map(function (k) {
+      var x = null;
+      d.dirs.forEach(function (y) { if (y.key === k) x = y; });
+      if (!x) return '';
+      var m = DIRS[k];
+      var pill = !x.enabled ? '<span class="pill closed">Выключено</span>'
+        : x.noDayToday ? '<span class="pill off">Не приём</span>'
+        : x.openedAll ? '<span class="pill warn">Открыто всем</span>'
+        : x.closed ? '<span class="pill closed">Закрыто</span>' : '<span class="pill open">Открыто</span>';
+      var pct = x.total ? Math.round(x.ordered / x.total * 100) : 0;
+      return '<button class="adir" style="--c:' + m.c + '" onclick="go(\'dir\',{dir:\'' + k + '\'})">' +
+        '<span class="h"><span class="n">' + esc(m.t) + '</span>' + pill + '</span>' +
+        (x.noDayToday
+          ? '<span class="m">Сегодня (' + esc(d.dow) + ') по графику не заказывает ни одна из ' + x.all + ' точек</span>'
+          : '<span class="big">' + x.ordered + ' <small>из ' + x.total + '</small></span><span class="bar"><i style="width:' + pct + '%;background:' + m.c + '"></i></span>') +
+        '<span class="m">до ' + esc(x.deadline || '—') + (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
+        (x.byDays && x.offDay ? ' · вне графика ' + x.offDay : '') + '</span></button>';
+    }).join('') + '</div>';
+    h += '<div class="atools"><button class="achip" onclick="go(\'schedule\',{dir:\'\'})">График по точкам</button>' +
+      '<button class="achip" onclick="go(\'health\',{})">Здоровье системы</button>' +
+      '<button class="achip" onclick="tabGo(\'log\')">Журнал действий</button></div>';
+    h += '<div id="adm-t"><div class="spin">Загрузка точек…</div></div>';
+    view(h);
+    AT.dir = '';
+    atMount(document.getElementById('adm-t'));
+  }).catch(fail);
+}
+</script>
 </body>
 </html>
