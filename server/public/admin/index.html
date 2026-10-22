@@ -1864,6 +1864,7 @@ var ST = { mode: 'tiles', data: null, q: '', dirs: {}, ua: false, off: false, bu
 
   loadStores = function (q) {
     baseLoadStores(q);
+    setHead('Магазини', ST.mode === 'table' ? 'усі точки, лише перегляд' : 'кто что заказал сегодня');
     var v = document.getElementById('view');
     if (v) v.insertAdjacentHTML('afterbegin', bar());
   };
@@ -1872,6 +1873,7 @@ var ST = { mode: 'tiles', data: null, q: '', dirs: {}, ua: false, off: false, bu
 
   window.stMode = function (m) {
     ST.mode = m;
+    setHead('Магазини', m === 'table' ? 'усі точки, лише перегляд' : 'кто что заказал сегодня');
     var b = document.getElementById('stbar');
     if (b) b.outerHTML = bar();
     var host = document.getElementById('adm-t');
