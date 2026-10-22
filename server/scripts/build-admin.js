@@ -67,7 +67,17 @@ function build() {
   if (!/name="viewport"/i.test(html)) html = html.replace(/<head>/i,
     '<head>\n<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">');
   if (!/<\/body>/i.test(html)) throw new Error('Немає </body> в Admin.html');
-  return html.replace(/<\/body>/i, SHIM + '</body>');
+  let out = html.replace(/<\/body>/i, () => SHIM + '</body>');
+  // тема пульта (темна/світла, ширина ноутбука) - з scripts/admin-theme.html
+  const TH = path.join(__dirname, 'admin-theme.html');
+  if (fs.existsSync(TH)) {
+    const parts = fs.readFileSync(TH, 'utf8').split('<!-- @body -->');
+    const head = parts[0].replace(/^<!--[\s\S]*?-->\s*/, '').trim(), body = (parts[1] || '').trim();
+    out = out.replace(/<\/head>/i, () => head + '\n</head>');
+    const i = out.lastIndexOf('</body>');
+    out = out.slice(0, i) + body + '\n' + out.slice(i);
+  }
+  return out;
 }
 
 if (require.main === module) {

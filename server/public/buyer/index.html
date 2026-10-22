@@ -219,7 +219,13 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .wdc i{display:block;width:100%;max-width:30px;border-radius:5px 5px 0 0;background:var(--teal);opacity:.8;transition:opacity .15s,background .15s}
 .wdc:hover i{opacity:1;background:var(--bad)}
 .wdc span{font-size:10px;color:var(--mu);margin-top:4px;white-space:nowrap;height:12px}
-@media (max-width:560px){.wogrid{grid-template-columns:1fr}.wod{height:110px}.wof{gap:8px}}</style>
+@media (max-width:560px){.wogrid{grid-template-columns:1fr}.wod{height:110px}.wof{gap:8px}}/* wo-compact */
+.wod{height:110px;justify-content:center;gap:6px}
+.wdc{flex:0 1 48px}
+.wocard.wide:has(.wod){grid-column:auto}
+@media (min-width:1000px){.wocard.wide:has(.wod){grid-column:span 2}}
+@media (max-width:640px){.wod{height:90px;gap:3px}}
+</style>
 </head>
 <body>
 <header class="hdr">

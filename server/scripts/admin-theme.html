@@ -1,0 +1,91 @@
+<!-- Тема пульта (як у закупниць). Підключає scripts/build-admin.js: до </head> - частина до @body, перед </body> - решта. -->
+<script>try{var t=localStorage.getItem('buyer_theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='light';}</script>
+<!-- @body -->
+<style>
+/* adm-theme */
+:root{--bg:#F2F4F5;--sf:#fff;--sf2:#F5F7F8;--ln:#E2E6E9;--tx:#14181B;--mu:#65717A;--hd:#11171A;--acc:#E11B22;--teal:#0F766E;--ok:#15803D;--okb:#E7F5EC;--bad:#C81E1E;--badb:#FDECEC;--warn:#9A5B00;--warnb:#FFF4DE;--sh:0 1px 2px rgba(16,24,28,.05),0 4px 14px rgba(16,24,28,.06);--sh2:0 12px 30px rgba(16,24,28,.16)}
+[data-theme=dark]{--bg:#0E1315;--sf:#161D20;--sf2:#1C252A;--ln:#27333A;--tx:#E3EBED;--mu:#8C9DA4;--hd:#090D0F;--teal:#2DD4BF;--ok:#4ADE80;--okb:rgba(74,222,128,.12);--bad:#F87171;--badb:rgba(248,113,113,.12);--warn:#FBBF24;--warnb:rgba(251,191,36,.12);--sh:0 1px 2px rgba(0,0,0,.35);--sh2:0 14px 34px rgba(0,0,0,.55)}
+html{color-scheme:light}[data-theme=dark]{color-scheme:dark}
+body{background:var(--bg);color:var(--tx);transition:background .2s,color .2s}
+.hdr{background:var(--hd);border-bottom:1px solid var(--ln)}
+.sec{color:var(--teal)}
+.s,.chev{color:var(--mu)}
+.card,.dir,.info,.kpis div,.wodoc{background:var(--sf);color:var(--tx);border:1px solid var(--ln);box-shadow:var(--sh)}
+.item{background:transparent;color:var(--tx);transition:background .15s}
+.item:hover,.item:active{background:var(--sf2)}
+.item + .item::before,label.pick + label.pick::before{background:var(--ln)}
+.dir,.card{transition:transform .18s,box-shadow .18s,background .2s}
+.dir:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.dir:active{background:var(--sf2)}
+.bar,.minibar{background:var(--sf2)}
+.chip{background:var(--sf);color:var(--tx);border-color:var(--ln);transition:transform .15s,box-shadow .15s}
+.chip:hover{transform:translateY(-2px);box-shadow:var(--sh)}
+.chip.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+input[type=search],input[type=text],input[type=tel]{background:var(--sf);color:var(--tx);border-color:var(--ln)}
+input:focus{border-color:var(--teal)}
+.btn{transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 18px color-mix(in srgb,var(--acc) 30%,transparent)}
+.btn.dark{background:var(--tx);color:var(--bg)}
+.btn.ghost{background:var(--sf2);color:var(--tx);border:1px solid var(--ln);box-shadow:none}
+.btn[disabled]{background:var(--ln);color:var(--mu);transform:none;box-shadow:none}
+.pill.open{color:var(--ok);background:var(--okb)}
+.pill.closed{color:var(--bad);background:var(--badb)}
+.pill.warn{color:var(--warn);background:var(--warnb)}
+.pill.off{color:var(--mu);background:var(--sf2)}
+.note{background:var(--warnb);border-color:color-mix(in srgb,var(--warn) 35%,transparent);color:var(--warn)}
+.bad{background:var(--badb);border-color:color-mix(in srgb,var(--bad) 35%,transparent);color:var(--bad)}
+.ok{background:var(--okb);border-color:color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok)}
+.spin{color:var(--mu)}
+.sheet{background:var(--sf);color:var(--tx);border:1px solid var(--ln)}
+.sheet .sub{color:var(--mu)}
+.what{background:var(--sf2)}
+.what div + div{border-color:var(--ln)}
+.wodoc .h{background:var(--sf2);border-color:var(--ln)}
+.wodoc .r .q,.kpis i{color:var(--mu)}
+[data-theme=dark] [style*="#8E1418"]{color:var(--bad)!important}
+[data-theme=dark] [style*="#5A626D"]{color:var(--mu)!important}
+[data-theme=dark] [style*="background:#fff"]{background:var(--sf)!important}
+.thbtn{font-size:19px}
+.tabs{left:50%;right:auto;bottom:14px;transform:translateX(-50%);width:auto;max-width:calc(100% - 20px);margin:0;gap:4px;padding:6px;border:1px solid var(--ln);border-radius:20px;background:color-mix(in srgb,var(--sf) 88%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:var(--sh2)}
+.tab{flex-grow:0;flex-direction:row;gap:8px;padding:10px 16px;border-radius:14px;font-size:14px;font-weight:600;color:var(--mu);white-space:nowrap;transition:transform .18s,background .18s,color .18s}
+.tab svg{width:18px;height:18px}
+.tab:hover{transform:translateY(-3px);background:var(--sf2);color:var(--tx)}
+.tab.on{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent)}
+.wrap{max-width:1320px;padding:24px 20px 120px}
+@media (min-width:1000px){
+ .hdr{padding:18px 28px}
+ .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:24px;align-items:start}
+ .grid>.spin,.grid>.note,.grid>.bad,.grid>.ok,.grid>.info,.grid>.chips,.grid>.btn,.grid>input,.grid>.kpis{grid-column:1/-1}
+ .grid>div:has(> .dir + .dir){grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+ .grid>div:has(> .dir + .dir)>.sec{grid-column:1/-1;margin-bottom:0}
+ .grid>div:has(> .dir + .dir)>.dir + .dir{margin-top:0}
+ .kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+ .mask{align-items:center}
+ .sheet{border-radius:24px;padding-bottom:24px}
+ .grip{display:none}
+}
+@media (max-width:640px){
+ .tabs{left:0;right:0;bottom:0;transform:none;max-width:none;border-radius:18px 18px 0 0;padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+ .tab{flex:1;flex-direction:column;gap:4px;padding:6px 0;font-size:11px}
+ .tab:hover{transform:none}
+ .wrap{padding:18px 14px 110px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>
+(function () {
+  var hdr = document.querySelector('.hdr'); if (!hdr) return;
+  var b = document.createElement('button');
+  b.className = 'icobtn thbtn'; b.type = 'button'; b.setAttribute('aria-label', 'Тема');
+  function mark() { b.textContent = document.documentElement.dataset.theme === 'dark' ? '\u2600' : '\u263E'; }
+  b.onclick = function () {
+    var t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('buyer_theme', t); } catch (e) {}
+    mark();
+  };
+  mark();
+  var btns = hdr.querySelectorAll('.icobtn');
+  hdr.insertBefore(b, btns[btns.length - 1]);
+})();
+</script>
