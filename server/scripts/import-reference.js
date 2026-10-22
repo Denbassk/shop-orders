@@ -3,6 +3,7 @@
 //   node scripts/import-reference.js --dry     - прочитати і надрукувати кількості, у базу не писати
 //   node scripts/import-reference.js           - записати (відмовиться, якщо в stores/products уже є дані)
 //   node scripts/import-reference.js --force   - перезаписати stores і products (затре правки з Table Editor!)
+//   node scripts/import-reference.js --cost-only - лише products.cost випічки (собівартість для списань) + settings списань; решту не чіпає
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -135,6 +136,25 @@ async function write(data, { force }) {
   return counts;
 }
 
+// Лише собівартість: рядки випічки, що вже є в базі, отримують cost; settings списань створюються, живі значення не затираються.
+async function applyCostsOnly(sb, bakeryProducts) {
+  const must = (label, { error }) => { if (error) throw new Error(`${label}: ${error.message}`); };
+  must('settings', await sb.from('settings').upsert(
+    Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({ key, value })), { onConflict: 'key', ignoreDuplicates: true }));
+  const { data, error } = await sb.from('products').select('dir,id,cost').eq('dir', 'bakery');
+  if (error) throw new Error(`products: ${error.message}`);
+  const have = new Map((data || []).map((r) => [r.id, r]));
+  const out = { updated: 0, same: 0, missing: [] };
+  for (const p of bakeryProducts) {
+    const row = have.get(p.id);
+    if (!row) { out.missing.push(p.id); continue; }
+    if (Number(row.cost) === Number(p.cost)) { out.same++; continue; }
+    must('products.cost', await sb.from('products').update({ cost: p.cost }).eq('dir', 'bakery').eq('id', p.id));
+    out.updated++;
+  }
+  return out;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const dry = args.includes('--dry');
@@ -143,6 +163,12 @@ async function main() {
   const data = await readAll();
   console.log(summarize(data));
   if (dry) { console.log('--dry: в базу не писали'); return; }
+  if (args.includes('--cost-only')) {
+    const { createClient } = require('@supabase/supabase-js');
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    console.log('--cost-only:', JSON.stringify(await applyCostsOnly(sb, data.products.bakery)));
+    return;
+  }
 
   const counts = await write(data, { force });
   console.log('в базі:', JSON.stringify(counts));
@@ -152,4 +178,4 @@ if (require.main === module) {
   main().catch((e) => { console.error('ПОМИЛКА:', e.message); process.exit(1); });
 }
 
-module.exports = { readAll, summarize, DEFAULT_SETTINGS };
+module.exports = { readAll, summarize, applyCostsOnly, DEFAULT_SETTINGS };

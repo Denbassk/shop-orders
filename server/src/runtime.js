@@ -2,6 +2,7 @@
 const { loadEnv } = require('./env');
 const { supabase } = require('./db');
 const { createData } = require('./data');
+const { createAdminData } = require('./admin/data');
 const { createVegPrices } = require('./vegPrices');
 const { createLate } = require('./late');
 const { createMailer } = require('./mail');
@@ -64,7 +65,8 @@ function createRuntime() {
   // перебудова його звітів з дебаунсом 30 с (не на кожне замовлення: перше замовлення відкриває вікно, усі наступні в ньому
   // входять в одну перебудову); у tick - усі напрямки (змінене - пишеться, без змін - пропуск).
   // NBHZ_ARCHIVE_SPREADSHEET_ID - таблиця-архів вигрузок НБХЗ (її створює власник: сервісний акаунт файлів не створює).
-  const reportEnv = () => ({ data, google: googleForExport, target, at: new Date(), archive: { spreadsheetId: process.env.NBHZ_ARCHIVE_SPREADSHEET_ID || '' } });
+  const adm = createAdminData(supabase());
+  const reportEnv = () => ({ data, google: googleForExport, target, at: new Date(), markReport: (dir, at) => adm.setReportAt(dir, at.toISOString()), archive: { spreadsheetId: process.env.NBHZ_ARCHIVE_SPREADSHEET_ID || '' } });
   const rebuildReports = () => rebuildAllReports(reportEnv());
   const queueReports = createExportQueue({ run: (dir) => rebuildDir(dir, reportEnv()), delayMs: Number(process.env.REPORTS_DEBOUNCE_MS) || 30000 });
   const queueExport = createExportQueue({ run: exportThenReports((dir) => exportDir(dir, exportEnv()), queueReports) });

@@ -163,3 +163,22 @@ test('rebuildAllReports: збій одного напрямку не зупин�
 test('невідомий напрямок', () => {
   assert.throws(() => rebuildReports('xxx', makeEnv().env), /невідомий напрямок/);
 });
+
+test('report_at: після успішної збірки викликається env.markReport(dir, at); пропуск «без змін» і збій запису - ні; збій markReport збірку не ламає', async () => {
+  const calls = [];
+  const t = makeEnv({ target: fresh(), orders: { veg: [order('a', [['Картопля', 10, 14.5]])] } });
+  t.env.markReport = async (dir, at) => { calls.push([dir, at.toISOString()]); };
+  await rebuildReports('veg', t.env);
+  assert.deepEqual(calls, [['veg', AT.toISOString()]]);
+  await rebuildReports('veg', t.env);
+  assert.equal(calls.length, 1, 'без змін - час збирання не оновлюється');
+
+  const bad = makeEnv({ target: fresh(), failDir: 'Замовлення Овочі', orders: { veg: [order('a', [['Картопля', 10, 14.5]])] } });
+  bad.env.markReport = async (dir) => { calls.push(['bad', dir]); };
+  await assert.rejects(rebuildReports('veg', bad.env), /Google тайм-аут/);
+  assert.equal(calls.length, 1, 'збій Google - час не пишемо');
+
+  const noisy = makeEnv({ target: fresh(), orders: { veg: [order('a', [['Картопля', 10, 14.5]])] } });
+  noisy.env.markReport = async () => { throw new Error('база лежить'); };
+  assert.ok((await rebuildReports('veg', noisy.env)).sheets, 'збій markReport не ламає збірку');
+});

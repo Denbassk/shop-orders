@@ -123,6 +123,7 @@ async function rebuildLocked(dir, env, { force }) {
 
   const { sizes, plans, ...res } = await writeDir(dir, env, spreadsheetId, rows, snap, day);
   lastSig[key] = sig;                                  // лише після успіху всіх листів
+  if (env.markReport) { try { await env.markReport(dir, env.at); } catch (e) { console.error('час збирання звіту ' + dir + ': ' + e.message); } }   // markReport_ -> settings report_at_<dir>
   return { rows: rows.length, ...res, target: env.target.mode };
 }
 

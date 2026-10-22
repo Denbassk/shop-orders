@@ -43,3 +43,20 @@ test('settings за замовчуванням: wo_books {} і wo_late "" (за�
   assert.deepEqual(IR.DEFAULT_SETTINGS.wo_books, {});
   assert.equal(IR.DEFAULT_SETTINGS.wo_late, '');
 });
+test('--cost-only: оновлюється лише products.cost випічки (інше не чіпається), settings списань - без перезапису живих', async () => {
+  const log = [];
+  const rowsInDb = [{ dir: 'bakery', id: '482001', cost: 0 }, { dir: 'bakery', id: '482002', cost: 5 }];
+  const sb = {
+    from: (t) => ({
+      select: () => ({ eq: async () => ({ data: t === 'products' ? rowsInDb : [], error: null }) }),
+      update: (patch) => ({ eq: (c1, v1) => ({ eq: async (c2, v2) => { log.push(['update', t, patch, v1, v2]); return { error: null }; } }) }),
+      upsert: async (rows, o) => { log.push(['upsert', t, rows.length, o && o.ignoreDuplicates]); return { error: null }; },
+    }),
+  };
+  const products = [{ id: '482001', cost: 12.3 }, { id: '482002', cost: 5 }, { id: '999999', cost: 7 }];
+  const res = await IR.applyCostsOnly(sb, products);
+  assert.deepEqual(res, { updated: 1, same: 1, missing: ['999999'] });
+  assert.deepEqual(log.filter((x) => x[0] === 'update'), [['update', 'products', { cost: 12.3 }, 'bakery', '482001']]);
+  assert.ok(log.some((x) => x[0] === 'upsert' && x[1] === 'settings' && x[3] === true), 'settings списань - ignoreDuplicates');
+  assert.ok(!log.some((x) => x[1] === 'stores'), 'stores не чіпаємо');
+});
