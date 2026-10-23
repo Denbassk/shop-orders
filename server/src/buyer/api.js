@@ -5,6 +5,7 @@
 const { DIRECTIONS } = require('../directions');
 const R = require('../rules');
 const { STORE_NOT_FOUND } = require('../admin/write');
+const { nameKey } = require('../import/parse');
 
 function cfgOf(dir) {
   const cfg = Object.prototype.hasOwnProperty.call(DIRECTIONS, dir) ? DIRECTIONS[dir] : null;
@@ -94,6 +95,48 @@ async function buyerSetProduct(dir, p, env) {
   return { id: cur.id, ...patch };
 }
 
+// Нова позиція в асортименті (кнопка «Нова позиція» на вкладці «Асортимент»): id = штрихкод, інакше ключ назви (як import-reference).
+// Для випічки: категорія, наявність і собівартість (без собівартості позицію не видно в списаннях продавців).
+const CATEGORY_MAX = 40;
+async function buyerAddProduct(dir, p, env) {
+  const cfg = cfgOf(dir);
+  p = p || {};
+  const name = String(p.name == null ? '' : p.name).trim().replace(/\s+/g, ' ');
+  if (!name) throw new Error('Вкажіть назву');
+  if (name.length > 120) throw new Error('Назва задовга (до 120 символів)');
+  const priceRaw = String(p.price == null ? '' : p.price).trim().replace(',', '.');
+  const price = Number(priceRaw);
+  if (priceRaw === '' || !isFinite(price) || price < 0 || price > 100000) throw new Error('Невірна ціна: вкажіть число від 0');
+  const barcode = String(p.barcode == null ? '' : p.barcode).trim();
+  if (barcode && !/^\d{4,20}$/.test(barcode)) throw new Error('Штрихкод - лише цифри (4-20) або порожньо');
+  const id = barcode || nameKey(name);
+  const row = { dir, id, barcode, name, price: Math.round(price * 100) / 100, status: 'active' };
+  const bakery = dir === 'bakery';
+  if (bakery) {
+    row.category = String(p.category == null ? '' : p.category).trim().slice(0, CATEGORY_MAX) || null;
+    row.availability = String(p.availability == null ? '' : p.availability).trim().slice(0, 60) || null;
+    const costRaw = String(p.cost == null ? '' : p.cost).trim().replace(',', '.');
+    if (costRaw !== '') {
+      const cost = Number(costRaw);
+      if (!isFinite(cost) || cost < 0 || cost > 100000) throw new Error('Невірна собівартість');
+      row.cost = Math.round(cost * 100) / 100;
+    }
+  } else if (dir === 'bread' || dir === 'nbhz') {
+    const box = String(p.box == null ? '' : p.box).trim().slice(0, 20);
+    row.box = box || null;
+  }
+  const list = await env.adm.dirProducts(dir);
+  const dup = list.find((x) => String(x.id) === id || nameKey(x.name) === nameKey(name));
+  if (dup) throw new Error('Така позиція вже є: ' + dup.name + (dup.status === 'stop' ? ' (стоп - зніміть стоп у списку)' : ''));
+  row.sort = list.filter((x) => Number(x.sort) < 1000).reduce((m, x) => Math.max(m, Number(x.sort) || 0), 0) + 1;
+  await env.adm.addProduct(row);
+  await logSafe(env, 'Додано в асортимент', cfg.title + ' / ' + name + ': ' + money2(row.price) + ' грн' +
+    (row.category ? ', ' + row.category : '') + (row.cost != null ? ', собівартість ' + money2(row.cost) : '') + (barcode ? ', ' + barcode : ''));
+  return { id, name, price: row.price, barcode, category: row.category || '', availability: row.availability || '', stop: false, sort: row.sort,
+    noCost: bakery && row.cost == null };
+}
+const money2 = (n) => String(Math.round(Number(n) * 100) / 100);
+
 // Запити дозволу за сьогодні - замість листа закупниці з кнопкою «Дозволити» (LateRequest.gs).
 // Чекають - першими, далі діючі дозволи (LATE_TTL_MIN) і прострочені.
 async function buyerLate(dir, env) {
@@ -129,4 +172,4 @@ async function buyerInfo(dir, env) {
       minOrder: (cfg.minOrderChanges && cfg.minOrderChanges.length ? cfg.minOrderChanges[cfg.minOrderChanges.length - 1].value : cfg.minOrder) || 0 } };
 }
 
-module.exports = { buyerToday, buyerDelete, buyerProducts, buyerSetProduct, buyerLate, buyerInfo };
+module.exports = { buyerToday, buyerDelete, buyerProducts, buyerSetProduct, buyerAddProduct, buyerLate, buyerInfo };

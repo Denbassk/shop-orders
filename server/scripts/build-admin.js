@@ -10,10 +10,9 @@ const OUT = path.join(__dirname, '..', 'public', 'admin', 'index.html');
 
 const SHIM = `<!-- shop-orders: на сервері немає: бэкап, дублі, позначка, збереження картки - кнопки приховано -->
 <style>
-[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"],[onclick="askCard()"]{display:none!important}
+[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"]{display:none!important}
 </style>
 <script>
-function askCard(){ toast('Сохранение карточки - после переезда. Пока правьте Довідник ТТ.'); }
 function askClearMark(){ toast('Отметок больше нет: отмените заказ или откройте приём точке.'); }
 // ===== shop-orders: зв'язок з сервером замість Apps Script (вхід - cookie, токена в сторінці немає) =====
 function adminPost_(action, payload) {
@@ -59,7 +58,7 @@ adminPost_('today', {}).then(function (r) {
 // нижня вкладка «Здоровье» (замість прихованого «Бэкап»): екран health підсвічує її, а не «Сегодня»
 function tabs(name) {
   var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today', stores: 'stores', store: 'stores',
-              health: 'restore', log: 'log', edit: 'stores', card: 'stores', wo: 'today', wostore: 'today' };
+              health: 'restore', log: 'log', edit: 'stores', card: 'stores', newstore: 'stores', wo: 'today', wostore: 'today' };
   var on = map[name] || 'today';
   ['today', 'stores', 'restore', 'log'].forEach(function (k) {
     var el = document.getElementById('t-' + k);
@@ -99,6 +98,13 @@ function build() {
     const i = out.lastIndexOf('</body>');
     const stHtml = fs.readFileSync(ST, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
     out = out.slice(0, i) + stHtml + '\n' + out.slice(i);
+  }
+  // правка точки і «Нова точка» - scripts/admin-card.html (після блоку «Магазини»: перевизначає loadCard/askCard)
+  const CD = path.join(__dirname, 'admin-card.html');
+  if (fs.existsSync(CD)) {
+    const i = out.lastIndexOf('</body>');
+    const cdHtml = fs.readFileSync(CD, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
+    out = out.slice(0, i) + cdHtml + '\n' + out.slice(i);
   }
   return out;
 }

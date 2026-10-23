@@ -34,3 +34,11 @@ test('GET /buyer/bakery без ключа і /buyer/xxx -> 404', async () => {
     assert.equal((await fetch(b + '/buyer/xxx')).status, 404);
   } finally { await new Promise((r) => srv.close(r)); }
 });
+test('сторінка закупниці: вбудовані скрипти без синтаксичних помилок; на вкладці «Асортимент» є кнопка «+ Нова позиція» зі своєю формою', () => {
+  const html = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
+  const re = /<script>([\s\S]*?)<\/script>/g;
+  let m, n = 0;
+  while ((m = re.exec(html))) { n++; assert.doesNotThrow(() => new Function(m[1]), 'скрипт №' + n); }
+  assert.ok(n >= 1);
+  for (const f of ['askNewProduct()', "call('addProduct'", '+ Нова позиція', 'saveNewProduct']) assert.ok(html.includes(f), f);
+});

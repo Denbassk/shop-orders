@@ -126,7 +126,7 @@ async function admStoresTable(env) {
     daysVeg: r.days_veg || '', daysBakery: r.days_bakery || '', note: r.note || '',
   }));
   rows.sort(byLabel);
-  return { rows, total: rows.length, registryUrl: 'https://docs.google.com/spreadsheets/d/' + REGISTRY_ID + '/edit' };
+  return { rows, total: rows.length, storeEdit: !!env.storeEdit, registryUrl: 'https://docs.google.com/spreadsheets/d/' + REGISTRY_ID + '/edit' };
 }
 
 // Картка магазину (вкладка «Магазини»): реквізити, компанія за ЄДРПОУ, по кожному напрямку - графік (дні тижня), що сьогодні

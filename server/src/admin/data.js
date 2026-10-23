@@ -89,11 +89,14 @@ function createAdminData(sb) {
   async function dirProducts(dir) {
     return must('products', await sb.from('products').select('id,barcode,name,price,category,availability,box,status,sort').eq('dir', dir));
   }
+  async function addProduct(row) {
+    must('products', await sb.from('products').insert(row));
+  }
   async function setProduct(dir, id, patch) {
     return must('products', await sb.from('products').update(patch).eq('dir', dir).eq('id', id).select('id')).length > 0;
   }
   return { dayOrders, allStores, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
-    dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow, updateStore, insertStore, maxStoreSort, dirProducts, setProduct };
+    dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow, updateStore, insertStore, maxStoreSort, dirProducts, setProduct, addProduct };
 }
 
 module.exports = { createAdminData };

@@ -1526,10 +1526,9 @@ function askCard() {
 
 <!-- shop-orders: на сервері немає: бэкап, дублі, позначка, збереження картки - кнопки приховано -->
 <style>
-[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"],[onclick="askCard()"]{display:none!important}
+[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"]{display:none!important}
 </style>
 <script>
-function askCard(){ toast('Сохранение карточки - после переезда. Пока правьте Довідник ТТ.'); }
 function askClearMark(){ toast('Отметок больше нет: отмените заказ или откройте приём точке.'); }
 // ===== shop-orders: зв'язок з сервером замість Apps Script (вхід - cookie, токена в сторінці немає) =====
 function adminPost_(action, payload) {
@@ -1575,7 +1574,7 @@ adminPost_('today', {}).then(function (r) {
 // нижня вкладка «Здоровье» (замість прихованого «Бэкап»): екран health підсвічує її, а не «Сегодня»
 function tabs(name) {
   var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today', stores: 'stores', store: 'stores',
-              health: 'restore', log: 'log', edit: 'stores', card: 'stores', wo: 'today', wostore: 'today' };
+              health: 'restore', log: 'log', edit: 'stores', card: 'stores', newstore: 'stores', wo: 'today', wostore: 'today' };
   var on = map[name] || 'today';
   ['today', 'stores', 'restore', 'log'].forEach(function (k) {
     var el = document.getElementById('t-' + k);
@@ -1842,7 +1841,8 @@ function loadToday() {
 .stbar .seg{display:inline-flex;border:1px solid var(--ln);border-radius:12px;overflow:hidden;background:var(--sf)}
 .stbar .seg button{border:0;background:transparent;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer;color:var(--tx)}
 .stbar .seg button.on{background:var(--acc);color:#fff}
-.stbar .doc{margin-left:auto;padding:10px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--tx);font-weight:600;text-decoration:none}
+.stbar .newst{margin-left:auto;padding:10px 14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.stbar .doc{padding:10px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--tx);font-weight:600;text-decoration:none}
 .stfl{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
 .stfl button{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
 .stfl button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -1893,10 +1893,10 @@ function loadToday() {
 .str{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--ln);font-size:14px}
 .str span:first-child{width:170px;flex:none;color:var(--mu)}
 .stf{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.stf .save{border:0;border-radius:12px;padding:12px 20px;font:inherit;font-weight:700;background:var(--sf2);color:var(--mu);cursor:not-allowed}
+.stf .save{border:0;border-radius:12px;padding:12px 20px;font:inherit;font-weight:700;background:var(--acc);color:#fff;cursor:pointer}
 </style>
 <script>
-// ===== shop-orders: вкладка «Магазини» - Таблиця | Картка (лише перегляд) =====
+// ===== shop-orders: вкладка «Магазини» - Таблиця | Картка; правка і «Нова точка» - admin-card.html =====
 var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, off: false, cardId: '', card: null, pick: '' };
 (function () {
   var WD = [['Пн', 1], ['Вт', 2], ['Ср', 3], ['Чт', 4], ['Пт', 5], ['Сб', 6], ['Нд', 0]];
@@ -1913,10 +1913,11 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
     return '<div class="stbar"><div class="seg">' +
       '<button class="' + (ST.view === 'table' ? 'on' : '') + '" onclick="stView(\'table\')">Таблиця</button>' +
       '<button class="' + (ST.view === 'card' ? 'on' : '') + '" onclick="stView(\'card\')">Картка</button></div>' +
+      '<button class="newst" onclick="stNewStore()">+ Нова точка</button>' +
       '<a class="doc" href="' + attr(docUrl()) + '" target="_blank" rel="noopener">Відкрити Довідник</a></div>';
   }
   function shell(inner) {
-    setHead('Магазини', ST.view === 'table' ? 'усі точки, лише перегляд' : 'одна точка: сьогодні, графік, реквізити');
+    setHead('Магазини', ST.view === 'table' ? 'усі точки' : 'одна точка: сьогодні, графік, реквізити');
     view('<div id="stw">' + bar() + '<div id="stbody">' + inner + '</div></div>');
   }
   function loadList(cb) {
@@ -2026,7 +2027,7 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
       '<div class="sth">Графік і напрямки</div>' + c.dirs.map(schedBlock).join('') +
       '<div class="sth">Реквізити</div>' + row('Адреса', s.address) + row('Адреса (хліб)', s.addrBread) + row('Адреса (ВК)', s.addrBakery) + row('Адреса (овочі)', s.addrVeg) +
       row('Адреса (НБХЗ)', s.addrNbhz) + row('Маршрут НБХЗ', s.routeNbhz) + row('Тип', s.type) + row('Примітка', s.note) +
-      '<div class="stf"><button class="save" disabled title="Правка точок із пульта - після переїзду">Зберегти</button><span class="stnote" style="margin:0">Правка - після переїзду. Зараз змінюйте точку в Довіднику Google.</span></div></div>';
+      '<div class="stf"><button class="save" onclick="go(\'card\',{store:\'' + attr(s.id) + '\'})">Редагувати</button><span class="stnote" style="margin:0">Графік, маршрути, напрямки, вимкнення точки.</span></div></div>';
   }
   function drawCard() {
     var b = document.getElementById('stbody');
@@ -2052,6 +2053,170 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
   // вкладка внизу веде в таблицю
   var baseTabGo = tabGo;
   tabGo = function (screen) { if (screen === 'stores') ST.cardId = ''; baseTabGo(screen); };
+})();
+</script>
+<style>
+.cfbanner{margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--sf);border:1px solid var(--ln);font-size:14px;line-height:1.4}
+.cfbanner.warn{border-color:#C98A00;color:#C98A00}
+.stbar .newst{padding:10px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.cfbtn[disabled]{opacity:.45;cursor:not-allowed}
+</style>
+<script>
+// ===== shop-orders: правка точки і «Нова точка» =====
+var CARD_T = { active: 'Активна', label: 'Назва', code: 'Обліковий номер', route: 'Маршрут',
+  note: 'Примітка', bread: 'Хліб Рома', nbhz: 'Хліб НБХЗ', bakery: 'Випічка', veg: 'Овочі',
+  routeNbhz: 'Маршрут НБХЗ', edrpou: 'ЄДРПОУ', daysBakery: 'Дні випічки', daysVeg: 'Дні овочів', zone: 'Зона' };
+
+function cfTxt(f, k, label, mode, ph) {
+  return '<div style="margin-top:14px"><div class="s" style="margin:0 4px 8px">' + esc(label) + '</div>' +
+    '<input type="text" id="cf_' + k + '" value="' + esc(f[k] == null ? '' : f[k]) + '"' +
+    (mode ? ' inputmode="' + mode + '"' : '') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
+}
+function cfChk(f, k, label, sub) {
+  return '<label class="pick"><input type="checkbox" id="cf_' + k + '"' + (f[k] ? ' checked' : '') + '>' +
+    '<span class="grow"><span class="t">' + esc(label) + '</span>' + (sub ? '<span class="s">' + esc(sub) + '</span>' : '') + '</span></label>';
+}
+function cfDays(f, k) {
+  var on = cardDaysNorm(f[k]).split(', ');
+  return '<div class="chips" id="cf_' + k + '" style="margin:0">' + CARD_DAYS.map(function (d) {
+    return '<button type="button" class="chip' + (on.indexOf(d) >= 0 ? ' on' : '') + '" data-d="' + d + '" onclick="this.classList.toggle(\'on\')">' + d + '</button>';
+  }).join('') + '</div>';
+}
+function cfZone(f, zones) {
+  var list = [''].concat(zones);
+  if (f.zone && list.indexOf(f.zone) < 0) list.push(f.zone);
+  return '<select id="cf_zone" style="width:100%;padding:16px;border:1px solid var(--ln);border-radius:16px;background:var(--sf);font:inherit;color:var(--tx)">' +
+    list.map(function (z) { return '<option value="' + esc(z) + '"' + (z === f.zone ? ' selected' : '') + '>' + esc(z || '— не задана —') + '</option>'; }).join('') + '</select>';
+}
+function cfBox(inner) { return '<div class="card" style="padding:2px 16px 18px">' + inner + '</div>'; }
+
+// спільна частина форми: основне, напрямки, хліб, випічка, овочі (isNew: без «Активна»)
+function cfBody(f, c, isNew) {
+  var h = cfBox(cfTxt(f, 'label', 'Назва для продавця' + (isNew ? ' (порожньо = адреса)' : '')) + cfTxt(f, 'code', 'Обліковий номер', 'numeric') +
+    cfTxt(f, 'route', 'Маршрут (Рома)') + cfTxt(f, 'note', 'Примітка'));
+  h = section('Основне', h);
+  h += section('Напрямки', '<div class="card">' +
+    (isNew ? '' : cfChk(f, 'active', 'Активна', 'якщо зняти - точка зникне у продавців і з «Сегодня»')) +
+    cfChk(f, 'bread', 'Хліб Рома') + cfChk(f, 'nbhz', 'Хліб НБХЗ') + cfChk(f, 'bakery', 'Випічка і кулінарія') + cfChk(f, 'veg', 'Овочі і фрукти') + '</div>');
+  h += section('Хліб', cfBox(cfTxt(f, 'edrpou', 'ЄДРПОУ юрособи (порожньо = ' + (c.defEdrpou || 'за замовчуванням') + ')', 'numeric', c.defEdrpou) +
+    cfTxt(f, 'routeNbhz', 'Маршрут НБХЗ')));
+  h += section('Випічка', '<div class="card" style="padding:16px"><div class="s" style="margin:0 4px 10px">Дні прийому (нічого не обрано = без обмежень)</div>' +
+    cfDays(f, 'daysBakery') + '<div class="s" style="margin:18px 4px 8px">Зона доставки</div>' + cfZone(f, c.zones) + '</div>');
+  h += section('Овочі', '<div class="card" style="padding:16px"><div class="s" style="margin:0 4px 10px">Дні прийому (нічого не обрано = без обмежень)</div>' + cfDays(f, 'daysVeg') + '</div>');
+  return h;
+}
+function cfBanner(editable) {
+  return editable ? '' : '<div class="cfbanner warn">До переходу точки правляться в Довіднику ТТ (Google): бойова система ще читає його. ' +
+    'Редагування в пульті вмикається при переході. Тестові точки (test…) можна правити вже зараз.</div>';
+}
+function cfInvalidate() { try { ST.data = null; } catch (e) {} }
+
+function loadCard(id) {
+  setHead('Картка точки', '');
+  spin();
+  call('card', { storeId: id }).then(function (c) {
+    S.card = c;
+    setHead(c.label, 'правка точки');
+    var h = cfBanner(c.editable) +
+      '<div class="info">Адреса: <b>' + esc(c.address) + '</b><br>Адреси тут не змінюються: за ними точка зв\'язана із замовленнями і звітами.</div>' +
+      cfBody(c.f, c, false) +
+      '<div><button class="btn cfbtn" onclick="askCard()"' + (c.editable ? '' : ' disabled') + '>Зберегти</button></div>';
+    view(h);
+  }).catch(fail);
+}
+
+function cfRead(k) { var e = document.getElementById('cf_' + k); return e ? e : null; }
+function cfDaysVal(k) {
+  var on = Array.prototype.map.call(document.querySelectorAll('#cf_' + k + ' .chip.on'), function (b) { return b.getAttribute('data-d'); });
+  return CARD_DAYS.filter(function (d) { return on.indexOf(d) >= 0; }).join(', ');
+}
+function cfCheck(v) {
+  if ('label' in v && !v.label) return 'Назва не може бути порожньою';
+  if (v.code && !/^\d+$/.test(v.code)) return 'Обліковий номер - тільки цифри';
+  if (v.edrpou && !/^\d{8}$/.test(v.edrpou)) return 'ЄДРПОУ - 8 цифр або порожньо';
+  return '';
+}
+
+function askCard() {
+  var c = S.card, f = c.f, set = {}, what = [];
+  ['label', 'code', 'route', 'note', 'edrpou', 'routeNbhz', 'zone'].forEach(function (k) {
+    var v = String(cfRead(k).value).trim();
+    if (v !== String(f[k] == null ? '' : f[k])) set[k] = v;
+  });
+  ['active', 'bread', 'nbhz', 'bakery', 'veg'].forEach(function (k) {
+    var v = cfRead(k).checked;
+    if (v !== !!f[k]) set[k] = v;
+  });
+  ['daysBakery', 'daysVeg'].forEach(function (k) {
+    var v = cfDaysVal(k);
+    if (v !== cardDaysNorm(f[k])) set[k] = v;
+  });
+  var keys = Object.keys(set);
+  if (!keys.length) return toast('Нічого не змінено');
+  var err = cfCheck(set);
+  if (err) return toast(err);
+  keys.forEach(function (k) { what.push(CARD_T[k] + ': ' + cardFmt(f[k]) + ' → ' + cardFmt(set[k])); });
+  var dirsOn = ['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return (k in set) ? set[k] : f[k]; });
+  var gone = set.active === false || !dirsOn;
+  if (set.active === false) what.push('Точка зникне у продавців і з «Сегодня». Повернути - галочкою «Активна» в картці');
+  else if (!dirsOn) what.push('Жодного напрямку - точка зникне у продавців');
+  if (['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return set[k] === false; }))
+    what.push('Якщо точка вже замовила сьогодні по напрямку, що знімається, краще знімати ввечері');
+  what.push('Прийняті замовлення не змінюються; продавці побачать зміну за ~30 секунд');
+  confirmSheet({
+    title: 'Зберегти зміни (' + keys.length + ')?', sub: c.label, what: what, yes: 'Зберегти',
+    run: function () { return call('cardSave', { storeId: c.id, orig: f, set: set }); },
+    done: function () { cfInvalidate(); toast('Збережено'); if (gone) tabGo('stores'); else goBack(); }
+  });
+}
+
+// ---------- нова точка ----------
+var NEWST_ZONES = ['Салтовка', 'Новые дома', 'Центр', 'не возится'];
+function loadCardNew() {
+  setHead('Нова точка', 'додати магазин');
+  var f = { label: '', code: '', route: '', note: '', bread: false, nbhz: false, bakery: false, veg: false, edrpou: '', routeNbhz: '', daysBakery: '', daysVeg: '', zone: '' };
+  var c = { defEdrpou: '44413718', zones: NEWST_ZONES };
+  view('<div class="spin">Загрузка…</div>');
+  call('storesTable').then(function (d) {
+    ST.data = d;
+    var h = cfBanner(!!d.storeEdit) +
+      '<div class="info">Адреса - основа точки: з неї будується id і зв\'язок із замовленнями та звітами. Задайте її так само, як вона записана в сирих листах. ' +
+      'Адреси для напрямків можна не заповнювати: тоді береться основна.</div>' +
+      section('Адреса', cfBox(cfTxt({ address: '' }, 'address', 'Адреса (обов\'язково)', '', 'м. Харків, вул. …') +
+        cfTxt({}, 'addrBread', 'Адреса в листі хліба Рома (якщо інша)') + cfTxt({}, 'addrNbhz', 'Адреса в листі НБХЗ (якщо інша)') +
+        cfTxt({}, 'addrBakery', 'Адреса в листі випічки (якщо інша)') + cfTxt({}, 'addrVeg', 'Адреса в листі овочів (якщо інша)'))) +
+      cfBody(f, c, true) +
+      '<div><button class="btn cfbtn" onclick="askCardNew()"' + (d.storeEdit ? '' : ' disabled') + '>Додати точку</button></div>';
+    view(h);
+  }).catch(fail);
+}
+function askCardNew() {
+  var p = {}, what = [];
+  ['address', 'addrBread', 'addrNbhz', 'addrBakery', 'addrVeg', 'label', 'code', 'route', 'note', 'edrpou', 'routeNbhz', 'zone'].forEach(function (k) { p[k] = String(cfRead(k).value).trim(); });
+  ['bread', 'nbhz', 'bakery', 'veg'].forEach(function (k) { p[k] = cfRead(k).checked; });
+  p.daysBakery = cfDaysVal('daysBakery'); p.daysVeg = cfDaysVal('daysVeg');
+  if (!p.address) return toast('Вкажіть адресу');
+  if (!p.bread && !p.nbhz && !p.bakery && !p.veg) return toast('Оберіть хоча б один напрямок');
+  var err = p.label === '' ? '' : cfCheck({ label: p.label, code: p.code, edrpou: p.edrpou });
+  if (!err) err = cfCheck({ code: p.code, edrpou: p.edrpou });
+  if (err) return toast(err);
+  what.push('Адреса: ' + p.address);
+  what.push('Напрямки: ' + [p.bread && 'хліб Рома', p.nbhz && 'хліб НБХЗ', p.bakery && 'випічка', p.veg && 'овочі'].filter(Boolean).join(', '));
+  if (p.daysBakery) what.push('Дні випічки: ' + p.daysBakery);
+  if (p.daysVeg) what.push('Дні овочів: ' + p.daysVeg);
+  what.push('Точка з\'явиться у продавців за ~30 секунд');
+  confirmSheet({
+    title: 'Додати точку?', sub: p.label || p.address, what: what, yes: 'Додати',
+    run: function () { return call('cardAdd', p); },
+    done: function (r) { cfInvalidate(); toast('Точку додано'); go('store', { store: r.id, dir: '' }); }
+  });
+}
+
+// екран newstore: окремий S.screen, нижня вкладка «Магазини»
+(function () {
+  var baseLoad = load;
+  load = function () { if (S.screen === 'newstore') return loadCardNew(); return baseLoad(); };
+  window.stNewStore = function () { go('newstore', {}); };
 })();
 </script>
 </body>

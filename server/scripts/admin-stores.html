@@ -7,7 +7,8 @@
 .stbar .seg{display:inline-flex;border:1px solid var(--ln);border-radius:12px;overflow:hidden;background:var(--sf)}
 .stbar .seg button{border:0;background:transparent;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer;color:var(--tx)}
 .stbar .seg button.on{background:var(--acc);color:#fff}
-.stbar .doc{margin-left:auto;padding:10px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--tx);font-weight:600;text-decoration:none}
+.stbar .newst{margin-left:auto;padding:10px 14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.stbar .doc{padding:10px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--tx);font-weight:600;text-decoration:none}
 .stfl{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
 .stfl button{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
 .stfl button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -58,10 +59,10 @@
 .str{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--ln);font-size:14px}
 .str span:first-child{width:170px;flex:none;color:var(--mu)}
 .stf{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.stf .save{border:0;border-radius:12px;padding:12px 20px;font:inherit;font-weight:700;background:var(--sf2);color:var(--mu);cursor:not-allowed}
+.stf .save{border:0;border-radius:12px;padding:12px 20px;font:inherit;font-weight:700;background:var(--acc);color:#fff;cursor:pointer}
 </style>
 <script>
-// ===== shop-orders: вкладка «Магазини» - Таблиця | Картка (лише перегляд) =====
+// ===== shop-orders: вкладка «Магазини» - Таблиця | Картка; правка і «Нова точка» - admin-card.html =====
 var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, off: false, cardId: '', card: null, pick: '' };
 (function () {
   var WD = [['Пн', 1], ['Вт', 2], ['Ср', 3], ['Чт', 4], ['Пт', 5], ['Сб', 6], ['Нд', 0]];
@@ -78,10 +79,11 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
     return '<div class="stbar"><div class="seg">' +
       '<button class="' + (ST.view === 'table' ? 'on' : '') + '" onclick="stView(\'table\')">Таблиця</button>' +
       '<button class="' + (ST.view === 'card' ? 'on' : '') + '" onclick="stView(\'card\')">Картка</button></div>' +
+      '<button class="newst" onclick="stNewStore()">+ Нова точка</button>' +
       '<a class="doc" href="' + attr(docUrl()) + '" target="_blank" rel="noopener">Відкрити Довідник</a></div>';
   }
   function shell(inner) {
-    setHead('Магазини', ST.view === 'table' ? 'усі точки, лише перегляд' : 'одна точка: сьогодні, графік, реквізити');
+    setHead('Магазини', ST.view === 'table' ? 'усі точки' : 'одна точка: сьогодні, графік, реквізити');
     view('<div id="stw">' + bar() + '<div id="stbody">' + inner + '</div></div>');
   }
   function loadList(cb) {
@@ -191,7 +193,7 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
       '<div class="sth">Графік і напрямки</div>' + c.dirs.map(schedBlock).join('') +
       '<div class="sth">Реквізити</div>' + row('Адреса', s.address) + row('Адреса (хліб)', s.addrBread) + row('Адреса (ВК)', s.addrBakery) + row('Адреса (овочі)', s.addrVeg) +
       row('Адреса (НБХЗ)', s.addrNbhz) + row('Маршрут НБХЗ', s.routeNbhz) + row('Тип', s.type) + row('Примітка', s.note) +
-      '<div class="stf"><button class="save" disabled title="Правка точок із пульта - після переїзду">Зберегти</button><span class="stnote" style="margin:0">Правка - після переїзду. Зараз змінюйте точку в Довіднику Google.</span></div></div>';
+      '<div class="stf"><button class="save" onclick="go(\'card\',{store:\'' + attr(s.id) + '\'})">Редагувати</button><span class="stnote" style="margin:0">Графік, маршрути, напрямки, вимкнення точки.</span></div></div>';
   }
   function drawCard() {
     var b = document.getElementById('stbody');

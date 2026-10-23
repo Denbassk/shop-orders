@@ -44,9 +44,8 @@ test('GET /admin -> сторінка пульта, без кешу', async () =>
 test('build: прибрані кнопки (бэкап, дублі, позначка, збереження картки) приховані і не шлють запитів', () => {
   const html = build();
   const tail = html.slice(html.indexOf('shop-orders: на сервері немає'));
-  for (const sel of [`[onclick*="'restore'"]`, `[onclick*="'dups'"]`, '[onclick*="askClearMark"]', '[onclick="askCard()"]']) assert.ok(tail.includes(sel), sel);
-  assert.ok(html.lastIndexOf('function askCard()') > html.indexOf('function askCard()'), 'askCard перевизначено після оригіналу');
-  assert.ok(!/function askCard\(\)[^}]*cardSave/.test(tail));
+  for (const sel of [`[onclick*="'restore'"]`, `[onclick*="'dups'"]`, '[onclick*="askClearMark"]']) assert.ok(tail.includes(sel), sel);
+  assert.ok(!html.includes('Сохранение карточки - после переезда'), 'заглушку збереження картки прибрано');
 });
 test('нижня панель: вкладка «Здоровье» (бувша «Бэкап») відкриває екран health і підсвічується на ньому', () => {
   const html = build();
@@ -69,4 +68,21 @@ test('вкладка «Магазини»: картка (реквізити, с�
   for (const f of ["call('storeCard'", 'Скасувати замовлення', 'Відкрити прийом точці', 'Графік і напрямки', 'Реквізити', "'Магазини'", "['Пн', 1]", "['Нд', 0]"]) assert.ok(html.includes(f), f);
   assert.ok(!html.includes('stMode('), 'вигляд «Плитки» прибрано з вкладки');
   assert.ok(html.lastIndexOf('loadStore = function') > html.lastIndexOf('function loadStore('), 'екран store веде в нову картку');
+});
+
+test('форма точки: «Редагувати» і «+ Нова точка» ведуть у cardSave/cardAdd; форма перевизначена після оригіналу; до переходу кнопка збереження неактивна', () => {
+  const html = build();
+  assert.ok(html.lastIndexOf('function loadCard(') > html.indexOf('function loadCard('), 'loadCard перевизначено після оригіналу');
+  assert.ok(html.lastIndexOf('function askCard()') > html.indexOf('function askCard()'), 'askCard перевизначено після оригіналу');
+  for (const f of ["call('cardSave'", "call('cardAdd'", 'stNewStore()', 'onclick="go(\\\'card\\\'', "S.screen === 'newstore'", 'c.editable']) assert.ok(html.includes(f), f);
+  assert.match(html, /newstore: 'stores'/);
+  assert.ok(!html.includes('Правка - після переїзду'));
+});
+
+test('сторінка пульта: усі вбудовані скрипти без синтаксичних помилок (ловить зіпсовані екранування у вставках)', () => {
+  const html = build();
+  const re = /<script>([\s\S]*?)<\/script>/g;
+  let m, n = 0;
+  while ((m = re.exec(html))) { n++; assert.doesNotThrow(() => new Function(m[1]), 'скрипт №' + n); }
+  assert.ok(n >= 5, 'скриптів: ' + n);
 });

@@ -91,7 +91,7 @@ async function noteError(adm, where, msg, at = new Date()) {
 async function admCard(payload, env) {
   const r = await env.adm.storeRow(String(payload.storeId || ''));
   if (!r) throw new Error(STORE_NOT_FOUND);
-  return require('./stores').cardOf(r);
+  return { ...require('./stores').cardOf(r), editable: !!env.storeEdit || /^test/i.test(r.store_id) };
 }
 
 module.exports = { HEALTH_STALE_MIN, HEALTH_ERR_KEY, admHealth, admHealthClear, noteError, admCard };

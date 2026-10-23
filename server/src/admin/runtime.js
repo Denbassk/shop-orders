@@ -95,6 +95,7 @@ function createAdminRuntime(opts = {}) {
     editOrder: (p) => write.admEditOrder({ ...(p || {}), dir }, env()),
     products: () => buyer.buyerProducts(dir, env()),
     setProduct: (p) => buyer.buyerSetProduct(dir, p, env()),
+    addProduct: (p) => buyer.buyerAddProduct(dir, p, env()),
     info: () => buyer.buyerInfo(dir, env()),
     late: () => buyer.buyerLate(dir, env()),
     approve: (p) => write.admOpenStore({ ...(p || {}), dir }, env()),

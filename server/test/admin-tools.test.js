@@ -114,6 +114,8 @@ test('card: поля з бази, дні «Пн, Ср … Вс», напрямк
     nbhz: false, routeNbhz: 'Н2', daysVeg: 'Пн, Ср', daysBakery: 'Сб, Вс', zone: 'Центр', edrpou: '45672783' });
   assert.deepEqual(c.zones, ['Салтовка', 'Новые дома', 'Центр', 'не возится']);
   assert.equal(c.defEdrpou, '44413718');
+  assert.equal(c.editable, false, 'до переходу бойова точка не редагується');
+  assert.equal((await T.admCard({ storeId: 's1' }, { ...env, storeEdit: true })).editable, true);
   await assert.rejects(T.admCard({ storeId: 'nope' }, env), { message: 'Торгову точку не знайдено. Оновіть сторінку.' });
 });
 

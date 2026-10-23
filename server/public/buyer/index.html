@@ -145,6 +145,7 @@ input:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--tealb)}
 .sdh{display:flex;align-items:center;gap:9px}
 .sdh .ds{margin-left:auto;font-weight:700;font-size:13.5px}
 .sds{font-size:13px;color:var(--mu);margin-top:6px}
+.prow{display:flex;gap:10px;align-items:center}.prow input{flex:1 1 auto;min-width:0}.pnew{flex:none;width:auto;white-space:nowrap;margin:0;padding:0 18px}
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--sf);border-top:1px solid var(--ln);padding:6px 6px calc(8px + env(safe-area-inset-bottom))}
 .tab{flex:1 1 0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 0;border-radius:12px;color:var(--mu);font-size:11.5px;font-weight:600;cursor:pointer;position:relative;transition:transform .2s cubic-bezier(.2,.8,.2,1),color .18s,background .18s}
 .tab:hover{transform:translateY(-3px);color:var(--tx)}
@@ -774,7 +775,8 @@ function prodSub(p) {
 }
 async function showProducts() {
   S.products = await call('products');
-  view('<div><input type="search" id="pq" placeholder="Пошук: назва або штрихкод" value="' + esc(S.q) + '" oninput="S.q = this.value; renderProducts()"></div>' +
+  view('<div class="prow"><input type="search" id="pq" placeholder="Пошук: назва або штрихкод" value="' + esc(S.q) + '" oninput="S.q = this.value; renderProducts()">' +
+    '<button class="btn dark pnew" onclick="askNewProduct()">+ Нова позиція</button></div>' +
     '<div id="plist"></div><div class="note">Поки працює стара система, зміни тут можуть перезаписатися з листа «Ассортимент».</div>');
   renderProducts();
 }
@@ -864,6 +866,37 @@ function askProduct(i) {
     if (av) $('pa').value = p.availability || '';
     $('shok').onclick = () => saveProduct(i);
   });
+}
+// нова позиція в асортименті: кнопка «+ Нова позиція» над списком
+function askNewProduct() {
+  const av = S.products.hasAvailability, dir = S.dir, boxed = dir === 'bread' || dir === 'nbhz';
+  const cats = [...new Set(S.products.products.map((p) => String(p.category || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'uk'));
+  openSheet((el) => {
+    el.innerHTML = '<h2>Нова позиція</h2><div class="sub" id="npsub"></div>' +
+      '<div class="lbl">Назва</div><input id="npn" type="text" maxlength="120" autocomplete="off">' +
+      '<div class="lbl">Ціна, грн</div><input id="npp" type="text" inputmode="decimal">' +
+      '<div class="lbl">Штрихкод (якщо є)</div><input id="npb" type="text" inputmode="numeric" maxlength="20">' +
+      (av ? '<div class="lbl">Категорія</div><input id="npc" type="text" maxlength="40" list="npcl" autocomplete="off"><datalist id="npcl">' + cats.map((c) => '<option value="' + esc(c) + '">').join('') + '</datalist>' +
+        '<div class="lbl">Собівартість, грн (для списань)</div><input id="npk" type="text" inputmode="decimal">' +
+        '<div class="lbl">Наявність (необов\'язково)</div><input id="npa" type="text" maxlength="60">' : '') +
+      (boxed ? '<div class="lbl">Штук в ящику (необов\'язково)</div><input id="npx" type="text" inputmode="numeric" maxlength="20">' : '') +
+      '<div class="hint"></div><button class="btn dark" id="npok">Додати</button><button class="btn ghost" onclick="closeSheet()">Скасувати</button>';
+    $('npsub').textContent = (S.info && S.info.title) || '';
+    $('npok').onclick = saveNewProduct;
+    $('npn').focus();
+  });
+}
+async function saveNewProduct() {
+  const av = S.products.hasAvailability, body = { name: $('npn').value, price: $('npp').value, barcode: $('npb').value };
+  if (av) { body.category = $('npc').value; body.cost = $('npk').value; body.availability = $('npa').value; }
+  if ($('npx')) body.box = $('npx').value;
+  const b = $('npok'); b.disabled = true; b.textContent = 'Додаю…';
+  try {
+    const r = await call('addProduct', body);
+    S.products.products.push({ id: r.id, name: r.name, barcode: r.barcode, price: r.price, stop: false, category: r.category, availability: r.availability, box: body.box || '', sort: r.sort });
+    S.q = ''; closeSheet(); renderProducts();
+    toast('✅ Додано: ' + r.name + (r.noCost ? ' (без собівартості - у списаннях продавців не буде)' : ''));
+  } catch (e) { b.disabled = false; b.textContent = 'Додати'; toast('❌ ' + e.message); }
 }
 async function saveProduct(i) {
   const p = S.products.products[i], av = S.products.hasAvailability;
