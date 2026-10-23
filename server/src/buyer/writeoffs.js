@@ -2,7 +2,7 @@
 // Пише туди app/WriteOff.gs; ID таблиць беремо з листа-змісту «Списания» таблиці ВК (або WO_BOOKS у .env).
 const { DIRECTIONS } = require('../directions');
 const WO_SHEET = 'Списания', WO_ARCH = 'Архив', INDEX = 'Списания';
-const C = { id: 0, at: 1, date: 2, store: 3, code: 4, cat: 5, name: 7, qty: 8, sum: 10, sum20: 11, seller: 12 };
+const C = { id: 0, at: 1, date: 2, store: 3, code: 4, cat: 5, name: 7, qty: 8, price: 9, sum: 10, sum20: 11, seller: 12 };
 const ID_RE = /spreadsheets\/d\/([A-Za-z0-9_-]{25,})/g;
 const TTL = 5 * 60 * 1000;
 const cache = new Map();
@@ -39,7 +39,7 @@ function parseRows(values, entity) {
     id: String(r[C.id]), day: dayOf(r[C.date]), at: dayOf(r[C.at]), time: timeOf(r[C.at]),
     store: String(r[C.store] || '').trim(), code: String(r[C.code] || '').trim(),
     cat: String(r[C.cat] || '').trim() || 'Інше', name: String(r[C.name] || '').trim(),
-    qty: numOf(r[C.qty]), sum: numOf(r[C.sum]), sum20: numOf(r[C.sum20]),
+    qty: numOf(r[C.qty]), price: numOf(r[C.price]), sum: numOf(r[C.sum]), sum20: numOf(r[C.sum20]),
     seller: String(r[C.seller] || '').replace(/\s+/g, ' ').trim() || '-', entity }));
 }
 function aggregate(rows, { from = '', to = '', entity = '', cat = '', today = '' } = {}) {
@@ -112,4 +112,4 @@ async function stats(dir, p = {}, deps = {}) {
   return { days, from, to: today, at: new Date(at).toISOString(), ...r.meta,
     ...aggregate(r.list, { from, to: today, entity: String(p.entity || ''), cat: String(p.cat || ''), today }) };
 }
-module.exports = { stats, aggregate, parseRows, bookIds, entityOf, dayOf, _reset: () => cache.clear() };
+module.exports = { stats, loadRows, aggregate, parseRows, bookIds, entityOf, dayOf, _reset: () => cache.clear() };
