@@ -37,7 +37,7 @@ test('каталог ВК: звіти (є/немає), службові - лиш
   assert.equal(rep[2].missing, true);
   assert.equal(rep[0].main, true);
   assert.equal(rep[1].gid, 12);
-  assert.deepEqual(l.sheets.filter((s) => s.group === 'extra').map((s) => s.key), ['writeoffs']);
+  assert.deepEqual(l.sheets.filter((s) => s.group === 'extra').map((s) => s.key), [], 'Списания в таблиці є, але на «Звіти» не показується - окрема вкладка');
 });
 
 test('НБХЗ: три останні дні, новіший - головний', async () => {
@@ -82,4 +82,14 @@ test('сторінка: вкладка «Звіти» читає листи Goog
   assert.match(h, /call\('sheets'/);
   assert.match(h, /call\('sheet'/);
   assert.ok(h.includes("'?key=' + encodeURIComponent"));
+});
+test('вкладка «Звіти»: журнали (помилок, видалених), асортимент і списання не показуються ні в одному напрямку', () => {
+  const { CATALOG } = require('../src/buyer/sheets');
+  for (const [dir, list] of Object.entries(CATALOG)) {
+    for (const c of list) {
+      assert.ok(!['errors', 'deleted', 'assort', 'writeoffs'].includes(c.key), dir + ': ' + c.key);
+      assert.ok(!/^_Лог|Журнал|Видалення|Ассортимент|Списания/.test(c.sheet || ''), dir + ': ' + c.sheet);
+    }
+  }
+  assert.deepEqual(CATALOG.bakery.map((c) => c.key), ['orders', 'summary', 'routes', 'addr']);
 });

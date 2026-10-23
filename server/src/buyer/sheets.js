@@ -1,6 +1,8 @@
 // Листи Google на сторінці закупниці: каталог листів напрямку, вміст листа таблицею, посилання на xlsx одного листа.
 // Лише читання (values.get, FORMATTED_VALUE - як бачить людина). Джерело - BUYER_SHEETS: live (бойові таблиці,
 // за замовчуванням) або target (та сама ціль, що вигрузка; до Task 11 - тестова).
+// Журнали помилок і видалень, лист асортименту і списань тут НЕ показуємо: закупниці вони не потрібні, а асортимент і списання - окремі вкладки сторінки.
+// Журнали помилок і видалень, лист асортименту і списань тут НЕ показуємо: закупниці вони не потрібні, а асортимент і списання - окремі вкладки сторінки.
 // group: report - звіти (немає листа - показуємо «немає»), extra - довідники і службові (немає - не показуємо).
 const SUM = require('./summary');
 const CATALOG = {
@@ -9,31 +11,23 @@ const CATALOG = {
     { key: 'summary', sheet: 'Данные Заказов', about: 'По маршрутах і позиціях, хто не замовив' },
     { key: 'routes', sheet: 'Маршруты и Магазины', about: 'Довідник: маршрути, магазини, номери ТТ', group: 'extra' },
     { key: 'check', sheet: '_Сверка_ТТ', about: 'Звірка точок з Довідником', group: 'extra' },
-    { key: 'errors', sheet: '_Лог_Ошибок', about: 'Журнал помилок таблиці', group: 'extra' },
-    { key: 'assort', sheet: 'Ассортимент', about: 'Лист асортименту в Google', group: 'extra' },
   ],
   nbhz: [
     { key: 'export', nbhz: true, about: 'Матриця ТТ × асортимент для заводу', main: true },
     { key: 'routes', sheet: 'Маршрути', about: 'Маршрути і адреси заводу', group: 'extra' },
     { key: 'check', sheet: '_Сверка_НБХЗ', about: 'Звірка точок НБХЗ', group: 'extra' },
-    { key: 'assort', sheet: 'Ассортимент', about: 'Лист асортименту в Google', group: 'extra' },
   ],
   bakery: [
     { key: 'orders', sheet: 'Заказы ВК', about: 'По точках: що і скільки', main: true },
     { key: 'summary', sheet: 'Сводная ВК', about: 'По позиціях: разом штук і гривень' },
     { key: 'routes', sheet: 'Маршрути ВК', about: 'Для машини розвозки: маршрут, товар, точка' },
-    { key: 'writeoffs', sheet: 'Списания', about: 'Списання', group: 'extra' },
-    { key: 'deleted', sheet: 'Видалення замовлення', about: 'Журнал видалених замовлень', group: 'extra' },
     { key: 'addr', sheet: 'Адреса ТТ', about: 'Адреси точок', group: 'extra' },
-    { key: 'errors', sheet: '_Лог_Ошибок', about: 'Журнал помилок таблиці', group: 'extra' },
-    { key: 'assort', sheet: 'Ассортимент', about: 'Лист асортименту в Google', group: 'extra' },
   ],
   veg: [
     { key: 'orders', sheet: 'Замовлення Овочі', about: 'По точках', main: true },
     { key: 'summary', sheet: 'Зведена Овочі', about: 'По позиціях' },
     { key: 'settings', sheet: 'Налаштування', about: 'Налаштування таблиці овочів', group: 'extra' },
     { key: 'addr', sheet: 'Адреса ТТ', about: 'Адреси точок', group: 'extra' },
-    { key: 'errors', sheet: '_Лог_Помилок_Овочі', about: 'Журнал помилок таблиці', group: 'extra' },
   ],
 };
 const NBHZ_RE = /^Вивантаження (\d{2})\.(\d{2})\.(\d{4})$/;
