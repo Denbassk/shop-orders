@@ -53,6 +53,9 @@ html,body{margin:0;padding:0;height:100%;background:#F1F2F4;overflow:hidden;
   var frame = document.getElementById('app');
   document.getElementById('again').href = location.href;
 
+  // після переходу на Fly (app-url.js = https://shop-orders.fly.dev/) іконка веде на пульт Fly, а не на сторінку продавця
+  if (/^https:\/\/[^\/]*\.fly\.dev(\/|$)/.test(url)) { location.replace(url.replace(/\/+$/, '') + '/admin'); return; }
+
   if (!url) { document.getElementById('err').style.display = 'block'; return; }
 
   frame.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'admin=1';

@@ -73,6 +73,14 @@ function createApp(opts = {}) {
     res.sendFile(require('path').join(__dirname, '..', 'public', 'admin', 'index.html'));
   });
 
+  // Установка пульта як застосунку (іконка на головному екрані Android): маніфест і іконки - лише ці три файли
+  const PULT_FILES = { 'manifest.webmanifest': 'application/manifest+json', 'icon-192.png': 'image/png', 'icon-512.png': 'image/png' };
+  app.get('/admin/:file', (req, res, next) => {
+    const type = PULT_FILES[req.params.file];
+    if (!type) return next();
+    res.set('Cache-Control', 'public, max-age=3600').type(type).sendFile(require('path').join(__dirname, '..', 'public', 'admin', req.params.file));
+  });
+
   // Пульт: POST /admin/api { action, payload } -> { ok, data, ms } (adminApi з app/Admin.gs). Вхід - action 'login' { pin };
   // сесія - підписаний JWT у cookie adm (HttpOnly, Secure, SameSite=Strict, 12 год). Лише application/json (захист від чужих форм).
   let adminRt = null;

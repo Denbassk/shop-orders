@@ -75,6 +75,10 @@ function build() {
   if (!/<title>/i.test(html)) html = html.replace(/<head>/i, '<head>\n<title>Пульт Фемелі Маркет</title>');
   if (!/name="viewport"/i.test(html)) html = html.replace(/<head>/i,
     '<head>\n<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">');
+  // установка на головний екран Android/iOS: маніфест, іконка, колір смуги (server/public/admin/manifest.webmanifest)
+  html = html.replace(/<head>/i, () => '<head>\n<link rel="manifest" href="/admin/manifest.webmanifest">\n<meta name="theme-color" content="#16181d">\n' +
+    '<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Пульт">\n' +
+    '<link rel="apple-touch-icon" href="/admin/icon-192.png">\n<link rel="icon" href="/admin/icon-192.png">');
   if (!/<\/body>/i.test(html)) throw new Error('Немає </body> в Admin.html');
   // вкладка «Бэкап» (її на сервері немає) -> «Здоровье»: екран health Apps Script-пульта, id лишається t-restore
   const HEALTH_TAB = `<button class="tab" id="t-restore" onclick="tabGo('health')">
