@@ -49,6 +49,13 @@ function build() {
     '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">\n' +
     '<link rel="icon" href="' + PWA_URL + 'icon-192.png">');
 
+  // 5. доопрацювання вигляду (scripts/front-overlay.html): лише CSS поверх app/ui/Index.html, який не змінюється
+  const OV = path.join(__dirname, 'front-overlay.html');
+  if (fs.existsSync(OV)) {
+    const css = fs.readFileSync(OV, 'utf8').replace(/\r\n/g, '\n').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
+    html = html.replace('</head>', () => css + '\n</head>');
+  }
+
   if (/<\?/.test(html)) throw new Error('Лишилась шаблонна вставка <? в збірці');
   if (html.includes('google.script')) throw new Error('Лишився google.script в збірці');
   return html;

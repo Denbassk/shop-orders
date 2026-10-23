@@ -1,0 +1,46 @@
+<!-- Доопрацювання вигляду сайту продавця (UI-аудит 23.10.2026). Підключає scripts/build-front.js перед </head>:
+     перекриває стилі app/ui/Index.html, який НЕ змінюється (його ж віддає бойовий Apps Script). Лише CSS, логіка замовлення не чіпається. -->
+<style>
+/* сітка точок: колонки рівні й не ширші за екран (раніше на 375 px сторінка була 390 px - горизонтальна прокрутка) */
+.grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:560px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:820px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.cell{min-width:0}
+.cell .nm{overflow-wrap:anywhere}
+/* шапка: логотип прокручується разом зі сторінкою, зверху лишається лише смуга з назвою екрана (економить ~80 px на кожному екрані) */
+.hdr{display:contents}
+.logo{background:#fff;width:100%;max-width:none;padding:8px 0 8px;object-fit:contain;max-height:84px}
+.navbar{position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+/* цілі натискання >= 44 px */
+.back{width:44px;height:44px;font-size:24px}
+.chip{min-height:44px}
+.mine button{min-height:44px}
+.lt .modes button{min-height:44px}
+/* шрифти >= 12 px і контраст >= 4.5:1 */
+.ua{font-size:12px}
+.legend{color:#555b66;font-size:12.5px}
+.dir .t .b{opacity:1;font-weight:600}
+.dir[style*="E65100" i]{background:#C2410C!important}
+.dir.done{color:#3f444c}
+.dir.done .tag{color:#2e6b32}
+/* списання: той самий темніший помаранчевий (білий текст на #E65100 давав 3.8:1) */
+.wob .a1{background:#C2410C;border-color:#C2410C}
+.wob .a2{color:#C2410C;border-color:#C2410C}
+.seg button.on{background:#C2410C}
+.btn.wo{background:#C2410C}
+.wocard .qty button.plus{background:#C2410C;border-color:#C2410C}
+/* ПК (>=1000 px): ширший робочий стовпчик, сітка точок за шириною плитки, товари в 2 колонки, смуга з назвою вирівняна по вмісту */
+@media(min-width:1000px){
+  .wrap:has(.grid),.wrap:has(.card .row){max-width:1040px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  .card:has(.row){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .card .msg{grid-column:1/-1}
+  .card .row:nth-child(odd){border-right:1px solid #f0f1f3}
+  .card .row:last-child{border-bottom:0}
+  .card .row:nth-child(odd):nth-last-child(2){border-bottom:0}
+  .navbar{padding-left:max(13px,calc((100% - 760px)/2));padding-right:max(13px,calc((100% - 760px)/2))}
+  body:has(.wrap .grid) .navbar,body:has(.wrap .card .row) .navbar{padding-left:max(13px,calc((100% - 1040px)/2));padding-right:max(13px,calc((100% - 1040px)/2))}
+  body:has(.wrap .card .row) .bot .in{max-width:1040px}
+  .logo{max-height:96px}
+}
+</style>

@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
 const { build, OUT, CALL_SNIPPET } = require('../scripts/build-front');
 const { createApp } = require('../src/app');
@@ -75,4 +76,13 @@ test('GET / -> сторінка продавця (HTML, без кешу); /healt
     assert.ok((await r.text()).includes('Замовлення Фемелі Маркет'));
     assert.equal((await fetch(base + '/health')).status, 200);
   } finally { await new Promise((r) => srv.close(r)); }
+});
+
+test('збірка: UI-доопрацювання (scripts/front-overlay.html) вбудоване перед </head>: рівні колонки сітки, нелипка шапка, 44 px, контраст; app/ui не змінено', () => {
+  const html = build();
+  const head = html.slice(0, html.indexOf('</head>'));
+  for (const s of ['.grid{grid-template-columns:repeat(2,minmax(0,1fr))}', '.hdr{display:contents}', '.navbar{position:sticky', '.back{width:44px;height:44px', '#C2410C']) assert.ok(head.includes(s), s);
+  assert.ok(!html.includes('<!--  Доопрацювання') && !/Доопрацювання вигляду сайту продавця/.test(html), 'коментар-шапка не потрапила в сторінку');
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'app', 'ui', 'Index.html'), 'utf8');
+  assert.ok(src.includes('.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}'), 'оригінал Index.html лишився як був');
 });
