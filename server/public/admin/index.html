@@ -1347,10 +1347,7 @@ function loadHealth() {
     var s = d.sys;
     h += section('Система', hList([
       { t: 'Версия', s: s.version, lv: 'off' },
-      { t: 'Тестовый режим', s: s.test ? 'ВКЛЮЧЁН — заказы уходят в тестовые листы' : 'выключен', lv: s.test ? 'bad' : 'ok' },
-      { t: 'Свойства скрипта', s: s.keys + ' ключей · примерно ' + s.pct + '% лимита',
-        lv: s.pct >= 90 ? 'bad' : (s.pct >= 70 ? 'warn' : 'ok') },
-      { t: 'Сессии пульта', s: String(s.sess), lv: 'off' }
+      { t: 'Тестовый режим', s: s.test ? 'ВКЛЮЧЁН — заказы уходят в тестовые листы' : 'выключен', lv: s.test ? 'bad' : 'ok' }
     ]));
     view(h);
   }).catch(fail);

@@ -82,6 +82,10 @@ function build() {
   const tabRe = /<button class="tab" id="t-restore"[\s\S]*?<\/button>/;
   if (!tabRe.test(html)) throw new Error('Немає вкладки t-restore в Admin.html');
   html = html.replace(tabRe, () => HEALTH_TAB);
+  // блок «Система»: рядки «Свойства скрипта» і «Сессии пульта» - залишки Apps Script, на сервері без змісту (app/ui не міняємо)
+  const sysRe = /\{ t: 'Тестовый режим'([^\n]*)\n\s*\{ t: 'Свойства скрипта'[\s\S]*?\n\s*\{ t: 'Сессии пульта'[^\n]*\n(\s*)\]\)\);/;
+  if (!sysRe.test(html)) throw new Error('Не знайдено рядки «Свойства скрипта»/«Сессии пульта» в блоці «Система»');
+  html = html.replace(sysRe, (_, rest, ind) => "{ t: 'Тестовый режим'" + rest.replace(/,\s*$/, '') + '\n' + ind + ']));');
   let out = html.replace(/<\/body>/i, () => SHIM + '</body>');
   // тема пульта (темна/світла, ширина ноутбука) - з scripts/admin-theme.html
   const TH = path.join(__dirname, 'admin-theme.html');

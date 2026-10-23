@@ -86,3 +86,9 @@ test('сторінка пульта: усі вбудовані скрипти б
   while ((m = re.exec(html))) { n++; assert.doesNotThrow(() => new Function(m[1]), 'скрипт №' + n); }
   assert.ok(n >= 5, 'скриптів: ' + n);
 });
+
+test('блок «Система» здоров\'я: без залишків Apps Script («Свойства скрипта», «Сессии пульта»), синтаксис цілий', () => {
+  const html = build();
+  assert.ok(!html.includes('Свойства скрипта') && !html.includes('Сессии пульта'));
+  assert.ok(html.includes("{ t: 'Тестовый режим'") && html.includes("{ t: 'Версия'"));
+});
