@@ -10,12 +10,10 @@ const CATALOG = {
     { key: 'orders', sheet: 'Заказы', about: 'Для постачальника: по магазинах, ЄДРПОУ і номер ТТ', main: true },
     { key: 'summary', sheet: 'Данные Заказов', about: 'По маршрутах і позиціях, хто не замовив' },
     { key: 'routes', sheet: 'Маршруты и Магазины', about: 'Довідник: маршрути, магазини, номери ТТ', group: 'extra' },
-    { key: 'check', sheet: '_Сверка_ТТ', about: 'Звірка точок з Довідником', group: 'extra' },
   ],
   nbhz: [
     { key: 'export', nbhz: true, about: 'Матриця ТТ × асортимент для заводу', main: true },
     { key: 'routes', sheet: 'Маршрути', about: 'Маршрути і адреси заводу', group: 'extra' },
-    { key: 'check', sheet: '_Сверка_НБХЗ', about: 'Звірка точок НБХЗ', group: 'extra' },
   ],
   bakery: [
     { key: 'orders', sheet: 'Заказы ВК', about: 'По точках: що і скільки', main: true },

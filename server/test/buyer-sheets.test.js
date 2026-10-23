@@ -87,8 +87,8 @@ test('вкладка «Звіти»: журнали (помилок, видал�
   const { CATALOG } = require('../src/buyer/sheets');
   for (const [dir, list] of Object.entries(CATALOG)) {
     for (const c of list) {
-      assert.ok(!['errors', 'deleted', 'assort', 'writeoffs'].includes(c.key), dir + ': ' + c.key);
-      assert.ok(!/^_Лог|Журнал|Видалення|Ассортимент|Списания/.test(c.sheet || ''), dir + ': ' + c.sheet);
+      assert.ok(!['errors', 'deleted', 'assort', 'writeoffs', 'check'].includes(c.key), dir + ': ' + c.key);
+      assert.ok(!/^_Лог|^_Сверка|Журнал|Видалення|Ассортимент|Списания/.test(c.sheet || ''), dir + ': ' + c.sheet);
     }
   }
   assert.deepEqual(CATALOG.bakery.map((c) => c.key), ['orders', 'summary', 'routes', 'addr']);
