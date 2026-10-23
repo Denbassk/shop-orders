@@ -56,7 +56,24 @@ button{font:inherit;color:inherit}
 .ovh{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .ovt{font-weight:700;font-size:15px}
 .ovn{margin-top:8px;font-size:14px;color:var(--mu)}
-.kpi.one{padding:16px;margin:0 0 4px}.kpi.one .bar{margin:12px 0 8px}.kpi.one .ovn{margin-top:0}
+.dc{display:contents}
+.kpi.prog{grid-column:span 2;--p:0%}
+.prog .pn{display:flex;align-items:baseline;gap:8px}
+.prog .pn b{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.prog .pn span{font-size:17px;color:var(--mu);font-weight:600}
+.prog .pn em{margin-left:auto;font-style:normal;font-size:15px;font-weight:800;color:var(--c)}
+.prog .pl{font-size:13.5px;color:var(--mu);margin-top:2px}
+.prog .pb{height:14px;border-radius:999px;background:var(--sf2);box-shadow:inset 0 0 0 1px var(--ln);overflow:hidden;margin:12px 0 10px}
+.prog .pb i{display:block;height:100%;width:var(--p);min-width:14px;border-radius:999px;background:linear-gradient(90deg,var(--c),color-mix(in srgb,var(--c) 45%,var(--ok)));transition:width .7s cubic-bezier(.2,.8,.2,1);position:relative;overflow:hidden}
+.prog .pb i::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.3) 0 9px,transparent 9px 18px);background-size:36px 100%;animation:pstripe 1.1s linear infinite}
+@keyframes pstripe{to{background-position:36px 0}}
+.prog.full .pb i{background:var(--ok)}
+.prog.full .pn em{color:var(--ok)}
+.prog.shut .pb i::after,.prog.full .pb i::after{animation:none}
+@media (prefers-reduced-motion:reduce){.prog .pb i::after{animation:none}}
+.prog .pf{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:600}
+.prog.shut .pf span{color:var(--bad)}
+.prog.full .pf span{color:var(--ok)}
 .ovn b{font-size:30px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-right:4px}
 .ovs{font-size:13.5px;font-weight:600;margin-top:4px}
 .ok-t,.ovs.ok,.ds.ok{color:var(--ok)}.ovs.bad,.ds.wait{color:var(--bad)}.ovs.teal{color:var(--teal)}.ovs.warn,.ds.late{color:var(--warn)}.ovs.off,.ds.off{color:var(--mu)}
@@ -249,8 +266,7 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 <main class="box wrap"><div id="view" class="stack"><div class="spin">Завантаження…</div></div></main>
 <nav class="tabs">
   <button class="tab on" id="t-today" onclick="go('today')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>Сьогодні</button>
-  <button class="tab" id="t-late" onclick="go('late')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Дозволи<span class="badge" id="bdg" hidden></span></button>
-  <button class="tab" id="t-accept" onclick="go('accept')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Прийом</button>
+  <button class="tab" id="t-accept" onclick="go('accept')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Прийом<span class="badge" id="bdg" hidden></span></button>
   <button class="tab" id="t-reports" onclick="go('reports')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13h6M9 17h6"/></svg>Звіти</button>
   <button class="tab" id="t-products" onclick="go('products')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>Асортимент</button>
 </nav>
@@ -360,8 +376,9 @@ function setDir(k) {
   S.late = S.products = null; S.info = S.infos[S.dir] || null; S.q = ''; S.f = 'all';
   chips(); head(); go(S.tab);
 }
-const TABS = { today: showToday, late: showLate, accept: showAccept, reports: showReports, products: showProducts, wo: showWo };
+const TABS = { today: showToday, accept: showAccept, reports: showReports, products: showProducts, wo: showWo };
 async function go(tab) {
+  if (tab === 'late') tab = 'accept';   // «Дозволи» об'єднано з «Прийом»
   S.tab = tab;
   woNav();
   chips();
@@ -414,8 +431,9 @@ async function showTodayBase(quiet) {
   await loadAll();
   if (S.tab !== 'today') return;
   if (!quiet || !$('tdroot')) {
-    view('<div id="tdroot" class="stack">' + section(S.me.dirs.length === 1 ? 'Сьогодні' : 'Напрямки зараз', '<div id="ov"></div>', 'час за Києвом ' + nowHM()) +
-      '<div id="tdsum"></div>' +
+    view('<div id="tdroot" class="stack">' + (S.me.dirs.length === 1
+      ? section('Сьогодні', '<div class="kpis"><div id="ov" class="dc"></div><div id="tdsum" class="dc"></div></div>', 'час за Києвом ' + nowHM())
+      : section('Напрямки зараз', '<div id="ov"></div>', 'час за Києвом ' + nowHM()) + '<div id="tdsum"></div>') +
       '<div><div class="sec">Торгові точки <small id="tdcnt"></small></div>' +
       '<div class="tools"><input type="search" id="tq" placeholder="Пошук: адреса, маршрут, код" value="' + esc(S.tq) + '" oninput="S.tq = this.value; renderTiles()"><div class="fl" id="fl"></div></div>' +
       '<div class="tiles" id="tiles"></div></div><div id="tdtop"></div></div>');
@@ -424,14 +442,14 @@ async function showTodayBase(quiet) {
   $('ov').innerHTML = ovHtml();
   S.tiles = storesAll(); renderTiles();
   const ds = S.me.dirs.map((d) => d.dir).filter((x) => isShared() || x === S.dir);
-  if (isShared()) sumAll(); else if (S.sums[S.dir]) sumDraw(S.sums[S.dir]); else $('tdsum').innerHTML = '<div class="spin sm">Читаю таблицю Google…</div>';
+  if (isShared()) sumAll(); else if (S.sums[S.dir]) sumDraw(S.sums[S.dir]); else $('tdsum').innerHTML = '<div class="spin sm" style="grid-column:1/-1">Читаю таблицю Google…</div>';
   const er = {};
   await Promise.all(ds.map((x) => call('summary', { dir: x }, 60000).then((d) => { S.sums[x] = d; }).catch((e) => { er[x] = e.message; })));
   if (S.tab !== 'today' || !$('tdsum')) return;
   gsApply();
   $('ov').innerHTML = ovHtml(); S.tiles = storesAll(); renderTiles();
   if (isShared()) sumAll(er);
-  else if (er[S.dir]) $('tdsum').innerHTML = '<div class="note">' + esc('Таблиця Google: ' + er[S.dir]) + '</div>';
+  else if (er[S.dir]) $('tdsum').innerHTML = '<div class="note" style="grid-column:1/-1">' + esc('Таблиця Google: ' + er[S.dir]) + '</div>';
   else if (S.sums[S.dir]) sumDraw(S.sums[S.dir]);
 }
 function aggCls(s) {
@@ -474,10 +492,15 @@ function sumAll(er) {
 function ovHtml() {
   if (S.me.dirs.length === 1) {
     const d = S.me.dirs[0], b = S.boards[d.dir] || {}, i = S.infos[d.dir];
-    const done = (b.done || []).length, tot = done + (b.wait || []).length, off = (b.off || []).length;
-    const st = b.error ? { cls: 'bad', t: 'немає даних: ' + b.error } : (!tot && off ? { cls: 'off', t: 'Сьогодні не день замовлень' } : stOf(i));
-    const p = S.pend[d.dir] ? ' <span class="pill late">' + esc(S.pend[d.dir] + ' дозв.') + '</span>' : '';
-    return '<div class="kpi one" style="--c:' + colorOf(d.dir) + '"><div class="ovn"><b>' + done + '</b>з ' + tot + ' точок замовили' + p + '</div><div class="bar"><i style="width:' + (tot ? Math.round(done * 100 / tot) : 0) + '%"></i></div><div class="ovs ' + st.cls + '">' + esc(st.t) + '</div></div>';
+    const done = (b.done || []).length, wait = (b.wait || []).length, tot = done + wait, off = (b.off || []).length;
+    const pct = tot ? Math.round(done * 100 / tot) : 0;
+    const full = tot > 0 && !wait, shut = !!(i && i.closed && !i.openAll);
+    const p = S.pend[d.dir] ? '<span class="pill late">' + esc(S.pend[d.dir] + ' дозв.') + '</span>' : '';
+    if (b.error || !tot) return '<div class="kpi prog" style="--c:' + colorOf(d.dir) + '"><div class="pl">' + esc(b.error ? 'Немає даних: ' + b.error : (off ? 'Сьогодні не день замовлень' : 'Точок немає')) + '</div></div>';
+    return '<div class="kpi prog' + (full ? ' full' : shut ? ' shut' : '') + '" style="--c:' + colorOf(d.dir) + ';--p:' + pct + '%">' +
+      '<div class="pn"><b>' + done + '</b><span>з ' + tot + '</span><em>' + pct + '%</em></div><div class="pl">точок замовили</div>' +
+      '<div class="pb" role="progressbar" aria-label="Замовили точок" aria-valuemin="0" aria-valuemax="' + tot + '" aria-valuenow="' + done + '"><i></i></div>' +
+      '<div class="pf"><span>' + (full ? 'Усі точки замовили' : (shut ? 'Прийом закрито, не замовили: ' : 'Чекаємо ще ') + wait) + '</span>' + p + '</div></div>';
   }
   return '<div class="ov">' + S.me.dirs.map((d, k) => {
     const b = S.boards[d.dir] || {}, i = S.infos[d.dir];
@@ -523,9 +546,11 @@ function tdRow(name, val) {
 }
 function sumDraw(d) {
   const at = d.at ? new Date(d.at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
-  let h = '<div class="sec">З таблиці Google <small>' + esc([d.note, at].filter(Boolean).join(' · ')) + '</small></div>';
-  const stats = (d.stats || []).filter((s) => S.me.dirs.length > 1 || s.k !== 'точок замовило');
-  h += stats.length ? '<div class="kpis">' + stats.map((s) => kpi(s.v, s.k)).join('') + '</div>' : '<div class="note">' + esc(d.note || 'Немає даних') + '</div>';
+  const one = S.me.dirs.length === 1, cap = esc([d.note, at].filter(Boolean).join(' · '));
+  const stats = (d.stats || []).filter((s) => !one || s.k !== 'точок замовило');
+  let h = '';
+  if (one) h = stats.length ? stats.map((s) => kpi(s.v, s.k)).join('') + '<div class="hint" style="grid-column:1/-1;margin:0 2px">З таблиці Google · ' + cap + '</div>' : '<div class="note" style="grid-column:1/-1">' + esc(d.note || 'Немає даних') + '</div>';
+  else h = '<div class="sec">З таблиці Google <small>' + cap + '</small></div>' + (stats.length ? '<div class="kpis">' + stats.map((s) => kpi(s.v, s.k)).join('') + '</div>' : '<div class="note">' + esc(d.note || 'Немає даних') + '</div>');
   $('tdsum').innerHTML = h;
   const u = d.unit ? ' ' + d.unit : '';
   const cols = [];
@@ -611,29 +636,22 @@ function lateTile(x, k) {
   const st = x.status === 'pending' ? 'late' : x.status === 'approved' ? 'ok' : 'off';
   return '<div class="tile static st-' + st + '"><div class="dr cur" style="--c:' + colorOf(x.dir) + '"><span class="dot"></span><span class="dn">' + esc(dirOf(x.dir).title) + '</span><span class="ds">' + esc(x.time) + '</span></div><div class="tt big">' + esc(x.label) + '</div><div class="tr">' + esc(lateSub(x)) + '</div><div class="ta">' + btn + '</div></div>';
 }
-async function showLate(quiet) {
-  await loadAll();
-  if (S.tab !== 'late') return;
+function lateBlock() {
   const all = S.lateAll = [];
   S.me.dirs.forEach((d) => { const l = S.lates[d.dir]; (l ? l.list : []).forEach((x) => all.push(Object.assign({ dir: d.dir }, x))); });
   S.late = S.lates[S.dir] || null;
   const grp = (st) => all.map((x, k) => [x, k]).filter(([x]) => x.status === st);
   const pend = grp('pending'), ok = grp('approved'), old = grp('expired');
   let h = '<div class="kpis">' + kpi(pend.length, 'чекають рішення', pend.length ? 'warn' : '') + kpi(ok.length, 'діють зараз', 'ok') + kpi(old.length, 'дозвіл минув') + '</div>';
-  h += section('Чекають рішення', pend.length ? '<div class="tiles">' + pend.map(([x, k]) => lateTile(x, k)).join('') + '</div>' : '<div class="ok">Нових запитів немає.</div>');
+  h += section('Запити на дозвіл', pend.length ? '<div class="tiles">' + pend.map(([x, k]) => lateTile(x, k)).join('') + '</div>' : '<div class="ok">Нових запитів немає.</div>');
   if (ok.length) h += section('Дозволено', '<div class="tiles">' + ok.map(([x, k]) => lateTile(x, k)).join('') + '</div>');
   if (old.length) h += section('Дозвіл минув', '<div class="tiles">' + old.map(([x, k]) => lateTile(x, k)).join('') + '</div>');
-  h += section('Як працюють дозволи', '<div class="ov">' + S.me.dirs.map((d) => {
-    const i = S.infos[d.dir] || {}, st = stOf(i), mins = (i.rules && i.rules.lateMin) || 30;
-    return '<div class="ovc static" style="--c:' + colorOf(d.dir) + '"><div class="ovt">' + esc(d.title) + '</div><div class="ovs ' + st.cls + '">' + esc(st.t) + '</div><div class="sds">' +
-      esc(i.lateRequest === false ? 'Кнопки «Попросити дозвіл» у продавця немає.' : 'Після дедлайну точка просить дозвіл, ви дозволяєте на ' + mins + ' хв.') + '</div></div>';
-  }).join('') + '</div>');
-  view(h);
+  return h;
 }
 async function approve(k) {
   const x = S.lateAll[k];
   try { const r = await call('approve', { storeId: x.storeId, dir: x.dir }); toast('Дозволено на ' + ((r && r.left) || 30) + ' хв: ' + x.label); } catch (e) { toast('❌ ' + e.message); }
-  showLate(true).catch(fail);
+  showAccept(true).catch(fail);
 }
 function badge() {
   const n = Object.values(S.pend).reduce((a, b) => a + (b || 0), 0);
@@ -667,7 +685,7 @@ function accTile(d, k) {
 async function showAccept(quiet) {
   await loadAll();
   if (S.tab !== 'accept') return;
-  view(section('Прийом сьогодні', '<div class="accg">' + S.me.dirs.map((d, k) => accTile(d, k)).join('') + '</div>', 'зараз ' + nowHM() + ' за Києвом') +
+  view(lateBlock() + section('Прийом сьогодні', '<div class="accg">' + S.me.dirs.map((d, k) => accTile(d, k)).join('') + '</div>', 'зараз ' + nowHM() + ' за Києвом') +
     '<div class="hint">Дедлайни і правила задані в налаштуваннях напрямку, змінює їх власник. Кнопка «Відкрити прийом усім» діє лише сьогодні.</div>');
 }
 function askOpenAll(k) {
