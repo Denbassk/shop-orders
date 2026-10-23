@@ -23,7 +23,9 @@ function createApp(opts = {}) {
   const approveForm = opts.approveForm || ((query) => runtime().approveForm(query));
 
   // POST /jobs/tick (x-jobs-secret): вигрузка всіх напрямків + довідправка листів про дозвіл. Викликає cron у GitHub Actions.
-  const tick = opts.tick || (() => runtime().tick());
+  const { singleFlight, startTickTimer } = require('./jobs/timer');
+  const tick = singleFlight(opts.tick || (() => runtime().tick()));   // спільний для POST /jobs/tick і власного таймера
+  app.locals.tick = tick;
   app.post('/jobs/tick', async (req, res, next) => {
     try {
       const secret = opts.jobsSecret !== undefined ? opts.jobsSecret : process.env.JOBS_SECRET;
@@ -175,7 +177,10 @@ function createApp(opts = {}) {
 if (require.main === module) {
   try { process.loadEnvFile(require('path').join(__dirname, '..', '.env')); } catch (e) { /* .env немає (Fly) - секрети з оточення */ }
   const port = +process.env.PORT || 3000;
-  createApp().listen(port, '0.0.0.0', () => console.log(`shop-orders слухає :${port}`));
+  const app = createApp();
+  app.listen(port, '0.0.0.0', () => console.log(`shop-orders слухає :${port}`));
+  // INTERNAL_TICK=on (fly.toml): tick раз на 10 хв у вікні 07:00-22:10 за Києвом без GitHub cron; потребує машини, що не спить
+  if (process.env.INTERNAL_TICK === 'on') { require('./jobs/timer').startTickTimer({ tick: app.locals.tick }); console.log('власний таймер tick увімкнено'); }
 }
 
 module.exports = { createApp };
