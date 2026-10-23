@@ -62,28 +62,28 @@
 .stf .save{border:0;border-radius:12px;padding:12px 20px;font:inherit;font-weight:700;background:var(--acc);color:#fff;cursor:pointer}
 </style>
 <script>
-// ===== shop-orders: вкладка «Магазини» - Таблиця | Картка; правка і «Нова точка» - admin-card.html =====
+// ===== shop-orders: вкладка «Магазини» - Таблиця | Картка; правка і «Добавить адрес» - admin-card.html =====
 var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, off: false, cardId: '', card: null, pick: '' };
 (function () {
-  var WD = [['Пн', 1], ['Вт', 2], ['Ср', 3], ['Чт', 4], ['Пт', 5], ['Сб', 6], ['Нд', 0]];
+  var WD = [['Пн', 1], ['Вт', 2], ['Ср', 3], ['Чт', 4], ['Пт', 5], ['Сб', 6], ['Вс', 0]];
   var DOC = 'https://docs.google.com/spreadsheets/d/1noOXYRRdxIuY6gd9kicI2OxGU0vJ_kfvLbcVTyqXi6o/edit';
 
   function tabLabel() {
     var t = document.getElementById('t-stores');
-    if (t && t.lastChild && t.lastChild.nodeType === 3) t.lastChild.nodeValue = 'Магазини';
+    if (t && t.lastChild && t.lastChild.nodeType === 3) t.lastChild.nodeValue = 'Магазины';
   }
   tabLabel();
 
   function docUrl() { return (ST.data && ST.data.registryUrl) || DOC; }
   function bar() {
     return '<div class="stbar"><div class="seg">' +
-      '<button class="' + (ST.view === 'table' ? 'on' : '') + '" onclick="stView(\'table\')">Таблиця</button>' +
-      '<button class="' + (ST.view === 'card' ? 'on' : '') + '" onclick="stView(\'card\')">Картка</button></div>' +
-      '<button class="newst" onclick="stNewStore()">+ Нова точка</button>' +
-      '<a class="doc" href="' + attr(docUrl()) + '" target="_blank" rel="noopener">Відкрити Довідник</a></div>';
+      '<button class="' + (ST.view === 'table' ? 'on' : '') + '" onclick="stView(\'table\')">Таблица</button>' +
+      '<button class="' + (ST.view === 'card' ? 'on' : '') + '" onclick="stView(\'card\')">Карточка</button></div>' +
+      '<button class="newst" onclick="stNewStore()">+ Добавить адрес</button>' +
+      '<a class="doc" href="' + attr(docUrl()) + '" target="_blank" rel="noopener">Открыть Довідник</a></div>';
   }
   function shell(inner) {
-    setHead('Магазини', ST.view === 'table' ? 'усі точки' : 'одна точка: сьогодні, графік, реквізити');
+    setHead('Магазины', ST.view === 'table' ? 'все точки' : 'одна точка: сегодня, график, реквизиты');
     view('<div id="stw">' + bar() + '<div id="stbody">' + inner + '</div></div>');
   }
   function loadList(cb) {
@@ -110,17 +110,17 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
     var rows = ST.data.rows.filter(match);
     var chips = ['bakery', 'bread', 'nbhz', 'veg'].map(function (k) {
       return '<button class="' + (ST.dirs[k] ? 'on' : '') + '" onclick="stFlt(\'' + k + '\')">' + esc(DIRS[k] ? DIRS[k].short : k) + '</button>';
-    }).join('') + '<button class="' + (ST.ua ? 'on' : '') + '" onclick="stFlt(\'ua\')">ЮА</button><button class="' + (ST.off ? 'on' : '') + '" onclick="stFlt(\'off\')">Неактивні</button>';
+    }).join('') + '<button class="' + (ST.ua ? 'on' : '') + '" onclick="stFlt(\'ua\')">ЮА</button><button class="' + (ST.off ? 'on' : '') + '" onclick="stFlt(\'off\')">Неактивные</button>';
     var yes = function (r, k) { return r.directions.indexOf(k) >= 0 ? '<span class="dot" style="background:' + (DIRS[k] ? DIRS[k].c : '#999') + '"></span>' : ''; };
-    var head = ['Назва', '№ ТТ', 'Маршрут', 'Зона', 'ВК', 'Хліб', 'НБХЗ', 'Овочі', 'Дні ВК', 'Дні овочів', 'ЄДРПОУ', 'Маршрут НБХЗ', 'Адреса (хліб)', 'Адреса (ВК)', 'Адреса (овочі)', 'Адреса (НБХЗ)', 'Примітка'];
+    var head = ['Название', '№ ТТ', 'Маршрут', 'Зона', 'ВК', 'Хлеб', 'НБХЗ', 'Овощи', 'Дни ВК', 'Дни овощей', 'ЄДРПОУ', 'Маршрут НБХЗ', 'Адрес (хлеб)', 'Адрес (ВК)', 'Адрес (овощи)', 'Адрес (НБХЗ)', 'Примечание'];
     var body = rows.map(function (r) {
       return '<tr class="' + (r.active ? '' : 'off') + '" onclick="go(\'store\',{store:\'' + attr(r.id) + '\',dir:\'\'})"><td>' + esc(r.label) + (r.ua ? UA_TAG : '') + '</td>' +
         [esc(r.code), esc(r.route), esc(r.zone), yes(r, 'bakery'), yes(r, 'bread'), yes(r, 'nbhz'), yes(r, 'veg'), esc(r.daysBakery), esc(r.daysVeg), esc(r.edrpou), esc(r.routeNbhz),
           esc(r.addrBread), esc(r.addrBakery), esc(r.addrVeg), esc(r.addrNbhz), esc(r.note)].map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
     }).join('');
-    b.innerHTML = '<div class="stnote">Лише перегляд. До переїзду точки правляться в Довіднику Google. Клік по рядку відкриває картку точки.</div>' +
-      '<input id="stq" type="search" placeholder="Пошук: назва, адреса, № ТТ, маршрут" value="' + attr(ST.q) + '" style="margin:0 0 10px">' +
-      '<div class="stfl">' + chips + '</div><div class="stnote">Показано ' + rows.length + ' з ' + ST.data.total + '</div>' +
+    b.innerHTML = '<div class="stnote">Клик по строке открывает карточку точки; правка - кнопкой «Редактировать» в карточке.</div>' +
+      '<input id="stq" type="search" placeholder="Поиск: название, адрес, № ТТ, маршрут" value="' + attr(ST.q) + '" style="margin:0 0 10px">' +
+      '<div class="stfl">' + chips + '</div><div class="stnote">Показано ' + rows.length + ' из ' + ST.data.total + '</div>' +
       '<div class="sttb-wrap"><table class="sttb"><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>';
     var inp = document.getElementById('stq');
     inp.addEventListener('input', function () { ST.q = inp.value; clearTimeout(ST.t); ST.t = setTimeout(function () { var p = inp.selectionStart; drawTable(); var n = document.getElementById('stq'); n.focus(); n.setSelectionRange(p, p); }, 250); });
@@ -129,7 +129,7 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
 
   // ---------- Картка ----------
   function pickerHtml() {
-    return '<div class="stpick"><input id="stpick" type="search" autocomplete="off" placeholder="Знайти точку: адреса, № ТТ або маршрут" value="' + attr(ST.pick) + '"><div class="stpl" id="stpl" style="display:none"></div></div>';
+    return '<div class="stpick"><input id="stpick" type="search" autocomplete="off" placeholder="Найти точку: адрес, № ТТ или маршрут" value="' + attr(ST.pick) + '"><div class="stpl" id="stpl" style="display:none"></div></div>';
   }
   function pickList() {
     var box = document.getElementById('stpl'), q = ST.pick.trim().toLowerCase();
@@ -138,7 +138,7 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
     var rows = ST.data.rows.filter(function (r) { return (r.label + ' ' + r.address + ' ' + r.code + ' ' + r.route).toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
     box.innerHTML = rows.length ? rows.map(function (r) {
       return '<button onclick="stPick(\'' + attr(r.id) + '\')">' + esc(r.label) + (r.ua ? UA_TAG : '') + '<small>' + [r.code ? '№ ' + esc(r.code) : '', esc(r.route), esc(r.zone)].filter(Boolean).join(' · ') + '</small></button>';
-    }).join('') : '<button disabled>Нічого не знайдено</button>';
+    }).join('') : '<button disabled>Ничего не найдено</button>';
     box.style.display = 'block';
   }
   window.stPick = function (id) { ST.pick = ''; go('store', { store: id, dir: '' }); };
@@ -151,25 +151,25 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
   }
 
   function pill(d) {
-    if (!d.enabled) return '<span class="stp mu">Напрямок вимкнено</span>';
-    if (d.order) return '<span class="stp ok">Замовила</span>';
-    if (!d.dayOk) return '<span class="stp mu">Не їхній день' + (d.next ? ' · ' + esc(d.next) : '') + '</span>';
-    if (d.closed) return '<span class="stp bad">Закрито</span>';
+    if (!d.enabled) return '<span class="stp mu">Направление выключено</span>';
+    if (d.order) return '<span class="stp ok">Заказала</span>';
+    if (!d.dayOk) return '<span class="stp mu">Не их день' + (d.next ? ' · ' + esc(d.next) : '') + '</span>';
+    if (d.closed) return '<span class="stp bad">Закрыто</span>';
     return '<span class="stp wait">Ждём' + (d.deadline ? ' до ' + esc(d.deadline) : '') + '</span>';
   }
   function dirBlock(c, d) {
     var info = '';
     if (d.order) {
       info = d.order.n + ' поз. · ' + d.order.qty + ' ' + esc(d.unit || '') + (d.order.time ? ' · ' + d.order.time : '') +
-        (d.order.src === 'google' ? ' · <i>по таблиці Google (замовлення через Apps Script)</i>' : '');
-    } else if (d.closed && d.lateLeft > 0) info = 'Прийом відкрито точці ще ' + d.lateLeft + ' хв';
+        (d.order.src === 'google' ? ' · <i>по таблице Google (заказ через Apps Script)</i>' : '');
+    } else if (d.closed && d.lateLeft > 0) info = 'Приём открыт точке ещё ' + d.lateLeft + ' мин';
     var id = attr(c.store.id), dir = attr(d.dir), btn = '';
-    if (d.enabled && (!d.order || d.closed || !d.dayOk)) btn += '<button onclick="askOpenStore(\'' + id + '\',\'' + dir + '\')">Відкрити прийом точці</button>';
+    if (d.enabled && (!d.order || d.closed || !d.dayOk)) btn += '<button onclick="askOpenStore(\'' + id + '\',\'' + dir + '\')">Открыть приём точке</button>';
     if (d.order && d.order.canEdit) {
-      btn += '<button onclick="askCancel(\'' + id + '\',\'' + dir + '\',' + d.order.n + ')">Скасувати замовлення</button>';
-      btn += '<button onclick="go(\'edit\',{store:\'' + id + '\',dir:\'' + dir + '\'})">Змінити замовлення</button>';
+      btn += '<button onclick="askCancel(\'' + id + '\',\'' + dir + '\',' + d.order.n + ')">Отменить заказ</button>';
+      btn += '<button onclick="go(\'edit\',{store:\'' + id + '\',dir:\'' + dir + '\'})">Изменить заказ</button>';
     }
-    if (d.order && !d.order.canEdit) info += '<br><span class="stnote">Скасування і правка цього замовлення поки лише в старому пульті Apps Script.</span>';
+    if (d.order && !d.order.canEdit) info += '<br><span class="stnote">Отмена и правка этого заказа пока только в старом пульте Apps Script.</span>';
     return '<div class="std" style="border-left-color:' + attr(d.color) + '"><div class="hd"><b>' + esc(DIRS[d.dir] ? DIRS[d.dir].short : d.title) + '</b>' + pill(d) +
       '<span class="dl">' + (d.deadline ? 'дедлайн ' + esc(d.deadline) : '') + '</span></div>' + (info ? '<div class="info">' + info + '</div>' : '') +
       (btn ? '<div class="btns">' + btn + '</div>' : '') + '</div>';
@@ -177,10 +177,10 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
   function schedBlock(d) {
     var color = attr(d.color);
     var wd = d.byDays ? WD.map(function (w) { var on = d.days.indexOf(w[1]) >= 0; return '<span class="wd' + (on ? ' on' : '') + '"' + (on ? ' style="background:' + color + '"' : '') + '>' + w[0] + '</span>'; }).join('')
-      : '<span class="dl">кожен день</span>';
-    if (d.byDays && !d.days.length) wd = '<span class="dl">без обмежень (усі дні)</span>';
+      : '<span class="dl">каждый день</span>';
+    if (d.byDays && !d.days.length) wd = '<span class="dl">без ограничений (все дни)</span>';
     return '<div class="stg"><span class="nm">' + esc(DIRS[d.dir] ? DIRS[d.dir].t : d.title) + '</span><span class="av' + (d.available ? ' on' : '') + '"' + (d.available ? ' style="background:' + color + '"' : '') + '>' +
-      (d.available ? 'доступно точці' : 'не підключено') + '</span>' + (d.available ? wd : '') + '</div>';
+      (d.available ? 'доступно точке' : 'не подключено') + '</span>' + (d.available ? wd : '') + '</div>';
   }
   function row(l, v) { return v ? '<div class="str"><span>' + esc(l) + '</span><span>' + esc(v) + '</span></div>' : ''; }
   function cardHtml(c) {
@@ -189,16 +189,16 @@ var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, o
       '<div class="sub">' + [s.code ? '№ ' + esc(s.code) : '', s.route ? 'маршрут ' + esc(s.route) : '', s.zone ? 'зона ' + esc(s.zone) : ''].filter(Boolean).join(' · ') + '</div>' +
       '<div class="tags"><span class="stag ' + (s.ua ? 'ua' : 'fm') + '">' + esc(s.company) + '</span>' + (s.edrpou ? '<span class="stag">ЄДРПОУ ' + esc(s.edrpou) + '</span>' : '') +
       (s.active ? '' : '<span class="stag off">неактивна</span>') + '</div>' +
-      '<div class="sth">Сьогодні по напрямках · ' + esc(c.today) + '</div>' + (avail.length ? avail.map(function (d) { return dirBlock(c, d); }).join('') : '<div class="stnote">Точці не підключено жодного напрямку.</div>') +
-      '<div class="sth">Графік і напрямки</div>' + c.dirs.map(schedBlock).join('') +
-      '<div class="sth">Реквізити</div>' + row('Адреса', s.address) + row('Адреса (хліб)', s.addrBread) + row('Адреса (ВК)', s.addrBakery) + row('Адреса (овочі)', s.addrVeg) +
-      row('Адреса (НБХЗ)', s.addrNbhz) + row('Маршрут НБХЗ', s.routeNbhz) + row('Тип', s.type) + row('Примітка', s.note) +
-      '<div class="stf"><button class="save" onclick="go(\'card\',{store:\'' + attr(s.id) + '\'})">Редагувати</button><span class="stnote" style="margin:0">Графік, маршрути, напрямки, вимкнення точки.</span></div></div>';
+      '<div class="sth">Сегодня по направлениям · ' + esc(c.today) + '</div>' + (avail.length ? avail.map(function (d) { return dirBlock(c, d); }).join('') : '<div class="stnote">Точке не подключено ни одного направления.</div>') +
+      '<div class="sth">График и направления</div>' + c.dirs.map(schedBlock).join('') +
+      '<div class="sth">Реквизиты</div>' + row('Адрес', s.address) + row('Адрес (хлеб)', s.addrBread) + row('Адрес (ВК)', s.addrBakery) + row('Адрес (овощи)', s.addrVeg) +
+      row('Адрес (НБХЗ)', s.addrNbhz) + row('Маршрут НБХЗ', s.routeNbhz) + row('Тип', s.type) + row('Примечание', s.note) +
+      '<div class="stf"><button class="save" onclick="go(\'card\',{store:\'' + attr(s.id) + '\'})">Редактировать</button><span class="stnote" style="margin:0">График, маршруты, направления, отключение точки.</span></div></div>';
   }
   function drawCard() {
     var b = document.getElementById('stbody');
     if (!b) return;
-    if (!ST.cardId) { b.innerHTML = pickerHtml() + '<div class="stnote">Оберіть точку: почніть вводити адресу, номер або маршрут.</div>'; bindPicker(); return; }
+    if (!ST.cardId) { b.innerHTML = pickerHtml() + '<div class="stnote">Выберите точку: начните вводить адрес, номер или маршрут.</div>'; bindPicker(); return; }
     b.innerHTML = pickerHtml() + '<div class="spin">Загрузка…</div>';
     bindPicker();
     call('storeCard', { storeId: ST.cardId }).then(function (c) {

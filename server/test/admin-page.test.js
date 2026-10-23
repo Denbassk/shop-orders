@@ -57,7 +57,7 @@ test('нижня панель: вкладка «Здоровье» (бувша �
 });
 test('вкладка «Магазини»: перемикач Таблиця | Картка, дані з дій storesTable і storeCard, кнопка «Відкрити Довідник», лише перегляд', () => {
   const html = build();
-  for (const f of ["call('storesTable')", 'window.stView', 'Відкрити Довідник', 'Таблиця', 'Лише перегляд']) assert.ok(html.includes(f), f);
+  for (const f of ["call('storesTable')", 'window.stView', 'Открыть Довідник', 'Таблица', 'Клик по строке открывает карточку']) assert.ok(html.includes(f), f);
   assert.ok(html.lastIndexOf('call(\'storesTable\')') > html.lastIndexOf('function loadStores('), 'перевизначення loadStores - після оригіналу');
   const mine = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'admin-stores.html'), 'utf8');
   assert.ok(!/call\('(?!storesTable|storeCard)/.test(mine), 'блок «Магазини» викликає лише storesTable і storeCard - нічого не зберігає');
@@ -65,12 +65,12 @@ test('вкладка «Магазини»: перемикач Таблиця | �
 
 test('вкладка «Магазини»: картка (реквізити, сьогодні по напрямках, графік днів), нижня вкладка перейменована, плиток у цій вкладці нема', () => {
   const html = build();
-  for (const f of ["call('storeCard'", 'Скасувати замовлення', 'Відкрити прийом точці', 'Графік і напрямки', 'Реквізити', "'Магазини'", "['Пн', 1]", "['Нд', 0]"]) assert.ok(html.includes(f), f);
+  for (const f of ["call('storeCard'", 'Отменить заказ', 'Открыть приём точке', 'График и направления', 'Реквизиты', "'Магазины'", "['Пн', 1]", "['Вс', 0]"]) assert.ok(html.includes(f), f);
   assert.ok(!html.includes('stMode('), 'вигляд «Плитки» прибрано з вкладки');
   assert.ok(html.lastIndexOf('loadStore = function') > html.lastIndexOf('function loadStore('), 'екран store веде в нову картку');
 });
 
-test('форма точки: «Редагувати» і «+ Нова точка» ведуть у cardSave/cardAdd; форма перевизначена після оригіналу; до переходу кнопка збереження неактивна', () => {
+test('форма точки: «Редактировать» і «+ Добавить адрес» ведуть у cardSave/cardAdd; форма перевизначена після оригіналу; до переходу кнопка збереження неактивна', () => {
   const html = build();
   assert.ok(html.lastIndexOf('function loadCard(') > html.indexOf('function loadCard('), 'loadCard перевизначено після оригіналу');
   assert.ok(html.lastIndexOf('function askCard()') > html.indexOf('function askCard()'), 'askCard перевизначено після оригіналу');
