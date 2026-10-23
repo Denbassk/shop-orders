@@ -46,7 +46,7 @@ button{font:inherit;color:inherit}
 #view.anim>*:nth-child(4){animation-delay:.15s}
 @keyframes fu{from{opacity:0;transform:translateY(8px)}}
 .sec{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin:0 0 12px 2px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.sec small{color:var(--mu);font-weight:600;letter-spacing:.03em;text-transform:none;font-size:12.5px}
+.sec small{color:var(--mu);font-weight:600;letter-spacing:.03em;text-transform:none;font-size:12.5px;min-width:0;max-width:100%;overflow-wrap:anywhere}
 .ov{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 .ovc{--c:var(--dc);display:block;width:100%;text-align:left;background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:18px 16px 14px;box-shadow:var(--sh);cursor:pointer;position:relative;overflow:hidden;transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s,border-color .2s}
 .ovc::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;background:var(--c)}
@@ -152,7 +152,7 @@ input:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--tealb)}
 .tab{flex:1 1 0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 0;border-radius:12px;color:var(--mu);font-size:11.5px;font-weight:600;cursor:pointer;position:relative;transition:transform .2s cubic-bezier(.2,.8,.2,1),color .18s,background .18s}
 .tab:hover{transform:translateY(-3px);color:var(--tx)}
 .tab.on{color:var(--dc);background:color-mix(in srgb,var(--dc) 13%,transparent)}
-.badge{position:absolute;top:0;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--acc);color:#fff;font-size:11px;font-weight:700;padding:0 5px;display:flex;align-items:center;justify-content:center}
+.badge{position:absolute;top:0;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--acc);color:#fff;font-size:12px;font-weight:700;padding:0 5px;display:flex;align-items:center;justify-content:center}
 .badge[hidden]{display:none}
 .mask{position:fixed;inset:0;z-index:50;background:rgba(6,9,11,.62);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
 .sheet{width:100%;max-width:620px;max-height:92vh;overflow:auto;background:var(--sf);color:var(--tx);border-radius:26px 26px 0 0;padding:12px 20px calc(24px + env(safe-area-inset-bottom));box-shadow:var(--sh2)}
@@ -177,6 +177,7 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .gs.fc th:first-child{z-index:3}
 .rpgrid{display:flex;flex-direction:column;gap:24px}
 @media (max-width:460px){.tabs{padding-left:2px;padding-right:2px}.tab{flex:1 1 auto;font-size:11px;gap:3px;padding:7px 4px;min-width:44px}.tab svg{width:21px;height:21px}.tiles{grid-template-columns:1fr}.hdr h1{font-size:19px}.clock{font-size:48px}}
+@media (max-width:460px){.tabs:not(:has(.tab:nth-child(6))) .tab{font-size:12px}}
 @media (max-width:340px){.tab{font-size:10px;padding:7px 2px}}
 @media (min-width:900px){
   .tabs{left:50%;right:auto;bottom:18px;transform:translateX(-50%);border:1px solid var(--ln);border-radius:20px;padding:6px;gap:4px;box-shadow:var(--sh2);background:color-mix(in srgb,var(--sf) 90%,transparent);backdrop-filter:blur(12px)}
@@ -350,11 +351,7 @@ function chips() {
   // один напрямок (ВК): перемикати нічого, назва вже в заголовку - рядок вкладок прибрано
   $('dirs').style.display = S.me.dirs.length === 1 ? 'none' : '';
   if (S.me.dirs.length === 1) { $('dirs').innerHTML = ''; return; }
-  if (isShared()) {
-    const n = Object.values(S.pend).reduce((a, b) => a + (b || 0), 0);
-    $('dirs').innerHTML = '<div class="bm on all" style="--c:var(--teal)">' + S.me.dirs.map((d) => '<span class="dot" style="--c:' + colorOf(d.dir) + '"></span>').join('') + 'Усі напрямки' + (n ? '<b>' + esc(n) + '</b>' : '') + '</div>';
-    return;
-  }
+  if (isShared()) { $('dirs').style.display = 'none'; $('dirs').innerHTML = ''; return; }   // спільні вкладки: перемикати нічого, список напрямків - у підзаголовку
   $('dirs').innerHTML = S.me.dirs.map((d, k) => '<button class="bm' + (d.dir === S.dir ? ' on' : '') + '" style="--c:' + colorOf(d.dir) + '" onclick="setDir(' + k + ')"><span class="dot"></span>' + esc(d.title) + (S.pend[d.dir] ? '<b>' + esc(S.pend[d.dir]) + '</b>' : '') + '</button>').join('');
 }
 function setDir(k) {
@@ -469,7 +466,7 @@ function sumAll(er) {
     const x = S.sums[d.dir], e = er[d.dir], ln = (S.gsNote || {})[d.dir];
     const body = e ? '<div class="note">' + esc('Таблиця Google: ' + e) + '</div>'
       : !x ? '<div class="spin sm">Читаю таблицю Google…</div>'
-      : (x.stats && x.stats.length ? '<div class="kpis">' + x.stats.map((s) => kpi(s.v, s.k)).join('') + '</div>' : '<div class="note">' + esc(x.note || 'Немає даних') + '</div>');
+      : (x.stats && x.stats.filter((s) => s.k !== 'точок замовило').length ? '<div class="kpis">' + x.stats.filter((s) => s.k !== 'точок замовило').map((s) => kpi(s.v, s.k)).join('') + '</div>' : '<div class="note">' + esc(x.note || 'Немає даних') + '</div>');
     return '<div class="sumd" style="--c:' + colorOf(d.dir) + '"><div class="sec"><span class="dot"></span> ' + esc(d.title) + ' <small>' + esc('з таблиці Google' + (x && x.note ? ' · ' + x.note : '') + (ln ? ' · не зіставлено адрес: ' + ln : '')) + '</small></div>' + body + '</div>';
   }).join('') + '</div>';
   if ($('tdtop')) $('tdtop').innerHTML = '';
@@ -487,7 +484,7 @@ function ovHtml() {
     const done = (b.done || []).length, tot = done + (b.wait || []).length, off = (b.off || []).length;
     const st = b.error ? { cls: 'bad', t: 'немає даних: ' + b.error } : (!tot && off ? { cls: 'off', t: 'Сьогодні не день замовлень' } : stOf(i));
     const p = S.pend[d.dir] ? '<span class="pill late">' + esc(S.pend[d.dir] + ' дозв.') + '</span>' : '';
-    return '<button class="ovc' + (d.dir === S.dir ? ' on' : '') + '" style="--c:' + colorOf(d.dir) + '" onclick="setDir(' + k + ')"><div class="ovh"><span class="ovt">' + esc(d.title) + '</span>' + p + '</div>' +
+    return '<button class="ovc" style="--c:' + colorOf(d.dir) + '" onclick="setDir(' + k + ')"><div class="ovh"><span class="ovt">' + esc(d.title) + '</span>' + p + '</div>' +
       '<div class="ovn"><b>' + done + '</b>з ' + tot + ' точок</div><div class="bar"><i style="width:' + (tot ? Math.round(done * 100 / tot) : 0) + '%"></i></div>' +
       '<div class="ovs ' + st.cls + '">' + esc(st.t) + '</div></button>';
   }).join('') + '</div>';
