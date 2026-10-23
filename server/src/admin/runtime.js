@@ -14,6 +14,7 @@ const { createLinks } = require('./links');
 const read = require('./read');
 const write = require('./write');
 const tools = require('./tools');
+const wo = require('./writeoffs');
 
 function createAdminRuntime(opts = {}) {
   loadEnv();
@@ -41,7 +42,7 @@ function createAdminRuntime(opts = {}) {
   const env = () => {
     const at = new Date();
     let ats = null;                                   // час збирання звітів - один запит на виклик
-    return { at, data: dataFresh, adm, links, rebuild, gOrders: gOrders ? (day, stores) => gOrders.byDir(day, stores) : undefined, queueExport: opts.queueExport || (() => {}),
+    return { at, data: dataFresh, adm, links, queueWoExport: opts.queueWoExport, rebuild, gOrders: gOrders ? (day, stores) => gOrders.byDir(day, stores) : undefined, queueExport: opts.queueExport || (() => {}),
       reportAt: async (k) => { ats = ats || adm.reportAts(); return read.reportAtOf((await ats)[k], at); } };
   };
   const api = createAdminApi({
@@ -64,6 +65,13 @@ function createAdminRuntime(opts = {}) {
     health: () => tools.admHealth(env()),
     healthClear: () => tools.admHealthClear(env()),
     card: (p) => tools.admCard(p, env()),
+    woBrief: () => wo.admWoBrief(env()),
+    woStats: (p) => wo.admWoStats(p, env()),
+    woStore: (p) => wo.admWoStore(p, env()),
+    woDelete: (p) => wo.admWoDelete(p, env()),
+    woOpen: (p) => wo.admWoOpen(p, env()),
+    woArchive: () => wo.admWoArchive(),
+    woSetup: (p) => wo.admWoSetup(p, env()),
   });
   // помилки дій пульта -> «Здоров'я» (healthNoteError_('пульт: ' + action)), AUTH - ні; у фоні, відповідь не чекає
   const apiNoted = async (a, p) => {

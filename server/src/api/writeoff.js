@@ -223,4 +223,5 @@ async function apiWoDelete(payload, env) {
 }
 
 module.exports = { apiWoProducts, apiWoSubmit, apiWoMine, apiWoDelete, buildWoProducts, woPlus,
+  woDocs, woClosed, woDeadline, woDmyOfNum, numOfDay, woEdrpouOf,
   WO_MARKUP, WO_KEEP_DAYS, WO_MAX_ITEMS, WO_MAX_QTY, BREAD_EDRPOU };

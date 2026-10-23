@@ -180,6 +180,17 @@ function createData(sb, { now = Date.now } = {}) {
     return must('writeoffs', await sb.from('writeoffs').select(WO_SEL)
       .eq('store_id', storeId).is('deleted_at', null).gte('wo_date', sinceDay)).map(woRow);
   }
+  // списання за період [from, to] (дати YYYY-MM-DD) - екрани «Списання» пульта
+  async function woRange(from, to) {
+    const out = [];
+    for (let at = 0; ; at += 1000) {                    // PostgREST віддає не більше 1000 рядків за запит
+      const page = must('writeoffs', await sb.from('writeoffs').select(WO_SEL).is('deleted_at', null)
+        .gte('wo_date', from).lte('wo_date', to).order('submitted_at').range(at, at + 999));
+      out.push(...page);
+      if (page.length < 1000) break;
+    }
+    return out.map(woRow);
+  }
   async function woFind(docId) {
     const rows = must('writeoffs', await sb.from('writeoffs').select(WO_SEL).eq('doc_id', docId).is('deleted_at', null).limit(1));
     return rows.length ? woRow(rows[0]) : null;
@@ -214,7 +225,7 @@ function createData(sb, { now = Date.now } = {}) {
   return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
     orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate,
     exportSnapshot, markExported, reportSnapshot,
-    woResult, submitWriteoffTx, woDocsOfStore, woFind, woMarkDeleted, adminLog, woExportSnapshot, woMarkExported };
+    woResult, submitWriteoffTx, woDocsOfStore, woRange, woFind, woMarkDeleted, adminLog, woExportSnapshot, woMarkExported };
 }
 
 module.exports = { createData };
