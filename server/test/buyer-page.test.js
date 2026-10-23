@@ -42,3 +42,13 @@ test('сторінка закупниці: вбудовані скрипти б�
   assert.ok(n >= 1);
   for (const f of ['askNewProduct()', "call('addProduct'", '+ Нова позиція', 'saveNewProduct']) assert.ok(html.includes(f), f);
 });
+
+test('кнопки скачування (Excel і звіт про списання): ім\'я файлу береться з filename*=UTF-8 (в регулярці * екрановано)', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
+  const res = html.match(/\/filename[^\n]*?UTF-8''\(\[\^;\]\+\)\//g) || [];
+  assert.ok(res.length >= 2, 'регулярок імені файлу: ' + res.length);
+  for (const lit of res) {
+    const re = new Function('return ' + lit)();
+    assert.equal(re.exec('attachment; filename="report.xlsx"; filename*=UTF-8\'\'%D0%A1.xlsx')?.[1], '%D0%A1.xlsx', lit);
+  }
+});

@@ -804,7 +804,7 @@ async function woDownload(i) {
   try {
     const r = await fetch(BASE + '/writeoff-report/' + S.dir + '?date=' + encodeURIComponent(date) + '&entity=' + encodeURIComponent(entity), { cache: 'no-store' });
     if (!r.ok) { let j = null; try { j = await r.json(); } catch (e) { j = null; } throw new Error((j && j.error) || ('Помилка ' + r.status)); }
-    const m = /filename*=UTF-8''([^;]+)/.exec(r.headers.get('content-disposition') || '');
+    const m = /filename\*=UTF-8''([^;]+)/.exec(r.headers.get('content-disposition') || '');
     const url = URL.createObjectURL(await r.blob());
     const a = document.createElement('a'); a.href = url; a.download = m ? decodeURIComponent(m[1]) : 'writeoff.xlsx';
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
