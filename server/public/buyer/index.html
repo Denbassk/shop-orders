@@ -204,6 +204,7 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .wogrid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));margin-top:18px;align-items:start}
 .wocard{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
 .wocard.wide{grid-column:1/-1}
+.worep{margin:4px 0 14px}.worow{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:8px 0 10px}.worow label{font-size:13px;color:var(--mu)}.worow input[type=date]{height:40px;border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:12px;padding:0 12px;font:inherit;font-size:14px}
 .woh{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
 .rk{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--ln)}
 .woh+.rk{border-top:0}
@@ -781,6 +782,35 @@ async function showProducts() {
   renderProducts();
 }
 const WO = { days: 7, entity: '', cat: '', data: null, force: false };
+// Звіт про списання за день для друку: окремий файл Excel по кожній юрособі
+const WOREP = { date: '', busy: false };
+const WO_ENTITIES = ['Фемели Маркет', 'ЮА Маркет'];
+function woRepToday() { return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Kyiv' }); }
+function woRepEntities() { return WO.data && WO.data.books && WO.data.books.length ? WO.data.books : WO_ENTITIES; }
+function woRepDraw() {
+  const box = $('worep'); if (!box) return;
+  const today = woRepToday(); if (!WOREP.date) WOREP.date = today;
+  box.innerHTML = '<div class="wocard wide worep"><div class="woh">Звіт для друку</div><div class="worow"><label for="woRepDate">Дата списання</label>' +
+    '<input type="date" id="woRepDate" value="' + esc(WOREP.date) + '" max="' + esc(today) + '" onchange="WOREP.date = this.value">' +
+    woRepEntities().map((e, i) => '<button class="btn dark sm" onclick="woDownload(' + i + ')">⬇ ' + esc(e) + '</button>').join('') + '</div>' +
+    '<div class="note sm">Окремий файл Excel по кожній юрособі: точки, товари, кількість, собівартість, суми. Готовий до друку на A4.</div></div>';
+}
+async function woDownload(i) {
+  const entity = woRepEntities()[i], date = ($('woRepDate') || {}).value || WOREP.date;
+  if (!entity || WOREP.busy) return;
+  if (!date) { toast('❌ Оберіть дату списання'); return; }
+  WOREP.busy = true;
+  toast('⏳ Готую звіт: ' + entity + ' · ' + date.split('-').reverse().join('.') + '…');
+  try {
+    const r = await fetch(BASE + '/writeoff-report/' + S.dir + '?date=' + encodeURIComponent(date) + '&entity=' + encodeURIComponent(entity), { cache: 'no-store' });
+    if (!r.ok) { let j = null; try { j = await r.json(); } catch (e) { j = null; } throw new Error((j && j.error) || ('Помилка ' + r.status)); }
+    const m = /filename*=UTF-8''([^;]+)/.exec(r.headers.get('content-disposition') || '');
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a'); a.href = url; a.download = m ? decodeURIComponent(m[1]) : 'writeoff.xlsx';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast('Файл завантажено');
+  } catch (e) { toast('❌ ' + e.message); } finally { WOREP.busy = false; }
+}
 function woNav() {
   if ($('t-wo') || !S.me || !S.me.dirs.some((d) => d.dir === 'bakery')) return;
   const pb = $('t-products'); if (!pb) return;
@@ -832,14 +862,15 @@ function woDraw(d) {
   $('wov').innerHTML = h;
 }
 async function showWo() {
-  if (!$('wov')) view('<div id="wof"></div><div id="wov"><div class="spin">Читаю таблиці списань…</div></div>');
+  if (!$('wov')) view('<div id="worep"></div><div id="wof"></div><div id="wov"><div class="spin">Читаю таблиці списань…</div></div>');
   woFilters();
+  woRepDraw();
   const force = WO.force; WO.force = false;
   let d;
   try { d = await call('writeoffs', { days: WO.days, entity: WO.entity, cat: WO.cat, fresh: force }, 90000); }
   catch (e) { if ($('wov')) $('wov').innerHTML = '<div class="note">' + esc(e.message) + '</div>'; return; }
   if (S.tab !== 'wo' || !$('wov')) return;
-  WO.data = d; woFilters(); woDraw(d);
+  WO.data = d; woRepDraw(); woFilters(); woDraw(d);
 }function renderProducts() {
   const box = $('plist'); if (!box || !S.products) return;
   const q = S.q.trim().toLowerCase();

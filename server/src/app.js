@@ -107,6 +107,7 @@ function createApp(opts = {}) {
   const linkSecret = () => (opts.buyerLinkSecret !== undefined ? opts.buyerLinkSecret : process.env.BUYER_LINK_SECRET || '');
   const linkOk = (req) => buyerLink.verifyBuyerKey(req.params.code, req.params.key, linkSecret());
   const buyerApi = (dir) => (opts.buyerApi ? opts.buyerApi(dir) : getAdminRt().buyerApi(dir));
+  const buyerWoReport = (dir, p) => (opts.buyerWoReport ? opts.buyerWoReport(dir, p) : require('./buyer/woReport').dayReport(dir, p));
   const buyerXlsx = (dir, key) => (opts.buyerXlsx ? opts.buyerXlsx(dir, key) : getAdminRt().buyerXlsx(dir, key));
   const noStore = (res) => { res.set('Cache-Control', 'no-store'); res.set('Referrer-Policy', 'no-referrer'); };
   app.get('/buyer/:code/:key', (req, res) => {
@@ -140,7 +141,28 @@ function createApp(opts = {}) {
       res.set('Content-Disposition', 'attachment; filename="report.xlsx"; filename*=UTF-8\'\'' + encodeURIComponent(f.name));
       res.send(f.buf);
     } catch (e) { res.status(502).json({ ok: false, error: (e && e.message) || 'Помилка сервера' }); }
-  });  app.use((req, res) => res.status(404).json({ ok: false, error: 'Not found' }));
+  });
+
+  // Звіт про списання ВК за день для друку: GET /buyer/<код>/<ключ>/writeoff-report/bakery?date=ГГГГ-ММ-ДД&entity=<юрособа>
+  app.get('/buyer/:code/:key/writeoff-report/:dir', async (req, res) => {
+    if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Not found' });
+    const dir = people.dirOf(req.params.code, req.params.dir);
+    if (!dir || dir !== req.params.dir) return res.status(404).json({ ok: false, error: 'Not found' });
+    const q = (k) => (typeof req.query[k] === 'string' ? req.query[k].slice(0, 80) : '');
+    try {
+      const f = await buyerWoReport(dir, { date: q('date'), entity: q('entity') });
+      noStore(res);
+      res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.set('Content-Disposition', 'attachment; filename="report.xlsx"; filename*=UTF-8\'\'' + encodeURIComponent(f.name));
+      res.send(f.buf);
+    } catch (e) {
+      const user = e && e.name === 'ReportError';
+      if (!user) console.error('звіт про списання: ' + ((e && e.message) || e));
+      res.status(user ? 400 : 502).json({ ok: false, error: (e && e.message) || 'Помилка сервера' });
+    }
+  });
+
+  app.use((req, res) => res.status(404).json({ ok: false, error: 'Not found' }));
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
