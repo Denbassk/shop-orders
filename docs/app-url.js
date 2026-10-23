@@ -4,4 +4,4 @@
 //
 // ВАЖЛИВО: щоб ця адреса не мінялась, при оновленнях НЕ створюйте нове
 // розгортання - редагуйте наявне (олівець) і ставте "Версія: Нова".
-window.APP_EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGY4--nMFFW5Fb-rsBbTqHX5718u0yC5FEKzo7TKXaqkZ4gHlwwWTbYjD4eFRXcJ5Z/exec';
+window.APP_EXEC_URL = 'https://shop-orders.fly.dev/';
