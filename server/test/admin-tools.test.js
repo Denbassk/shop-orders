@@ -41,7 +41,7 @@ test('health: усе гаразд -> ok, «Всё работает», 4 напр
   assert.equal(r.level, 'ok'); assert.equal(r.summary, 'Всё работает'); assert.equal(r.time, '10:00');
   assert.deepEqual(r.dirs.map((d) => d.key), Object.keys(DIRECTIONS));
   assert.deepEqual(r.dirs[0], { key: 'bread', title: DIRECTIONS.bread.title, level: 'ok', text: 'Отчёт сегодня не собирался · заказали 0' });
-  assert.deepEqual(r.triggers.map((x) => [x.name, x.level]), [['Автоперевірка сервера (tick кожні 10 хв)', 'ok']]); assert.match(r.triggers[0].text, /5 хв тому/); assert.equal(r.sys.version, 'v1'); assert.equal(r.sys.test, false);
+  assert.deepEqual(r.triggers.map((x) => [x.name, x.level]), [['Автоперевірка сервера (tick кожні 10 хв)', 'ok']]); assert.match(r.triggers[0].text, /5 хв тому/); assert.match(r.sys.version, /^Node \(Fly\) · сервер запущено \d\d\.\d\d\.\d{4} \d\d:\d\d$/); assert.equal(r.sys.test, false);
   assert.equal(st.day, DAY);
 });
 

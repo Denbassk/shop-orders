@@ -3,6 +3,9 @@
 // cardSave - Task 11 (Довідник ТТ лишається головним для бою).
 const { DIRECTIONS } = require('../directions');
 const R = require('../rules');
+
+const STARTED = new Date();          // змінюється при кожному деплої/перезапуску - так видно, що пульт новий
+const serverStart = () => { const k = R.kyivNow(STARTED); return k.dmy + ' ' + k.time.slice(0, 5); };
 const { STORE_NOT_FOUND } = require('./write');
 
 const HEALTH_STALE_MIN = 20;                  // з app/*.gs
@@ -60,7 +63,7 @@ async function admHealth(env) {
     time: hmOf(at), level: worst,
     summary: worst === 'ok' ? 'Всё работает' : 'Требует внимания: ' + problems,
     dirs, triggers: [{ name: 'Автоперевірка сервера (tick кожні 10 хв)', level: tl, text: tt }], errors,
-    sys: { version: String(settings.app_version || ''), test: !!settings.test_mode, keys: Object.keys(settings).length, pct: 0, sess: 0 },
+    sys: { version: 'Node (Fly) · сервер запущено ' + serverStart(), test: !!settings.test_mode, keys: Object.keys(settings).length, pct: 0, sess: 0 },
   };
 }
 
