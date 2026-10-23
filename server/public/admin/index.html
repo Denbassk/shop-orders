@@ -146,8 +146,8 @@ label.pick input{width:24px;height:24px;accent-color:#E11B22;flex:none}
       <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>Сегодня</button>
     <button class="tab" id="t-stores" onclick="tabGo('stores')">
       <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1 11H5z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>Точки</button>
-    <button class="tab" id="t-restore" onclick="tabGo('restore')">
-      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Бэкап</button>
+    <button class="tab" id="t-restore" onclick="tabGo('health')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>Здоровье</button>
     <button class="tab" id="t-log" onclick="tabGo('log')">
       <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>Журнал</button>
   </div>
@@ -1526,7 +1526,7 @@ function askCard() {
 
 <!-- shop-orders: на сервері немає: бэкап, дублі, позначка, збереження картки - кнопки приховано -->
 <style>
-#t-restore,[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"],[onclick="askCard()"]{display:none!important}
+[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"],[onclick="askCard()"]{display:none!important}
 </style>
 <script>
 function askCard(){ toast('Сохранение карточки - после переезда. Пока правьте Довідник ТТ.'); }
@@ -1572,6 +1572,16 @@ function doLogin() {
 adminPost_('today', {}).then(function (r) {
   if (r && r.ok && document.getElementById('app').style.display !== 'block') { TOKEN = 'cookie'; start(); }
 }, function () {});
+// нижня вкладка «Здоровье» (замість прихованого «Бэкап»): екран health підсвічує її, а не «Сегодня»
+function tabs(name) {
+  var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today', stores: 'stores', store: 'stores',
+              health: 'restore', log: 'log', edit: 'stores', card: 'stores', wo: 'today', wostore: 'today' };
+  var on = map[name] || 'today';
+  ['today', 'stores', 'restore', 'log'].forEach(function (k) {
+    var el = document.getElementById('t-' + k);
+    if (el) el.className = 'tab' + (k === on ? ' on' : '');
+  });
+}
 </script>
 <style>
 /* adm-theme */

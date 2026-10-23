@@ -10,7 +10,7 @@ const OUT = path.join(__dirname, '..', 'public', 'admin', 'index.html');
 
 const SHIM = `<!-- shop-orders: на сервері немає: бэкап, дублі, позначка, збереження картки - кнопки приховано -->
 <style>
-#t-restore,[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"],[onclick="askCard()"]{display:none!important}
+[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"],[onclick="askCard()"]{display:none!important}
 </style>
 <script>
 function askCard(){ toast('Сохранение карточки - после переезда. Пока правьте Довідник ТТ.'); }
@@ -56,6 +56,16 @@ function doLogin() {
 adminPost_('today', {}).then(function (r) {
   if (r && r.ok && document.getElementById('app').style.display !== 'block') { TOKEN = 'cookie'; start(); }
 }, function () {});
+// нижня вкладка «Здоровье» (замість прихованого «Бэкап»): екран health підсвічує її, а не «Сегодня»
+function tabs(name) {
+  var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today', stores: 'stores', store: 'stores',
+              health: 'restore', log: 'log', edit: 'stores', card: 'stores', wo: 'today', wostore: 'today' };
+  var on = map[name] || 'today';
+  ['today', 'stores', 'restore', 'log'].forEach(function (k) {
+    var el = document.getElementById('t-' + k);
+    if (el) el.className = 'tab' + (k === on ? ' on' : '');
+  });
+}
 </script>
 `;
 
@@ -67,6 +77,12 @@ function build() {
   if (!/name="viewport"/i.test(html)) html = html.replace(/<head>/i,
     '<head>\n<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">');
   if (!/<\/body>/i.test(html)) throw new Error('Немає </body> в Admin.html');
+  // вкладка «Бэкап» (її на сервері немає) -> «Здоровье»: екран health Apps Script-пульта, id лишається t-restore
+  const HEALTH_TAB = `<button class="tab" id="t-restore" onclick="tabGo('health')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>Здоровье</button>`;
+  const tabRe = /<button class="tab" id="t-restore"[\s\S]*?<\/button>/;
+  if (!tabRe.test(html)) throw new Error('Немає вкладки t-restore в Admin.html');
+  html = html.replace(tabRe, () => HEALTH_TAB);
   let out = html.replace(/<\/body>/i, () => SHIM + '</body>');
   // тема пульта (темна/світла, ширина ноутбука) - з scripts/admin-theme.html
   const TH = path.join(__dirname, 'admin-theme.html');

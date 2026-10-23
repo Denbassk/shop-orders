@@ -44,9 +44,17 @@ test('GET /admin -> сторінка пульта, без кешу', async () =>
 test('build: прибрані кнопки (бэкап, дублі, позначка, збереження картки) приховані і не шлють запитів', () => {
   const html = build();
   const tail = html.slice(html.indexOf('shop-orders: на сервері немає'));
-  for (const sel of ['#t-restore', `[onclick*="'restore'"]`, `[onclick*="'dups'"]`, '[onclick*="askClearMark"]', '[onclick="askCard()"]']) assert.ok(tail.includes(sel), sel);
+  for (const sel of [`[onclick*="'restore'"]`, `[onclick*="'dups'"]`, '[onclick*="askClearMark"]', '[onclick="askCard()"]']) assert.ok(tail.includes(sel), sel);
   assert.ok(html.lastIndexOf('function askCard()') > html.indexOf('function askCard()'), 'askCard перевизначено після оригіналу');
   assert.ok(!/function askCard\(\)[^}]*cardSave/.test(tail));
+});
+test('нижня панель: вкладка «Здоровье» (бувша «Бэкап») відкриває екран health і підсвічується на ньому', () => {
+  const html = build();
+  assert.match(html, /<button class="tab" id="t-restore" onclick="tabGo\('health'\)">[\s\S]*?Здоровье<\/button>/);
+  assert.ok(!/Бэкап<\/button>/.test(html));
+  assert.ok(!html.slice(html.indexOf('shop-orders: на сервері немає')).includes('#t-restore'), 'вкладку більше не приховано');
+  const tabsFn = html.slice(html.lastIndexOf('function tabs(name)'));
+  assert.match(tabsFn, /health: 'restore'/);
 });
 test('вкладка «Магазини»: перемикач Таблиця | Картка, дані з дій storesTable і storeCard, кнопка «Відкрити Довідник», лише перегляд', () => {
   const html = build();
