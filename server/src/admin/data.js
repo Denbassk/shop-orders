@@ -53,6 +53,17 @@ function createAdminData(sb) {
     const rows = must('stores', await sb.from('stores').select('*').eq('store_id', id).limit(1));
     return rows.length ? rows[0] : null;
   }
+  // правка/додавання точок з пульта (admin/stores.js): update повертає true, якщо рядок існує
+  async function updateStore(id, patch) {
+    return must('stores', await sb.from('stores').update(patch).eq('store_id', id).select('store_id')).length > 0;
+  }
+  async function insertStore(row) {
+    must('stores', await sb.from('stores').insert(row));
+  }
+  async function maxStoreSort() {
+    const rows = must('stores', await sb.from('stores').select('sort').order('sort', { ascending: false }).limit(1));
+    return rows.length ? Number(rows[0].sort) || 0 : 0;
+  }
   // правка замовлення (admEditOrder_): рядки активних замовлень точки за день
   async function dayStoreLines(dir, storeId, day) {
     const rows = must('orders', await sb.from('orders').select('id,order_lines(id,name,qty)')
@@ -82,7 +93,7 @@ function createAdminData(sb) {
     return must('products', await sb.from('products').update(patch).eq('dir', dir).eq('id', id).select('id')).length > 0;
   }
   return { dayOrders, allStores, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
-    dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow, dirProducts, setProduct };
+    dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow, updateStore, insertStore, maxStoreSort, dirProducts, setProduct };
 }
 
 module.exports = { createAdminData };

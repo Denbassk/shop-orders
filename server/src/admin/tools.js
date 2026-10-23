@@ -87,27 +87,11 @@ async function noteError(adm, where, msg, at = new Date()) {
   } catch (e) { /* як в оригіналі - мовчки */ }
 }
 
-// Картка точки (admCard_) з бази. row (рядок Довідника) і note (Примітка) у базі немає.
-const CARD_DAYS_OK = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const DAY_BY_NUM = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-const CARD_ZONES_OK = ['Салтовка', 'Новые дома', 'Центр', 'не возится'];
-const daysTxt = (a) => { const t = (Array.isArray(a) ? a : []).map((n) => DAY_BY_NUM[n]).filter(Boolean); return CARD_DAYS_OK.filter((d) => t.includes(d)).join(', '); };
-const s = (v) => String(v == null ? '' : v).trim();
-
+// Картка точки (admCard_) з бази: row (рядок Довідника) у базі нема. Поля й перевірки - admin/stores.js
 async function admCard(payload, env) {
-  const id = String(payload.storeId || '');
-  const r = await env.adm.storeRow(id);
+  const r = await env.adm.storeRow(String(payload.storeId || ''));
   if (!r) throw new Error(STORE_NOT_FOUND);
-  const dirs = Array.isArray(r.directions) ? r.directions : [], days = r.days || {};
-  return {
-    id, row: null, label: s(r.label), address: s(r.address),
-    addr: { bread: s(r.addr_bread), bakery: s(r.addr_bakery), veg: s(r.addr_veg), nbhz: s(r.addr_nbhz) },
-    f: { active: r.active === true, label: s(r.label), code: s(r.code), route: s(r.route),
-      bread: dirs.includes('bread'), bakery: dirs.includes('bakery'), veg: dirs.includes('veg'), note: '',
-      nbhz: dirs.includes('nbhz'), routeNbhz: s(r.route_nbhz), daysVeg: daysTxt(days.veg), daysBakery: daysTxt(days.bakery),
-      zone: s(r.zone), edrpou: s(r.edrpou) },
-    zones: CARD_ZONES_OK, defEdrpou: BREAD_EDRPOU,
-  };
+  return require('./stores').cardOf(r);
 }
 
 module.exports = { HEALTH_STALE_MIN, HEALTH_ERR_KEY, admHealth, admHealthClear, noteError, admCard };

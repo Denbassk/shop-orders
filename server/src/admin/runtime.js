@@ -15,6 +15,7 @@ const read = require('./read');
 const write = require('./write');
 const tools = require('./tools');
 const wo = require('./writeoffs');
+const stores = require('./stores');
 
 function createAdminRuntime(opts = {}) {
   loadEnv();
@@ -23,7 +24,7 @@ function createAdminRuntime(opts = {}) {
   const adm = createAdminData(sb);
   adm.dayLate = require('../buyer/data').dayLateOf(sb);   // запити дозволу за день - сторінка закупниці
   // пульт читає налаштування без 10-секундного кешу: після перемикання екран одразу показує новий стан
-  const dataFresh = { ...data, settings: () => createData(sb).settings() };
+  const dataFresh = { ...data, settings: () => createData(sb).settings(), stores: () => createData(sb).stores() };
   const roles = ['admin', ...Object.keys(DIRECTIONS).map((d) => 'buyer:' + d)];
   const hashes = Object.fromEntries(roles.map((r) => [r, process.env[hashEnvName(r)] || '']).filter(([, h]) => h));
   const auth = createAuth({ secret: process.env.ADMIN_JWT_SECRET || '', hashes, fails: createSbFails(sb) });
@@ -42,7 +43,7 @@ function createAdminRuntime(opts = {}) {
   const env = () => {
     const at = new Date();
     let ats = null;                                   // час збирання звітів - один запит на виклик
-    return { at, data: dataFresh, adm, links, queueWoExport: opts.queueWoExport, rebuild, gOrders: gOrders ? (day, stores) => gOrders.byDir(day, stores) : undefined, queueExport: opts.queueExport || (() => {}),
+    return { at, data: dataFresh, adm, links, storeEdit: process.env.PULT_STORE_EDIT === 'on', queueWoExport: opts.queueWoExport, rebuild, gOrders: gOrders ? (day, stores) => gOrders.byDir(day, stores) : undefined, queueExport: opts.queueExport || (() => {}),
       reportAt: async (k) => { ats = ats || adm.reportAts(); return read.reportAtOf((await ats)[k], at); } };
   };
   const api = createAdminApi({
@@ -65,6 +66,8 @@ function createAdminRuntime(opts = {}) {
     health: () => tools.admHealth(env()),
     healthClear: () => tools.admHealthClear(env()),
     card: (p) => tools.admCard(p, env()),
+    cardSave: (p) => stores.admCardSave(p, env()),
+    cardAdd: (p) => stores.admCardAdd(p, env()),
     woBrief: () => wo.admWoBrief(env()),
     woStats: (p) => wo.admWoStats(p, env()),
     woStore: (p) => wo.admWoStore(p, env()),

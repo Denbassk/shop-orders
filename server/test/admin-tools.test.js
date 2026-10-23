@@ -105,7 +105,7 @@ test('healthClear: список очищено, журнал дослівно', 
 test('card: поля з бази, дні «Пн, Ср … Вс», напрямки -> прапорці; нема точки -> текст findStore_', async () => {
   const row = { store_id: 's1', active: true, label: ' Магазин 1 ', address: 'вул. А, 1', code: '12', route: 'М1',
     addr_bread: 'аб', addr_bakery: 'ав', addr_veg: 'ао', addr_nbhz: 'ан', route_nbhz: 'Н2', zone: 'Центр', edrpou: '45672783',
-    days: { veg: [3, 1], bakery: [0, 6] }, directions: ['bread', 'veg'] };
+    days_veg: 'Ср, Пн', days_bakery: 'Сб, Вс', bread: true, veg: true, bakery: false, nbhz: false, note: '' };
   const { env } = mkEnv({ rows: { s1: row } });
   const c = await T.admCard({ storeId: 's1' }, env);
   assert.equal(c.id, 's1'); assert.equal(c.row, null); assert.equal(c.label, 'Магазин 1'); assert.equal(c.address, 'вул. А, 1');
@@ -126,10 +126,10 @@ test('data.storeRow: за store_id, неактивні теж; нема -> null'
   assert.equal(await a.storeRow('x'), null);
 });
 
-test('runtime: health, healthClear, card підключені; cardSave ні; помилки пульта -> noteError', () => {
+test('runtime: health, healthClear, card підключені; cardSave і cardAdd так; помилки пульта -> noteError', () => {
   const src = fs.readFileSync(path.join(__dirname, '../src/admin/runtime.js'), 'utf8');
   for (const a of ['health:', 'healthClear:', 'card:']) assert.ok(src.includes(a), a);
-  assert.ok(!src.includes('cardSave:')); assert.ok(src.includes('noteError'));
+  assert.ok(src.includes('cardSave:') && src.includes('cardAdd:')); assert.ok(src.includes('noteError'));
 });
 test('health: автоперевірка tick - застаріла (> 25 хв у вікні 07-22) або не запускалась -> warn з поясненням; вночі - ok', async () => {
   const stale = await T.admHealth(mkEnv({ settings: { app_version: 'v1', last_tick: new Date(AT.getTime() - 40 * 60000).toISOString() } }).env);
