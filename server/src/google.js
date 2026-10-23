@@ -1,0 +1,107 @@
+// Клієнт Google Sheets через сервісний акаунт. Кожен запит - з тайм-аутом 30 с:
+// таблиця, що висить, не має тримати процес (Review Focus 2 плану).
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { google } = require('googleapis');
+
+const TIMEOUT_MS = 30000;
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
+
+let _sheets = null;
+
+function loadCredentials() {
+  if (process.env.GOOGLE_SA_JSON) return JSON.parse(process.env.GOOGLE_SA_JSON);
+  const file = process.env.GOOGLE_SA_FILE || path.join(os.homedir(), '.secrets', 'shop-orders-sa.json');
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function sheetsClient() {
+  if (!_sheets) {
+    const auth = new google.auth.GoogleAuth({ credentials: loadCredentials(), scopes: SCOPES });
+    _sheets = google.sheets({ version: 'v4', auth });
+  }
+  return _sheets;
+}
+
+const REQ = { timeout: TIMEOUT_MS, retry: false };
+
+// Значення діапазону. За замовчуванням - сирі (як apiValues_ в Apps Script: числа числами,
+// галочки true/false); formatted=true - як бачить людина.
+async function getValues(spreadsheetId, a1, { formatted = false } = {}) {
+  const res = await sheetsClient().spreadsheets.values.get({
+    spreadsheetId, range: a1,
+    valueRenderOption: formatted ? 'FORMATTED_VALUE' : 'UNFORMATTED_VALUE',
+    dateTimeRenderOption: 'SERIAL_NUMBER',
+  }, REQ);
+  return res.data.values || [];
+}
+
+async function batchUpdate(spreadsheetId, requests) {
+  const res = await sheetsClient().spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } }, REQ);
+  return res.data;
+}
+
+async function appendValues(spreadsheetId, a1, rows) {
+  const res = await sheetsClient().spreadsheets.values.append({
+    spreadsheetId, range: a1, valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: rows },
+  }, REQ);
+  return res.data;
+}
+
+// Назва першого листа таблиці (для діапазонів без явної назви листа).
+async function firstSheetTitle(spreadsheetId) {
+  const res = await sheetsClient().spreadsheets.get({
+    spreadsheetId, fields: 'sheets.properties.title',
+  }, REQ);
+  return res.data.sheets[0].properties.title;
+}
+
+// sheetId вкладки за назвою (не змінюється, тому кеш процесу)
+const _sheetIds = new Map();
+async function sheetIdOf(spreadsheetId, title) {
+  const key = spreadsheetId + '|' + title;
+  if (_sheetIds.has(key)) return _sheetIds.get(key);
+  const res = await sheetsClient().spreadsheets.get({ spreadsheetId, fields: 'sheets.properties(sheetId,title)' }, REQ);
+  const hit = res.data.sheets.find((s) => s.properties.title === title);
+  if (!hit) throw new Error('Не знайдено лист "' + title + '"');
+  _sheetIds.set(key, hit.properties.sheetId);
+  return hit.properties.sheetId;
+}
+
+// Властивості вкладки (sheetId, розмір, умовні формати) або null, якщо вкладки нема
+async function sheetMeta(spreadsheetId, title) {
+  const res = await sheetsClient().spreadsheets.get({
+    spreadsheetId, fields: 'sheets(properties(sheetId,title,gridProperties),conditionalFormats,basicFilter)',
+  }, REQ);
+  return res.data.sheets.find((s) => s.properties.title === title) || null;
+}
+
+// Усі вкладки: [{ sheetId, title, rowCount, columnCount }]
+async function sheetList(spreadsheetId) {
+  const res = await sheetsClient().spreadsheets.get({ spreadsheetId, fields: 'sheets(properties(sheetId,title,gridProperties))' }, REQ);
+  return res.data.sheets.map((s) => ({ sheetId: s.properties.sheetId, title: s.properties.title,
+    rowCount: (s.properties.gridProperties || {}).rowCount, columnCount: (s.properties.gridProperties || {}).columnCount }));
+}
+
+// Ширини колонок A, B і висота рядка 1, які порахував Google (autoResize)
+async function sheetDims(spreadsheetId, title) {
+  const res = await sheetsClient().spreadsheets.get({
+    spreadsheetId, ranges: [a1q(title, 'A1:B1')], fields: 'sheets(properties(title),data(rowMetadata(pixelSize),columnMetadata(pixelSize)))',
+  }, REQ);
+  const sh = res.data.sheets.find((x) => x.properties.title === title);
+  const d = sh && sh.data && sh.data[0];
+  if (!d) throw new Error('нема метаданих вкладки ' + title);
+  return { col1: d.columnMetadata[0].pixelSize, col2: d.columnMetadata[1].pixelSize, row1: d.rowMetadata[0].pixelSize };
+}
+
+// Копія вкладки в іншу таблицю (sheets.copyTo): повертає { sheetId, title } копії
+async function copySheetTo(spreadsheetId, sheetId, destinationSpreadsheetId) {
+  const res = await sheetsClient().spreadsheets.sheets.copyTo({ spreadsheetId, sheetId, requestBody: { destinationSpreadsheetId } }, REQ);
+  return { sheetId: res.data.sheetId, title: res.data.title };
+}
+
+const a1q = (sheet, range) => `'${String(sheet).replace(/'/g, "''")}'!${range}`;
+
+module.exports = { loadCredentials, sheetsClient, getValues, batchUpdate, appendValues, firstSheetTitle, sheetIdOf, sheetMeta, sheetList, sheetDims, copySheetTo, a1q, TIMEOUT_MS };

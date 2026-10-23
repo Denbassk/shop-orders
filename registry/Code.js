@@ -16,7 +16,7 @@ const TARGETS = {
   },
   bakery: {
     title: 'Випічка і кулінарія',
-    id: '1THdB-b4JkXzAKsaVPw8DLrXATlycpFkTgolTmqCOXWo',
+    id: '1a94srF34gowBQ71U1sLDgiDnJgvTEvW32l2gLtJk3FY',
     sheet: 'Адреса ТТ',
     cols: 1,
     addrCol: 0,

@@ -283,6 +283,84 @@ function d10_showDeleteSheets() {
   showDeleteSheets_();
 }
 
+/** Перевірка звітів ВК, що тепер пишуться через Sheets API (18.10.2026).
+ *  Бере рядки ОСТАННЬОГО дня з замовленнями і будує три листи з префіксом
+ *  "ТЕСТ " у таблиці ВК. Справжні звіти не чіпає. Подивитись - і видалити d12. */
+function d11_testBakeryReportsApi() {
+  var cfg = dirCfg_('bakery');
+  var tail = rawTailApi_(cfg, 'H');
+  var rows = tail.rows.map(function (r) {
+    var x = [];
+    for (var i = 0; i < 8; i++) x.push(r[i] == null ? '' : r[i]);
+    x[0] = dmyApi_(x[0]).slice(0, 10); x[1] = timeApi_(x[1]); x[7] = numApi_(x[7]);
+    return x;
+  }).filter(function (r) { return parseDMY_(r[0]) && String(r[5] || '').trim() && r[7] > 0; });
+  var lastDay = rows.length ? rows[rows.length - 1][0] : '';
+  rows = rows.filter(function (r) { return r[0] === lastDay; }).sort(function (a, b) {
+    var x = String(a[2] || '').localeCompare(String(b[2] || ''), 'uk');
+    return x || String(a[5] || '').localeCompare(String(b[5] || ''), 'uk');
+  });
+  console.log('День ' + lastDay + ', рядків ' + rows.length);
+
+  var keep = [BAKERY_ORDERS_SHEET, BAKERY_SUMMARY_SHEET, BAKERY_ROUTE_SHEET];
+  BAKERY_ORDERS_SHEET = 'ТЕСТ ' + keep[0];
+  BAKERY_SUMMARY_SHEET = 'ТЕСТ ' + keep[1];
+  BAKERY_ROUTE_SHEET = 'ТЕСТ ' + keep[2];
+  try {
+    var t0 = Date.now();
+    buildBakeryOrdersSheet_(rows);
+    buildBakerySummarySheet_(rows);
+    buildBakeryRouteSheet_(rows);
+    console.log('OK: три листи "ТЕСТ ..." за ' + (Date.now() - t0) + ' мс');
+  } finally {
+    BAKERY_ORDERS_SHEET = keep[0]; BAKERY_SUMMARY_SHEET = keep[1]; BAKERY_ROUTE_SHEET = keep[2];
+  }
+}
+
+/** ДІАГНОСТИКА: чим перевантажена таблиця ВК. Нічого не змінює.
+ *  Метадані (вони відповідають) - розмір сітки, умовні формати, фільтри,
+ *  захисти, метадані розробника по кожному листу; потім час читання A1 кожного листа. */
+function d13_diagVk() {
+  var id = dirCfg_('bakery').spreadsheetId;
+  var t0 = Date.now();
+  var m = Sheets.Spreadsheets.get(id, { fields:
+    'developerMetadata(metadataId),namedRanges(name),dataSources(dataSourceId),' +
+    'sheets(properties(title,sheetId,hidden,sheetType,gridProperties),conditionalFormats(ranges),' +
+    'protectedRanges(protectedRangeId),filterViews(filterViewId),basicFilter(range),merges,' +
+    'bandedRanges(bandedRangeId),charts(chartId),developerMetadata(metadataId),slicers(slicerId))' });
+  console.log('metadata ' + (Date.now() - t0) + ' мс; devMeta=' + (m.developerMetadata || []).length +
+              ' named=' + (m.namedRanges || []).length + ' dataSources=' + (m.dataSources || []).length);
+  var cells = 0;
+  (m.sheets || []).forEach(function (s) {
+    var p = s.properties, g = p.gridProperties || {};
+    var n = (g.rowCount || 0) * (g.columnCount || 0); cells += n;
+    var cfRanges = (s.conditionalFormats || []).reduce(function (a, c) { return a + (c.ranges || []).length; }, 0);
+    console.log(p.title + (p.hidden ? ' (скр)' : '') + ': ' + g.rowCount + 'x' + g.columnCount + '=' + n +
+      ' | CF ' + (s.conditionalFormats || []).length + ' (діап ' + cfRanges + ')' +
+      ' | protected ' + (s.protectedRanges || []).length + ' | filterViews ' + (s.filterViews || []).length +
+      ' | basicFilter ' + (s.basicFilter ? 'ТАК' : '-') + ' | merges ' + (s.merges || []).length +
+      ' | banded ' + (s.bandedRanges || []).length + ' | charts ' + (s.charts || []).length +
+      ' | devMeta ' + (s.developerMetadata || []).length + ' | slicers ' + (s.slicers || []).length);
+  });
+  console.log('ВСЬОГО клітинок: ' + cells + ' (ліміт 10 000 000)');
+  (m.sheets || []).forEach(function (s) {
+    var t = Date.now();
+    try { apiValues_(id, a1q_(s.properties.title, 'A1')); console.log('читання ' + s.properties.title + ': ' + (Date.now() - t) + ' мс'); }
+    catch (e) { console.log('читання ' + s.properties.title + ': ПОМИЛКА за ' + (Date.now() - t) + ' мс: ' + e.message); }
+  });
+}
+
+/** Прибрати листи "ТЕСТ ..." після d11. */
+function d12_removeBakeryTestSheets() {
+  var id = dirCfg_('bakery').spreadsheetId;
+  var meta = Sheets.Spreadsheets.get(id, { fields: 'sheets.properties(sheetId,title)' });
+  var req = (meta.sheets || []).filter(function (s) {
+    return s.properties.title.indexOf('ТЕСТ ') === 0;
+  }).map(function (s) { return { deleteSheet: { sheetId: s.properties.sheetId } }; });
+  if (req.length) Sheets.Spreadsheets.batchUpdate({ requests: req }, id);
+  console.log('Прибрано листів: ' + req.length);
+}
+
 /** Що зараз стоїть у розкладі. */
 function d07_showTriggers() {
   var all = ScriptApp.getProjectTriggers();

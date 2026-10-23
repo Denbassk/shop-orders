@@ -62,6 +62,7 @@ function breadSignature_(rows) {
 
 // --- Функція для тригера: перезбирає, лише якщо щось змінилось ---
 function refreshBreadReports() {
+  if (dirSick_('bread')) { console.log('таблиця хліба не відповідає - пропускаю'); return; }
   var rows = breadTodayRows_();
   var sig = breadSignature_(rows);
   var props = PropertiesService.getScriptProperties();

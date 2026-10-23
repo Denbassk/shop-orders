@@ -443,6 +443,7 @@ function done(r){
                   (r.removed ? ' (прибрано рядків: ' + r.removed + ')' : '') + '</p>' : '') +
     '<p>' + esc(r.date||'') + ' ' + esc(r.time) + '</p>' +
     (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
+    (r.buffered ? '<p style="color:#7a5200">Таблиця зараз повільна — замовлення збережене і само запишеться в неї за кілька хвилин. Повторно не відправляйте.</p>' : '') +
     '<div style="height:22px"></div>' +
     '<button class="btn gray" onclick="openStore(S.store)">Замовити ще для цієї точки</button>' +
     '<div style="height:12px"></div>' +

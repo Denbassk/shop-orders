@@ -1,0 +1,43 @@
+name: server-tick
+
+# Кожні 10 хвилин: POST /jobs/tick (вигрузка невигружених замовлень у сирі листи + довідправка листів про дозвіл).
+# GitHub cron - лише UTC, тому запускаємо в усьому можливому вікні (04:00-20:59 UTC) і відсікаємо за київським часом
+# (07:00-22:00), - так літній/зимовий час (перехід 25.10) обробляється сам.
+on:
+  schedule:
+    - cron: '*/10 4-20 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: server-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Київський час 07:00-22:00?
+        id: window
+        run: |
+          H=$(TZ=Europe/Kyiv date +%H); M=$(TZ=Europe/Kyiv date +%M)
+          H=$((10#$H)); M=$((10#$M))
+          if [ "$H" -ge 7 ] && { [ "$H" -lt 22 ] || { [ "$H" -eq 22 ] && [ "$M" -lt 10 ]; }; }; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Поза вікном 07:00-22:00 за Києвом ($H:$M) - пропуск"
+          fi
+        shell: bash
+
+      - name: POST /jobs/tick
+        if: github.event_name == 'workflow_dispatch' || steps.window.outputs.run == 'true'
+        env:
+          JOBS_SECRET: ${{ secrets.JOBS_SECRET }}
+          TICK_URL: https://shop-orders.fly.dev/jobs/tick
+        run: |
+          test -n "$JOBS_SECRET" || { echo "::error::секрет JOBS_SECRET не задано"; exit 1; }
+          curl -fsS -X POST -H "x-jobs-secret: $JOBS_SECRET" --max-time 120 --retry 2 --retry-delay 5 "$TICK_URL"
+          echo

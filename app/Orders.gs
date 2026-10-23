@@ -15,6 +15,8 @@ function apiProducts_(payload) {
     throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
 
   if (!dayAllowed_(dirKey, store)) throw new Error(dayOffText_(dirKey, store));
+  // таблиця напрямку висить - асортимент із запасної копії (Products.gs),
+  // замовлення піде в буфер (Buffer.gs)
 
   var products = loadProducts_(dirKey).map(function (p) {
     return {
@@ -67,7 +69,15 @@ function orderedTodayCached_(dirKey, store) {
     var map = loadTodayStatus_()[dirKey];
     if (map) return !!map[statusKey_(dirKey, store)];
   } catch (e) {}
-  return isOrderedToday_(dirKey, store);
+  // таблиця висить - судимо за позначкою "дата|orderId", яку ставить відправка
+  if (dirSick_(dirKey)) return markedToday_(dirKey, store);
+  try { return isOrderedToday_(dirKey, store); }
+  catch (e) { if (dirSick_(dirKey)) return markedToday_(dirKey, store); throw e; }
+}
+
+function markedToday_(dirKey, store) {
+  var v = PropertiesService.getScriptProperties().getProperty(orderMarkKey_(dirKey, store)) || '';
+  return v.indexOf(formatDateDMY_(new Date())) === 0;
 }
 
 function isOrderedToday_(dirKey, store) {
@@ -75,19 +85,12 @@ function isOrderedToday_(dirKey, store) {
   var target = statusKey_(dirKey, store);
   var today = formatDateDMY_(new Date());
 
-  try {
-    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-    if (!sh || sh.getLastRow() < 2) return false;
-    var last = sh.getLastRow();
-    var take = Math.min(last - 1, RAW_TAIL_ROWS);
-    var rows = sh.getRange(last - take + 1, 1, take, 3).getValues();
-    for (var i = rows.length - 1; i >= 0; i--) {
-      var d = (rows[i][0] instanceof Date) ? formatDateDMY_(rows[i][0]) : String(rows[i][0]).trim();
-      if (d !== today) continue;
-      if (addrKey_(String(rows[i][2]).trim()) === target) return true;
-    }
-  } catch (e) {
-    console.error('isOrderedToday ' + dirKey + ': ' + e.message);
+  // Sheets API під запобіжником. Помилку НЕ ковтаємо: "не змогли перевірити"
+  // не означає "не замовляли" - інакше пропустимо дубль.
+  var rows = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'C'); }).rows;
+  for (var i = rows.length - 1; i >= 0; i--) {
+    if (dmyApi_(rows[i][0]) !== today) continue;
+    if (addrKey_(cellStr_(rows[i][2])) === target) return true;
   }
   return false;
 }
@@ -117,7 +120,8 @@ function seenOrder_(orderId) {
 // до властивостей, без жодного читання таблиці.
 // ============================================================
 var USE_SHEETS_API = true;     // false - повернутись до старого шляху з замком
-var SUBMIT_WAIT_MS = 75000;    // скільки чекати свою чергу на коротку перевірку
+var SUBMIT_WAIT_MS = 30000;    // скільки чекати свою чергу на коротку перевірку
+                               // (було 75 с: кожен, хто чекає, займає слот виконання)
 var DIR_LOCK_TTL_MS = 45000;   // для archiveRawSheets, див. нижче
 
 // Одне замовлення = один виклик append, скільки б у ньому не було позицій.
@@ -319,20 +323,18 @@ function deleteTodayRows_(cfg, dirKey, store) {
 // Те саме, але за ключем адреси (addrKey_) - так видаляє лист "Видалення
 // замовлення" (DeleteSheet.gs), де є лише адреса з сирого листа.
 function deleteTodayRowsByKey_(cfg, dirKey, target) {
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (!sh || sh.getLastRow() < 2) return 0;
+  // Sheets API: викликається під ScriptLock, тож зависле SpreadsheetApp тут
+  // тримало б замок для всіх напрямків
+  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'C'); });
+  if (!tail.rows.length) return 0;
 
   var today = formatDateDMY_(new Date());
-  var last = sh.getLastRow();
-  var take = Math.min(last - 1, RAW_TAIL_ROWS);
-  var from = last - take + 1;
-  var rows = sh.getRange(from, 1, take, 3).getValues();
+  var from = tail.from, rows = tail.rows;
 
   var hits = [];
   for (var i = 0; i < rows.length; i++) {
-    var d = (rows[i][0] instanceof Date) ? formatDateDMY_(rows[i][0]) : String(rows[i][0]).trim();
-    if (d !== today) continue;
-    if (addrKey_(String(rows[i][2]).trim()) !== target) continue;
+    if (dmyApi_(rows[i][0]) !== today) continue;
+    if (addrKey_(cellStr_(rows[i][2])) !== target) continue;
     hits.push(from + i);
   }
   if (!hits.length) return 0;
@@ -346,18 +348,14 @@ function deleteTodayRowsByKey_(cfg, dirKey, target) {
   ranges.push([start, prev]);
   ranges.reverse();
 
-  if (typeof Sheets !== 'undefined') {
-    Sheets.Spreadsheets.batchUpdate({
-      requests: ranges.map(function (r) {
-        return { deleteDimension: { range: {
-          sheetId: sh.getSheetId(), dimension: 'ROWS',
-          startIndex: r[0] - 1, endIndex: r[1] } } };
-      })
-    }, cfg.spreadsheetId);
-  } else {
-    ranges.forEach(function (r) { sh.deleteRows(r[0], r[1] - r[0] + 1); });
-    SpreadsheetApp.flush();
-  }
+  var sid = sheetIdOf_(cfg.spreadsheetId, rawSheetName_(cfg));
+  Sheets.Spreadsheets.batchUpdate({
+    requests: ranges.map(function (r) {
+      return { deleteDimension: { range: {
+        sheetId: sid, dimension: 'ROWS',
+        startIndex: r[0] - 1, endIndex: r[1] } } };
+    })
+  }, cfg.spreadsheetId);
   return hits.length;
 }
 
@@ -368,6 +366,9 @@ function apiSubmitOrder_(payload) {
   var items = payload.items || [];
   var orderId = String(payload.orderId || '').slice(0, 60);
 
+  // спершу буфер, потім oid_: bufDrain ставить oid_ ДО того, як прибрати буфер
+  var buf = bufHas_(orderId);
+  if (buf) return bufResult_(buf);
   var prev = seenOrder_(orderId);
   if (prev) { prev.duplicate = true; return prev; }
 
@@ -380,6 +381,10 @@ function apiSubmitOrder_(payload) {
 
   if (!dayAllowed_(dirKey, store)) throw new Error(dayOffText_(dirKey, store));
 
+  // таблиця напрямку не відповідає - замовлення йде в буфер (Buffer.gs),
+  // а не висить 6 хвилин і не губиться
+  var sick = dirSick_(dirKey);
+
   // Дозвіл закупниці = зміни. Знімає ТРИ замки: дедлайн, повторне
   // замовлення на сьогодні і мінімальну суму.
   var approvedNow = !!cfg.lateRequest &&
@@ -388,6 +393,8 @@ function apiSubmitOrder_(payload) {
   // 'replace' - замовлення переписується з нуля: старі рядки за сьогодні
   // видаляються. Так прибирають зайву позицію або міняють кількість.
   var replaceAll = approvedNow && String(payload.mode || '') === 'replace';
+  // заміна видаляє рядки в листі - без живої таблиці її не зробити
+  if (replaceAll && sick) assertDirHealthy_(dirKey);
 
   if (deadlinePassed_(dirKey, store.id)) {
     throw new Error(cfg.lateRequest
@@ -433,8 +440,30 @@ function apiSubmitOrder_(payload) {
 
   // Швидка відмова ПОЗА замком. Читання сирого листа буває лише один раз
   // на добу на точку - поки позначки ще немає.
-  var already = (props.getProperty(markKey) === todayStr);
-  if (!already) already = isOrderedToday_(dirKey, store);
+  // Позначка = "дата|orderId". Повтор ТОГО САМОГО замовлення (той самий orderId,
+  // телефон його зберігає) не блокується: 18.10.2026 запит, убитий Google на
+  // 360 с, лишав позначку, і продавець уже не міг відправити ще раз.
+  var mine = orderId ? todayStr + '|' + orderId : '';
+  var markBlocks = function () {
+    var v = props.getProperty(markKey) || '';
+    return v.indexOf(todayStr) === 0 && v !== mine;
+  };
+  var retry = !!mine && props.getProperty(markKey) === mine;
+  var already = markBlocks();
+  if (!already && !sick) {
+    var inSheet;
+    try { inSheet = isOrderedToday_(dirKey, store); }
+    catch (e) { if (!dirSick_(dirKey)) throw e; sick = true; inSheet = false; }
+    if (inSheet && retry && !approvedNow) {
+      // перша спроба записалась, але відповідь до телефона не дійшла
+      return { ok: true, duplicate: true, positions: lines.length,
+               total: Math.round(totalSupplier * cfg.markup * 100) / 100,
+               time: formatTime_(new Date()), date: todayStr,
+               direction: cfg.title, store: store.label, test: TEST_MODE };
+    }
+    already = inSheet;
+  }
+  if (sick && replaceAll) assertDirHealthy_(dirKey);
   if (already && !approvedNow)
     throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
       (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
@@ -446,14 +475,16 @@ function apiSubmitOrder_(payload) {
   if (!g.tryLock(SUBMIT_WAIT_MS))
     throw new Error('BUSY: сервер зайнятий, спробуйте ще раз');
   try {
+    var bufAgain = bufHas_(orderId);
+    if (bufAgain) return bufResult_(bufAgain);
     var again = seenOrder_(orderId);
     if (again) { again.duplicate = true; return again; }
 
     if (!approvedNow) {
-      if (props.getProperty(markKey) === todayStr)
+      if (markBlocks())
         throw new Error('Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
           (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : ''));
-      props.setProperty(markKey, todayStr);
+      props.setProperty(markKey, mine || todayStr);
       claimed = true;
     }
   } finally {
@@ -474,10 +505,12 @@ function apiSubmitOrder_(payload) {
 
   var removed = 0;
   if (replaceAll) {
-    var gd = LockService.getScriptLock();
-    if (!gd.tryLock(SUBMIT_WAIT_MS)) throw new Error('BUSY: сервер зайнятий');
+    // замок напрямку - той самий, що в пульті, на листі "Видалення" і в архіві:
+    // видалення за номерами рядків не повинні йти одночасно
+    var dtok = dirLockAcquire_(dirKey, SUBMIT_WAIT_MS);
+    if (!dtok) throw new Error('BUSY: сервер зайнятий');
     try { removed = deleteTodayRows_(cfg, dirKey, store); }
-    finally { try { gd.releaseLock(); } catch (e) {} }
+    finally { dirLockRelease_(dirKey, dtok); }
   }
 
   var totalShown = Math.round(totalSupplier * cfg.markup * 100) / 100;
@@ -491,15 +524,40 @@ function apiSubmitOrder_(payload) {
   // orderId запамʼятовується ОДРАЗУ після підтвердженого запису (колбек),
   // а не в кінці виклику: якщо щось обірветься пізніше, повтор з телефона
   // отримає "дублі не створені" замість другого запису.
+  // Запис - під запобіжником: якщо append висне, наступні продавці бачать
+  // "таблиця не відповідає" і йдуть у буфер, а не стають за ним у чергу.
+  var bufOid = orderId || ('srv-' + Utilities.getUuid());
+  if (sick) {
+    var bres = bufAccept_(bufOid, dirKey, store, values, result, approvedNow, 'таблиця не відповідала');
+    CacheService.getScriptCache().remove('status_v4');
+    return bres;
+  }
+  APPEND_STATE_ = { confirmed: false, notified: false, onWritten: null };
   try {
-    appendRows_(cfg, dirKey, values, function () { rememberOrder_(orderId, result); });
+    guardedDir_(dirKey, function () {
+      appendRows_(cfg, dirKey, values, function () { rememberOrder_(orderId, result); });
+    });
   } catch (e) {
-    if (claimed) { try { props.deleteProperty(markKey); } catch (e2) {} }
-    throw e;
+    // Не підтверджено - у буфер. bufDrain перед записом дивиться, чи рядків уже
+    // немає в листі (той самий час), тож навіть "можливо записалось" не дасть дубля.
+    if (!APPEND_STATE_.notified && !replaceAll) {
+      try {
+        var b2 = bufAccept_(bufOid, dirKey, store, values, result, approvedNow,
+                            'запис не вдався: ' + e.message);
+        CacheService.getScriptCache().remove('status_v4');
+        return b2;
+      } catch (e3) { console.error('буфер не прийняв: ' + e3.message); }
+    }
+    if (APPEND_STATE_.notified) {
+      console.error('помилка після запису (замовлення в листі): ' + e.message);
+    } else {
+      if (claimed) { try { props.deleteProperty(markKey); } catch (e2) {} }
+      throw e;
+    }
   }
   if (!APPEND_STATE_.notified) rememberOrder_(orderId, result);
 
-  CacheService.getScriptCache().remove('status_v3');
+  CacheService.getScriptCache().remove('status_v4');
   if (dirKey === 'nbhz') {
     try { props.setProperty('nbhz_export_dirty', todayStr); } catch (e) {}
   }

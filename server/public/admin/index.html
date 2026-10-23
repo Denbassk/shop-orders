@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Пульт Фемелі Маркет</title>
+<base target="_top">
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:#F1F2F4;color:#16181D;font-size:16px;line-height:1.45;
+  font-family:'Golos Text',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2{margin:0;letter-spacing:-.015em}
+button{font-family:inherit;font-size:inherit;color:inherit}
+
+/* --- шапка --- */
+.hdr{position:sticky;top:0;z-index:20;background:#16181D;color:#fff;
+  padding:14px 16px 18px;display:flex;align-items:center;gap:12px}
+.hdr h1{font-size:23px;font-weight:800;line-height:1.2}
+.hdr .sub{font-size:13px;color:#A6ACB6;margin-top:5px}
+.icobtn{flex:none;width:46px;height:46px;border:0;border-radius:15px;background:#2C2F36;color:#fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.icobtn:active{background:#3A3E47}
+
+/* --- каркас --- */
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 120px}
+.grid{display:flex;flex-direction:column;gap:26px}
+.sec{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:#7A828E;margin:0 0 12px 4px}
+.card{background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(22,24,29,.09);overflow:hidden}
+.card + .card{margin-top:12px}
+
+/* --- строка списка --- */
+.item{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;
+  padding:15px 16px;border:0;background:#fff;text-align:left;cursor:pointer;position:relative}
+.item + .item::before{content:'';position:absolute;left:16px;right:0;top:0;height:1px;background:#EEF0F3}
+.item:active{background:#F7F8FA}
+.t{display:block;font-size:16px;font-weight:600;line-height:1.3}
+.s{display:block;font-size:13.5px;color:#7A828E;margin-top:6px;line-height:1.4}
+.grow{flex-grow:1;min-width:0}
+.chev{flex:none;color:#C2C7CE}
+.right{flex:none;font-size:15px;font-weight:600;text-align:right}
+
+/* --- направление --- */
+.dir{display:block;width:100%;border:0;background:#fff;border-radius:20px;padding:16px;
+  box-shadow:0 1px 3px rgba(22,24,29,.09);cursor:pointer;text-align:left}
+.dir + .dir{margin-top:12px}
+.dir:active{background:#F7F8FA}
+.dirtop{display:flex;align-items:center;gap:14px}
+.sq{flex:none;width:46px;height:46px;border-radius:14px;color:#fff;font-size:19px;font-weight:800;
+  display:flex;align-items:center;justify-content:center}
+.bar{flex-grow:1;height:8px;border-radius:5px;background:#EDEFF2;overflow:hidden;display:block}
+.bar i{display:block;height:8px;border-radius:5px}
+
+.pill{flex:none;font-size:12px;font-weight:600;border-radius:10px;padding:7px 11px;white-space:nowrap}
+.pill.open{color:#166B3A;background:#E6F4EC}
+.pill.closed{color:#8E1418;background:#FDECEC}
+.pill.warn{color:#6B4A00;background:#FFF3DC}
+.pill.off{color:#4A5058;background:#E7E9ED}
+
+/* --- кнопки --- */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:56px;
+  border:0;border-radius:16px;background:#E11B22;color:#fff;font-size:17px;font-weight:600;cursor:pointer}
+.btn:active{background:#C4161C}
+.btn.dark{background:#16181D}
+.btn.ghost{background:#fff;color:#16181D;box-shadow:0 1px 3px rgba(22,24,29,.09);height:52px;font-weight:600}
+.btn[disabled]{background:#C9CCD2;cursor:default}
+.btn + .btn{margin-top:12px}
+
+/* --- поля и чипы --- */
+.chips{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px}
+.chip{border:1px solid #DCE0E5;border-radius:24px;padding:12px 17px;font-size:14.5px;font-weight:500;
+  background:#fff;cursor:pointer}
+.chip.on{background:#16181D;color:#fff;border-color:#16181D;font-weight:600}
+input[type=search],input[type=text],input[type=tel]{width:100%;padding:16px;border:1px solid #DCE0E5;
+  border-radius:16px;background:#fff;font-family:inherit;font-size:16px;color:#16181D;outline:none}
+input:focus{border-color:#16181D}
+
+/* --- плашки --- */
+.note,.bad,.ok{border-radius:18px;padding:16px;font-size:14.5px;line-height:1.5}
+.note{background:#FFF7E6;border:1px solid #F0D49A;color:#6B4A00}
+.bad{background:#FDF2F2;border:1px solid #F3C3C5;color:#8E1418}
+.ok{background:#E6F4EC;border:1px solid #B5DCC4;color:#14602F}
+.info{background:#fff;border-radius:20px;padding:18px 16px;font-size:15px;line-height:1.55;
+  box-shadow:0 1px 3px rgba(22,24,29,.09)}
+.spin{padding:56px 16px;text-align:center;color:#7A828E;font-size:15px}
+
+/* --- нижние вкладки --- */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid #E4E6EA;
+  padding:9px 6px calc(12px + env(safe-area-inset-bottom));display:flex;max-width:560px;margin:0 auto}
+.tab{flex-grow:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:6px 0;color:#7A828E;font-size:11.5px;font-weight:500;cursor:pointer}
+.tab.on{color:#E11B22;font-weight:600}
+
+/* --- подтверждение --- */
+.mask{position:fixed;inset:0;z-index:50;background:rgba(12,14,18,.62);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;background:#fff;border-radius:28px 28px 0 0;
+  padding:12px 20px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(12,14,18,.3)}
+.grip{width:46px;height:5px;border-radius:3px;background:#DCE0E5;margin:0 auto 18px}
+.sheet h2{font-size:22px;font-weight:800;margin-bottom:8px}
+.sheet .sub{font-size:14.5px;color:#5A626D;margin-bottom:18px}
+.what{background:#F6F7F9;border-radius:18px;padding:16px;margin-bottom:20px}
+.what div{display:flex;gap:10px;font-size:15px;line-height:1.45}
+.what div + div{margin-top:12px;padding-top:12px;border-top:1px solid #E9EBEF}
+
+label.pick{display:flex;align-items:center;gap:14px;padding:15px 16px;cursor:pointer;position:relative}
+label.pick + label.pick::before{content:'';position:absolute;left:16px;right:0;top:0;height:1px;background:#EEF0F3}
+label.pick input{width:24px;height:24px;accent-color:#E11B22;flex:none}
+
+/* --- вход --- */
+.login{max-width:400px;margin:0 auto;padding:18vh 24px}
+.login h1{font-size:30px;font-weight:800;margin-bottom:6px}
+.pin{letter-spacing:.4em;text-align:center;font-size:26px;font-weight:600}
+</style>
+<script>try{var t=localStorage.getItem('buyer_theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='light';}</script>
+</head>
+<body>
+
+<div id="login" class="login">
+  <h1>Пульт</h1>
+  <div style="color:#5A626D;font-size:15px;margin-bottom:28px">Фемели Маркет · управление заказами</div>
+  <input id="pin" class="pin" type="tel" inputmode="numeric" autocomplete="off" placeholder="····">
+  <div id="pinerr" style="color:#B3261E;font-size:14px;margin:12px 4px 0;min-height:20px"></div>
+  <button class="btn" onclick="doLogin()">Войти</button>
+</div>
+
+<div id="app" style="display:none">
+  <div class="hdr">
+    <button id="back" class="icobtn" style="display:none" onclick="goBack()" aria-label="Назад">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <div class="grow">
+      <h1 id="title">Сегодня</h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <button class="icobtn" onclick="load()" aria-label="Обновить">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+  </div>
+
+  <div class="wrap"><div class="grid" id="view"><div class="spin">Загрузка…</div></div></div>
+
+  <div class="tabs">
+    <button class="tab on" id="t-today" onclick="tabGo('today')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>Сегодня</button>
+    <button class="tab" id="t-stores" onclick="tabGo('stores')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1 11H5z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>Точки</button>
+    <button class="tab" id="t-restore" onclick="tabGo('health')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>Здоровье</button>
+    <button class="tab" id="t-log" onclick="tabGo('log')">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>Журнал</button>
+  </div>
+</div>
+
+<div id="modal"></div>
+
+<style>
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kpis div{background:#fff;border-radius:18px;padding:14px 16px;box-shadow:0 1px 3px rgba(22,24,29,.09)}
+.kpis i{display:block;font-style:normal;font-size:12.5px;color:#7A828E;font-weight:500}
+.kpis b{display:block;font-size:22px;font-weight:800;margin-top:4px;letter-spacing:-.01em}
+.wodoc{background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(22,24,29,.09);overflow:hidden}
+.wodoc + .wodoc{margin-top:12px}
+.wodoc .h{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;background:#FAFBFC;border-bottom:1px solid #EEF0F3}
+.wodoc .r{display:flex;gap:12px;padding:9px 16px;font-size:14.5px}
+.wodoc .r .g{flex-grow:1;min-width:0}
+.wodoc .r .q{color:#7A828E;white-space:nowrap}
+.minibar{display:block;height:6px;border-radius:4px;background:#EDEFF2;margin-top:8px;overflow:hidden}
+.minibar i{display:block;height:6px;border-radius:4px;background:#AD1457}
+</style>
+<script>
+// ================= СПИСАНИЯ (WriteOff.gs) =================
+// Отдельный пункт на главной: аналитика по всем юрлицам, таблицы, действия.
+var WO_C = '#AD1457';
+var WA = { period: 'month', ent: '' };
+var WO_PERIODS = [['today', 'Сегодня'], ['yesterday', 'Вчера'], ['week', '7 дней'],
+                  ['month', 'Этот месяц'], ['prev', 'Прошлый месяц']];
+
+function woMoney(n) {
+  var s = (Math.round((n || 0) * 100) / 100).toFixed(2).replace(/\.00$/, '');
+  return s.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+function woLink(href, title, sub) {
+  return '<a class="item" href="' + attr(href) + '" target="_blank" rel="noopener" ' +
+    'style="text-decoration:none;color:inherit"><span class="grow"><span class="t">' + esc(title) + '</span>' +
+    (sub ? '<span class="s">' + esc(sub) + '</span>' : '') + '</span>' + CHEV + '</a>';
+}
+function woPill(d) {
+  return d.openedAll ? '<span class="pill warn">Открыто всем</span>'
+       : (d.closed ? '<span class="pill closed">Закрыто</span>' : '<span class="pill open">Открыто</span>');
+}
+
+// --- плашка на главной ---
+function woBriefSlot() {
+  return section('Списания', '<div id="wobrief"><button class="dir" onclick="go(\'wo\',{})">' +
+    woBriefTop('выпечка и кулинария', '') + '<span class="s" style="margin-top:14px">Загрузка…</span></button></div>');
+}
+function woBriefTop(sub, pill) {
+  return '<span class="dirtop"><span class="sq" style="background:' + WO_C + '">С</span>' +
+    '<span class="grow"><span class="t" style="font-size:17px;font-weight:700;display:block">Списания</span>' +
+    '<span class="s" style="display:block">' + sub + '</span></span>' + pill + '</span>';
+}
+function woBriefFill() {
+  call('woBrief').then(function (d) {
+    var el = document.getElementById('wobrief');
+    if (!el) return;
+    var body = !d.books
+      ? '<span class="s" style="margin-top:14px;color:#8E1418">Таблицы списаний ещё не созданы — нажмите, чтобы создать</span>'
+      : '<span style="display:flex;gap:12px;margin-top:14px">' +
+          '<span class="grow"><span class="s" style="margin:0">Сегодня подано</span>' +
+          '<span style="font-size:17px;font-weight:700">' + d.todayDocs + ' · ' + woMoney(d.todaySum) + ' грн</span></span>' +
+          '<span class="grow"><span class="s" style="margin:0">За месяц</span>' +
+          '<span style="font-size:17px;font-weight:700">' + woMoney(d.monthSum) + ' грн</span></span></span>';
+    el.innerHTML = '<button class="dir" onclick="go(\'wo\',{})">' +
+      woBriefTop('выпечка и кулинария · до ' + esc(d.deadline) +
+                 (d.todayStores ? ' · точек сегодня ' + d.todayStores : ''), woPill(d)) + body + '</button>';
+  }, function () {});
+}
+
+// --- экран "Списания" ---
+function woChips() {
+  return '<div class="chips">' + WO_PERIODS.map(function (p) {
+    return '<button class="chip' + (WA.period === p[0] ? ' on' : '') + '" onclick="woSetPeriod(\'' + p[0] + '\')">' +
+      esc(p[1]) + '</button>';
+  }).join('') + '</div>';
+}
+function woSetPeriod(p) { WA.period = p; load(); }
+function woSetEnt(e) { WA.ent = e; load(); }
+
+function loadWo() {
+  setHead('Списания', 'выпечка и кулинария');
+  view(woChips() + '<div id="wores" class="grid"><div class="spin">Считаю…</div></div>');
+  call('woStats', { period: WA.period, edrpou: WA.ent }).then(function (d) {
+    var el = document.getElementById('wores');
+    if (!el || S.screen !== 'wo') return;
+    setHead('Списания', d.periodTitle + ': ' + (d.from === d.to ? d.from : d.from + ' — ' + d.to));
+    var h = '';
+
+    if (d.books.length > 1) {
+      h += '<div class="chips" style="margin-bottom:0"><button class="chip' + (WA.ent ? '' : ' on') +
+        '" onclick="woSetEnt(\'\')">Все юрлица</button>' + d.books.map(function (b) {
+          return '<button class="chip' + (WA.ent === b.edrpou ? ' on' : '') + '" onclick="woSetEnt(\'' +
+            b.edrpou + '\')">' + esc(b.name) + '</button>';
+        }).join('') + '</div>';
+    }
+
+    if (!d.books.length)
+      h += '<div class="bad">Таблиц списаний ещё нет — продавцы не смогут подать списание. ' +
+           'Нажмите «Создать таблицы» внизу.</div>';
+    d.missing.forEach(function (m) {
+      h += '<div class="bad">Нет таблицы для <b>ЕГРПОУ ' + esc(m.edrpou) + '</b> — ' + m.stores.length +
+        ' точек не смогут подать списание: ' + esc(m.stores.slice(0, 6).join(', ')) +
+        (m.stores.length > 6 ? '…' : '') + '. Нажмите «Создать таблицы» внизу.</div>';
+    });
+    if (!d.costCol)
+      h += '<div class="note">Сумма считается по <b>продажной цене</b>: в листе «Ассортимент» выпечки нет ' +
+           'колонки «Себестоимость». Запустите w04_addCostColumn() или добавьте колонку с таким заголовком — новые списания сразу пойдут по себестоимости.</div>';
+    else if (d.noCost && d.noCost.length)
+      h += '<div class="note">Продавцам доступно <b>' + d.prodCount + '</b> товаров — только с заполненной себестоимостью. ' +
+           'Без себестоимости (их не видно): ' + esc(d.noCost.slice(0, 12).join(', ')) +
+           (d.noCost.length > 12 ? ' и ещё ' + (d.noCost.length - 12) : '') +
+           '. Впишите себестоимость в «Ассортимент» — появятся у продавцов в течение 10 минут.</div>';
+
+    h += '<div class="kpis">' +
+      '<div><i>Сумма</i><b>' + woMoney(d.total) + ' грн</b></div>' +
+      '<div><i>Количество</i><b>' + d.qty + ' шт</b></div>' +
+      '<div><i>Подач</i><b>' + d.docs + '</b></div>' +
+      '<div><i>Точек списывали</i><b>' + d.storesCount + ' из ' + d.storesAll + '</b></div></div>';
+
+    h += '<div class="info" style="display:flex;align-items:center;gap:12px"><span class="grow">Приём списаний ' +
+      (d.openedAll ? 'открыт <b>до конца дня</b>' : (d.closed ? '<b>закрыт</b> до завтра' : 'открыт')) +
+      ' · дедлайн ' + esc(d.deadline) + ' ежедневно<br><span style="color:#7A828E;font-size:13.5px">' +
+      'Продавец удаляет своё списание до ' + esc(d.deadline) + ' в день подачи. В архив — старше ' +
+      d.keepDays + ' дней.</span></span>' + woPill(d) + '</div>';
+
+    if (d.books.length) {
+      var maxE = Math.max.apply(null, d.books.map(function (b) { return b.sum; }).concat([1]));
+      h += section('По юрлицам', '<div class="card">' + d.books.map(function (b) {
+        return '<div class="item"><span class="grow"><span class="t">' + esc(b.name) + '</span>' +
+          '<span class="s">ЕГРПОУ ' + esc(b.edrpou) + ' · точек сейчас ' + b.storesNow + ' · списывали ' + b.active + ' · ' + b.qty + ' шт</span>' +
+          '<span class="minibar"><i style="width:' + Math.round(b.sum / maxE * 100) + '%"></i></span></span>' +
+          '<span class="right">' + woMoney(b.sum) + ' грн</span></div>';
+      }).join('') + '</div>');
+    }
+
+    if (d.stores.length) {
+      var maxS = d.stores[0].sum || 1;
+      h += section('По точкам (' + d.stores.length + ')', '<div class="card">' + d.stores.map(function (s) {
+        var moved = s.nowEdrpou && s.nowEdrpou !== s.edrpou;
+        var sub = (s.code ? '№ ' + esc(s.code) + ' · ' : '') + 'подач ' + s.docs + ' · ' + s.qty + ' шт' +
+          ' · ЕГРПОУ ' + esc(s.edrpou) +
+          (moved ? ' <b style="color:#6B4A00">→ теперь ' + esc(s.nowEdrpou) + '</b>' : '') +
+          '<span class="minibar"><i style="width:' + Math.round(s.sum / maxS * 100) + '%"></i></span>';
+        return item(s.label, sub, woMoney(s.sum) + ' грн', 'go(\'wostore\',{store:\'' + attr(s.id) + '\'})', s.ua);
+      }).join('') + '</div>');
+    } else {
+      h += '<div class="info">За этот период списаний нет.</div>';
+    }
+
+    if (d.products.length) {
+      h += section('Топ товаров', '<div class="card">' + d.products.map(function (p) {
+        return '<div class="item" style="min-height:56px"><span class="grow"><span class="t" style="font-size:15px">' +
+          esc(p.name) + '</span><span class="s">' + esc(p.cat) + ' · ' + p.qty + ' шт</span></span>' +
+          '<span class="right">' + woMoney(p.sum) + ' грн</span></div>';
+      }).join('') + '</div>');
+    }
+
+    if (d.days.length > 1) {
+      var maxD = Math.max.apply(null, d.days.map(function (x) { return x.sum; }).concat([1]));
+      h += section('По дням списания', '<div class="card">' + d.days.map(function (x) {
+        return '<div class="item" style="min-height:52px;padding:12px 16px"><span style="flex:none;width:92px;font-size:14.5px;font-weight:600">' +
+          esc(x.date) + '</span><span class="bar"><i style="width:' + Math.round(x.sum / maxD * 100) +
+          '%;background:' + WO_C + '"></i></span><span class="right" style="min-width:92px">' +
+          woMoney(x.sum) + ' грн</span></div>';
+      }).join('') + '</div>');
+    }
+
+    if (d.silent.length) {
+      h += section('Не списывали за период (' + d.silent.length + ')',
+        '<div class="info" style="font-size:14px;color:#5A626D">' + esc(d.silent.join(' · ')) + '</div>');
+    }
+
+    var files = '';
+    d.books.forEach(function (b) {
+      files += woLink(b.url, 'Таблица ' + b.name, 'Google Таблица: «Списания», «Архив», «Сводная»');
+      if (b.xlsx) files += woLink(b.xlsx, 'Excel ' + b.name, 'только лист «Списания»');
+    });
+    if (files) h += section('Таблицы юрлиц', '<div class="card">' + files + '</div>');
+
+    h += section('Управление', '<div class="card">' +
+      (d.openedAll
+        ? item('Вернуть обычный режим', 'приём снова закрывается в ' + esc(d.deadline), '', 'askWoOpen(false)')
+        : item('Открыть приём до конца дня', 'сегодня дедлайн ' + esc(d.deadline) + ' не действует', '', 'askWoOpen(true)')) +
+      item('Перенести старое в архив', 'строки старше ' + d.keepDays + ' дней → лист «Архив» (делается и сам ночью)', '', 'askWoArchive()') +
+      item('Создать недостающие таблицы', 'для каждого ЕГРПОУ из колонки T Довідника', '', 'askWoSetup()') +
+      '</div>');
+
+    el.innerHTML = h;
+  }).catch(fail);
+}
+
+// --- списания одной точки ---
+function loadWoStore(id) {
+  setHead('Списания точки', '');
+  view(woChips() + '<div id="wores" class="grid"><div class="spin">Загрузка…</div></div>');
+  call('woStore', { storeId: id, period: WA.period }).then(function (d) {
+    var el = document.getElementById('wores');
+    if (!el || S.screen !== 'wostore') return;
+    S.woStore = d;
+    setHead(d.label + (d.ua ? ' · ЮА' : ''), 'списания · ' + d.periodTitle);
+    var h = '<div class="kpis"><div><i>Сумма</i><b>' + woMoney(d.total) + ' грн</b></div>' +
+      '<div><i>Подач</i><b>' + d.docs.length + '</b></div></div>';
+    h += '<div class="info">' + (d.code ? '№ ' + esc(d.code) + ' · ' : '') +
+      (d.edrpou ? 'сейчас пишет в <b>ЕГРПОУ ' + esc(d.edrpou) + '</b> (колонка T Довідника)' : 'точки нет среди активных') +
+      '<br><span style="color:#7A828E;font-size:13.5px">' + esc(d.from) + ' — ' + esc(d.to) + '</span></div>';
+    if (d.bookUrl) h += '<div class="card">' + woLink(d.bookUrl, 'Открыть таблицу юрлица', 'Google Таблица') + '</div>';
+    if (!d.docs.length) h += '<div class="info">За этот период списаний нет.</div>';
+    d.docs.forEach(function (doc, i) {
+      h += '<div class="wodoc"><div class="h"><span class="grow"><span class="t">Списание за ' + esc(doc.date) + '</span>' +
+        '<span class="s">подано ' + esc(doc.at) + (doc.seller ? ' · продавец: <b>' + esc(doc.seller) + '</b>' : '') +
+        ' · ' + doc.items.length + ' поз. · ЕГРПОУ ' + esc(doc.edrpou) +
+        (doc.sheet === 'Архив' ? ' · в архиве' : '') + '</span></span>' +
+        '<span class="right">' + woMoney(doc.total) + ' грн</span></div>' +
+        doc.items.map(function (it) {
+          return '<div class="r"><span class="g">' + esc(it.name) + '</span><span class="q">' + it.qty +
+            ' × ' + woMoney(it.price) + ' = ' + woMoney(it.sum) + '</span></div>';
+        }).join('') +
+        '<div style="padding:8px 16px 14px"><button class="btn ghost" style="height:46px;color:#B3261E" ' +
+        'onclick="askWoDelete(' + i + ')">Удалить это списание</button></div></div>';
+    });
+    el.innerHTML = h;
+  }).catch(fail);
+}
+
+// --- действия ---
+function askWoDelete(i) {
+  var d = S.woStore, doc = d && d.docs[i];
+  if (!doc) return;
+  confirmSheet({
+    title: 'Удалить списание?', sub: d.label + ' · за ' + doc.date,
+    what: [doc.items.length + ' позиций на ' + woMoney(doc.total) + ' грн удалятся из таблицы ЕГРПОУ ' + doc.edrpou,
+           'Сумма больше не пойдёт в счёт зарплаты продавцов',
+           'Действие попадёт в журнал'],
+    yes: 'Да, удалить',
+    run: function () { return call('woDelete', { docId: doc.id }); },
+    done: function (r) { toast('Удалено строк: ' + r.removed); apply('wostore', { store: d.id }); }
+  });
+}
+function askWoOpen(on) {
+  confirmSheet({
+    title: on ? 'Открыть приём списаний?' : 'Вернуть обычный режим?', sub: 'Списания',
+    what: on ? ['До конца сегодняшнего дня все точки смогут подать и удалить своё списание',
+                'Завтра снова действует дедлайн']
+             : ['Приём снова закрывается в дедлайн', 'Поданные списания остаются на месте'],
+    yes: on ? 'Открыть' : 'Вернуть',
+    run: function () { return call('woOpen', { on: on }); },
+    done: function () { toast(on ? 'Открыто до конца дня' : 'Обычный режим'); apply('wo', {}); }
+  });
+}
+function askWoArchive() {
+  confirmSheet({
+    title: 'Перенести в архив?', sub: 'Списания',
+    what: ['Строки, где дата списания старше месяца, переедут на лист «Архив» той же таблицы',
+           'Ничего не удаляется — аналитика за прошлые месяцы их видит',
+           'Продавцы перестанут видеть их в «Мої списання»'],
+    yes: 'Перенести',
+    run: function () { return call('woArchive'); },
+    done: function (r) { toast('Перенесено строк: ' + r.moved); apply('wo', {}); }
+  });
+}
+function askWoSetup() {
+  confirmSheet({
+    title: 'Создать таблицы?', sub: 'Списания',
+    what: ['Для каждого ЕГРПОУ из колонки T Довідника будет своя Google Таблица',
+           'Уже созданные таблицы не трогаются, только оформление',
+           'Таблицы появятся на Google Диске владельца скрипта'],
+    yes: 'Создать',
+    run: function () { return call('woSetup'); },
+    done: function (r) {
+      var n = r.filter(function (x) { return x.created; }).length;
+      toast(n ? 'Создано таблиц: ' + n : 'Все таблицы уже есть');
+      apply('wo', {});
+    }
+  });
+}
+</script>
+
+<script>
+var TOKEN = '';
+try { TOKEN = localStorage.getItem('adm_token') || ''; } catch (e) {}
+
+var S = { screen: 'today', dir: '', store: null, q: '', today: '', busy: false };
+var HIST = [];
+
+var DIRS = {
+  bakery: { t: 'Выпечка и кулинария', short: 'Выпечка', s: 'В', c: '#E65100' },
+  bread:  { t: 'Хлеб Рома',           short: 'Рома',    s: 'Р', c: '#8D6E63' },
+  nbhz:   { t: 'Хлеб НБХЗ',           short: 'НБХЗ',    s: 'Н', c: '#5D4037' },
+  veg:    { t: 'Овощи и фрукты',      short: 'Овощи',   s: 'О', c: '#2E7D32' }
+};
+var ORDER = ['bakery', 'bread', 'nbhz', 'veg'];
+var CHEV = '<span class="chev"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>';
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function attr(s) { return esc(s).replace(/\|/g, ''); }
+
+// ===== БЫСТРЫЙ ПУЛЬТ: кеш экранов + фоновое обновление + предзагрузка =====
+// Каждый вызов сервера стоит 1-3 с на связь, поэтому экран показывается
+// из сохранённого сразу, а свежие данные приходят фоном.
+var SWR_READ = { today: 1, dirStores: 1, stores: 1, store: 1, schedule: 1, log: 1,
+                 woBrief: 1, woStats: 1, woStore: 1 };
+var SWR_MAX_AGE = 10 * 60 * 1000;   // старше - не показываем, ждём сервер
+var SWR_FRESH = 8000;               // столько после ответа сервера не переспрашиваем
+var SWR_LS = 'adm_swr_v1';
+var SWR = {}, SWR_BUSY = {}, SWR_RT = 0, SWR_PREFETCH_AT = 0;
+
+function swrDay() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function swrLoad() {
+  try {
+    var o = JSON.parse(localStorage.getItem(SWR_LS) || 'null');
+    if (o && o.day === swrDay() && o.c) SWR = o.c;
+  } catch (e) {}
+}
+function swrSave() {
+  try { localStorage.setItem(SWR_LS, JSON.stringify({ day: swrDay(), c: SWR })); }
+  catch (e) { try { localStorage.removeItem(SWR_LS); } catch (e2) {} }
+}
+function swrClear() { SWR = {}; SWR_PREFETCH_AT = 0; try { localStorage.removeItem(SWR_LS); } catch (e) {} }
+function swrKey(a, p) { return a + '|' + JSON.stringify(p || {}); }
+function swrSig() {
+  return JSON.stringify([S.screen, S.dir, S.store, S.q, HIST.length,
+    typeof WA === 'object' ? WA.period + WA.ent : '']);
+}
+function swrPut(k, d) { SWR[k] = { t: Date.now(), d: d }; swrSave(); }
+
+function swrRerender(sig) {
+  clearTimeout(SWR_RT);
+  SWR_RT = setTimeout(function () {
+    var a = document.activeElement;
+    // за 150 мс могли уйти на другой экран - проверяем ещё раз
+    if (sig !== swrSig() || S.busy || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+    var y = window.scrollY || 0;
+    try { load(); } catch (e) {}
+    setTimeout(function () { try { window.scrollTo(0, y); } catch (e) {} }, 60);
+  }, 150);
+}
+
+function swrPrefetch() {
+  if (Date.now() - SWR_PREFETCH_AT < 60000) return;
+  SWR_PREFETCH_AT = Date.now();
+  var calls = ORDER.map(function (k) { return { a: 'dirStores', p: { dir: k } }; });
+  calls.push({ a: 'stores', p: { q: '' } });
+  callNet('batch', { calls: calls }).then(function (res) {
+    (res || []).forEach(function (r, i) {
+      if (r && r.ok) SWR[swrKey(calls[i].a, calls[i].p)] = { t: Date.now(), d: r.data };
+    });
+    swrSave();
+  }, function () {});
+}
+
+function swrRefresh(a, p, k, sig) {
+  if (SWR_BUSY[k]) return;
+  SWR_BUSY[k] = 1;
+  var old = JSON.stringify(SWR[k] && SWR[k].d);
+  callNet(a, p).then(function (d) {
+    delete SWR_BUSY[k];
+    swrPut(k, d);
+    if (a === 'today') swrPrefetch();
+    if (JSON.stringify(d) !== old && sig === swrSig()) swrRerender(sig);
+  }, function () { delete SWR_BUSY[k]; });
+}
+
+function call(action, payload) {
+  payload = payload || {};
+  if (!SWR_READ[action] || (action === 'store' && S.screen === 'edit')) {
+    return callNet(action, payload).then(function (d) {
+      if (!SWR_READ[action] && action !== 'health' && action !== 'batch') swrClear();
+      return d;
+    });
+  }
+  var k = swrKey(action, payload), c = SWR[k], now = Date.now();
+  if (c && now - c.t < SWR_MAX_AGE) {
+    if (now - c.t > SWR_FRESH) swrRefresh(action, payload, k, swrSig());
+    return Promise.resolve(c.d);
+  }
+  return callNet(action, payload).then(function (d) {
+    swrPut(k, d);
+    if (action === 'today') swrPrefetch();
+    return d;
+  });
+}
+swrLoad();
+
+var PERF = [];
+function perfLog(action, t0, r) {
+  var total = Date.now() - t0;
+  var srv = (r && typeof r.ms === 'number') ? r.ms : null;
+  PERF.unshift({ a: action, total: total, srv: srv, at: new Date().toTimeString().slice(0, 8) });
+  if (PERF.length > 30) PERF.length = 30;
+  try { console.log('[perf] ' + action + ': всего ' + total + ' мс' +
+    (srv != null ? ', сервер ' + srv + ', связь/запуск ' + (total - srv) : '')); } catch (e) {}
+}
+function callNet(action, payload) {
+  var t0 = Date.now();
+  return new Promise(function (res, rej) {
+    google.script.run
+      .withSuccessHandler(function (r) {
+        perfLog(action, t0, r);
+        if (r && r.ok) return res(r.data);
+        if (r && r.error === 'AUTH') { logout(); return rej(new Error('Нужно войти заново')); }
+        rej(new Error((r && r.error) || 'Ошибка связи'));
+      })
+      .withFailureHandler(function (e) { perfLog(action, t0, null); rej(e); })
+      .adminApi(action, payload || {}, TOKEN);
+  });
+}
+
+// ================= ВХОД =================
+function logout() {
+  TOKEN = '';
+  try { localStorage.removeItem('adm_token'); } catch (e) {}
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login').style.display = 'block';
+}
+
+function doLogin() {
+  var pin = document.getElementById('pin').value;
+  var err = document.getElementById('pinerr');
+  err.textContent = 'Проверяю…';
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (!r || !r.ok) { err.textContent = (r && r.error) || 'Ошибка'; return; }
+      err.textContent = '';
+      TOKEN = r.data.token;
+      try { localStorage.setItem('adm_token', TOKEN); } catch (e) {}
+      start();
+    })
+    .withFailureHandler(function (e) { err.textContent = String(e.message || e); })
+    .adminApi('login', { pin: pin }, '');
+}
+
+document.getElementById('pin').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') doLogin();
+});
+
+function start() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  HIST = [];
+  armBack();
+  tabGo('today');
+}
+
+// ================= НАВИГАЦИЯ =================
+// Системная кнопка "назад" на телефоне не должна закрывать приложение:
+// держим в истории браузера запасной шаг и перехватываем popstate.
+function armBack() {
+  try {
+    history.replaceState({ adm: 0 }, '');
+    history.pushState({ adm: 1 }, '');
+    window.addEventListener('popstate', function () {
+      history.pushState({ adm: 1 }, '');
+      goBack();
+    });
+  } catch (e) {}
+}
+
+function snap() { return { screen: S.screen, dir: S.dir, store: S.store, q: S.q }; }
+
+function go(screen, opts) {
+  HIST.push(snap());
+  if (HIST.length > 20) HIST.shift();
+  apply(screen, opts);
+}
+
+function tabGo(screen) {          // переход по нижним вкладкам обнуляет историю
+  HIST = [];
+  apply(screen, {});
+}
+
+function apply(screen, opts) {
+  opts = opts || {};
+  S.screen = screen;
+  if (opts.dir !== undefined) S.dir = opts.dir;
+  if (opts.store !== undefined) S.store = opts.store;
+  if (opts.q !== undefined) S.q = opts.q;
+  tabs(screen);
+  load();
+}
+
+function goBack() {
+  var prev = HIST.pop();
+  if (!prev) { if (S.screen !== 'today') apply('today', {}); return; }
+  S.dir = prev.dir; S.store = prev.store; S.q = prev.q;
+  S.screen = prev.screen;
+  tabs(prev.screen);
+  load();
+}
+
+function load() {
+  if (S.screen === 'today') return loadToday();
+  if (S.screen === 'dir') return loadDir(S.dir);
+  if (S.screen === 'stores') return loadStores(S.q);
+  if (S.screen === 'store') return loadStore(S.store, S.dir);
+  if (S.screen === 'restore') return loadRestore(S.dir || 'bakery');
+  if (S.screen === 'dups') return loadDups(S.dir === 'veg' ? 'veg' : 'bakery');
+  if (S.screen === 'schedule') return loadSchedule(S.dir || '');
+  if (S.screen === 'log') return loadLog();
+  if (S.screen === 'health') return loadHealth();
+  if (S.screen === 'edit') return loadEdit(S.store, S.dir);
+  if (S.screen === 'card') return loadCard(S.store);
+  if (S.screen === 'wo') return loadWo();
+  if (S.screen === 'wostore') return loadWoStore(S.store);
+}
+
+// ================= ОБЩЕЕ =================
+function setHead(title, sub) {
+  document.getElementById('title').textContent = title;
+  document.getElementById('subtitle').textContent = sub || '';
+  document.getElementById('back').style.display = HIST.length ? 'flex' : 'none';
+}
+
+function tabs(name) {
+  var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today',
+              stores: 'stores', store: 'stores', restore: 'restore', log: 'log',
+              health: 'today', edit: 'stores', card: 'stores', wo: 'today', wostore: 'today' };
+  var on = map[name] || 'today';
+  ['today', 'stores', 'restore', 'log'].forEach(function (k) {
+    var el = document.getElementById('t-' + k);
+    if (el) el.className = 'tab' + (k === on ? ' on' : '');
+  });
+}
+
+function view(html) { document.getElementById('view').innerHTML = html; }
+function spin(t) { view('<div class="spin">' + esc(t || 'Загрузка…') + '</div>'); }
+function fail(e) { view('<div class="bad">' + esc(e && e.message ? e.message : e) + '</div>'); }
+
+function section(title, inner) {
+  return '<div>' + (title ? '<div class="sec">' + esc(title) + '</div>' : '') + inner + '</div>';
+}
+
+// значок ЮА маркет (колонка T Довідника), як у продавців
+var UA_TAG = '<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;' +
+  'background:#1565C0;color:#fff;font-size:11px;font-weight:700;vertical-align:2px">ЮА</span>';
+function item(title, sub, right, onclick, ua) {
+  var tag = onclick ? 'button' : 'div';
+  return '<' + tag + ' class="item"' + (onclick ? ' onclick="' + onclick + '"' : '') + '>' +
+    '<span class="grow"><span class="t">' + esc(title) + (ua ? UA_TAG : '') + '</span>' +
+    (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' +
+    (right ? '<span class="right">' + right + '</span>' : '') +
+    (onclick ? CHEV : '') + '</' + tag + '>';
+}
+</script>
+<script>
+// ================= СЕГОДНЯ =================
+function loadToday() {
+  setHead('Сегодня', '');
+  spin();
+  call('today').then(function (d) {
+    S.today = d.today;
+    setHead('Сегодня', d.today + ', ' + d.time);
+
+    var h = '';
+    var alerts = d.dirs.filter(function (x) {
+      return !x.closed && x.minLeft !== null && x.minLeft > 0 && x.minLeft <= 60 && x.waiting.length;
+    });
+    if (alerts.length) {
+      h += '<div class="note">' + alerts.map(function (x) {
+        return 'До дедлайна «' + esc(DIRS[x.key].t) + '» ' + x.minLeft +
+               ' мин. Не заказали ' + x.waiting.length + ' точек.';
+      }).join('<br><br>') + '</div>';
+    }
+
+    var cards = '';
+    ORDER.forEach(function (k) {
+      var x = null;
+      d.dirs.forEach(function (y) { if (y.key === k) x = y; });
+      if (!x) return;
+      var m = DIRS[k];
+      var pill = !x.enabled ? '<span class="pill closed">Выключено</span>'
+               : x.noDayToday ? '<span class="pill off">Сегодня не приём</span>'
+               : (x.openedAll ? '<span class="pill warn">Открыто всем</span>'
+               : (x.closed ? '<span class="pill closed">Закрыто</span>'
+                           : '<span class="pill open">Открыто</span>'));
+      var pct = x.total ? Math.round(x.ordered / x.total * 100) : 0;
+      cards += '<button class="dir" onclick="go(\'dir\',{dir:\'' + k + '\'})">' +
+        '<span class="dirtop">' +
+          '<span class="sq" style="background:' + m.c + '">' + m.s + '</span>' +
+          '<span class="grow"><span class="t" style="font-size:17px;font-weight:700;display:block">' +
+            esc(m.t) + '</span>' +
+            '<span class="s" style="display:block">до ' + esc(x.deadline || '—') +
+            (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
+            (x.byDays && x.offDay ? ' · вне графика ' + x.offDay : '') + '</span></span>' +
+          pill + '</span>' +
+        (x.noDayToday
+          ? '<span class="s" style="margin-top:14px">Сегодня (' + esc(d.dow) + ') по графику ' +
+            'не заказывает ни одна из ' + x.all + ' точек</span>'
+          : '<span style="display:flex;align-items:center;gap:12px;margin-top:16px">' +
+            '<span class="bar"><i style="width:' + pct + '%;background:' + m.c + '"></i></span>' +
+            '<span style="font-size:14px;font-weight:700;white-space:nowrap">' +
+              x.ordered + ' из ' + x.total + '</span></span>') +
+        '</button>';
+    });
+    var stale = d.dirs.filter(function (x) { return x.enabled && x.ordered > 0 && !x.reportAt; });
+    if (stale.length) h += '<button class="bad" style="display:block;width:100%;text-align:left;cursor:pointer" ' +
+      'onclick="go(\'health\',{})">Заказы есть, а отчёт сегодня не собирался: ' +
+      stale.map(function (x) { return esc(DIRS[x.key] ? DIRS[x.key].short : x.key); }).join(', ') +
+      '. Нажмите, чтобы проверить.</button>';
+    h += section('Направления', cards);
+    h += woBriefSlot();                       // списания - отдельным пунктом (WriteOffAdminJs)
+
+    h += section('Быстрые действия', '<div class="card">' +
+      item('График по точкам', 'кому какие дни и что доступно сегодня', '', 'go(\'schedule\',{dir:\'\'})') +
+      item('Заказы точки', 'посмотреть, отменить, снять метку', '', 'tabGo(\'stores\')') +
+      item('Восстановить из бэкапа', 'вернуть строки, которых нет в листе', '', 'tabGo(\'restore\')') +
+      item('Убрать дубли', 'найти и удалить задвоенные строки заказов', '', 'go(\'dups\',{dir:\'bakery\'})') +
+      item('Здоровье системы', 'отчёты, триггеры, ошибки', '', 'go(\'health\',{})') +
+      item('Журнал действий', 'что и когда нажимали', '', 'tabGo(\'log\')') +
+      '</div>');
+
+    view(h);
+    woBriefFill();
+  }).catch(fail);
+}
+
+// ================= НАПРАВЛЕНИЕ =================
+function loadDir(k) {
+  var m = DIRS[k];
+  setHead(m.t, '');
+  spin();
+  Promise.all([call('today'), call('dirStores', { dir: k })]).then(function (r) {
+    var d = r[0], ds = r[1];
+    var x = null;
+    d.dirs.forEach(function (y) { if (y.key === k) x = y; });
+    if (!x) return fail(new Error('Направление не найдено'));
+
+    var byDay = ds.done.length + ds.wait.length;
+    var h = '<div class="info">' +
+      'Дедлайн <b>' + esc(x.deadline || '—') + '</b>, сейчас ' + esc(d.time) + '.<br>' +
+      (ds.byDays
+        ? 'Сегодня ' + esc(ds.dow) + ' — по графику заказывают <b>' + byDay + '</b> точек из <b>' +
+          (byDay + ds.off.length) + '</b>.<br>'
+        : '') +
+      'Заказали <b>' + ds.done.length + '</b> из <b>' + byDay + '</b>' +
+      (x.reportAt ? ', отчёт собран в ' + esc(x.reportAt) : '') + '.' +
+      (x.openedAll ? '<br>Приём открыт всем до конца дня.' : '') +
+      (!x.enabled ? '<br><b style="color:#b3261e">Направление выключено — продавцы его не видят в меню.</b>' : '') +
+      '</div>';
+
+    h += section('Управление приёмом', '<div class="card">' +
+      (x.enabled
+        ? item('Выключить направление', 'исчезнет из меню продавцов до включения обратно',
+               '', 'askDisableDir(\'' + k + '\')')
+        : item('Включить направление', 'снова появится в меню продавцов', '', 'askEnableDir(\'' + k + '\')')) +
+      (x.openedAll
+        ? item('Вернуть обычный режим', 'дедлайн снова действует', '', 'askCloseAll(\'' + k + '\')')
+        : item('Открыть приём всем до конца дня', 'дедлайн ' + esc(x.deadline || '—') + ' сегодня не действует',
+               '', 'askOpenAll(\'' + k + '\')')) +
+      item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\'restore\',{dir:\'' + k + '\'})') +
+      ((k === 'bakery' || k === 'veg')
+        ? item('Убрать дубли', 'задвоенные строки в рабочем листе', '', 'go(\'dups\',{dir:\'' + k + '\'})') : '') +
+      '</div>');
+
+    var files = item('Собрать отчёт сейчас', 'не дожидаясь пятиминутного триггера', '',
+                     'askReport(\'' + k + '\')');
+    if (ds.xlsx) files += '<a class="item" href="' + attr(ds.xlsx) + '" target="_blank" rel="noopener" ' +
+      'style="text-decoration:none;color:inherit"><span class="grow"><span class="t">Скачать Excel</span>' +
+      '<span class="s">только лист отчёта, без остальных листов</span></span>' + CHEV + '</a>';
+    if (ds.sheetUrl) files += '<a class="item" href="' + attr(ds.sheetUrl) + '" target="_blank" rel="noopener" ' +
+      'style="text-decoration:none;color:inherit"><span class="grow"><span class="t">Открыть таблицу</span>' +
+      '<span class="s">в Google Таблицах</span></span>' + CHEV + '</a>';
+    h += section('Отчёты и файлы', '<div class="card">' + files + '</div>');
+
+    if (ds.done.length) {
+      h += section('Заказали (' + ds.done.length + ')', '<div class="card">' +
+        ds.done.map(function (s) {
+          var sub = s.n + ' позиций · ' + s.qty + ' ' + esc(ds.unit) +
+                    (s.time ? ' · в ' + esc(s.time) : '') +
+                    (s.code ? ' · № ' + esc(s.code) : '');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})', s.ua);
+        }).join('') + '</div>');
+    }
+
+    if (ds.wait.length) {
+      h += section('Ещё не заказали (' + ds.wait.length + ')', '<div class="card">' +
+        ds.wait.map(function (s) {
+          var sub = (s.code ? '№ ' + esc(s.code) : '') + (s.route ? ' · маршрут ' + esc(s.route) : '');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})', s.ua);
+        }).join('') + '</div>');
+    } else if (byDay) {
+      h += '<div class="ok">Заказали все точки, у которых сегодня приём.</div>';
+    }
+
+    if (ds.off.length) {
+      h += section('Сегодня не их день (' + ds.off.length + ')', '<div class="card">' +
+        ds.off.map(function (s) {
+          var sub = 'дни приёма: ' + esc(s.days || '—') + (s.next ? ' · ближайший ' + esc(s.next) : '');
+          return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'' + k + '\'})', s.ua);
+        }).join('') + '</div>');
+    }
+
+    view(h);
+  }).catch(fail);
+}
+
+// ================= ГРАФИК ПО ТОЧКАМ =================
+function loadSchedule(dir) {
+  S.dir = dir;
+  setHead('График', 'кому что доступно сегодня');
+  var chips = '<div class="chips"><button class="chip' + (dir ? '' : ' on') +
+    '" onclick="apply(\'schedule\',{dir:\'\'})">Все</button>' +
+    ORDER.map(function (k) {
+      return '<button class="chip' + (k === dir ? ' on' : '') + '" onclick="apply(\'schedule\',{dir:\'' +
+        k + '\'})">' + esc(DIRS[k].short) + '</button>';
+    }).join('') + '</div>';
+  view(chips + '<div id="sch"><div class="spin">Загрузка…</div></div>');
+
+  call('schedule', { dir: dir }).then(function (d) {
+    var el = document.getElementById('sch');
+    if (!el) return;
+
+    var h = '<div class="info">Сегодня ' + esc(d.dow) + ', ' + esc(d.today) + '.<br>' +
+      'Зелёным — направление, по которому точка может заказать сегодня.</div>';
+
+    h += '<div style="margin-top:22px"><div class="sec">Точки (' + d.rows.length + ')</div><div class="card">' +
+      d.rows.map(function (r) {
+        var lines = r.cells.map(function (c) {
+          var color = c.today ? '#166B3A' : '#7A828E';
+          var mark = c.today ? (c.ordered ? 'заказали' : 'можно до ' + esc(c.deadline || '—'))
+                             : ('не сегодня · дни: ' + esc(c.days || '—') +
+                                (c.next ? ' · ' + esc(c.next) : ''));
+          return '<div style="display:flex;gap:10px;font-size:13.5px;line-height:1.5;color:' + color + '">' +
+            '<span style="flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px;background:' +
+            (DIRS[c.dir] ? DIRS[c.dir].c : '#ccc') + ';opacity:' + (c.today ? '1' : '.35') + '"></span>' +
+            '<span class="grow"><b style="font-weight:600">' + esc(DIRS[c.dir] ? DIRS[c.dir].short : c.dir) +
+            '</b> — ' + mark + '</span></div>';
+        }).join('');
+        return '<button class="item" style="align-items:flex-start" onclick="go(\'store\',{store:\'' +
+          attr(r.id) + '\',dir:\'\'})"><span class="grow"><span class="t">' + esc(r.label) + (r.ua ? UA_TAG : '') + '</span>' +
+          '<span style="display:block;margin-top:8px">' + lines + '</span></span>' + CHEV + '</button>';
+      }).join('') + '</div></div>';
+
+    el.innerHTML = h;
+  }).catch(fail);
+}
+</script>
+<script>
+// ================= ТОЧКИ =================
+function loadStores(q) {
+  setHead('Точки', 'поиск по адресу или номеру');
+  view('<div><input id="q" type="search" placeholder="Например: Валентиновская или 14" value="' +
+       esc(q || '') + '"></div><div id="list"><div class="spin">Загрузка…</div></div>');
+  var inp = document.getElementById('q');
+  inp.addEventListener('input', function () {
+    clearTimeout(S.t);
+    S.q = inp.value;
+    S.t = setTimeout(function () { fillStores(inp.value); }, 300);
+  });
+  fillStores(q || '');
+}
+
+function fillStores(q) {
+  call('stores', { q: q, dir: '' }).then(function (list) {
+    var el = document.getElementById('list');
+    if (!el) return;
+    if (!list.length) { el.innerHTML = '<div class="note">Ничего не найдено</div>'; return; }
+    el.innerHTML = '<div class="card">' + list.map(function (s) {
+      var dots = s.directions.map(function (k) {
+        return '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;' +
+               'background:' + (DIRS[k] ? DIRS[k].c : '#ccc') + ';margin-right:5px"></span>';
+      }).join('');
+      var sub = dots + (s.code ? '№ ' + esc(s.code) : '') + (s.route ? ' · маршрут ' + esc(s.route) : '');
+      return item(s.label, sub, '', 'go(\'store\',{store:\'' + attr(s.id) + '\',dir:\'\'})', s.ua);
+    }).join('') + '</div>';
+  }).catch(fail);
+}
+
+function loadStore(id, dir) {
+  setHead('Точка', '');
+  spin();
+  call('store', { storeId: id, dir: dir || '' }).then(function (d) {
+    S.dir = d.dir;
+    setHead(d.label + (d.ua ? ' · ЮА' : ''), (d.code ? '№ ' + d.code : '') + (d.route ? ' · маршрут ' + d.route : ''));
+
+    var sched = {};
+    (d.schedule || []).forEach(function (c) { sched[c.dir] = c; });
+
+    var h = '<div class="chips">' + d.directions.map(function (k) {
+      var c = sched[k] || { today: true };
+      return '<button class="chip' + (k === d.dir ? ' on' : '') + '" style="' +
+        (c.today ? '' : 'opacity:.5') + '" onclick="apply(\'store\',{store:\'' +
+        attr(d.id) + '\',dir:\'' + k + '\'})">' + esc(DIRS[k] ? DIRS[k].short : k) +
+        (c.today ? '' : ' ✕') + '</button>';
+    }).join('') + '</div>';
+
+    var me = sched[d.dir];
+    if (!d.dayOk) h += '<div class="note">Сегодня не день приёма по этому направлению.' +
+      (me && me.days ? ' Дни точки: ' + esc(me.days) + '.' : '') +
+      (me && me.next ? ' Ближайший приём ' + esc(me.next) + '.' : '') + '</div>';
+    if (d.lateLeft) h += '<div class="ok">Приём открыт ещё ' + d.lateLeft + ' мин.</div>';
+
+    if (d.schedule && d.schedule.length) {
+      h += section('График точки', '<div class="card">' + d.schedule.map(function (c) {
+        var right = c.today
+          ? '<span style="color:#166B3A;font-weight:600">сегодня можно</span>'
+          : '<span style="color:#7A828E;font-weight:500">' + esc(c.next || 'не сегодня') + '</span>';
+        return '<div class="item"><span class="grow"><span class="t">' +
+          esc(DIRS[c.dir] ? DIRS[c.dir].t : c.title) + '</span><span class="s">дни: ' +
+          esc(c.days || '—') + ' · дедлайн ' + esc(c.deadline || '—') + '</span></span>' +
+          '<span class="right" style="font-size:13.5px">' + right + '</span></div>';
+      }).join('') + '</div>');
+    }
+
+    if (d.rows.length) {
+      var rows = d.rows.map(function (r) {
+        return '<div class="item" style="min-height:52px;padding:13px 16px">' +
+          '<span class="grow"><span style="font-size:15px">' + esc(r.name) + '</span></span>' +
+          '<span class="right">' + r.qty + '</span></div>';
+      }).join('');
+      h += section('Заказ на ' + esc(S.today || d.today || ''), '<div class="card">' + rows +
+        '<div class="item" style="background:#FAFBFC;min-height:52px">' +
+        '<span class="grow"><span class="s" style="margin:0">' + d.rows.length + ' позиций · ' +
+        d.qty + ' ' + esc(d.unit) + ' · лист «' + esc(d.sheet) + '»' +
+        (d.firstRow ? ', с ' + d.firstRow + '-й строки' : '') + '</span></span></div></div>');
+    } else {
+      h += section('Заказ на ' + esc(S.today || ''), '<div class="info">Сегодня заказа нет.' +
+        (d.marked ? '<br><b>Но метка «уже заказывали» стоит</b> — значит строки потерялись. ' +
+                    'Снимите метку или проверьте бэкап.' : '') + '</div>');
+    }
+
+    var acts = '';
+    if (d.rows.length) acts += item('Отменить заказ', 'убрать строки и метку — точка закажет заново',
+      '', 'askCancel(\'' + attr(d.id) + '\',\'' + d.dir + '\',' + d.rows.length + ')');
+    if (d.marked) acts += item('Снять метку «уже заказывали»', 'строки остаются на месте',
+      '', 'askClearMark(\'' + attr(d.id) + '\',\'' + d.dir + '\')');
+    if (d.rows.length) acts += item('Изменить заказ', 'поправить количество или убрать позиции',
+      '', 'go(\'edit\',{store:\'' + attr(d.id) + '\',dir:\'' + d.dir + '\'})');
+    if (d.directions.indexOf('bakery') >= 0)
+      acts += item('Списания точки', 'выпечка и кулинария: что и на сколько списали',
+        '', 'go(\'wostore\',{store:\'' + attr(d.id) + '\'})');
+    acts += item('Карточка точки', 'направления, дни, зона, ЄДРПОУ, номер',
+      '', 'go(\'card\',{store:\'' + attr(d.id) + '\',dir:\'' + d.dir + '\'})');
+    acts += item('Открыть приём этой точке', 'на 30 минут, даже после дедлайна',
+      '', 'askOpenStore(\'' + attr(d.id) + '\',\'' + d.dir + '\')');
+    acts += item('Проверить бэкап направления', 'что потерялось из рабочего листа',
+      '', 'go(\'restore\',{dir:\'' + d.dir + '\'})');
+    h += section('Действия', '<div class="card">' + acts + '</div>');
+
+    view(h);
+  }).catch(fail);
+}
+</script>
+<script>
+// ================= ПОДТВЕРЖДЕНИЕ =================
+function confirmSheet(o) {
+  var m = document.getElementById('modal');
+  m.innerHTML = '<div class="mask" onclick="if(event.target===this)closeSheet()"><div class="sheet">' +
+    '<div class="grip"></div><h2>' + esc(o.title) + '</h2>' +
+    '<div class="sub">' + esc(o.sub || '') + '</div>' +
+    '<div class="what">' + o.what.map(function (t) {
+      return '<div><span style="flex:none;color:#7A828E">—</span><span>' + esc(t) + '</span></div>';
+    }).join('') + '</div>' +
+    '<button class="btn" id="yes">' + esc(o.yes || 'Подтвердить') + '</button>' +
+    '<button class="btn ghost" onclick="closeSheet()">Отмена</button></div></div>';
+
+  document.getElementById('yes').onclick = function () {
+    var b = this;
+    if (S.busy) return;
+    S.busy = true; b.disabled = true; b.textContent = 'Выполняю…';
+    o.run().then(function (res) {
+      S.busy = false; closeSheet();
+      if (o.done) o.done(res);
+    }).catch(function (e) {
+      S.busy = false; b.disabled = false; b.textContent = o.yes || 'Подтвердить';
+      toast(e && e.message ? e.message : String(e));
+    });
+  };
+}
+
+function closeSheet() { document.getElementById('modal').innerHTML = ''; }
+
+function toast(text) {
+  var m = document.getElementById('modal');
+  m.innerHTML = '<div style="position:fixed;left:16px;right:16px;bottom:104px;z-index:60;background:#16181D;' +
+    'color:#fff;border-radius:16px;padding:16px;font-size:15px;text-align:center;max-width:528px;margin:0 auto">' +
+    esc(text) + '</div>';
+  setTimeout(function () { if (m.firstChild && !m.querySelector('.mask')) m.innerHTML = ''; }, 3000);
+}
+
+function askCancel(id, dir, n) {
+  confirmSheet({
+    title: 'Отменить заказ?', sub: DIRS[dir].t,
+    what: ['Из рабочего листа удалятся ' + n + ' строк сегодняшнего заказа',
+           'Снимется метка «уже заказывали» — точка сможет заказать заново',
+           'Действие попадёт в журнал'],
+    yes: 'Да, отменить',
+    run: function () { return call('cancelOrder', { storeId: id, dir: dir }); },
+    done: function (r) { toast('Удалено строк: ' + r.removed); apply('store', { store: id, dir: dir }); }
+  });
+}
+
+function askClearMark(id, dir) {
+  confirmSheet({
+    title: 'Снять метку?', sub: DIRS[dir].t,
+    what: ['Строки в листе остаются как есть',
+           'Точка сможет отправить заказ ещё раз',
+           'Действие попадёт в журнал'],
+    yes: 'Снять метку',
+    run: function () { return call('clearMark', { storeId: id, dir: dir }); },
+    done: function () { toast('Метка снята'); apply('store', { store: id, dir: dir }); }
+  });
+}
+
+function askOpenStore(id, dir) {
+  confirmSheet({
+    title: 'Открыть приём точке?', sub: DIRS[dir].t,
+    what: ['Точка сможет отправить заказ ближайшие 30 минут',
+           'На остальные точки это не влияет',
+           'Метку «уже заказывали» не трогаем — дубля не будет'],
+    yes: 'Открыть на 30 минут',
+    run: function () { return call('openStore', { storeId: id, dir: dir }); },
+    done: function (r) { toast('Открыто на ' + (r.left || 30) + ' мин'); apply('store', { store: id, dir: dir }); }
+  });
+}
+
+function askOpenAll(dir) {
+  confirmSheet({
+    title: 'Открыть всем до конца дня?', sub: DIRS[dir].t,
+    what: ['Дедлайн сегодня не действует ни для одной точки',
+           'Кто уже заказал — останется заблокирован, дублей не будет',
+           'Вернуть обычный режим можно этой же кнопкой'],
+    yes: 'Открыть всем',
+    run: function () { return call('openAll', { dir: dir }); },
+    done: function () { toast('Открыто до конца дня'); apply('dir', { dir: dir }); }
+  });
+}
+
+function askReport(dir) {
+  confirmSheet({
+    title: 'Собрать отчёт сейчас?', sub: DIRS[dir].t,
+    what: ['Листы отчёта пересоберутся по текущим строкам сырого листа',
+           'Сырой лист не меняется',
+           'Занимает несколько секунд'],
+    yes: 'Собрать',
+    run: function () { return call('report', { dir: dir }); },
+    done: function (r) { toast('Отчёт собран' + (r.at ? ' в ' + r.at : '')); apply('dir', { dir: dir }); }
+  });
+}
+
+function askCloseAll(dir) {
+  confirmSheet({
+    title: 'Вернуть обычный режим?', sub: DIRS[dir].t,
+    what: ['Дедлайн снова действует', 'Принятые заказы остаются на месте'],
+    yes: 'Вернуть',
+    run: function () { return call('closeAll', { dir: dir }); },
+    done: function () { toast('Обычный режим'); apply('dir', { dir: dir }); }
+  });
+}
+
+function askDisableDir(dir) {
+  confirmSheet({
+    title: 'Выключить направление?', sub: DIRS[dir].t,
+    what: ['Исчезнет из меню на телефонах продавцов — ни точка, ни карточка',
+           'Уже принятые сегодня заказы и отчёты не трогает',
+           'Новые заказы по этому направлению принимать перестанет',
+           'Включить обратно можно этой же кнопкой в любой момент'],
+    yes: 'Выключить',
+    run: function () { return call('setDirEnabled', { dir: dir, on: false }); },
+    done: function () { toast('Направление выключено'); apply('dir', { dir: dir }); }
+  });
+}
+
+function askEnableDir(dir) {
+  confirmSheet({
+    title: 'Включить направление?', sub: DIRS[dir].t,
+    what: ['Снова появится в меню продавцов', 'Дедлайн и график дней — как обычно'],
+    yes: 'Включить',
+    run: function () { return call('setDirEnabled', { dir: dir, on: true }); },
+    done: function () { toast('Направление включено'); apply('dir', { dir: dir }); }
+  });
+}
+</script>
+<script>
+// ================= БЭКАП =================
+function loadRestore(dir) {
+  S.dir = dir;
+  setHead('Бэкап', 'сравнение с рабочим листом');
+  var chips = '<div class="chips">' + ORDER.map(function (k) {
+    return '<button class="chip' + (k === dir ? ' on' : '') + '" onclick="apply(\'restore\',{dir:\'' +
+      k + '\'})">' + esc(DIRS[k].short) + '</button>';
+  }).join('') + '</div>';
+  view(chips + '<div id="res"><div class="spin">Сравниваю бэкап с рабочим листом…</div></div>');
+
+  call('restoreScan', { dir: dir }).then(function (d) {
+    var el = document.getElementById('res');
+    if (!el) return;
+    S.scan = d;
+
+    var h = '<div class="info">' + esc(d.dirTitle) + ', ' + esc(d.date) + '<br>' +
+      'В бэкапе <b>' + d.backupRows + '</b> строк, в рабочем листе <b>' + d.liveRows + '</b>.</div>';
+
+    if (!d.stores.length) {
+      el.innerHTML = h + '<div class="ok" style="margin-top:20px">Всё на месте — пропавших строк нет.</div>';
+      return;
+    }
+
+    h += '<div class="bad" style="margin-top:20px">Не хватает <b>' + d.missingRows + '</b> строк от ' +
+         d.stores.length + ' точек. Отметьте, что вернуть.</div>';
+
+    h += '<div style="margin-top:22px">' + '<div class="sec">Что вернуть</div><div class="card">' +
+      d.stores.map(function (s, i) {
+        return '<label class="pick"><input type="checkbox" checked data-key="' + attr(s.key) + '">' +
+          '<span class="grow"><span class="t">' + esc(s.label) + '</span>' +
+          '<span class="s">' + s.missing + ' строк · ' + s.qty + ' ' + esc(d.unit) +
+          ' · снимок ' + esc(s.stamp) + '</span></span>' +
+          '<span class="right" style="color:#E11B22;font-size:13.5px" ' +
+          'onclick="event.preventDefault();event.stopPropagation();toggleItems(' + i + ')">что именно</span>' +
+          '</label>' +
+          '<div id="it' + i + '" style="display:none;padding:4px 16px 14px 54px;background:#FAFBFC">' +
+          s.items.map(function (it) {
+            return '<div style="display:flex;gap:12px;font-size:14.5px;padding:5px 0">' +
+              '<span class="grow">' + esc(it.name) + '</span>' +
+              '<span style="font-weight:600">' + it.qty + '</span></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div></div>';
+
+    h += '<div style="margin-top:22px"><div class="sec">Как это работает</div><div class="info">' +
+      'Строки только дописываются в конец листа — ничего не стирается и не перезаписывается.<br><br>' +
+      'Дубли отсеиваются: то, что уже есть в листе, повторно не ляжет.<br><br>' +
+      'После возврата отчёт и выгрузка пересобираются сами.</div></div>';
+
+    h += '<div style="margin-top:22px"><button class="btn" onclick="askRestore()">' +
+         'Вернуть отмеченные строки</button></div>';
+    el.innerHTML = h;
+  }).catch(fail);
+}
+
+function toggleItems(i) {
+  var el = document.getElementById('it' + i);
+  if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+}
+
+function askRestore() {
+  var keys = [];
+  Array.prototype.forEach.call(document.querySelectorAll('input[data-key]'), function (c) {
+    if (c.checked) keys.push(c.getAttribute('data-key'));
+  });
+  if (!keys.length) return toast('Ничего не отмечено');
+
+  var d = S.scan, n = 0, names = [];
+  d.stores.forEach(function (s) {
+    if (keys.indexOf(s.key) < 0) return;
+    n += s.missing; names.push(s.label);
+  });
+
+  confirmSheet({
+    title: 'Вернуть ' + n + ' строк?',
+    sub: d.dirTitle + ', ' + d.date + ' · ' + names.join(', '),
+    what: ['Добавится ' + n + ' строк в конец листа «' + d.sheet + '»',
+           'Ничего не удаляется и не перезаписывается',
+           'Дубли отсеиваются автоматически',
+           'Действие попадёт в журнал'],
+    yes: 'Да, вернуть',
+    run: function () { return call('restoreApply', { dir: d.dir, date: d.date, keys: keys }); },
+    done: function (r) { toast('Возвращено строк: ' + r.added); apply('restore', { dir: d.dir }); }
+  });
+}
+
+// ================= ДУБЛИ =================
+function loadDups(dir) {
+  S.dir = dir;
+  setHead('Дубли', 'задвоенные строки в рабочем листе');
+  var chips = '<div class="chips">' + ['bakery', 'veg'].map(function (k) {
+    return '<button class="chip' + (k === dir ? ' on' : '') + '" onclick="apply(\'dups\',{dir:\'' +
+      k + '\'})">' + esc(DIRS[k].short) + '</button>';
+  }).join('') + '</div>';
+  view(chips + '<div id="res"><div class="spin">Ищу дубли в листе…</div></div>');
+
+  call('dupScan', { dir: dir }).then(function (d) {
+    var el = document.getElementById('res');
+    if (!el) return;
+    S.dup = d;
+
+    var h = '<div class="info">' + esc(d.dirTitle) + '<br>Строк в листе: <b>' + d.liveRows + '</b>.<br><br>' +
+      'Дубль — строка с тем же временем, адресом, товаром и количеством. ' +
+      'В одном заказе товар не может стоять дважды.</div>';
+
+    if (!d.orders.length) {
+      el.innerHTML = h + '<div class="ok" style="margin-top:20px">Дублей нет.</div>';
+      return;
+    }
+
+    h += '<div class="bad" style="margin-top:20px">Лишних строк: <b>' + d.extraTotal + '</b>, заказов: ' +
+         d.orders.length + '. Отметьте, где убрать.</div>';
+
+    h += '<div style="margin-top:22px"><div class="sec">Где убрать</div><div class="card">' +
+      d.orders.map(function (o, i) {
+        return '<label class="pick"><input type="checkbox" checked data-i="' + i + '">' +
+          '<span class="grow"><span class="t">' + esc(o.addr) + '</span>' +
+          '<span class="s">' + esc(o.date) + ' ' + esc(o.time) + ' · лишних строк ' + o.extra +
+          ' из ' + o.total + '</span></span>' +
+          '<span class="right" style="color:#E11B22;font-size:13.5px" ' +
+          'onclick="event.preventDefault();event.stopPropagation();toggleItems(' + i + ')">что именно</span>' +
+          '</label>' +
+          '<div id="it' + i + '" style="display:none;padding:4px 16px 14px 54px;background:#FAFBFC">' +
+          o.positions.map(function (p) {
+            return '<div style="display:flex;gap:12px;font-size:14.5px;padding:5px 0">' +
+              '<span class="grow">' + esc(p.name) + '</span>' +
+              '<span style="font-weight:600">' + p.qty + ' × ' + p.n + '</span></div>';
+          }).join('') + '</div>';
+      }).join('') + '</div></div>';
+
+    h += '<div style="margin-top:22px"><div class="sec">Как это работает</div><div class="info">' +
+      'В каждой группе одинаковых строк остаётся <b>одна</b>, остальные удаляются.<br><br>' +
+      'Другие заказы и другие товары не затрагиваются.<br><br>' +
+      'Каждое удаление попадает в журнал вместе со списком товаров. ' +
+      'Отчёт пересоберётся сам в течение 5 минут или кнопкой «Собрать отчёт».</div></div>';
+
+    h += '<div style="margin-top:22px"><button class="btn" onclick="askDups()">Убрать дубли в отмеченных</button></div>';
+    el.innerHTML = h;
+  }).catch(fail);
+}
+
+function askDups() {
+  var d = S.dup, keys = [], n = 0, names = [];
+  Array.prototype.forEach.call(document.querySelectorAll('input[data-i]'), function (c) {
+    if (!c.checked) return;
+    var o = d.orders[Number(c.getAttribute('data-i'))];
+    if (!o) return;
+    keys.push(o.key); n += o.extra; names.push(o.addr + ' (' + o.date + ' ' + o.time + ')');
+  });
+  if (!keys.length) return toast('Ничего не отмечено');
+
+  confirmSheet({
+    title: 'Удалить ' + n + ' лишних строк?',
+    sub: d.dirTitle + ' · ' + names.join(', '),
+    what: ['Из листа «' + d.sheet + '» удалится ' + n + ' повторных строк',
+           'В каждой группе одинаковых строк остаётся одна',
+           'Отменить нельзя, но что удалено, видно в журнале',
+           'Действие попадёт в журнал'],
+    yes: 'Да, удалить',
+    run: function () { return call('dupApply', { dir: d.dir, keys: keys }); },
+    done: function (r) { toast('Удалено строк: ' + r.removed); apply('dups', { dir: d.dir }); }
+  });
+}
+
+// ================= ЖУРНАЛ =================
+function loadLog() {
+  setHead('Журнал', 'последние действия');
+  spin();
+  call('log').then(function (list) {
+    var out = '<div class="card">' + list.map(function (r) {
+      return '<div class="item"><span class="grow"><span class="t">' + esc(r.what) + '</span>' +
+        '<span class="s">' + esc(r.details) + '</span></span>' +
+        '<span class="right" style="font-size:12.5px;color:#7A828E;font-weight:500">' +
+        esc(r.when).replace(' ', '<br>') + '</span></div>';
+    }).join('') + '</div>';
+    if (!list.length) out = '<div class="info">Пока пусто. Здесь появится всё, что меняли через пульт.</div>';
+    view(out + '<div><button class="btn ghost" onclick="logout()">Выйти из пульта</button></div>');
+  }).catch(fail);
+}
+
+if (TOKEN) start();
+</script>
+
+<script>
+// ================= ЗДОРОВЬЕ СИСТЕМЫ =================
+var HC = { ok: '#2E9E5B', warn: '#E0A100', bad: '#D93025', off: '#B7BCC4' };
+
+function hList(arr) {
+  return '<div class="card">' + arr.map(function (x) {
+    return '<div class="item" style="align-items:flex-start">' +
+      '<span style="flex:none;width:12px;height:12px;border-radius:50%;margin-top:5px;background:' +
+      (HC[x.lv] || HC.off) + '"></span><span class="grow"><span class="t">' + esc(x.t) + '</span>' +
+      (x.s ? '<span class="s">' + esc(x.s) + '</span>' : '') + '</span></div>';
+  }).join('') + '</div>';
+}
+
+function loadHealth() {
+  setHead('Здоровье системы', '');
+  spin('Проверяю…');
+  call('health').then(function (d) {
+    setHead('Здоровье системы', 'проверено в ' + d.time);
+    var cls = d.level === 'ok' ? 'ok' : (d.level === 'bad' ? 'bad' : 'note');
+    var h = '<div class="' + cls + '">' + esc(d.summary) + '</div>';
+    h += section('Отчёты по направлениям', hList(d.dirs.map(function (x) {
+      return { t: DIRS[x.key] ? DIRS[x.key].t : x.title, s: x.text, lv: x.level };
+    })));
+    h += section('Триггеры', d.triggers.length ? hList(d.triggers.map(function (x) {
+      return { t: x.name, s: x.text, lv: x.level };
+    })) : '<div class="bad">Триггеров нет совсем — запустите d06_installTriggers() в редакторе.</div>');
+    h += section('Ошибки пульта', d.errors.length
+      ? hList(d.errors.map(function (e) {
+          return { t: e.where, s: e.at + ' · ' + e.msg, lv: e.today ? 'warn' : 'off' };
+        })) + '<div style="margin-top:12px"><button class="btn ghost" onclick="askHealthClear()">Очистить список</button></div>'
+      : '<div class="info">Ошибок не было.</div>');
+    if (PERF.length) h += section('Скорость пульта (этот телефон, последние запросы)', hList(PERF.map(function (p) {
+      return { t: p.a + ' — ' + p.total + ' мс',
+               s: p.at + (p.srv != null ? ' · сервер ' + p.srv + ' мс · связь и запуск ' + (p.total - p.srv) + ' мс' : ' · ошибка связи'),
+               lv: p.total > 4000 ? 'bad' : (p.total > 2000 ? 'warn' : 'ok') };
+    })));
+    var s = d.sys;
+    h += section('Система', hList([
+      { t: 'Версия', s: s.version, lv: 'off' },
+      { t: 'Тестовый режим', s: s.test ? 'ВКЛЮЧЁН — заказы уходят в тестовые листы' : 'выключен', lv: s.test ? 'bad' : 'ok' }
+    ]));
+    view(h);
+  }).catch(fail);
+}
+
+function askHealthClear() {
+  confirmSheet({
+    title: 'Очистить список ошибок?', sub: 'Здоровье системы',
+    what: ['Список ошибок обнулится', 'На заказы и отчёты не влияет'],
+    yes: 'Очистить',
+    run: function () { return call('healthClear'); },
+    done: function () { toast('Очищено'); apply('health', {}); }
+  });
+}
+
+// ================= ИЗМЕНИТЬ ЗАКАЗ =================
+function loadEdit(id, dir) {
+  setHead('Изменить заказ', '');
+  spin();
+  call('store', { storeId: id, dir: dir || '' }).then(function (d) {
+    S.edit = d;
+    setHead('Изменить заказ', d.label + ' · ' + (DIRS[d.dir] ? DIRS[d.dir].short : d.dir));
+    if (!d.rows.length) return view('<div class="info">Сегодня заказа нет — менять нечего.</div>');
+    var rows = d.rows.map(function (r, i) {
+      return '<div class="item" style="min-height:58px;padding:10px 16px">' +
+        '<span class="grow"><span style="font-size:15px">' + esc(r.name) + '</span>' +
+        '<span class="s">было ' + r.qty + '</span></span>' +
+        '<input type="text" inputmode="decimal" data-i="' + i + '" value="' + r.qty + '" ' +
+        'style="flex:none;width:92px;padding:12px;text-align:center;font-weight:600"></div>';
+    }).join('');
+    view('<div class="info">Впишите новое количество. <b>0</b> — убрать позицию.<br>' +
+      'Если убрать всё — это то же, что отменить заказ: метка «уже заказывали» снимется.</div>' +
+      section('Заказ на ' + esc(d.today) + ' · ' + esc(d.unit), '<div class="card">' + rows + '</div>') +
+      '<div><button class="btn" onclick="askEdit()">Сохранить изменения</button></div>');
+  }).catch(fail);
+}
+
+function askEdit() {
+  var d = S.edit, ch = [], what = [], bad = '';
+  Array.prototype.forEach.call(document.querySelectorAll('input[data-i]'), function (inp) {
+    var r = d.rows[+inp.getAttribute('data-i')];
+    var v = String(inp.value).trim().replace(',', '.');
+    var q = v === '' ? 0 : Number(v);
+    if (!(q >= 0) || (d.dir !== 'veg' && q % 1)) { bad = r.name; return; }
+    if (q === r.qty) return;
+    ch.push({ row: r.row, name: r.name, oldQty: r.qty, qty: q });
+    what.push(r.name + ': ' + (q ? r.qty + ' → ' + q : 'убрать (было ' + r.qty + ')'));
+  });
+  if (bad) return toast('Неверное количество: ' + bad);
+  if (!ch.length) return toast('Ничего не изменено');
+  var id = d.id, dir = d.dir;
+  confirmSheet({
+    title: 'Сохранить изменения (' + ch.length + ')?', sub: d.label + ' · ' + DIRS[dir].t,
+    what: what.concat(['Каждая строка перед записью сверяется с листом', 'Действие попадёт в журнал']),
+    yes: 'Сохранить',
+    run: function () { return call('editOrder', { storeId: id, dir: dir, changes: ch }); },
+    done: function (r) {
+      toast(r.left ? 'Сохранено' : 'Заказ пуст — метка снята');
+      goBack();
+    }
+  });
+}
+
+// ================= КАРТОЧКА ТОЧКИ =================
+var CARD_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+var CARD_T = { active: 'Активна', label: 'Название', code: 'Учётный номер', route: 'Маршрут',
+  note: 'Примечание', bread: 'Хлеб Рома', nbhz: 'Хлеб НБХЗ', bakery: 'Выпечка', veg: 'Овощи',
+  routeNbhz: 'Маршрут НБХЗ', edrpou: 'ЄДРПОУ', daysBakery: 'Дни выпечки', daysVeg: 'Дни овощей',
+  zone: 'Зона' };
+
+function cardDaysNorm(s) {
+  var t = String(s || '').split(/[\s,;]+/);
+  return CARD_DAYS.filter(function (d) { return t.indexOf(d) >= 0; }).join(', ');
+}
+function cardFmt(v) { return v === true ? 'да' : v === false ? 'нет' : (String(v) === '' ? 'пусто' : String(v)); }
+
+function loadCard(id) {
+  setHead('Карточка точки', '');
+  spin();
+  call('card', { storeId: id }).then(function (c) {
+    S.card = c;
+    var f = c.f;
+    setHead(c.label, 'строка ' + c.row + ' Довідника');
+
+    function txt(k, label, mode, ph) {
+      return '<div style="margin-top:14px"><div class="s" style="margin:0 4px 8px">' + esc(label) + '</div>' +
+        '<input type="text" id="cf_' + k + '" value="' + esc(f[k]) + '"' +
+        (mode ? ' inputmode="' + mode + '"' : '') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
+    }
+    function chk(k, label, sub) {
+      return '<label class="pick"><input type="checkbox" id="cf_' + k + '"' + (f[k] ? ' checked' : '') + '>' +
+        '<span class="grow"><span class="t">' + esc(label) + '</span>' +
+        (sub ? '<span class="s">' + esc(sub) + '</span>' : '') + '</span></label>';
+    }
+    function days(k) {
+      var on = cardDaysNorm(f[k]).split(', ');
+      return '<div class="chips" id="cf_' + k + '" style="margin:0">' + CARD_DAYS.map(function (d) {
+        return '<button type="button" class="chip' + (on.indexOf(d) >= 0 ? ' on' : '') + '" data-d="' + d +
+          '" onclick="this.classList.toggle(\'on\')">' + d + '</button>';
+      }).join('') + '</div>';
+    }
+    var zones = [''].concat(c.zones);
+    if (f.zone && zones.indexOf(f.zone) < 0) zones.push(f.zone);
+    var zone = '<select id="cf_zone" style="width:100%;padding:16px;border:1px solid #DCE0E5;border-radius:16px;' +
+      'background:#fff;font:inherit;color:#16181D">' + zones.map(function (z) {
+        return '<option value="' + esc(z) + '"' + (z === f.zone ? ' selected' : '') + '>' +
+          esc(z || '— не задана —') + '</option>';
+      }).join('') + '</select>';
+    var box = function (inner) { return '<div class="card" style="padding:2px 16px 18px">' + inner + '</div>'; };
+
+    var h = '<div class="info">Адрес: <b>' + esc(c.address) + '</b><br>' +
+      'Адреса здесь не меняются — по ним точка связана с заказами и отчётами.</div>';
+    h += section('Основное', box(txt('label', 'Название для продавца') + txt('code', 'Учётный номер', 'numeric') +
+      txt('route', 'Маршрут (Рома)') + txt('note', 'Примечание')));
+    h += section('Направления', '<div class="card">' +
+      chk('active', 'Активна', 'если снять — точка пропадёт у продавцов и из пульта') +
+      chk('bread', 'Хлеб Рома') + chk('nbhz', 'Хлеб НБХЗ') +
+      chk('bakery', 'Выпечка и кулинария') + chk('veg', 'Овощи и фрукты') + '</div>');
+    h += section('Хлеб', box(txt('edrpou', 'ЄДРПОУ юрлица (пусто = ' + (c.defEdrpou || 'по умолчанию') + ')',
+      'numeric', c.defEdrpou) + txt('routeNbhz', 'Маршрут НБХЗ')));
+    h += section('Выпечка', '<div class="card" style="padding:16px">' +
+      '<div class="s" style="margin:0 4px 10px">Дни приёма (ничего не выбрано = без ограничений)</div>' +
+      days('daysBakery') + '<div class="s" style="margin:18px 4px 8px">Зона доставки</div>' + zone + '</div>');
+    h += section('Овощи', '<div class="card" style="padding:16px">' +
+      '<div class="s" style="margin:0 4px 10px">Дни приёма (ничего не выбрано = без ограничений)</div>' +
+      days('daysVeg') + '</div>');
+    h += '<div><button class="btn" onclick="askCard()">Сохранить</button></div>';
+    view(h);
+  }).catch(fail);
+}
+
+function askCard() {
+  var c = S.card, f = c.f, set = {}, what = [];
+  function el(k) { return document.getElementById('cf_' + k); }
+  ['label', 'code', 'route', 'note', 'edrpou', 'routeNbhz', 'zone'].forEach(function (k) {
+    var v = String(el(k).value).trim();
+    if (v !== String(f[k] == null ? '' : f[k])) set[k] = v;
+  });
+  ['active', 'bread', 'nbhz', 'bakery', 'veg'].forEach(function (k) {
+    var v = el(k).checked;
+    if (v !== !!f[k]) set[k] = v;
+  });
+  ['daysBakery', 'daysVeg'].forEach(function (k) {
+    var on = Array.prototype.map.call(document.querySelectorAll('#cf_' + k + ' .chip.on'),
+      function (b) { return b.getAttribute('data-d'); });
+    var v = CARD_DAYS.filter(function (d) { return on.indexOf(d) >= 0; }).join(', ');
+    if (v !== cardDaysNorm(f[k])) set[k] = v;
+  });
+
+  var keys = Object.keys(set);
+  if (!keys.length) return toast('Ничего не изменено');
+  if ('label' in set && !set.label) return toast('Название не может быть пустым');
+  if (set.code && !/^\d+$/.test(set.code)) return toast('Учётный номер — только цифры');
+  if (set.edrpou && !/^\d{8}$/.test(set.edrpou)) return toast('ЄДРПОУ — 8 цифр или пусто');
+
+  keys.forEach(function (k) { what.push(CARD_T[k] + ': ' + cardFmt(f[k]) + ' → ' + cardFmt(set[k])); });
+  var dirsOn = ['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return (k in set) ? set[k] : f[k]; });
+  var gone = set.active === false || !dirsOn;
+  if (set.active === false) what.push('Точка пропадёт у продавцов и из пульта. Вернуть — галочкой в Довіднике');
+  else if (!dirsOn) what.push('Ни одного направления — точка пропадёт у продавцов');
+  if (['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return set[k] === false; }))
+    what.push('Если точка уже заказала сегодня по снимаемому направлению — лучше снять вечером');
+  what.push('Меняется только Довідник, принятые заказы не трогаются');
+
+  confirmSheet({
+    title: 'Сохранить изменения (' + keys.length + ')?', sub: c.label,
+    what: what, yes: 'Сохранить',
+    run: function () { return call('cardSave', { storeId: c.id, orig: f, set: set }); },
+    done: function () { toast('Сохранено'); if (gone) tabGo('stores'); else goBack(); }
+  });
+}
+</script>
+
+<!-- shop-orders: на сервері немає: бэкап, дублі, позначка, збереження картки - кнопки приховано -->
+<style>
+[onclick*="'restore'"],[onclick*="'dups'"],[onclick*="askClearMark"]{display:none!important}
+</style>
+<script>
+function askClearMark(){ toast('Отметок больше нет: отмените заказ или откройте приём точке.'); }
+// ===== shop-orders: зв'язок з сервером замість Apps Script (вхід - cookie, токена в сторінці немає) =====
+function adminPost_(action, payload) {
+  return fetch('/admin/api', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: action, payload: payload || {} })
+  }).then(function (r) {
+    return r.json().catch(function () { return { ok: false, error: 'Ошибка связи (' + r.status + ')' }; });
+  });
+}
+function callNet(action, payload) {
+  var t0 = Date.now();
+  return adminPost_(action, payload).then(function (r) {
+    perfLog(action, t0, r);
+    if (r && r.ok) return r.data;
+    if (r && r.error === 'AUTH') { logout(); throw new Error('Нужно войти заново'); }
+    throw new Error((r && r.error) || 'Ошибка связи');
+  }, function (e) { perfLog(action, t0, null); throw e; });
+}
+function logout() {
+  TOKEN = '';
+  try { localStorage.removeItem('adm_token'); } catch (e) {}
+  try { fetch('/admin/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login').style.display = 'block';
+}
+function doLogin() {
+  var pin = document.getElementById('pin').value;
+  var err = document.getElementById('pinerr');
+  err.textContent = 'Проверяю…';
+  adminPost_('login', { pin: pin }).then(function (r) {
+    if (!r || !r.ok) { err.textContent = (r && r.error) || 'Ошибка'; return; }
+    err.textContent = '';
+    TOKEN = 'cookie';
+    start();
+  }, function (e) { err.textContent = String(e.message || e); });
+}
+// вже увійшли (cookie діє) -> одразу в пульт
+adminPost_('today', {}).then(function (r) {
+  if (r && r.ok && document.getElementById('app').style.display !== 'block') { TOKEN = 'cookie'; start(); }
+}, function () {});
+// нижня вкладка «Здоровье» (замість прихованого «Бэкап»): екран health підсвічує її, а не «Сегодня»
+function tabs(name) {
+  var map = { today: 'today', dir: 'today', schedule: 'today', dups: 'today', stores: 'stores', store: 'stores',
+              health: 'restore', log: 'log', edit: 'stores', card: 'stores', newstore: 'stores', wo: 'today', wostore: 'today' };
+  var on = map[name] || 'today';
+  ['today', 'stores', 'restore', 'log'].forEach(function (k) {
+    var el = document.getElementById('t-' + k);
+    if (el) el.className = 'tab' + (k === on ? ' on' : '');
+  });
+}
+</script>
+<style>
+/* adm-theme */
+:root{--bg:#F2F4F5;--sf:#fff;--sf2:#F5F7F8;--ln:#E2E6E9;--tx:#14181B;--mu:#65717A;--hd:#11171A;--acc:#E11B22;--teal:#0F766E;--ok:#15803D;--okb:#E7F5EC;--bad:#C81E1E;--badb:#FDECEC;--warn:#9A5B00;--warnb:#FFF4DE;--sh:0 1px 2px rgba(16,24,28,.05),0 4px 14px rgba(16,24,28,.06);--sh2:0 12px 30px rgba(16,24,28,.16)}
+[data-theme=dark]{--bg:#0E1315;--sf:#161D20;--sf2:#1C252A;--ln:#27333A;--tx:#E3EBED;--mu:#8C9DA4;--hd:#090D0F;--teal:#2DD4BF;--ok:#4ADE80;--okb:rgba(74,222,128,.12);--bad:#F87171;--badb:rgba(248,113,113,.12);--warn:#FBBF24;--warnb:rgba(251,191,36,.12);--sh:0 1px 2px rgba(0,0,0,.35);--sh2:0 14px 34px rgba(0,0,0,.55)}
+html{color-scheme:light}[data-theme=dark]{color-scheme:dark}
+body{background:var(--bg);color:var(--tx);transition:background .2s,color .2s}
+.hdr{background:var(--hd);border-bottom:1px solid var(--ln)}
+.sec{color:var(--teal)}
+.s,.chev{color:var(--mu)}
+.card,.dir,.info,.kpis div,.wodoc{background:var(--sf);color:var(--tx);border:1px solid var(--ln);box-shadow:var(--sh)}
+.item{background:transparent;color:var(--tx);transition:background .15s}
+.item:hover,.item:active{background:var(--sf2)}
+.item + .item::before,label.pick + label.pick::before{background:var(--ln)}
+.dir,.card{transition:transform .18s,box-shadow .18s,background .2s}
+.dir:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.dir:active{background:var(--sf2)}
+.bar,.minibar{background:var(--sf2)}
+.chip{background:var(--sf);color:var(--tx);border-color:var(--ln);transition:transform .15s,box-shadow .15s}
+.chip:hover{transform:translateY(-2px);box-shadow:var(--sh)}
+.chip.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+input[type=search],input[type=text],input[type=tel]{background:var(--sf);color:var(--tx);border-color:var(--ln)}
+input:focus{border-color:var(--teal)}
+.btn{transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 18px color-mix(in srgb,var(--acc) 30%,transparent)}
+.btn.dark{background:var(--tx);color:var(--bg)}
+.btn.ghost{background:var(--sf2);color:var(--tx);border:1px solid var(--ln);box-shadow:none}
+.btn[disabled]{background:var(--ln);color:var(--mu);transform:none;box-shadow:none}
+.pill.open{color:var(--ok);background:var(--okb)}
+.pill.closed{color:var(--bad);background:var(--badb)}
+.pill.warn{color:var(--warn);background:var(--warnb)}
+.pill.off{color:var(--mu);background:var(--sf2)}
+.note{background:var(--warnb);border-color:color-mix(in srgb,var(--warn) 35%,transparent);color:var(--warn)}
+.bad{background:var(--badb);border-color:color-mix(in srgb,var(--bad) 35%,transparent);color:var(--bad)}
+.ok{background:var(--okb);border-color:color-mix(in srgb,var(--ok) 35%,transparent);color:var(--ok)}
+.spin{color:var(--mu)}
+.sheet{background:var(--sf);color:var(--tx);border:1px solid var(--ln)}
+.sheet .sub{color:var(--mu)}
+.what{background:var(--sf2)}
+.what div + div{border-color:var(--ln)}
+.wodoc .h{background:var(--sf2);border-color:var(--ln)}
+.wodoc .r .q,.kpis i{color:var(--mu)}
+[data-theme=dark] [style*="#8E1418"]{color:var(--bad)!important}
+[data-theme=dark] [style*="#5A626D"]{color:var(--mu)!important}
+[data-theme=dark] [style*="background:#fff"]{background:var(--sf)!important}
+.thbtn{font-size:19px}
+.tabs{left:50%;right:auto;bottom:14px;transform:translateX(-50%);width:auto;max-width:calc(100% - 20px);margin:0;gap:4px;padding:6px;border:1px solid var(--ln);border-radius:20px;background:color-mix(in srgb,var(--sf) 88%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:var(--sh2)}
+.tab{flex-grow:0;flex-direction:row;gap:8px;padding:10px 16px;border-radius:14px;font-size:14px;font-weight:600;color:var(--mu);white-space:nowrap;transition:transform .18s,background .18s,color .18s}
+.tab svg{width:18px;height:18px}
+.tab:hover{transform:translateY(-3px);background:var(--sf2);color:var(--tx)}
+.tab.on{color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent)}
+.wrap{max-width:1320px;padding:24px 20px 120px}
+@media (min-width:1000px){
+ .hdr{padding:18px 28px}
+ .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:24px;align-items:start}
+ .grid>.spin,.grid>.note,.grid>.bad,.grid>.ok,.grid>.info,.grid>.chips,.grid>.btn,.grid>input,.grid>.kpis{grid-column:1/-1}
+ .grid>div:has(> .dir + .dir){grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+ .grid>div:has(> .dir + .dir)>.sec{grid-column:1/-1;margin-bottom:0}
+ .grid>div:has(> .dir + .dir)>.dir + .dir{margin-top:0}
+ .kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+ .mask{align-items:center}
+ .sheet{border-radius:24px;padding-bottom:24px}
+ .grip{display:none}
+}
+@media (max-width:640px){
+ .tabs{left:0;right:0;bottom:0;transform:none;max-width:none;border-radius:18px 18px 0 0;padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+ .tab{flex:1;flex-direction:column;gap:4px;padding:6px 0;font-size:11px}
+ .tab:hover{transform:none}
+ .wrap{padding:18px 14px 110px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>
+(function () {
+  var hdr = document.querySelector('.hdr'); if (!hdr) return;
+  var b = document.createElement('button');
+  b.className = 'icobtn thbtn'; b.type = 'button'; b.setAttribute('aria-label', 'Тема');
+  function mark() { b.textContent = document.documentElement.dataset.theme === 'dark' ? '\u2600' : '\u263E'; }
+  b.onclick = function () {
+    var t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('buyer_theme', t); } catch (e) {}
+    mark();
+  };
+  mark();
+  var btns = hdr.querySelectorAll('.icobtn');
+  hdr.insertBefore(b, btns[btns.length - 1]);
+})();
+</script>
+
+<style>
+/* adm-tiles */
+.atop{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;grid-column:1/-1}
+.adir{--c:#888;position:relative;overflow:hidden;display:block;width:100%;text-align:left;border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:18px;padding:14px 16px 14px 20px;box-shadow:var(--sh);cursor:pointer;transition:transform .18s,box-shadow .18s}
+.adir::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+.adir:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.adir .h{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.adir .n{font-size:16px;font-weight:700;line-height:1.25}
+.adir .big{display:block;font-size:30px;font-weight:800;line-height:1;margin-top:10px;letter-spacing:-.02em}
+.adir .big small{font-size:14px;font-weight:600;color:var(--mu)}
+.adir .bar{display:block;margin-top:10px}
+.adir .m{display:block;font-size:12.5px;color:var(--mu);margin-top:8px}
+.atools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.grid>.atools{grid-column:1/-1;margin:0}
+.atools input[type=search]{flex:1 1 240px;max-width:420px;padding:10px 14px;border-radius:12px}
+.achip{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.achip:hover{transform:translateY(-2px);box-shadow:var(--sh)}
+.achip.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+.achip i{font-style:normal;opacity:.6;margin-left:6px}
+.adot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.atiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.atile{--st:var(--ln);display:block;width:100%;text-align:left;background:var(--sf);color:var(--tx);border:1px solid var(--ln);border-top:3px solid var(--st);border-radius:14px;padding:11px 12px;cursor:pointer;transition:transform .16s,box-shadow .16s}
+.atile:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.atile.done{--st:var(--ok);background:color-mix(in srgb,var(--ok) 8%,var(--sf))}
+.atile.wait{--st:var(--warn)}
+.atile .tt{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.atile .nm{font-size:14.5px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.atile .st{flex:none;font-size:11px;font-weight:800;border-radius:8px;padding:3px 7px}
+.atile.done .st{color:var(--ok);background:var(--okb)}
+.atile.wait .st{color:var(--warn);background:var(--warnb)}
+.atile.off .st{color:var(--mu);background:var(--sf2)}
+.atile .mt{display:block;font-size:12px;color:var(--mu);margin-top:3px}
+.atile .ds{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.atile .d{font-size:11.5px;font-weight:700;border-radius:7px;padding:2px 7px 2px 9px}
+.atile .d.y{color:var(--ok);background:var(--okb)}
+.atile .d.w{color:var(--warn);background:var(--warnb)}
+.atile .d.o{color:var(--mu);background:var(--sf2)}
+.uat{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:5px;background:#1565C0;color:#fff;font-size:10.5px;font-weight:800;vertical-align:1px}
+.grid>#adm-t{grid-column:1/-1}
+@media (max-width:520px){.atiles{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.atop{grid-template-columns:1fr 1fr}.adir .big{font-size:24px}}
+</style>
+<script>
+// ===== shop-orders: пульт плитками, як у закупниць. Перевизначає loadToday, loadStores, fillStores, loadSchedule; дані ті ж: today, schedule, stores =====
+var AT = { f: 'all', q: '', dir: '', rows: null, t: 0 };
+function atState(r) {
+  var t = r.cells.filter(function (c) { return c.today && (!AT.dir || c.dir === AT.dir); });
+  var dn = t.filter(function (c) { return c.ordered; }).length;
+  return { today: t.length, done: dn, st: dn ? 'done' : (t.length ? 'wait' : 'off') };
+}
+function atMount(el) {
+  if (!el) return;
+  Promise.all([call('schedule', { dir: '' }), call('stores', { q: '', dir: '' })]).then(function (r) {
+    var by = {};
+    (r[1] || []).forEach(function (s) { by[s.id] = s; });
+    AT.rows = ((r[0] && r[0].rows) || []).map(function (x) {
+      var s = by[x.id] || {};
+      return { id: x.id, label: x.label || s.label || '', ua: !!(x.ua || s.ua), code: s.code || '', route: s.route || '', cells: x.cells || [] };
+    });
+    atDraw();
+  }).catch(function (e) { el.innerHTML = '<div class="bad">' + esc(e && e.message ? e.message : e) + '</div>'; });
+}
+function atList() {
+  return (AT.rows || []).filter(function (r) {
+    return !AT.dir || r.cells.some(function (c) { return c.dir === AT.dir; });
+  }).map(function (r) { r.s = atState(r); return r; });
+}
+function atDraw() {
+  var el = document.getElementById('adm-t');
+  if (!el || !AT.rows) return;
+  var list = atList(), cnt = { all: list.length, done: 0, wait: 0, off: 0, ua: 0 };
+  list.forEach(function (r) { cnt[r.s.st]++; if (r.ua) cnt.ua++; });
+  if (AT.f === 'ua' && !cnt.ua) AT.f = 'all';
+  function chip(k, t) { return '<button class="achip' + (AT.f === k ? ' on' : '') + '" onclick="AT.f=\'' + k + '\';atDraw()">' + t + '<i>' + cnt[k] + '</i></button>'; }
+  function dchip(k, t, c) { return '<button class="achip' + (AT.dir === k ? ' on' : '') + '" onclick="AT.dir=\'' + k + '\';atDraw()">' + (c ? '<span class="adot" style="background:' + c + '"></span>' : '') + esc(t) + '</button>'; }
+  el.innerHTML = '<div class="sec">Точки сегодня</div>' +
+    '<div class="atools"><input id="atq" type="search" placeholder="Адрес, № или маршрут" value="' + esc(AT.q) + '">' +
+    chip('all', 'Все') + chip('done', 'Сделано') + chip('wait', 'Ждём') + chip('off', 'Не сегодня') + (cnt.ua ? chip('ua', 'ЮА') : '') + '</div>' +
+    '<div class="atools">' + dchip('', 'Все направления', '') + ORDER.map(function (k) { return dchip(k, DIRS[k].short, DIRS[k].c); }).join('') + '</div>' +
+    '<div id="atl"></div>';
+  var inp = document.getElementById('atq');
+  inp.addEventListener('input', function () {
+    clearTimeout(AT.t);
+    AT.t = setTimeout(function () { AT.q = inp.value; S.q = inp.value; atTiles(); }, 200);
+  });
+  atTiles();
+}
+function atTiles() {
+  var box = document.getElementById('atl');
+  if (!box) return;
+  var q = String(AT.q || '').trim().toLowerCase();
+  var shown = atList().filter(function (r) {
+    if (AT.f === 'ua' ? !r.ua : (AT.f !== 'all' && r.s.st !== AT.f)) return false;
+    return !q || (r.label + ' ' + r.code + ' ' + r.route).toLowerCase().indexOf(q) >= 0;
+  });
+  box.innerHTML = shown.length ? '<div class="atiles">' + shown.map(atTile).join('') + '</div>' : '<div class="note">Ничего не найдено</div>';
+}
+function atTile(r) {
+  var st = r.s.st, lab = st === 'done' ? 'Сделано' : (st === 'wait' ? 'Ждём' : 'Не сегодня');
+  var ds = r.cells.filter(function (c) { return !AT.dir || c.dir === AT.dir; }).map(function (c) {
+    var m = DIRS[c.dir] || { short: c.dir, c: '#888' };
+    var k = c.ordered ? 'y' : (c.today ? 'w' : 'o');
+    var tip = c.ordered ? 'заказали' : (c.today ? 'можно сегодня до ' + (c.deadline || '—') : 'дни: ' + (c.days || '—') + (c.next ? ' · ' + c.next : ''));
+    return '<span class="d ' + k + '" style="box-shadow:inset 3px 0 0 ' + m.c + '" title="' + attr(tip) + '">' +
+      esc(m.short) + (c.ordered ? ' ✓' : (c.today ? ' до ' + esc(c.deadline || '—') : '')) + '</span>';
+  }).join('');
+  var meta = [r.code ? '№ ' + esc(r.code) : '', r.route ? esc(r.route) : '', r.s.today ? r.s.done + ' из ' + r.s.today + ' сегодня' : ''].filter(Boolean).join(' · ');
+  return '<button class="atile ' + st + '" onclick="go(\'store\',{store:\'' + attr(r.id) + '\',dir:\'' + AT.dir + '\'})">' +
+    '<span class="tt"><span class="nm">' + esc(r.label) + (r.ua ? '<span class="uat">ЮА</span>' : '') + '</span><span class="st">' + lab + '</span></span>' +
+    (meta ? '<span class="mt">' + meta + '</span>' : '') + '<span class="ds">' + ds + '</span></button>';
+}
+function loadStores(q) {
+  setHead('Точки', 'кто что заказал сегодня');
+  if (q != null) AT.q = q;
+  view('<div id="adm-t"><div class="spin">Загрузка…</div></div>');
+  atMount(document.getElementById('adm-t'));
+}
+function fillStores(q) { AT.q = q || ''; atTiles(); }
+function loadSchedule(dir) {
+  S.dir = dir; AT.dir = dir || '';
+  setHead('График', 'кому что доступно сегодня');
+  view('<div id="adm-t"><div class="spin">Загрузка…</div></div>');
+  atMount(document.getElementById('adm-t'));
+}
+function loadToday() {
+  setHead('Сегодня', '');
+  spin();
+  call('today').then(function (d) {
+    S.today = d.today;
+    setHead('Сегодня', d.today + ', ' + d.time);
+    var h = '';
+    var alerts = d.dirs.filter(function (x) { return !x.closed && x.minLeft !== null && x.minLeft > 0 && x.minLeft <= 60 && x.waiting.length; });
+    if (alerts.length) h += '<div class="note">' + alerts.map(function (x) {
+      return 'До дедлайна «' + esc(DIRS[x.key].t) + '» ' + x.minLeft + ' мин. Не заказали ' + x.waiting.length + ' точек.';
+    }).join('<br>') + '</div>';
+    var stale = d.dirs.filter(function (x) { return x.enabled && x.ordered > 0 && !x.reportAt; });
+    if (stale.length) h += '<button class="bad" style="display:block;width:100%;text-align:left;cursor:pointer" onclick="go(\'health\',{})">' +
+      'Заказы есть, а отчёт сегодня не собирался: ' + stale.map(function (x) { return esc(DIRS[x.key] ? DIRS[x.key].short : x.key); }).join(', ') + '. Нажмите, чтобы проверить.</button>';
+    h += '<div class="atop">' + ORDER.map(function (k) {
+      var x = null;
+      d.dirs.forEach(function (y) { if (y.key === k) x = y; });
+      if (!x) return '';
+      var m = DIRS[k];
+      var pill = !x.enabled ? '<span class="pill closed">Выключено</span>'
+        : x.noDayToday ? '<span class="pill off">Не приём</span>'
+        : x.openedAll ? '<span class="pill warn">Открыто всем</span>'
+        : x.closed ? '<span class="pill closed">Закрыто</span>' : '<span class="pill open">Открыто</span>';
+      var pct = x.total ? Math.round(x.ordered / x.total * 100) : 0;
+      return '<button class="adir" style="--c:' + m.c + '" onclick="go(\'dir\',{dir:\'' + k + '\'})">' +
+        '<span class="h"><span class="n">' + esc(m.t) + '</span>' + pill + '</span>' +
+        (x.noDayToday
+          ? '<span class="m">Сегодня (' + esc(d.dow) + ') по графику не заказывает ни одна из ' + x.all + ' точек</span>'
+          : '<span class="big">' + x.ordered + ' <small>из ' + x.total + '</small></span><span class="bar"><i style="width:' + pct + '%;background:' + m.c + '"></i></span>') +
+        '<span class="m">до ' + esc(x.deadline || '—') + (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
+        (x.byDays && x.offDay ? ' · вне графика ' + x.offDay : '') + '</span></button>';
+    }).join('') + '</div>';
+    h += '<div class="atools"><button class="achip" onclick="go(\'schedule\',{dir:\'\'})">График по точкам</button>' +
+      '<button class="achip" onclick="go(\'health\',{})">Здоровье системы</button>' +
+      '<button class="achip" onclick="tabGo(\'log\')">Журнал действий</button></div>';
+    h += '<div id="adm-t"><div class="spin">Загрузка точек…</div></div>';
+    view(h);
+    AT.dir = '';
+    atMount(document.getElementById('adm-t'));
+  }).catch(fail);
+}
+</script>
+<style>
+.stbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.stbar .seg{display:inline-flex;border:1px solid var(--ln);border-radius:12px;overflow:hidden;background:var(--sf)}
+.stbar .seg button{border:0;background:transparent;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer;color:var(--tx)}
+.stbar .seg button.on{background:var(--acc);color:#fff}
+.stbar .newst{margin-left:auto;padding:10px 14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.stbar .doc{padding:10px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--tx);font-weight:600;text-decoration:none}
+.stfl{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.stfl button{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.stfl button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.sttb-wrap{overflow:auto;max-height:calc(100vh - 290px);border:1px solid var(--ln);border-radius:12px;background:var(--sf)}
+.sttb{border-collapse:collapse;font-size:13px;min-width:max-content}
+.sttb th,.sttb td{padding:7px 10px;border-bottom:1px solid var(--ln);white-space:nowrap;text-align:left}
+.sttb th{position:sticky;top:0;background:var(--sf2);z-index:2;font-weight:700}
+.sttb td:first-child,.sttb th:first-child{position:sticky;left:0;background:var(--sf);z-index:1;font-weight:600}
+.sttb th:first-child{background:var(--sf2);z-index:3}
+.sttb tbody tr{cursor:pointer}
+.sttb tbody tr:hover td{background:var(--sf2)}
+.sttb tr.off td{opacity:.5}
+.sttb .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:middle}
+.stnote{color:var(--mu);font-size:13px;margin:0 0 10px}
+.stpick{position:relative;margin:0 0 14px}
+.stpick input{width:100%}
+.stpl{position:absolute;left:0;right:0;top:100%;z-index:6;background:var(--sf);border:1px solid var(--ln);border-radius:12px;box-shadow:var(--sh2);max-height:340px;overflow:auto;margin-top:4px}
+.stpl button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--ln);background:transparent;padding:11px 14px;cursor:pointer;color:var(--tx);font:inherit}
+.stpl button:hover{background:var(--sf2)}
+.stpl small{display:block;color:var(--mu);font-size:12px}
+.stc{background:var(--sf);border:1px solid var(--ln);border-radius:18px;padding:18px;margin:0 0 14px}
+.stc h2{margin:0 0 4px;font-size:20px}
+.stc .sub{color:var(--mu);font-size:14px;margin:0 0 10px}
+.stc .tags{display:flex;gap:8px;flex-wrap:wrap}
+.stag{display:inline-block;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;background:var(--sf2);color:var(--tx)}
+.stag.ua{background:#1565C0;color:#fff}
+.stag.fm{background:#2E7D32;color:#fff}
+.stag.off{background:#8E1418;color:#fff}
+.sth{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--mu);margin:22px 0 10px}
+.std{border:1px solid var(--ln);border-left-width:5px;border-radius:14px;padding:12px 14px;margin:0 0 10px;background:var(--sf)}
+.std .hd{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.std .hd b{font-size:16px}
+.std .dl{color:var(--mu);font-size:13px}
+.std .info{margin:8px 0 0;font-size:14px}
+.std .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.std .btns button{border:1px solid var(--ln);background:var(--sf2);color:var(--tx);border-radius:10px;padding:9px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.stp{border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700}
+.stp.ok{background:var(--okb);color:var(--ok)}
+.stp.wait{background:var(--warnb);color:var(--warn)}
+.stp.bad{background:var(--badb);color:var(--bad)}
+.stp.mu{background:var(--sf2);color:var(--mu)}
+.stg{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 10px}
+.stg .nm{min-width:150px;font-weight:600}
+.stg .wd{display:inline-block;min-width:38px;text-align:center;border:1px solid var(--ln);border-radius:9px;padding:7px 0;font-size:13px;font-weight:600;color:var(--mu);background:var(--sf2)}
+.stg .wd.on{color:#fff;border-color:transparent}
+.stg .av{border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;border:1px solid var(--ln);color:var(--mu)}
+.stg .av.on{color:#fff;border-color:transparent}
+.str{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--ln);font-size:14px}
+.str span:first-child{width:170px;flex:none;color:var(--mu)}
+.stf{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.stf .save{border:0;border-radius:12px;padding:12px 20px;font:inherit;font-weight:700;background:var(--acc);color:#fff;cursor:pointer}
+</style>
+<script>
+// ===== shop-orders: вкладка «Магазини» - Таблиця | Картка; правка і «Добавить адрес» - admin-card.html =====
+var ST = { view: 'table', data: null, busy: false, q: '', dirs: {}, ua: false, off: false, cardId: '', card: null, pick: '' };
+(function () {
+  var WD = [['Пн', 1], ['Вт', 2], ['Ср', 3], ['Чт', 4], ['Пт', 5], ['Сб', 6], ['Вс', 0]];
+  var DOC = 'https://docs.google.com/spreadsheets/d/1noOXYRRdxIuY6gd9kicI2OxGU0vJ_kfvLbcVTyqXi6o/edit';
+
+  function tabLabel() {
+    var t = document.getElementById('t-stores');
+    if (t && t.lastChild && t.lastChild.nodeType === 3) t.lastChild.nodeValue = 'Магазины';
+  }
+  tabLabel();
+
+  function docUrl() { return (ST.data && ST.data.registryUrl) || DOC; }
+  function bar() {
+    return '<div class="stbar"><div class="seg">' +
+      '<button class="' + (ST.view === 'table' ? 'on' : '') + '" onclick="stView(\'table\')">Таблица</button>' +
+      '<button class="' + (ST.view === 'card' ? 'on' : '') + '" onclick="stView(\'card\')">Карточка</button></div>' +
+      '<button class="newst" onclick="stNewStore()">+ Добавить адрес</button>' +
+      '<a class="doc" href="' + attr(docUrl()) + '" target="_blank" rel="noopener">Открыть Довідник</a></div>';
+  }
+  function shell(inner) {
+    setHead('Магазины', ST.view === 'table' ? 'все точки' : 'одна точка: сегодня, график, реквизиты');
+    view('<div id="stw">' + bar() + '<div id="stbody">' + inner + '</div></div>');
+  }
+  function loadList(cb) {
+    if (ST.data) return cb();
+    if (ST.busy) return;
+    ST.busy = true;
+    call('storesTable').then(function (d) { ST.data = d; ST.busy = false; cb(); },
+      function (e) { ST.busy = false; var b = document.getElementById('stbody'); if (b) b.innerHTML = '<div class="bad">' + esc(e && e.message ? e.message : e) + '</div>'; });
+  }
+
+  // ---------- Таблиця ----------
+  function match(r) {
+    if (!ST.off && !r.active) return false;
+    if (ST.ua && !r.ua) return false;
+    var on = Object.keys(ST.dirs).filter(function (k) { return ST.dirs[k]; });
+    for (var i = 0; i < on.length; i++) if (r.directions.indexOf(on[i]) < 0) return false;
+    var q = ST.q.trim().toLowerCase();
+    return !q || (r.label + ' ' + r.address + ' ' + r.code + ' ' + r.route + ' ' + r.zone + ' ' + r.addrBread + ' ' + r.addrNbhz).toLowerCase().indexOf(q) >= 0;
+  }
+  function drawTable() {
+    var b = document.getElementById('stbody');
+    if (!b) return;
+    if (!ST.data) { b.innerHTML = '<div class="spin">Загрузка…</div>'; loadList(drawTable); return; }
+    var rows = ST.data.rows.filter(match);
+    var chips = ['bakery', 'bread', 'nbhz', 'veg'].map(function (k) {
+      return '<button class="' + (ST.dirs[k] ? 'on' : '') + '" onclick="stFlt(\'' + k + '\')">' + esc(DIRS[k] ? DIRS[k].short : k) + '</button>';
+    }).join('') + '<button class="' + (ST.ua ? 'on' : '') + '" onclick="stFlt(\'ua\')">ЮА</button><button class="' + (ST.off ? 'on' : '') + '" onclick="stFlt(\'off\')">Неактивные</button>';
+    var yes = function (r, k) { return r.directions.indexOf(k) >= 0 ? '<span class="dot" style="background:' + (DIRS[k] ? DIRS[k].c : '#999') + '"></span>' : ''; };
+    var head = ['Название', '№ ТТ', 'Маршрут', 'Зона', 'ВК', 'Хлеб', 'НБХЗ', 'Овощи', 'Дни ВК', 'Дни овощей', 'ЄДРПОУ', 'Маршрут НБХЗ', 'Адрес (хлеб)', 'Адрес (ВК)', 'Адрес (овощи)', 'Адрес (НБХЗ)', 'Примечание'];
+    var body = rows.map(function (r) {
+      return '<tr class="' + (r.active ? '' : 'off') + '" onclick="go(\'store\',{store:\'' + attr(r.id) + '\',dir:\'\'})"><td>' + esc(r.label) + (r.ua ? UA_TAG : '') + '</td>' +
+        [esc(r.code), esc(r.route), esc(r.zone), yes(r, 'bakery'), yes(r, 'bread'), yes(r, 'nbhz'), yes(r, 'veg'), esc(r.daysBakery), esc(r.daysVeg), esc(r.edrpou), esc(r.routeNbhz),
+          esc(r.addrBread), esc(r.addrBakery), esc(r.addrVeg), esc(r.addrNbhz), esc(r.note)].map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+    }).join('');
+    b.innerHTML = '<div class="stnote">Клик по строке открывает карточку точки; правка - кнопкой «Редактировать» в карточке.</div>' +
+      '<input id="stq" type="search" placeholder="Поиск: название, адрес, № ТТ, маршрут" value="' + attr(ST.q) + '" style="margin:0 0 10px">' +
+      '<div class="stfl">' + chips + '</div><div class="stnote">Показано ' + rows.length + ' из ' + ST.data.total + '</div>' +
+      '<div class="sttb-wrap"><table class="sttb"><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    var inp = document.getElementById('stq');
+    inp.addEventListener('input', function () { ST.q = inp.value; clearTimeout(ST.t); ST.t = setTimeout(function () { var p = inp.selectionStart; drawTable(); var n = document.getElementById('stq'); n.focus(); n.setSelectionRange(p, p); }, 250); });
+  }
+  window.stFlt = function (k) { if (k === 'ua') ST.ua = !ST.ua; else if (k === 'off') ST.off = !ST.off; else ST.dirs[k] = !ST.dirs[k]; drawTable(); };
+
+  // ---------- Картка ----------
+  function pickerHtml() {
+    return '<div class="stpick"><input id="stpick" type="search" autocomplete="off" placeholder="Найти точку: адрес, № ТТ или маршрут" value="' + attr(ST.pick) + '"><div class="stpl" id="stpl" style="display:none"></div></div>';
+  }
+  function pickList() {
+    var box = document.getElementById('stpl'), q = ST.pick.trim().toLowerCase();
+    if (!box) return;
+    if (!q || !ST.data) { box.style.display = 'none'; return; }
+    var rows = ST.data.rows.filter(function (r) { return (r.label + ' ' + r.address + ' ' + r.code + ' ' + r.route).toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
+    box.innerHTML = rows.length ? rows.map(function (r) {
+      return '<button onclick="stPick(\'' + attr(r.id) + '\')">' + esc(r.label) + (r.ua ? UA_TAG : '') + '<small>' + [r.code ? '№ ' + esc(r.code) : '', esc(r.route), esc(r.zone)].filter(Boolean).join(' · ') + '</small></button>';
+    }).join('') : '<button disabled>Ничего не найдено</button>';
+    box.style.display = 'block';
+  }
+  window.stPick = function (id) { ST.pick = ''; go('store', { store: id, dir: '' }); };
+  function bindPicker() {
+    var inp = document.getElementById('stpick');
+    if (!inp) return;
+    loadList(function () {});
+    inp.addEventListener('input', function () { ST.pick = inp.value; pickList(); });
+    inp.addEventListener('focus', pickList);
+  }
+
+  function pill(d) {
+    if (!d.enabled) return '<span class="stp mu">Направление выключено</span>';
+    if (d.order) return '<span class="stp ok">Заказала</span>';
+    if (!d.dayOk) return '<span class="stp mu">Не их день' + (d.next ? ' · ' + esc(d.next) : '') + '</span>';
+    if (d.closed) return '<span class="stp bad">Закрыто</span>';
+    return '<span class="stp wait">Ждём' + (d.deadline ? ' до ' + esc(d.deadline) : '') + '</span>';
+  }
+  function dirBlock(c, d) {
+    var info = '';
+    if (d.order) {
+      info = d.order.n + ' поз. · ' + d.order.qty + ' ' + esc(d.unit || '') + (d.order.time ? ' · ' + d.order.time : '') +
+        (d.order.src === 'google' ? ' · <i>по таблице Google (заказ через Apps Script)</i>' : '');
+    } else if (d.closed && d.lateLeft > 0) info = 'Приём открыт точке ещё ' + d.lateLeft + ' мин';
+    var id = attr(c.store.id), dir = attr(d.dir), btn = '';
+    if (d.enabled && (!d.order || d.closed || !d.dayOk)) btn += '<button onclick="askOpenStore(\'' + id + '\',\'' + dir + '\')">Открыть приём точке</button>';
+    if (d.order && d.order.canEdit) {
+      btn += '<button onclick="askCancel(\'' + id + '\',\'' + dir + '\',' + d.order.n + ')">Отменить заказ</button>';
+      btn += '<button onclick="go(\'edit\',{store:\'' + id + '\',dir:\'' + dir + '\'})">Изменить заказ</button>';
+    }
+    if (d.order && !d.order.canEdit) info += '<br><span class="stnote">Отмена и правка этого заказа пока только в старом пульте Apps Script.</span>';
+    return '<div class="std" style="border-left-color:' + attr(d.color) + '"><div class="hd"><b>' + esc(DIRS[d.dir] ? DIRS[d.dir].short : d.title) + '</b>' + pill(d) +
+      '<span class="dl">' + (d.deadline ? 'дедлайн ' + esc(d.deadline) : '') + '</span></div>' + (info ? '<div class="info">' + info + '</div>' : '') +
+      (btn ? '<div class="btns">' + btn + '</div>' : '') + '</div>';
+  }
+  function schedBlock(d) {
+    var color = attr(d.color);
+    var wd = d.byDays ? WD.map(function (w) { var on = d.days.indexOf(w[1]) >= 0; return '<span class="wd' + (on ? ' on' : '') + '"' + (on ? ' style="background:' + color + '"' : '') + '>' + w[0] + '</span>'; }).join('')
+      : '<span class="dl">каждый день</span>';
+    if (d.byDays && !d.days.length) wd = '<span class="dl">без ограничений (все дни)</span>';
+    return '<div class="stg"><span class="nm">' + esc(DIRS[d.dir] ? DIRS[d.dir].t : d.title) + '</span><span class="av' + (d.available ? ' on' : '') + '"' + (d.available ? ' style="background:' + color + '"' : '') + '>' +
+      (d.available ? 'доступно точке' : 'не подключено') + '</span>' + (d.available ? wd : '') + '</div>';
+  }
+  function row(l, v) { return v ? '<div class="str"><span>' + esc(l) + '</span><span>' + esc(v) + '</span></div>' : ''; }
+  function cardHtml(c) {
+    var s = c.store, avail = c.dirs.filter(function (d) { return d.available; });
+    return '<div class="stc"><h2>' + esc(s.label) + (s.ua ? UA_TAG : '') + '</h2>' +
+      '<div class="sub">' + [s.code ? '№ ' + esc(s.code) : '', s.route ? 'маршрут ' + esc(s.route) : '', s.zone ? 'зона ' + esc(s.zone) : ''].filter(Boolean).join(' · ') + '</div>' +
+      '<div class="tags"><span class="stag ' + (s.ua ? 'ua' : 'fm') + '">' + esc(s.company) + '</span>' + (s.edrpou ? '<span class="stag">ЄДРПОУ ' + esc(s.edrpou) + '</span>' : '') +
+      (s.active ? '' : '<span class="stag off">неактивна</span>') + '</div>' +
+      '<div class="sth">Сегодня по направлениям · ' + esc(c.today) + '</div>' + (avail.length ? avail.map(function (d) { return dirBlock(c, d); }).join('') : '<div class="stnote">Точке не подключено ни одного направления.</div>') +
+      '<div class="sth">График и направления</div>' + c.dirs.map(schedBlock).join('') +
+      '<div class="sth">Реквизиты</div>' + row('Адрес', s.address) + row('Адрес (хлеб)', s.addrBread) + row('Адрес (ВК)', s.addrBakery) + row('Адрес (овощи)', s.addrVeg) +
+      row('Адрес (НБХЗ)', s.addrNbhz) + row('Маршрут НБХЗ', s.routeNbhz) + row('Тип', s.type) + row('Примечание', s.note) +
+      '<div class="stf"><button class="save" onclick="go(\'card\',{store:\'' + attr(s.id) + '\'})">Редактировать</button><span class="stnote" style="margin:0">График, маршруты, направления, отключение точки.</span></div></div>';
+  }
+  function drawCard() {
+    var b = document.getElementById('stbody');
+    if (!b) return;
+    if (!ST.cardId) { b.innerHTML = pickerHtml() + '<div class="stnote">Выберите точку: начните вводить адрес, номер или маршрут.</div>'; bindPicker(); return; }
+    b.innerHTML = pickerHtml() + '<div class="spin">Загрузка…</div>';
+    bindPicker();
+    call('storeCard', { storeId: ST.cardId }).then(function (c) {
+      ST.card = c;
+      var b2 = document.getElementById('stbody');
+      if (b2) { b2.innerHTML = pickerHtml() + cardHtml(c); bindPicker(); }
+    }).catch(function (e) { var b2 = document.getElementById('stbody'); if (b2) b2.innerHTML = pickerHtml() + '<div class="bad">' + esc(e && e.message ? e.message : e) + '</div>'; bindPicker(); });
+  }
+
+  // ---------- вхід: вкладка «Магазини» і будь-який перехід на екран «store» (плитка «Сегодня», рядок таблиці) ----------
+  window.stView = function (v) {
+    ST.view = v;
+    shell('');
+    if (v === 'table') drawTable(); else drawCard();
+  };
+  loadStores = function () { ST.view = ST.cardId && S.screen === 'store' ? 'card' : 'table'; shell(''); if (ST.view === 'table') drawTable(); else drawCard(); };
+  loadStore = function (id) { ST.view = 'card'; ST.cardId = id || ST.cardId; shell(''); drawCard(); };
+  // вкладка внизу веде в таблицю
+  var baseTabGo = tabGo;
+  tabGo = function (screen) { if (screen === 'stores') ST.cardId = ''; baseTabGo(screen); };
+})();
+</script>
+<style>
+.cfbanner{margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--sf);border:1px solid var(--ln);font-size:14px;line-height:1.4}
+.cfbanner.warn{border-color:#C98A00;color:#C98A00}
+.stbar .newst{padding:10px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.cfbtn[disabled]{opacity:.45;cursor:not-allowed}
+</style>
+<script>
+// ===== shop-orders: правка точки и «Добавить адрес» =====
+var CARD_T = { active: 'Активна', label: 'Название', code: 'Учётный номер', route: 'Маршрут',
+  note: 'Примечание', bread: 'Хлеб Рома', nbhz: 'Хлеб НБХЗ', bakery: 'Выпечка', veg: 'Овощи',
+  routeNbhz: 'Маршрут НБХЗ', edrpou: 'ЄДРПОУ', daysBakery: 'Дни выпечки', daysVeg: 'Дни овощей', zone: 'Зона' };
+
+function cfTxt(f, k, label, mode, ph) {
+  return '<div style="margin-top:14px"><div class="s" style="margin:0 4px 8px">' + esc(label) + '</div>' +
+    '<input type="text" id="cf_' + k + '" value="' + esc(f[k] == null ? '' : f[k]) + '"' +
+    (mode ? ' inputmode="' + mode + '"' : '') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
+}
+function cfChk(f, k, label, sub) {
+  return '<label class="pick"><input type="checkbox" id="cf_' + k + '"' + (f[k] ? ' checked' : '') + '>' +
+    '<span class="grow"><span class="t">' + esc(label) + '</span>' + (sub ? '<span class="s">' + esc(sub) + '</span>' : '') + '</span></label>';
+}
+function cfDays(f, k) {
+  var on = cardDaysNorm(f[k]).split(', ');
+  return '<div class="chips" id="cf_' + k + '" style="margin:0">' + CARD_DAYS.map(function (d) {
+    return '<button type="button" class="chip' + (on.indexOf(d) >= 0 ? ' on' : '') + '" data-d="' + d + '" onclick="this.classList.toggle(\'on\')">' + d + '</button>';
+  }).join('') + '</div>';
+}
+function cfZone(f, zones) {
+  var list = [''].concat(zones);
+  if (f.zone && list.indexOf(f.zone) < 0) list.push(f.zone);
+  return '<select id="cf_zone" style="width:100%;padding:16px;border:1px solid var(--ln);border-radius:16px;background:var(--sf);font:inherit;color:var(--tx)">' +
+    list.map(function (z) { return '<option value="' + esc(z) + '"' + (z === f.zone ? ' selected' : '') + '>' + esc(z || '— не задана —') + '</option>'; }).join('') + '</select>';
+}
+function cfBox(inner) { return '<div class="card" style="padding:2px 16px 18px">' + inner + '</div>'; }
+
+// общая часть формы: основное, направления, хлеб, выпечка, овощи (isNew: без «Активна»)
+function cfBody(f, c, isNew) {
+  var h = cfBox(cfTxt(f, 'label', 'Название для продавца' + (isNew ? ' (пусто = адрес)' : '')) + cfTxt(f, 'code', 'Учётный номер', 'numeric') +
+    cfTxt(f, 'route', 'Маршрут (Рома)') + cfTxt(f, 'note', 'Примечание'));
+  h = section('Основное', h);
+  h += section('Направления', '<div class="card">' +
+    (isNew ? '' : cfChk(f, 'active', 'Активна', 'если снять - точка пропадёт у продавцов и из «Сегодня»')) +
+    cfChk(f, 'bread', 'Хлеб Рома') + cfChk(f, 'nbhz', 'Хлеб НБХЗ') + cfChk(f, 'bakery', 'Выпечка и кулинария') + cfChk(f, 'veg', 'Овощи и фрукты') + '</div>');
+  h += section('Хлеб', cfBox(cfTxt(f, 'edrpou', 'ЄДРПОУ юрлица (пусто = ' + (c.defEdrpou || 'по умолчанию') + ')', 'numeric', c.defEdrpou) +
+    cfTxt(f, 'routeNbhz', 'Маршрут НБХЗ')));
+  h += section('Выпечка', '<div class="card" style="padding:16px"><div class="s" style="margin:0 4px 10px">Дни приёма (ничего не выбрано = без ограничений)</div>' +
+    cfDays(f, 'daysBakery') + '<div class="s" style="margin:18px 4px 8px">Зона доставки</div>' + cfZone(f, c.zones) + '</div>');
+  h += section('Овощи', '<div class="card" style="padding:16px"><div class="s" style="margin:0 4px 10px">Дни приёма (ничего не выбрано = без ограничений)</div>' + cfDays(f, 'daysVeg') + '</div>');
+  return h;
+}
+function cfBanner(editable) {
+  return editable ? '' : '<div class="cfbanner warn">До перехода точки правятся в Довіднике ТТ (Google): боевая система ещё читает его. ' +
+    'Редактирование в пульте включается при переходе. Тестовые точки (test…) можно править уже сейчас.</div>';
+}
+function cfInvalidate() { try { ST.data = null; } catch (e) {} }
+
+function loadCard(id) {
+  setHead('Карточка точки', '');
+  spin();
+  call('card', { storeId: id }).then(function (c) {
+    S.card = c;
+    setHead(c.label, 'правка точки');
+    var h = cfBanner(c.editable) +
+      '<div class="info">Адрес: <b>' + esc(c.address) + '</b><br>Адрес здесь не меняется: по нему точка связана с заказами и отчётами.</div>' +
+      cfBody(c.f, c, false) +
+      '<div><button class="btn cfbtn" onclick="askCard()"' + (c.editable ? '' : ' disabled') + '>Сохранить</button></div>';
+    view(h);
+  }).catch(fail);
+}
+
+function cfRead(k) { var e = document.getElementById('cf_' + k); return e ? e : null; }
+function cfDaysVal(k) {
+  var on = Array.prototype.map.call(document.querySelectorAll('#cf_' + k + ' .chip.on'), function (b) { return b.getAttribute('data-d'); });
+  return CARD_DAYS.filter(function (d) { return on.indexOf(d) >= 0; }).join(', ');
+}
+function cfCheck(v) {
+  if ('label' in v && !v.label) return 'Название не может быть пустым';
+  if (v.code && !/^\d+$/.test(v.code)) return 'Учётный номер - только цифры';
+  if (v.edrpou && !/^\d{8}$/.test(v.edrpou)) return 'ЄДРПОУ - 8 цифр или пусто';
+  return '';
+}
+
+function askCard() {
+  var c = S.card, f = c.f, set = {}, what = [];
+  ['label', 'code', 'route', 'note', 'edrpou', 'routeNbhz', 'zone'].forEach(function (k) {
+    var v = String(cfRead(k).value).trim();
+    if (v !== String(f[k] == null ? '' : f[k])) set[k] = v;
+  });
+  ['active', 'bread', 'nbhz', 'bakery', 'veg'].forEach(function (k) {
+    var v = cfRead(k).checked;
+    if (v !== !!f[k]) set[k] = v;
+  });
+  ['daysBakery', 'daysVeg'].forEach(function (k) {
+    var v = cfDaysVal(k);
+    if (v !== cardDaysNorm(f[k])) set[k] = v;
+  });
+  var keys = Object.keys(set);
+  if (!keys.length) return toast('Ничего не изменено');
+  var err = cfCheck(set);
+  if (err) return toast(err);
+  keys.forEach(function (k) { what.push(CARD_T[k] + ': ' + cardFmt(f[k]) + ' → ' + cardFmt(set[k])); });
+  var dirsOn = ['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return (k in set) ? set[k] : f[k]; });
+  var gone = set.active === false || !dirsOn;
+  if (set.active === false) what.push('Точка пропадёт у продавцов и из «Сегодня». Вернуть - галочкой «Активна» в карточке');
+  else if (!dirsOn) what.push('Ни одного направления - точка пропадёт у продавцов');
+  if (['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return set[k] === false; }))
+    what.push('Если точка уже заказала сегодня по снимаемому направлению, лучше снимать вечером');
+  what.push('Принятые заказы не меняются; продавцы увидят изменение через ~30 секунд');
+  confirmSheet({
+    title: 'Сохранить изменения (' + keys.length + ')?', sub: c.label, what: what, yes: 'Сохранить',
+    run: function () { return call('cardSave', { storeId: c.id, orig: f, set: set }); },
+    done: function () { cfInvalidate(); toast('Сохранено'); if (gone) tabGo('stores'); else goBack(); }
+  });
+}
+
+// ---------- новый адрес ----------
+var NEWST_ZONES = ['Салтовка', 'Новые дома', 'Центр', 'не возится'];
+function loadCardNew() {
+  setHead('Новый адрес', 'добавить магазин');
+  var f = { label: '', code: '', route: '', note: '', bread: false, nbhz: false, bakery: false, veg: false, edrpou: '', routeNbhz: '', daysBakery: '', daysVeg: '', zone: '' };
+  var c = { defEdrpou: '44413718', zones: NEWST_ZONES };
+  view('<div class="spin">Загрузка…</div>');
+  call('storesTable').then(function (d) {
+    ST.data = d;
+    var h = cfBanner(!!d.storeEdit) +
+      '<div class="info">Адрес - основа точки: из него строится id и связь с заказами и отчётами. Впишите его так же, как он записан в сырых листах. ' +
+      'Адреса для направлений можно не заполнять: тогда берётся основной.</div>' +
+      section('Адрес', cfBox(cfTxt({ address: '' }, 'address', 'Адрес (обязательно)', '', 'м. Харків, вул. …') +
+        cfTxt({}, 'addrBread', 'Адрес в листе хлеба Рома (если другой)') + cfTxt({}, 'addrNbhz', 'Адрес в листе НБХЗ (если другой)') +
+        cfTxt({}, 'addrBakery', 'Адрес в листе выпечки (если другой)') + cfTxt({}, 'addrVeg', 'Адрес в листе овощей (если другой)'))) +
+      cfBody(f, c, true) +
+      '<div><button class="btn cfbtn" onclick="askCardNew()"' + (d.storeEdit ? '' : ' disabled') + '>Добавить адрес</button></div>';
+    view(h);
+  }).catch(fail);
+}
+function askCardNew() {
+  var p = {}, what = [];
+  ['address', 'addrBread', 'addrNbhz', 'addrBakery', 'addrVeg', 'label', 'code', 'route', 'note', 'edrpou', 'routeNbhz', 'zone'].forEach(function (k) { p[k] = String(cfRead(k).value).trim(); });
+  ['bread', 'nbhz', 'bakery', 'veg'].forEach(function (k) { p[k] = cfRead(k).checked; });
+  p.daysBakery = cfDaysVal('daysBakery'); p.daysVeg = cfDaysVal('daysVeg');
+  if (!p.address) return toast('Укажите адрес');
+  if (!p.bread && !p.nbhz && !p.bakery && !p.veg) return toast('Выберите хотя бы одно направление');
+  var err = p.label === '' ? '' : cfCheck({ label: p.label, code: p.code, edrpou: p.edrpou });
+  if (!err) err = cfCheck({ code: p.code, edrpou: p.edrpou });
+  if (err) return toast(err);
+  what.push('Адрес: ' + p.address);
+  what.push('Направления: ' + [p.bread && 'хлеб Рома', p.nbhz && 'хлеб НБХЗ', p.bakery && 'выпечка', p.veg && 'овощи'].filter(Boolean).join(', '));
+  if (p.daysBakery) what.push('Дни выпечки: ' + p.daysBakery);
+  if (p.daysVeg) what.push('Дни овощей: ' + p.daysVeg);
+  what.push('Точка появится у продавцов через ~30 секунд');
+  confirmSheet({
+    title: 'Добавить адрес?', sub: p.label || p.address, what: what, yes: 'Добавить',
+    run: function () { return call('cardAdd', p); },
+    done: function (r) { cfInvalidate(); toast('Адрес добавлен'); go('store', { store: r.id, dir: '' }); }
+  });
+}
+
+// экран newstore: отдельный S.screen, нижняя вкладка «Магазины»
+(function () {
+  var baseLoad = load;
+  load = function () { if (S.screen === 'newstore') return loadCardNew(); return baseLoad(); };
+  window.stNewStore = function () { go('newstore', {}); };
+})();
+</script>
+</body>
+</html>

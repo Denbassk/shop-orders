@@ -25,19 +25,22 @@ var BAKERY_CAT_ICONS = { 'Випічка': 'Випічка: ', 'Кулінарі
 // A дата | B час | C адреса | D категорія | E штрихкод | F назва | G ціна | H кіл-ть
 
 // --- Сьогоднішні робочі рядки сирого листа ---
-function bakeryTodayRows_() {
+// Sheets API під запобіжником: зависла таблиця ВК не тримає нікого іншого.
+// Дата - рядок ДД.ММ.РРРР, час - "HH:mm", рядок доповнено до 8 колонок.
+function bakeryTodayRows_(probe) {
   var cfg = dirCfg_('bakery');
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (!sh || sh.getLastRow() < 2) return [];
-
-  var last = sh.getLastRow();
-  var take = Math.min(last - 1, RAW_TAIL_ROWS);
-  var rows = sh.getRange(last - take + 1, 1, take, 8).getValues();
+  var tail = guardedDir_('bakery', function () { return rawTailApi_(cfg, 'H'); }, probe);
   var today = formatDateDMY_(new Date());
 
-  return rows.filter(function (r) {
-    var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim().slice(0, 10);
-    if (d !== today) return false;
+  return tail.rows.map(function (r) {
+    var x = [];
+    for (var i = 0; i < 8; i++) x.push(r[i] == null ? '' : r[i]);
+    x[0] = dmyApi_(x[0]).slice(0, 10);
+    x[1] = timeApi_(x[1]);
+    x[7] = numApi_(x[7]);
+    return x;
+  }).filter(function (r) {
+    if (r[0] !== today) return false;
     // рядки старого формату (без дати, 4 значення) відкидаються саме тут
     return String(r[5] || '').trim() && (Number(r[7]) || 0) > 0;
   });
@@ -59,28 +62,43 @@ function bakerySignature_(rows) {
 
 // --- Функція для тригера: перезбирає, лише якщо щось змінилось ---
 function refreshBakeryReports() {
-  var rows = bakeryTodayRows_();
+  if (dirStuck_('bakery')) { console.log('таблиця ВК не відповідає - пропускаю'); return; }
+  // probe: тригер - єдиний, хто перевіряє, чи ожила "повільна" таблиця ВК
+  var rows = bakeryTodayRows_(true);
+  // Немає сьогодні замовлень ВК (вихідний напрямку, або вже після дедлайну
+  // 13:00) - нема чого пересобирати і нема чого сортувати. Інакше тригер
+  // щоп'ять хвилин бере ГЛОБАЛЬНИЙ ScriptLock на сортування всієї історії
+  // листа ВК, і в цей час відправка інших напрямків (НБХЗ, овочі) стоїть
+  // у черзі за тим самим замком. 18.10.2026: саме через це висів НБХЗ.
+  if (!rows.length) return;
   var sig = bakerySignature_(rows);
   var props = PropertiesService.getScriptProperties();
 
-  var ss = SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
-  var have = ss.getSheetByName(BAKERY_ORDERS_SHEET) && ss.getSheetByName(BAKERY_SUMMARY_SHEET) &&
-             ss.getSheetByName(BAKERY_ROUTE_SHEET);
-
   // лист могли перезаписать чужим скриптом (старый legacy/bakery) - тогда
-  // заголовок уже не тот, что мы записали, и надо пересобрать
-  if (have && props.getProperty('bakery_report_sig') === sig &&
-      props.getProperty('bakery_report_stamp') === bakeryReportStamp_(ss)) return;
+  // заголовок уже не тот, что мы записали, и надо пересобрать.
+  // Листа нет - чтение падает, тогда тоже пересобираем.
+  if (props.getProperty('bakery_report_sig') === sig) {
+    var stamp = '';
+    try {
+      stamp = bakeryReportStamp_();
+      apiValues_(dirCfg_('bakery').spreadsheetId, a1q_(BAKERY_ROUTE_SHEET, 'A1'));
+    } catch (e) { stamp = ''; }
+    if (stamp && props.getProperty('bakery_report_stamp') === stamp) return;
+  }
 
-  buildBakeryReports();
+  // ті самі рядки: друге читання поза probe впало б на позначці "повільна"
+  buildBakeryReports(rows);
 }
 
 // --- Зібрати обидва звіти ПРЯМО ЗАРАЗ, у будь-якому разі ---
-function buildBakeryReports() {
-  // спершу впорядковуємо сирий лист (дата, потім назва товару),
-  // далі читаємо вже впорядковані рядки
-  sortBakeryRawByAddress_();
-  var rows = bakeryTodayRows_();
+function buildBakeryReports(preRows) {
+  // Сирий лист БІЛЬШЕ НЕ СОРТУЄМО (18.10.2026): sortRange всієї таблиці під
+  // глобальним ScriptLock тримав замок до 360 с і поклав усі напрямки.
+  // Порядок потрібен лише звітам - сортуємо в памʼяті: адреса, назва.
+  var rows = (preRows || bakeryTodayRows_()).slice().sort(function (a, b) {
+    var x = String(a[2] || '').localeCompare(String(b[2] || ''), 'uk');
+    return x || String(a[5] || '').localeCompare(String(b[5] || ''), 'uk');
+  });
   buildBakeryOrdersSheet_(rows);
   buildBakerySummarySheet_(rows);
   buildBakeryRouteSheet_(rows);
@@ -93,11 +111,13 @@ function buildBakeryReports() {
 
 // Заголовки (A1) "Заказы ВК" и "Сводная ВК". В них есть время сборки,
 // поэтому чужая перезапись сразу видна.
-function bakeryReportStamp_(ss) {
-  ss = ss || SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
-  return [BAKERY_ORDERS_SHEET, BAKERY_SUMMARY_SHEET].map(function (n) {
-    var sh = ss.getSheetByName(n);
-    return sh ? String(sh.getRange(1, 1).getDisplayValue()) : '';
+function bakeryReportStamp_() {
+  var res = Sheets.Spreadsheets.Values.batchGet(dirCfg_('bakery').spreadsheetId, {
+    ranges: [a1q_(BAKERY_ORDERS_SHEET, 'A1'), a1q_(BAKERY_SUMMARY_SHEET, 'A1')],
+    valueRenderOption: 'FORMATTED_VALUE'
+  });
+  return (res.valueRanges || []).map(function (vr) {
+    return (vr.values && vr.values[0] && vr.values[0][0] != null) ? String(vr.values[0][0]) : '';
   }).join('|');
 }
 
@@ -196,67 +216,36 @@ function buildBakeryOrdersSheet_(rows) {
       .forEach(function (s) { push(['   ' + s, '', '', ''], 'miss'); });
   }
 
-  var ss = SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
-  var sh = ss.getSheetByName(BAKERY_ORDERS_SHEET) || ss.insertSheet(BAKERY_ORDERS_SHEET);
-  sh.clear();
-  sh.clearConditionalFormatRules();
-
+  // один batchUpdate Sheets API замість SpreadsheetApp (див. SheetsFast.gs)
   var n = data.length;
-  sh.getRange(1, 1, n, 4).setValues(data);
+  var w = apiSheetWriter_(dirCfg_('bakery').spreadsheetId, BAKERY_ORDERS_SHEET, data, 4);
+  w.fmt(null, 'A', 'D', { font: 'Arial', size: 10, valign: 'middle', color: '#212121', bg: '#FFFFFF' });
+  w.rowHeights(24);
 
-  sh.getRange(1, 1, n, 4).setFontFamily('Arial').setFontSize(10)
-    .setVerticalAlignment('middle').setFontColor('#212121').setBackground('#FFFFFF');
-  sh.setRowHeights(1, n, 24);
-
-  if (g.title.length) sh.getRangeList(bakeryRowList_(g.title, 'A', 'D'))
-    .setBackground('#1565C0').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
-  if (g.sub.length) sh.getRangeList(bakeryRowList_(g.sub, 'A', 'D'))
-    .setBackground('#E3F2FD').setFontColor('#1565C0').setFontSize(11);
-  if (g.head.length) sh.getRangeList(bakeryRowList_(g.head, 'A', 'D'))
-    .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold')
-    .setHorizontalAlignment('center');
-  if (g.store.length) sh.getRangeList(bakeryRowList_(g.store, 'A', 'D'))
-    .setBackground('#1976D2').setFontColor('#FFFFFF').setFontWeight('bold');
-  if (g.cat.length) sh.getRangeList(bakeryRowList_(g.cat, 'A', 'D'))
-    .setBackground('#FFF8E1').setFontColor('#E65100').setFontWeight('bold');
+  w.fmt(g.title, 'A', 'D', { bg: '#1565C0', color: '#FFFFFF', bold: true, size: 14 });
+  w.fmt(g.sub, 'A', 'D', { bg: '#E3F2FD', color: '#1565C0', size: 11 });
+  w.fmt(g.head, 'A', 'D', { bg: '#37474F', color: '#FFFFFF', bold: true, halign: 'center' });
+  w.fmt(g.store, 'A', 'D', { bg: '#1976D2', color: '#FFFFFF', bold: true });
+  w.fmt(g.cat, 'A', 'D', { bg: '#FFF8E1', color: '#E65100', bold: true });
 
   if (g.row.length) {
     var even = g.row.filter(function (_, i) { return i % 2 === 1; });
-    if (even.length) sh.getRangeList(bakeryRowList_(even, 'A', 'D')).setBackground('#F8F9FA');
-    sh.getRangeList(bakeryRowList_(g.row, 'A', 'A')).setHorizontalAlignment('center');
-    sh.getRangeList(bakeryRowList_(g.row, 'C', 'C'))
-      .setHorizontalAlignment('center').setNumberFormat('0.###');
-    sh.getRangeList(bakeryRowList_(g.row, 'D', 'D'))
-      .setHorizontalAlignment('right').setNumberFormat('#,##0.00');
+    w.fmt(even, 'A', 'D', { bg: '#F8F9FA' });
+    w.fmt(g.row, 'A', 'A', { halign: 'center' });
+    w.fmt(g.row, 'C', 'C', { halign: 'center', num: '0.###' });
+    w.fmt(g.row, 'D', 'D', { halign: 'right', num: '#,##0.00' });
   }
-  if (g.total.length) {
-    sh.getRangeList(bakeryRowList_(g.total, 'A', 'D'))
-      .setBackground('#E8F5E9').setFontColor('#2E7D32').setFontWeight('bold');
-    // 0.### - щоб кількість була "11", а не "11,00": формат
-    // підтягувався від попереднього вмісту листа
-    sh.getRangeList(bakeryRowList_(g.total, 'C', 'C'))
-      .setHorizontalAlignment('center').setNumberFormat('0.###');
-    sh.getRangeList(bakeryRowList_(g.total, 'D', 'D'))
-      .setHorizontalAlignment('right').setNumberFormat('#,##0.00');
-  }
-  if (g.grand.length) {
-    sh.getRangeList(bakeryRowList_(g.grand, 'A', 'D'))
-      .setBackground('#388E3C').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(11);
-    sh.getRangeList(bakeryRowList_(g.grand, 'C', 'C'))
-      .setHorizontalAlignment('center').setNumberFormat('0.###');
-    sh.getRangeList(bakeryRowList_(g.grand, 'D', 'D'))
-      .setHorizontalAlignment('right').setNumberFormat('#,##0.00');
-  }
-  if (g.missHead.length) sh.getRangeList(bakeryRowList_(g.missHead, 'A', 'D'))
-    .setBackground('#FFEBEE').setFontColor('#C62828').setFontWeight('bold');
-  if (g.miss.length) sh.getRangeList(bakeryRowList_(g.miss, 'A', 'A')).setFontColor('#C62828');
+  // 0.### - щоб кількість була "11", а не "11,00"
+  w.fmt(g.total, 'A', 'D', { bg: '#E8F5E9', color: '#2E7D32', bold: true });
+  w.fmt(g.total, 'C', 'C', { halign: 'center', num: '0.###' });
+  w.fmt(g.total, 'D', 'D', { halign: 'right', num: '#,##0.00' });
+  w.fmt(g.grand, 'A', 'D', { bg: '#388E3C', color: '#FFFFFF', bold: true, size: 11 });
+  w.fmt(g.grand, 'C', 'C', { halign: 'center', num: '0.###' });
+  w.fmt(g.grand, 'D', 'D', { halign: 'right', num: '#,##0.00' });
+  w.fmt(g.missHead, 'A', 'D', { bg: '#FFEBEE', color: '#C62828', bold: true });
+  w.fmt(g.miss, 'A', 'A', { color: '#C62828' });
 
-  sh.setColumnWidth(1, 50);
-  sh.setColumnWidth(2, 420);
-  sh.setColumnWidth(3, 90);
-  sh.setColumnWidth(4, 120);
-  sh.setFrozenRows(4);
-  SpreadsheetApp.flush();
+  w.colWidths([50, 420, 90, 120]).frozen(4).commit();
 
   console.log('Заказы ВК: рядків ' + n + ', позицій ' + (num - 1) +
               ', ТТ ' + Object.keys(byStore).length + ' з ' + all.length +
@@ -316,39 +305,23 @@ function buildBakerySummarySheet_(rows) {
     push(['ЗАГАЛОМ', grandQty, grandSum, '100%'], 'total');
   }
 
-  var ss = SpreadsheetApp.openById(dirCfg_('bakery').spreadsheetId);
-  var sh = ss.getSheetByName(BAKERY_SUMMARY_SHEET) || ss.insertSheet(BAKERY_SUMMARY_SHEET);
-  sh.clear();
-  sh.clearConditionalFormatRules();
-
   var n = data.length;
-  sh.getRange(1, 1, n, 4).setValues(data);
-  sh.getRange(1, 1, n, 4).setFontFamily('Arial').setFontSize(10)
-    .setVerticalAlignment('middle').setFontColor('#212121').setBackground('#FFFFFF');
-  sh.setRowHeights(1, n, 24);
+  var w = apiSheetWriter_(dirCfg_('bakery').spreadsheetId, BAKERY_SUMMARY_SHEET, data, 4);
+  w.fmt(null, 'A', 'D', { font: 'Arial', size: 10, valign: 'middle', color: '#212121', bg: '#FFFFFF' });
+  w.rowHeights(24);
 
   // формати задаємо явно, щоб % з колонки D не перетікав у C
-  sh.getRange(1, 1, n, 1).setNumberFormat('@');
-  sh.getRange(1, 2, n, 1).setNumberFormat('0.###');
-  sh.getRange(1, 3, n, 1).setNumberFormat('#,##0.00');
-  sh.getRange(1, 4, n, 1).setNumberFormat('@');
+  w.fmt(null, 'A', 'A', { num: '@' });
+  w.fmt(null, 'B', 'B', { num: '0.###' });
+  w.fmt(null, 'C', 'C', { num: '#,##0.00' });
+  w.fmt(null, 'D', 'D', { num: '@' });
 
-  if (g.title.length) sh.getRangeList(bakeryRowList_(g.title, 'A', 'D'))
-    .setBackground('#1565C0').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
-  if (g.head.length) sh.getRangeList(bakeryRowList_(g.head, 'A', 'D'))
-    .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold')
-    .setHorizontalAlignment('center');
-  if (g.cat.length) sh.getRangeList(bakeryRowList_(g.cat, 'A', 'D'))
-    .setBackground('#FFF8E1').setFontColor('#E65100').setFontWeight('bold');
-  if (g.total.length) sh.getRangeList(bakeryRowList_(g.total, 'A', 'D'))
-    .setBackground('#388E3C').setFontColor('#FFFFFF').setFontWeight('bold');
+  w.fmt(g.title, 'A', 'D', { bg: '#1565C0', color: '#FFFFFF', bold: true, size: 14 });
+  w.fmt(g.head, 'A', 'D', { bg: '#37474F', color: '#FFFFFF', bold: true, halign: 'center' });
+  w.fmt(g.cat, 'A', 'D', { bg: '#FFF8E1', color: '#E65100', bold: true });
+  w.fmt(g.total, 'A', 'D', { bg: '#388E3C', color: '#FFFFFF', bold: true });
 
-  sh.setColumnWidth(1, 420);
-  sh.setColumnWidth(2, 120);
-  sh.setColumnWidth(3, 120);
-  sh.setColumnWidth(4, 100);
-  sh.setFrozenRows(2);
-  SpreadsheetApp.flush();
+  w.colWidths([420, 120, 120, 100]).frozen(2).commit();
 
   console.log('Сводная ВК: позицій ' + Math.max(n - 2, 0) +
               ', разом ' + grandQty + ' шт / ' + grandSum + ' грн');
@@ -650,7 +623,7 @@ function clearBakeryLostMarks() {
     n++;
   });
 
-  CacheService.getScriptCache().remove('status_v3');
+  CacheService.getScriptCache().remove('status_v4');
   console.log('Знято позначок: ' + n + '. Ці точки можуть відправити замовлення заново.');
 }
 // ============================================================

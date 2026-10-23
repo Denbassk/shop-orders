@@ -301,27 +301,20 @@ function admDirStores_(payload) {
   var hasTime = (dir === 'bakery' || dir === 'veg');
 
   var agg = {};
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (sh && sh.getLastRow() > 1) {
-    var last = sh.getLastRow();
-    var take = Math.min(last - 1, RAW_TAIL_ROWS);
-    var w = Math.max(sh.getLastColumn(), 7);
-    sh.getRange(last - take + 1, 1, take, w).getValues().forEach(function (r) {
-      var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0] || '').trim();
-      if (d !== today) return;
-      var key = addrKey_(String(r[2] || '').trim());
-      if (!key) return;
-      if (!agg[key]) agg[key] = { n: 0, qty: 0, time: '' };
-      agg[key].n++;
-      agg[key].qty += Number(r[c.qty]) || 0;
-      if (hasTime) {
-        var t = (r[1] instanceof Date)
-          ? Utilities.formatDate(r[1], 'Europe/Kyiv', 'HH:mm')
-          : String(r[1] || '').trim().slice(0, 5);
-        if (t) agg[key].time = t;
-      }
-    });
-  }
+  // Sheets API під запобіжником: зависла таблиця одного напрямку не вішає пульт
+  var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); }, true);
+  tail.rows.forEach(function (r) {
+    if (dmyApi_(r[0]) !== today) return;
+    var key = addrKey_(cellStr_(r[2]));
+    if (!key) return;
+    if (!agg[key]) agg[key] = { n: 0, qty: 0, time: '' };
+    agg[key].n++;
+    agg[key].qty += numApi_(r[c.qty]);
+    if (hasTime) {
+      var t = timeApi_(r[1]);
+      if (t) agg[key].time = t;
+    }
+  });
 
   var done = [], wait = [], off = [];
   loadStores_().forEach(function (s) {
@@ -361,10 +354,9 @@ function admXlsxUrl_(dir) {
   };
   try {
     var cfg = dirCfg_(dir);
-    var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(names[dir]);
-    if (!sh) return '';
+    var gid = sheetIdOf_(cfg.spreadsheetId, names[dir]);
     return 'https://docs.google.com/spreadsheets/d/' + cfg.spreadsheetId +
-           '/export?format=xlsx&gid=' + sh.getSheetId();
+           '/export?format=xlsx&gid=' + gid;
   } catch (e) { return ''; }
 }
 
@@ -395,22 +387,16 @@ function admStore_(payload) {
   var today = formatDateDMY_(new Date());
 
   var rows = [], first = 0;
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
-  if (sh && sh.getLastRow() > 1) {
-    var last = sh.getLastRow();
-    var take = Math.min(last - 1, RAW_TAIL_ROWS);
-    var from = last - take + 1;
-    var w = Math.max(sh.getLastColumn(), 7);
-    var c = rawCols_(dir);
-    var target = statusKey_(dir, store);
-    sh.getRange(from, 1, take, w).getValues().forEach(function (r, i) {
-      var d = (r[0] instanceof Date) ? formatDateDMY_(r[0]) : String(r[0]).trim();
-      if (d !== today) return;
-      if (addrKey_(String(r[2] || '').trim()) !== target) return;
-      if (!first) first = from + i;
-      rows.push({ row: from + i, name: String(r[c.name] || ''), qty: Number(r[c.qty]) || 0 });
-    });
-  }
+  var tail = guardedDir_(dir, function () { return rawTailApi_(cfg, 'H'); }, true);
+  var from = tail.from;
+  var c = rawCols_(dir);
+  var target = statusKey_(dir, store);
+  tail.rows.forEach(function (r, i) {
+    if (dmyApi_(r[0]) !== today) return;
+    if (addrKey_(cellStr_(r[2])) !== target) return;
+    if (!first) first = from + i;
+    rows.push({ row: from + i, name: String(r[c.name] == null ? '' : r[c.name]), qty: numApi_(r[c.qty]) });
+  });
 
   var qty = 0;
   rows.forEach(function (r) { qty += r.qty; });
@@ -453,11 +439,13 @@ function admCancelOrder_(payload) {
   var dir = String(payload.dir || '');
   var cfg = dirCfg_(dir);
 
-  var g = LockService.getScriptLock();
-  if (!g.tryLock(30000)) throw new Error('Сервер зайнятий, спробуйте ще раз');
+  // замок напрямку, а не глобальний ScriptLock: читання/видалення зависле на
+  // таблиці одного напрямку не повинно тримати решту (18.10.2026)
+  var tok = dirLockAcquire_(dir, 30000);
+  if (!tok) throw new Error('Лист зайнятий, спробуйте ще раз за хвилину');
   var removed = 0;
   try { removed = deleteTodayRows_(cfg, dir, store); }
-  finally { try { g.releaseLock(); } catch (e) {} }
+  finally { dirLockRelease_(dir, tok); }
 
   PropertiesService.getScriptProperties().deleteProperty(orderMarkKey_(dir, store));
   if (dir === 'nbhz')

@@ -1,0 +1,167 @@
+<!-- Форма точки пульта: «Редактировать» (действия card + cardSave) и «Добавить адрес» (cardAdd). Перекрывает loadCard/askCard из app/ui/AdminToolsJs.html
+     (их файлы не меняются). До перехода запись в боевые точки заблокирована на сервере - форма это показывает и не даёт сохранить.
+     Вставляется в конец страницы скриптом build-admin.js после admin-stores.html. Тексты - по-русски, как весь остальной пульт. -->
+<style>
+.cfbanner{margin:0 0 14px;padding:12px 14px;border-radius:12px;background:var(--sf);border:1px solid var(--ln);font-size:14px;line-height:1.4}
+.cfbanner.warn{border-color:#C98A00;color:#C98A00}
+.stbar .newst{padding:10px 14px;border:1px solid var(--ln);border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.cfbtn[disabled]{opacity:.45;cursor:not-allowed}
+</style>
+<script>
+// ===== shop-orders: правка точки и «Добавить адрес» =====
+var CARD_T = { active: 'Активна', label: 'Название', code: 'Учётный номер', route: 'Маршрут',
+  note: 'Примечание', bread: 'Хлеб Рома', nbhz: 'Хлеб НБХЗ', bakery: 'Выпечка', veg: 'Овощи',
+  routeNbhz: 'Маршрут НБХЗ', edrpou: 'ЄДРПОУ', daysBakery: 'Дни выпечки', daysVeg: 'Дни овощей', zone: 'Зона' };
+
+function cfTxt(f, k, label, mode, ph) {
+  return '<div style="margin-top:14px"><div class="s" style="margin:0 4px 8px">' + esc(label) + '</div>' +
+    '<input type="text" id="cf_' + k + '" value="' + esc(f[k] == null ? '' : f[k]) + '"' +
+    (mode ? ' inputmode="' + mode + '"' : '') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
+}
+function cfChk(f, k, label, sub) {
+  return '<label class="pick"><input type="checkbox" id="cf_' + k + '"' + (f[k] ? ' checked' : '') + '>' +
+    '<span class="grow"><span class="t">' + esc(label) + '</span>' + (sub ? '<span class="s">' + esc(sub) + '</span>' : '') + '</span></label>';
+}
+function cfDays(f, k) {
+  var on = cardDaysNorm(f[k]).split(', ');
+  return '<div class="chips" id="cf_' + k + '" style="margin:0">' + CARD_DAYS.map(function (d) {
+    return '<button type="button" class="chip' + (on.indexOf(d) >= 0 ? ' on' : '') + '" data-d="' + d + '" onclick="this.classList.toggle(\'on\')">' + d + '</button>';
+  }).join('') + '</div>';
+}
+function cfZone(f, zones) {
+  var list = [''].concat(zones);
+  if (f.zone && list.indexOf(f.zone) < 0) list.push(f.zone);
+  return '<select id="cf_zone" style="width:100%;padding:16px;border:1px solid var(--ln);border-radius:16px;background:var(--sf);font:inherit;color:var(--tx)">' +
+    list.map(function (z) { return '<option value="' + esc(z) + '"' + (z === f.zone ? ' selected' : '') + '>' + esc(z || '— не задана —') + '</option>'; }).join('') + '</select>';
+}
+function cfBox(inner) { return '<div class="card" style="padding:2px 16px 18px">' + inner + '</div>'; }
+
+// общая часть формы: основное, направления, хлеб, выпечка, овощи (isNew: без «Активна»)
+function cfBody(f, c, isNew) {
+  var h = cfBox(cfTxt(f, 'label', 'Название для продавца' + (isNew ? ' (пусто = адрес)' : '')) + cfTxt(f, 'code', 'Учётный номер', 'numeric') +
+    cfTxt(f, 'route', 'Маршрут (Рома)') + cfTxt(f, 'note', 'Примечание'));
+  h = section('Основное', h);
+  h += section('Направления', '<div class="card">' +
+    (isNew ? '' : cfChk(f, 'active', 'Активна', 'если снять - точка пропадёт у продавцов и из «Сегодня»')) +
+    cfChk(f, 'bread', 'Хлеб Рома') + cfChk(f, 'nbhz', 'Хлеб НБХЗ') + cfChk(f, 'bakery', 'Выпечка и кулинария') + cfChk(f, 'veg', 'Овощи и фрукты') + '</div>');
+  h += section('Хлеб', cfBox(cfTxt(f, 'edrpou', 'ЄДРПОУ юрлица (пусто = ' + (c.defEdrpou || 'по умолчанию') + ')', 'numeric', c.defEdrpou) +
+    cfTxt(f, 'routeNbhz', 'Маршрут НБХЗ')));
+  h += section('Выпечка', '<div class="card" style="padding:16px"><div class="s" style="margin:0 4px 10px">Дни приёма (ничего не выбрано = без ограничений)</div>' +
+    cfDays(f, 'daysBakery') + '<div class="s" style="margin:18px 4px 8px">Зона доставки</div>' + cfZone(f, c.zones) + '</div>');
+  h += section('Овощи', '<div class="card" style="padding:16px"><div class="s" style="margin:0 4px 10px">Дни приёма (ничего не выбрано = без ограничений)</div>' + cfDays(f, 'daysVeg') + '</div>');
+  return h;
+}
+function cfBanner(editable) {
+  return editable ? '' : '<div class="cfbanner warn">До перехода точки правятся в Довіднике ТТ (Google): боевая система ещё читает его. ' +
+    'Редактирование в пульте включается при переходе. Тестовые точки (test…) можно править уже сейчас.</div>';
+}
+function cfInvalidate() { try { ST.data = null; } catch (e) {} }
+
+function loadCard(id) {
+  setHead('Карточка точки', '');
+  spin();
+  call('card', { storeId: id }).then(function (c) {
+    S.card = c;
+    setHead(c.label, 'правка точки');
+    var h = cfBanner(c.editable) +
+      '<div class="info">Адрес: <b>' + esc(c.address) + '</b><br>Адрес здесь не меняется: по нему точка связана с заказами и отчётами.</div>' +
+      cfBody(c.f, c, false) +
+      '<div><button class="btn cfbtn" onclick="askCard()"' + (c.editable ? '' : ' disabled') + '>Сохранить</button></div>';
+    view(h);
+  }).catch(fail);
+}
+
+function cfRead(k) { var e = document.getElementById('cf_' + k); return e ? e : null; }
+function cfDaysVal(k) {
+  var on = Array.prototype.map.call(document.querySelectorAll('#cf_' + k + ' .chip.on'), function (b) { return b.getAttribute('data-d'); });
+  return CARD_DAYS.filter(function (d) { return on.indexOf(d) >= 0; }).join(', ');
+}
+function cfCheck(v) {
+  if ('label' in v && !v.label) return 'Название не может быть пустым';
+  if (v.code && !/^\d+$/.test(v.code)) return 'Учётный номер - только цифры';
+  if (v.edrpou && !/^\d{8}$/.test(v.edrpou)) return 'ЄДРПОУ - 8 цифр или пусто';
+  return '';
+}
+
+function askCard() {
+  var c = S.card, f = c.f, set = {}, what = [];
+  ['label', 'code', 'route', 'note', 'edrpou', 'routeNbhz', 'zone'].forEach(function (k) {
+    var v = String(cfRead(k).value).trim();
+    if (v !== String(f[k] == null ? '' : f[k])) set[k] = v;
+  });
+  ['active', 'bread', 'nbhz', 'bakery', 'veg'].forEach(function (k) {
+    var v = cfRead(k).checked;
+    if (v !== !!f[k]) set[k] = v;
+  });
+  ['daysBakery', 'daysVeg'].forEach(function (k) {
+    var v = cfDaysVal(k);
+    if (v !== cardDaysNorm(f[k])) set[k] = v;
+  });
+  var keys = Object.keys(set);
+  if (!keys.length) return toast('Ничего не изменено');
+  var err = cfCheck(set);
+  if (err) return toast(err);
+  keys.forEach(function (k) { what.push(CARD_T[k] + ': ' + cardFmt(f[k]) + ' → ' + cardFmt(set[k])); });
+  var dirsOn = ['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return (k in set) ? set[k] : f[k]; });
+  var gone = set.active === false || !dirsOn;
+  if (set.active === false) what.push('Точка пропадёт у продавцов и из «Сегодня». Вернуть - галочкой «Активна» в карточке');
+  else if (!dirsOn) what.push('Ни одного направления - точка пропадёт у продавцов');
+  if (['bread', 'nbhz', 'bakery', 'veg'].some(function (k) { return set[k] === false; }))
+    what.push('Если точка уже заказала сегодня по снимаемому направлению, лучше снимать вечером');
+  what.push('Принятые заказы не меняются; продавцы увидят изменение через ~30 секунд');
+  confirmSheet({
+    title: 'Сохранить изменения (' + keys.length + ')?', sub: c.label, what: what, yes: 'Сохранить',
+    run: function () { return call('cardSave', { storeId: c.id, orig: f, set: set }); },
+    done: function () { cfInvalidate(); toast('Сохранено'); if (gone) tabGo('stores'); else goBack(); }
+  });
+}
+
+// ---------- новый адрес ----------
+var NEWST_ZONES = ['Салтовка', 'Новые дома', 'Центр', 'не возится'];
+function loadCardNew() {
+  setHead('Новый адрес', 'добавить магазин');
+  var f = { label: '', code: '', route: '', note: '', bread: false, nbhz: false, bakery: false, veg: false, edrpou: '', routeNbhz: '', daysBakery: '', daysVeg: '', zone: '' };
+  var c = { defEdrpou: '44413718', zones: NEWST_ZONES };
+  view('<div class="spin">Загрузка…</div>');
+  call('storesTable').then(function (d) {
+    ST.data = d;
+    var h = cfBanner(!!d.storeEdit) +
+      '<div class="info">Адрес - основа точки: из него строится id и связь с заказами и отчётами. Впишите его так же, как он записан в сырых листах. ' +
+      'Адреса для направлений можно не заполнять: тогда берётся основной.</div>' +
+      section('Адрес', cfBox(cfTxt({ address: '' }, 'address', 'Адрес (обязательно)', '', 'м. Харків, вул. …') +
+        cfTxt({}, 'addrBread', 'Адрес в листе хлеба Рома (если другой)') + cfTxt({}, 'addrNbhz', 'Адрес в листе НБХЗ (если другой)') +
+        cfTxt({}, 'addrBakery', 'Адрес в листе выпечки (если другой)') + cfTxt({}, 'addrVeg', 'Адрес в листе овощей (если другой)'))) +
+      cfBody(f, c, true) +
+      '<div><button class="btn cfbtn" onclick="askCardNew()"' + (d.storeEdit ? '' : ' disabled') + '>Добавить адрес</button></div>';
+    view(h);
+  }).catch(fail);
+}
+function askCardNew() {
+  var p = {}, what = [];
+  ['address', 'addrBread', 'addrNbhz', 'addrBakery', 'addrVeg', 'label', 'code', 'route', 'note', 'edrpou', 'routeNbhz', 'zone'].forEach(function (k) { p[k] = String(cfRead(k).value).trim(); });
+  ['bread', 'nbhz', 'bakery', 'veg'].forEach(function (k) { p[k] = cfRead(k).checked; });
+  p.daysBakery = cfDaysVal('daysBakery'); p.daysVeg = cfDaysVal('daysVeg');
+  if (!p.address) return toast('Укажите адрес');
+  if (!p.bread && !p.nbhz && !p.bakery && !p.veg) return toast('Выберите хотя бы одно направление');
+  var err = p.label === '' ? '' : cfCheck({ label: p.label, code: p.code, edrpou: p.edrpou });
+  if (!err) err = cfCheck({ code: p.code, edrpou: p.edrpou });
+  if (err) return toast(err);
+  what.push('Адрес: ' + p.address);
+  what.push('Направления: ' + [p.bread && 'хлеб Рома', p.nbhz && 'хлеб НБХЗ', p.bakery && 'выпечка', p.veg && 'овощи'].filter(Boolean).join(', '));
+  if (p.daysBakery) what.push('Дни выпечки: ' + p.daysBakery);
+  if (p.daysVeg) what.push('Дни овощей: ' + p.daysVeg);
+  what.push('Точка появится у продавцов через ~30 секунд');
+  confirmSheet({
+    title: 'Добавить адрес?', sub: p.label || p.address, what: what, yes: 'Добавить',
+    run: function () { return call('cardAdd', p); },
+    done: function (r) { cfInvalidate(); toast('Адрес добавлен'); go('store', { store: r.id, dir: '' }); }
+  });
+}
+
+// экран newstore: отдельный S.screen, нижняя вкладка «Магазины»
+(function () {
+  var baseLoad = load;
+  load = function () { if (S.screen === 'newstore') return loadCardNew(); return baseLoad(); };
+  window.stNewStore = function () { go('newstore', {}); };
+})();
+</script>

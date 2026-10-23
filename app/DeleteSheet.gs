@@ -41,29 +41,26 @@ function delTimeOf_(v) {
 }
 
 // Хто сьогодні замовляв: [{key, addr, n, qty, time}] за адресою з сирого листа
+// Sheets API під запобіжником (18.10.2026: SpreadsheetApp на ВК висів хвилинами)
 function delTodayOrders_(dirKey) {
   var cfg = dirCfg_(dirKey);
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
   var out = [];
-  if (!sh || sh.getLastRow() < 2) return out;
+  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); }, true);
 
   var today = formatDateDMY_(new Date());
   var c = rawCols_(dirKey);
   var hasTime = (dirKey === 'bakery' || dirKey === 'veg');
-  var last = sh.getLastRow();
-  var take = Math.min(last - 1, RAW_TAIL_ROWS);
-  var w = Math.max(sh.getLastColumn(), 7);
 
   var agg = {};
-  sh.getRange(last - take + 1, 1, take, w).getValues().forEach(function (r) {
-    if (rawDate_(r[0]) !== today) return;
-    var addr = String(r[2] || '').trim();
+  tail.rows.forEach(function (r) {
+    if (dmyApi_(r[0]) !== today) return;
+    var addr = cellStr_(r[2]);
     var key = addrKey_(addr);
     if (!key) return;
     var a = agg[key] || (agg[key] = { key: key, addr: addr, n: 0, qty: 0, time: '' });
     a.n++;
-    a.qty += Number(String(r[c.qty] == null ? '' : r[c.qty]).replace(',', '.')) || 0;
-    if (hasTime) { var t = delTimeOf_(r[1]); if (t) a.time = t; }
+    a.qty += numApi_(r[c.qty]);
+    if (hasTime) { var t = timeApi_(r[1]); if (t) a.time = t; }
   });
 
   Object.keys(agg).forEach(function (k) { out.push(agg[k]); });
@@ -72,88 +69,113 @@ function delTodayOrders_(dirKey) {
 }
 
 // --- створити/оформити вкладку (разово, ідемпотентно) ---
+// Усе через Sheets API: SpreadsheetApp на таблиці ВК висів хвилинами, і
+// d09_installDeleteSheets не доходив до тригера.
 function delSheetEnsure_(dirKey) {
   var cfg = dirCfg_(dirKey);
-  var ss = SpreadsheetApp.openById(cfg.spreadsheetId);
-  var sh = ss.getSheetByName(DEL_SHEET);
-  var isNew = !sh;
-  if (!sh) sh = ss.insertSheet(DEL_SHEET);
+  var ssId = cfg.spreadsheetId;
+  var meta = sheetMetaApi_(ssId, DEL_SHEET);
+  var isNew = !meta, sid;
+  var tab = hexRgb_('#D32F2F');
+  if (isNew) {
+    var r = Sheets.Spreadsheets.batchUpdate({ requests: [{ addSheet: { properties: {
+      title: DEL_SHEET, tabColor: tab } } }] }, ssId);
+    sid = r.replies[0].addSheet.properties.sheetId;
+  } else sid = meta.properties.sheetId;
 
-  sh.getRange('A1').setValue('Видалення замовлення ТТ')
-    .setFontSize(15).setFontWeight('bold');
-  sh.getRange('A2').setValue('Оберіть ТТ у списку і поставте галочку. Замовлення за сьогодні буде видалено, ' +
-                             'а ТТ зможе замовити знову.')
-    .setFontColor('#5f6368');
-  sh.getRange('A4').setValue('Торгова точка:').setFontWeight('bold');
-  sh.getRange('A5').setValue('Видалити замовлення:').setFontWeight('bold');
-  sh.getRange('A7').setValue('Результат:').setFontWeight('bold');
-  sh.getRange('A9').setValue('Замовили сьогодні (оновлюється разом зі звітом):')
-    .setFontWeight('bold').setFontColor('#1565C0');
-  sh.getRange('A10:B10').setValues([['Торгова точка', 'Позицій · кількість · час']])
-    .setFontWeight('bold').setBackground('#E3F2FD');
+  var vals = [
+    ['A1', 'Видалення замовлення ТТ'],
+    ['A2', 'Оберіть ТТ у списку і поставте галочку. Замовлення за сьогодні буде видалено, ' +
+           'а ТТ зможе замовити знову.'],
+    ['A4', 'Торгова точка:'], ['A5', 'Видалити замовлення:'], ['A7', 'Результат:'],
+    ['A9', 'Замовили сьогодні (оновлюється разом зі звітом):'],
+    ['A10', 'Торгова точка'], ['B10', 'Позицій · кількість · час']
+  ];
+  if (isNew) vals.push([DEL_MSG, 'Готово до роботи.']);
+  Sheets.Spreadsheets.Values.batchUpdate({
+    valueInputOption: 'RAW',
+    data: vals.map(function (v) { return { range: a1q_(DEL_SHEET, v[0]), values: [[v[1]]] }; })
+  }, ssId);
 
-  sh.getRange(DEL_PICK).setBackground('#FFF8E1').setFontWeight('bold');
-  sh.getRange(DEL_TICK).insertCheckboxes();
-  sh.getRange(DEL_TICK).setHorizontalAlignment('left');
-  sh.getRange(DEL_MSG).setWrap(true).setVerticalAlignment('top');
-
-  sh.setColumnWidth(1, 330);
-  sh.setColumnWidth(2, 430);
-  sh.setTabColor('#D32F2F');
-  sh.getRange(1, 1, DEL_LIST_ROW + DEL_LIST_MAX, 2).setFontFamily('Arial');
-  if (isNew) sh.getRange(DEL_MSG).setValue('Готово до роботи.');
-
-  var list = sh.getRange(DEL_LIST_ROW, 1, DEL_LIST_MAX, 1);
-  sh.getRange(DEL_PICK).setDataValidation(
-    SpreadsheetApp.newDataValidation().requireValueInRange(list, true)
-      .setAllowInvalid(false).setHelpText('Оберіть ТТ зі списку нижче').build());
-  return sh;
+  var last = DEL_LIST_ROW + DEL_LIST_MAX;
+  var R = function (r1, c1, r2, c2) { return gridRange_(sid, r1, c1, r2 || r1, c2 || c1); };
+  var listRef = "='" + DEL_SHEET + "'!$A$" + DEL_LIST_ROW + ':$A$' + (last - 1);
+  var reqs = [
+    apiFmtReq_(R(1, 1, last, 2), { font: 'Arial' }),
+    apiFmtReq_(R(1, 1), { size: 15, bold: true }),
+    apiFmtReq_(R(2, 1), { color: '#5f6368' }),
+    apiFmtReq_(R(4, 1), { bold: true }),
+    apiFmtReq_(R(5, 1), { bold: true }),
+    apiFmtReq_(R(7, 1), { bold: true }),
+    apiFmtReq_(R(9, 1), { bold: true, color: '#1565C0' }),
+    apiFmtReq_(R(10, 1, 10, 2), { bold: true, bg: '#E3F2FD' }),
+    apiFmtReq_(R(4, 2), { bg: '#FFF8E1', bold: true }),          // DEL_PICK
+    apiFmtReq_(R(5, 2), { halign: 'left' }),                     // DEL_TICK
+    apiFmtReq_(R(7, 2), { wrap: true, valign: 'top' }),          // DEL_MSG
+    // галочка
+    { setDataValidation: { range: R(5, 2), rule: { condition: { type: 'BOOLEAN' } } } },
+    // випадаючий список ТТ із рядків нижче
+    { setDataValidation: { range: R(4, 2), rule: {
+      condition: { type: 'ONE_OF_RANGE', values: [{ userEnteredValue: listRef }] },
+      strict: true, showCustomUi: true, inputMessage: 'Оберіть ТТ зі списку нижче' } } },
+    { updateDimensionProperties: { range: { sheetId: sid, dimension: 'COLUMNS', startIndex: 0, endIndex: 1 },
+      properties: { pixelSize: 330 }, fields: 'pixelSize' } },
+    { updateDimensionProperties: { range: { sheetId: sid, dimension: 'COLUMNS', startIndex: 1, endIndex: 2 },
+      properties: { pixelSize: 430 }, fields: 'pixelSize' } },
+    { updateSheetProperties: { properties: { sheetId: sid, tabColor: tab }, fields: 'tabColor' } }
+  ];
+  Sheets.Spreadsheets.batchUpdate({ requests: reqs }, ssId);
+  return sid;
 }
 
 // --- оновити список "Замовили сьогодні" (і випадаючий список) ---
 // Викликається з markReport_ після кожної збірки звіту. Якщо вкладки немає -
 // нічого не робить (функція ще не встановлена).
 function delSheetRefresh_(dirKey) {
+  if (DEL_DIRS.indexOf(dirKey) < 0) return;
   var cfg = dirCfg_(dirKey);
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(DEL_SHEET);
-  if (!sh) return;
+  var ssId = cfg.spreadsheetId;
+  var pickV;
+  // немає вкладки - Values.get падає: функція ще не встановлена, тихо виходимо
+  try { pickV = apiValues_(ssId, a1q_(DEL_SHEET, DEL_PICK), true); } catch (e) { return; }
 
   var list = delTodayOrders_(dirKey).slice(0, DEL_LIST_MAX);
-  sh.getRange(DEL_LIST_ROW, 1, DEL_LIST_MAX, 2).clearContent();
-  if (list.length) {
-    sh.getRange(DEL_LIST_ROW, 1, list.length, 2).setValues(list.map(function (o) {
-      return [o.addr, o.n + ' поз. · ' + (Math.round(o.qty * 1000) / 1000) + ' ' + cfg.unit +
-                      (o.time ? ' · ' + o.time : '')];
-    }));
+  var rows = [];
+  for (var i = 0; i < DEL_LIST_MAX; i++) {
+    var o = list[i];
+    rows.push(o ? [o.addr, o.n + ' поз. · ' + (Math.round(o.qty * 1000) / 1000) + ' ' + cfg.unit +
+                           (o.time ? ' · ' + o.time : '')] : ['', '']);
   }
+  var data = [{ range: a1q_(DEL_SHEET, 'A' + DEL_LIST_ROW + ':B' + (DEL_LIST_ROW + DEL_LIST_MAX - 1)),
+                values: rows }];
 
   // вибрана ТТ більше не серед тих, що замовляли - прибираємо вибір
-  var pick = String(sh.getRange(DEL_PICK).getValue() || '').trim();
+  var pick = cellStr_(pickV[0] && pickV[0][0]);
   if (pick) {
     var k = addrKey_(pick), still = false;
-    list.forEach(function (o) { if (o.key === k) still = true; });
-    if (!still) sh.getRange(DEL_PICK).clearContent();
+    list.forEach(function (x) { if (x.key === k) still = true; });
+    if (!still) data.push({ range: a1q_(DEL_SHEET, DEL_PICK), values: [['']] });
   }
+  Sheets.Spreadsheets.Values.batchUpdate({ valueInputOption: 'RAW', data: data }, ssId);
 }
 
 // --- рядки замовлення для журналу (до видалення) ---
 function delRowsSummary_(cfg, dirKey, target) {
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(rawSheetName_(cfg));
   var out = [];
-  if (!sh || sh.getLastRow() < 2) return out;
+  var tail = guardedDir_(dirKey, function () { return rawTailApi_(cfg, 'H'); }, true);
   var today = formatDateDMY_(new Date());
   var c = rawCols_(dirKey);
-  var last = sh.getLastRow();
-  var take = Math.min(last - 1, RAW_TAIL_ROWS);
-  var w = Math.max(sh.getLastColumn(), 7);
-  sh.getRange(last - take + 1, 1, take, w).getValues().forEach(function (r) {
-    if (rawDate_(r[0]) !== today || addrKey_(String(r[2] || '').trim()) !== target) return;
-    out.push(String(r[c.name] || '').trim() + ' x' + (Number(String(r[c.qty]).replace(',', '.')) || 0));
+  tail.rows.forEach(function (r) {
+    if (dmyApi_(r[0]) !== today || addrKey_(cellStr_(r[2])) !== target) return;
+    out.push(cellStr_(r[c.name]) + ' x' + numApi_(r[c.qty]));
   });
   return out;
 }
 
-// --- саме видалення. Під замком напрямку (його чекають сортування і append) ---
+// --- саме видалення. Під замком напрямку, БЕЗ глобального ScriptLock: зависла
+// таблиця ВК не повинна тримати замок для решти напрямків (18.10.2026).
+// Рядки видаляються одним deleteDimension, append дописує в кінець - номери
+// рядків вище не зсуває.
 function delCancelOrder_(dirKey, addr) {
   var cfg = dirCfg_(dirKey);
   var target = addrKey_(addr);
@@ -163,12 +185,8 @@ function delCancelOrder_(dirKey, addr) {
   var tok = dirLockAcquire_(dirKey, 30000);
   if (!tok) throw new Error('Лист зайнятий (іде запис замовлень). Спробуйте ще раз за хвилину.');
   try {
-    var g = LockService.getScriptLock();
-    if (!g.tryLock(30000)) throw new Error('Сервер зайнятий. Спробуйте ще раз за хвилину.');
-    try {
-      items = delRowsSummary_(cfg, dirKey, target);
-      removed = deleteTodayRowsByKey_(cfg, dirKey, target);
-    } finally { try { g.releaseLock(); } catch (e) {} }
+    items = delRowsSummary_(cfg, dirKey, target);
+    removed = deleteTodayRowsByKey_(cfg, dirKey, target);
   } finally { dirLockRelease_(dirKey, tok); }
 
   // Позначка "ТТ сьогодні вже замовляла" (ScriptProperties застосунку). Саме її
@@ -270,21 +288,37 @@ function onDeleteSheetEdit(e) {
 
 // Створити вкладку у таблицях з DEL_DIRS і поставити тригер.
 // Повторний запуск безпечний: вкладки оновляться, тригери не задвояться.
+// Таблиці, що були замість нинішніх (копія ВК 18.10.2026). Їхні тригери
+// onDeleteSheetEdit прибираємо, щоб не лишалось двох.
+var DEL_OLD_SPREADSHEETS = ['1a94srF34gowBQ71U1sLDgiDnJgvTEvW32l2gLtJk3FY'];
+
 function installDeleteSheets_() {
+  // спершу - усі тригери обробника: старих таблиць і поточних (поставимо заново)
+  var ours = DEL_DIRS.map(function (k) { return DIRECTIONS[k].spreadsheetId; });
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() !== DEL_HANDLER) return;
+    var src = t.getTriggerSourceId();
+    if (DEL_OLD_SPREADSHEETS.indexOf(src) >= 0 || ours.indexOf(src) >= 0) {
+      ScriptApp.deleteTrigger(t);
+      console.log('прибрано тригер ' + DEL_HANDLER + ' для ' + src);
+    }
+  });
+
   DEL_DIRS.forEach(function (k) {
     var cfg = DIRECTIONS[k];
+    // тригер - першим і окремо: навіть якщо таблиця зараз не відповідає,
+    // старі тригери вже прибрані, а без нового видалення не працюватиме
     try {
-      delSheetEnsure_(k);
-      delSheetRefresh_(k);
-
-      ScriptApp.getProjectTriggers().forEach(function (t) {
-        if (t.getHandlerFunction() === DEL_HANDLER && t.getTriggerSourceId() === cfg.spreadsheetId)
-          ScriptApp.deleteTrigger(t);
-      });
       ScriptApp.newTrigger(DEL_HANDLER).forSpreadsheet(cfg.spreadsheetId).onEdit().create();
-      console.log('OK  ' + cfg.title + ': вкладка "' + DEL_SHEET + '" і тригер поставлено');
+      console.log('OK  ' + cfg.title + ': тригер поставлено');
+    } catch (e) { console.error('ПОМИЛКА тригера ' + cfg.title + ': ' + e.message); }
+    try {
+      var t0 = Date.now();
+      delSheetEnsure_(k);
+      try { delSheetRefresh_(k); } catch (e) { console.error('список ТТ: ' + e.message); }
+      console.log('OK  ' + cfg.title + ': вкладка "' + DEL_SHEET + '" за ' + (Date.now() - t0) + ' мс');
     } catch (e) {
-      console.error('ПОМИЛКА ' + cfg.title + ': ' + e.message);
+      console.error('ПОМИЛКА вкладки ' + cfg.title + ': ' + e.message);
     }
   });
 }
@@ -295,7 +329,7 @@ function showDeleteSheets_() {
   });
   DEL_DIRS.forEach(function (k) {
     var cfg = DIRECTIONS[k];
-    var has = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(DEL_SHEET) ? 'є' : 'НЕМАЄ';
+    var has = sheetMetaApi_(cfg.spreadsheetId, DEL_SHEET) ? 'є' : 'НЕМАЄ';
     var tr = triggers.filter(function (t) { return t.getTriggerSourceId() === cfg.spreadsheetId; }).length;
     console.log(cfg.title + ': вкладка ' + has + ', тригерів ' + tr + (tr === 1 ? '' : '  <-- має бути 1'));
   });

@@ -80,7 +80,7 @@ function cleanupOldOrderIds() {
   Object.keys(all).forEach(function (k) {
     if (k.indexOf('busy_') === 0) { props.deleteProperty(k); killed++; return; }
     if (k.indexOf('sub_') === 0) {                 // позначки "вже замовляли"
-      if (all[k] !== today) { props.deleteProperty(k); killed++; }
+      if (String(all[k]).indexOf(today) !== 0) { props.deleteProperty(k); killed++; }   // "дата|orderId"
       return;
     }
     if (k.indexOf('oid_') !== 0) return;
@@ -364,7 +364,7 @@ function benchmarkApp() {
   Object.keys(DIRECTIONS).forEach(function (k) {
     var s = loadStores_().filter(function (x) { return x.directions.indexOf(k) >= 0; })[0];
     if (!s) { console.log('немає точок для ' + k); return; }
-    CacheService.getScriptCache().remove('prod_' + k);
+    CacheService.getScriptCache().remove('prod2_' + k);
     step('products ' + k + ', холодний', function () {
       return apiProducts_({ dir: k, storeId: s.id }).products.length + ' позицій';
     });

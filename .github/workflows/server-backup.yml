@@ -1,0 +1,31 @@
+# Щоденний бекап бази Supabase (shop-orders) на Google Диск: файл Замовлення_база_ДАТА.json.gz у підпапці «Замовлення — база щодня».
+# Логіка - server/scripts/backup-db-lib.cjs (як у зарплатному проекті). Запуск вручну: Actions -> Server Backup -> Run workflow.
+# Секрети репозиторію: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, DRIVE_BACKUP_FOLDER_ID.
+# Зауваження (таблиця не прочиталась, рядки зникли) - код виходу 1, GitHub пришле лист.
+name: Server Backup
+on:
+  schedule:
+    - cron: '45 0 * * *'     # 03:45 за Києвом влітку, 02:45 взимку
+  workflow_dispatch:
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --omit=dev
+      - name: Run backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          DRIVE_BACKUP_FOLDER_ID: ${{ secrets.DRIVE_BACKUP_FOLDER_ID }}
+        run: node scripts/backup-db.cjs

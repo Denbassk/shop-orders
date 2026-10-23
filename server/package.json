@@ -1,0 +1,25 @@
+{
+  "name": "shop-orders-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/app.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "import:dry": "node scripts/import-reference.js --dry",
+    "import": "node scripts/import-reference.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "googleapis": "^186.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.1.7"
+  },
+  "main": "src/app.js"
+}

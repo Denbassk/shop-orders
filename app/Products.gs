@@ -3,11 +3,45 @@
 // ============================================================
 
 function loadProducts_(dirKey) {
-  var cached = cacheGet_('prod_' + dirKey);
+  var cached = cacheGet_('prod2_' + dirKey);
   if (cached) return cached;
-  var list = (dirKey === 'veg') ? loadVegProducts_() : loadSheetProducts_(dirKey);
-  cachePut_('prod_' + dirKey, list, 600);
+  var list;
+  try {
+    list = (dirKey === 'veg') ? loadVegProducts_() : loadSheetProducts_(dirKey);
+  } catch (e) {
+    // таблиця напрямку висить - останній вдалий асортимент, щоб замовлення
+    // можна було зібрати і покласти в буфер (Buffer.gs)
+    var last = lastProducts_(dirKey);
+    if (!last) throw e;
+    console.error('асортимент ' + dirKey + ' - запасна копія: ' + e.message);
+    cachePut_('prod2_' + dirKey, last, 120);
+    return last;
+  }
+  cachePut_('prod2_' + dirKey, list, 600);
+  saveLastProducts_(dirKey, list);
   return list;
+}
+
+// Остання вдала копія асортименту - стиснена у властивостях (Buffer.gs: packMap_)
+function saveLastProducts_(dirKey, list) {
+  if (!list || !list.length) return;
+  try {
+    var props = PropertiesService.getScriptProperties(), key = 'prodlast_' + dirKey, old = null;
+    try { old = JSON.parse(props.getProperty(key) || 'null'); } catch (e) {}
+    var map = packMap_(key, list, { ts: Date.now() });
+    props.setProperties(map);
+    for (var i = JSON.parse(map[key]).n; old && i < old.n; i++) {
+      try { props.deleteProperty(key + '#' + i); } catch (e) {}
+    }
+  } catch (e) { console.error('копія асортименту ' + dirKey + ': ' + e.message); }
+}
+
+function lastProducts_(dirKey) {
+  try {
+    var props = PropertiesService.getScriptProperties(), key = 'prodlast_' + dirKey;
+    var meta = JSON.parse(props.getProperty(key) || 'null');
+    return meta ? packRead_(props, key, meta) : null;
+  } catch (e) { console.error('запасна копія асортименту ' + dirKey + ': ' + e.message); return null; }
 }
 
 // Лист "Ассортимент":
@@ -16,10 +50,10 @@ function loadSheetProducts_(dirKey) {
   var cfg = dirCfg_(dirKey);
   if (cfg.productLayout === 'nbhz') return loadNbhzSheetProducts_(cfg);
 
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
-  if (!sh || sh.getLastRow() < 2) return [];
-
-  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues();
+  // Sheets API під запобіжником (SheetsFast.gs), не SpreadsheetApp
+  var rows = guardedDir_(dirKey, function () {
+    return apiValues_(cfg.spreadsheetId, a1q_(cfg.productsSheet, 'A2:F'));
+  });
   var out = [];
 
   rows.forEach(function (r) {
@@ -58,10 +92,9 @@ function loadSheetProducts_(dirKey) {
 // НБХЗ: без цін і штрихкодів. Лист рівно 3 колонки:
 // A Статус | B № | C Номенклатура. Порядок рядків = порядок колонок для заводу.
 function loadNbhzSheetProducts_(cfg) {
-  var sh = SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.productsSheet);
-  if (!sh || sh.getLastRow() < 2) return [];
-
-  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues();
+  var rows = guardedDir_(cfg.key, function () {
+    return apiValues_(cfg.spreadsheetId, a1q_(cfg.productsSheet, 'A2:C'));
+  });
   var out = [];
 
   rows.forEach(function (r) {
