@@ -43,4 +43,104 @@
   body:has(.wrap .card .row) .bot .in{max-width:1040px}
   .logo{max-height:96px}
 }
+/* нагадування продавцю: спливаюче вікно за 60 і 30 хв до дедлайну, якщо точка ще не замовила напрямок */
+.rem-ov{position:fixed;inset:0;z-index:70;background:rgba(22,24,29,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+@media(min-width:600px){.rem-ov{align-items:center}}
+.rem-box{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:18px 16px 14px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.rem-box h3{margin:0 0 4px;font-size:19px;line-height:1.25}
+.rem-box .rem-sub{font-size:14px;color:#555b66;margin:0 0 12px}
+.rem-it{display:flex;align-items:center;gap:10px;background:#f4f5f7;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.rem-dot{width:10px;height:10px;border-radius:50%;flex:none}
+.rem-t{flex:1;min-width:0}
+.rem-t b{display:block;font-size:15px}
+.rem-t span{font-size:13px;color:#555b66}
+.rem-t .rem-left{font-weight:700;color:#b3261e}
+.rem-go{flex:none;background:#e11b22;color:#fff;border:0;border-radius:11px;min-height:44px;padding:0 16px;font-weight:700;font-size:15px;cursor:pointer}
+.rem-close{width:100%;min-height:44px;margin-top:4px;background:none;border:2px solid #dfe1e6;border-radius:12px;font-size:15px;font-weight:600;color:#16181d;cursor:pointer}
 </style>
+
+<script>
+/* Нагадування продавцю (UI-доопрацювання 24.10.2026): лише читає S.boot, нічого не відправляє. Працює, поки застосунок відкритий. */
+(function () {
+  var WINDOWS = [60, 30];
+  function kyivMin(now) {
+    var p = new Intl.DateTimeFormat('uk-UA', { timeZone: 'Europe/Kyiv', hour: '2-digit', minute: '2-digit', hour12: false }).format(now).split(':');
+    return (+p[0] % 24) * 60 + (+p[1]);
+  }
+  function minutesLeft(deadline, nowMin) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(deadline || '').trim());
+    return m ? (+m[1]) * 60 + (+m[2]) - nowMin : null;
+  }
+  // які напрямки точки треба нагадати: не замовлено, прийом відкритий, їхній день, до дедлайну <= 60 хв, поріг ще не показували
+  function due(store, dirs, nowMin, seen, skipDir) {
+    var out = [];
+    (store.directions || []).forEach(function (k) {
+      var d = dirs && dirs[k];
+      if (!d || d.closed || k === skipDir) return;
+      if (store.dayOk && store.dayOk[k] === false) return;
+      if (store.ordered && store.ordered[k]) return;
+      var left = minutesLeft(d.deadline, nowMin);
+      if (left == null || left <= 0 || left > 60) return;
+      var keys = WINDOWS.filter(function (w) { return left <= w; })
+        .map(function (w) { return store.id + '|' + k + '|' + w; })
+        .filter(function (key) { return !seen[key]; });
+      if (keys.length) out.push({ dir: k, title: d.title, deadline: d.deadline, left: left, color: d.color, keys: keys });
+    });
+    return out.sort(function (a, b) { return a.left - b.left; });
+  }
+  function load(day) {
+    try { var s = JSON.parse(localStorage.getItem('fm_rem') || 'null'); if (s && s.day === day && s.seen) return s; } catch (e) {}
+    return { day: day, seen: {} };
+  }
+  function save(s) { try { localStorage.setItem('fm_rem', JSON.stringify(s)); } catch (e) {} }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function closeRem() { var o = document.getElementById('rem-ov'); if (o && o.parentNode) o.parentNode.removeChild(o); }
+  function minWord(n) { return n + ' хв'; }
+  function show(store, list) {
+    var urgent = list[0].left <= 30;
+    var h = '<div class="rem-box" role="dialog" aria-modal="true" aria-labelledby="rem-h"><h3 id="rem-h">' +
+      (urgent ? 'Лишилось менше пів години' : 'Не забули про замовлення?') + '</h3><p class="rem-sub">' + esc(store.label) +
+      ' ще не замовила' + (list.length > 1 ? ':' : ' цей напрямок:') + '</p>';
+    list.forEach(function (x) {
+      h += '<div class="rem-it"><span class="rem-dot" style="background:' + esc(x.color || '#888') + '"></span><div class="rem-t"><b>' + esc(x.title) +
+        '</b><span>до ' + esc(x.deadline) + ' · <span class="rem-left">ще ' + minWord(x.left) + '</span></span></div>' +
+        '<button class="rem-go" data-dir="' + esc(x.dir) + '">Замовити</button></div>';
+    });
+    h += '<button class="rem-close">Закрити</button></div>';
+    var o = document.createElement('div');
+    o.id = 'rem-ov'; o.className = 'rem-ov'; o.innerHTML = h;
+    o.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t === o || (t.className || '') === 'rem-close') return closeRem();
+      var k = t.getAttribute && t.getAttribute('data-dir');
+      if (k) { closeRem(); try { openStore(store); openDir(k); } catch (err) {} }
+    });
+    document.body.appendChild(o);
+    var b = o.querySelector && o.querySelector('.rem-go'); if (b && b.focus) b.focus();
+  }
+  function check(o) {
+    o = o || {};
+    try {
+      if (typeof S === 'undefined' || !S.boot || !S.boot.stores) return null;
+      if (document.hidden && !o.force) return null;
+      if (document.getElementById('rem-ov')) return null;
+      var store = S.store || (typeof myStore === 'function' ? myStore() : null);
+      if (!store) return null;
+      var fresh = S.boot.stores.filter(function (x) { return x.id === store.id; })[0] || store;
+      var now = o.nowMin != null ? o.nowMin : kyivMin(new Date());
+      var st = load(S.boot.today);
+      var list = due(fresh, S.boot.directions, now, st.seen, S.screen === 'prod' ? S.dir : null);
+      if (!list.length) return null;
+      list.forEach(function (x) { x.keys.forEach(function (key) { st.seen[key] = 1; }); });
+      save(st);
+      show(fresh, list);
+      return list;
+    } catch (e) { return null; }
+  }
+  window.__fmRem = { due: due, minutesLeft: minutesLeft, kyivMin: kyivMin, check: check };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeRem(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(check, 1500); });
+  setTimeout(check, 6000);
+  setInterval(check, 30000);
+})();
+</script>
