@@ -13,6 +13,7 @@ primary_region = 'fra'
   PORT = '3000'
   EXPORT_TARGET = 'live'
   INTERNAL_TICK = 'on'
+  IMPORT_SHEETS_TODAY = 'on'
   PULT_STORE_EDIT = 'on'
 
 [http_service]

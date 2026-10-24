@@ -35,7 +35,7 @@ const sig = (lines) => JSON.stringify(lines.map((l) => [Number(l.line_no), Strin
 
 // input: { day, now, stores (rowToStore), products { dir: [...] }, existing: активні замовлення дня з бази [{ order_id, pk, dir, store_id, status, lines }],
 //          rows: [{ dir, addr, time, barcode, name, price, qty }] (рядки листів за день, qty > 0) }
-function planImport({ day, now, stores, products, existing, rows }) {
+function planImport({ day, now, stores, products, existing, rows, exclude }) {
   const nowIso = now.toISOString();
   const out = { inserts: [], updates: [], cancels: [], skipped: [], unmatched: [] };
   const idx = {}, pid = {};
@@ -56,6 +56,8 @@ function planImport({ day, now, stores, products, existing, rows }) {
 
   for (const [k, g] of groups) {
     const ex = exBy[k] || [];
+    // точка вже працює через Fly (є справжнє замовлення дня, у тому числі скасоване): рядки в листі - це наша ж вигрузка, імпортувати їх не можна
+    if (exclude && exclude.has(k)) { out.skipped.push({ dir: g.dir, storeId: g.storeId, reason: 'точка вже замовляла через Fly' }); continue; }
     if (ex.some((o) => !String(o.order_id).startsWith(IMPORT_PREFIX))) { out.skipped.push({ dir: g.dir, storeId: g.storeId, reason: 'у базі вже є справжнє замовлення' }); continue; }
     const lines = g.rows.map((r, i) => ({ line_no: i + 1, product_id: pidOf(g.dir)(g.dir, r), barcode: String(r.barcode || ''), name: String(r.name), price: Number(r.price) || 0, qty: Number(r.qty) }));
     const total = money(lines.reduce((s, l) => s + l.price * l.qty, 0));
@@ -94,6 +96,13 @@ function rowsOfSheet(dir, sheetRows, dmy) {
   return out;
 }
 
+// ключі 'dir|store_id' точок, що мають НЕ імпортоване замовлення дня (будь-який статус): їх листи пише наша вигрузка
+async function loadRealKeys(sb, day) {
+  const { data, error } = await sb.from('orders').select('dir,store_id').eq('order_date', day).not('order_id', 'like', IMPORT_PREFIX + '%');
+  if (error) throw new Error('orders(real): ' + error.message);
+  return new Set(data.map((o) => o.dir + '|' + o.store_id));
+}
+
 async function loadExisting(sb, day) {
   const { data, error } = await sb.from('orders').select('id,order_id,dir,store_id,status,order_lines(line_no,barcode,name,qty,price)').eq('order_date', day).eq('status', 'active');
   if (error) throw new Error('orders: ' + error.message);
@@ -117,4 +126,4 @@ async function applyPlan(sb, plan) {
   for (const c of plan.cancels) must('orders.cancel', await sb.from('orders').update({ status: 'cancelled', changed_at: c.changed_at, exported_at: c.exported_at }).eq('id', c.pk));
 }
 
-module.exports = { IMPORT_PREFIX, importOrderId, planImport, rowsOfSheet, loadExisting, applyPlan, kyivIso };
+module.exports = { IMPORT_PREFIX, importOrderId, planImport, rowsOfSheet, loadExisting, loadRealKeys, applyPlan, kyivIso };

@@ -12,6 +12,7 @@ const { exportDir, exportAll } = require('./export/raw');
 const { resolveTarget, exportTargetMode } = require('./export/target');
 const { rebuildReports: rebuildDir, rebuildAllReports, exportThenReports } = require('./reports/rebuild');
 const { tick } = require('./jobs');
+const { importToday } = require('./import/run');
 const { noteError } = require('./admin/tools');
 const { errorText, collectTickErrors } = require('./errors');
 const { exportWriteoffs } = require('./export/writeoff');
@@ -79,8 +80,24 @@ function createRuntime() {
   const queueWoExport = createExportQueue({ run: woExport, onError: noteErr('списання') });
 
   const getEnv = () => ({ at: new Date(), data, veg, late, mailer, queueExport, queueWoExport, defer });
+  // Підтяжка замовлень, зроблених зі старої сторінки Apps Script (лише живий режим, IMPORT_SHEETS_TODAY=on): до перебудови звітів
+  const importSheets = async () => {
+    if (process.env.IMPORT_SHEETS_TODAY !== 'on' || exportTargetMode() !== 'live') return null;
+    try {
+      const r = await importToday({ sb: supabase(), loadStores: require('./db').loadStores, googleApi, directions: DIRECTIONS });
+      const p = r.plan, n = p.inserts.length + p.updates.length + p.cancels.length;
+      if (n) console.log(`імпорт з листів: нових ${p.inserts.length}, змінених ${p.updates.length}, скасовано ${p.cancels.length}`);
+      if (p.guarded && p.guarded.length) console.error('імпорт з листів: порожній лист, скасування пропущено: ' + p.guarded.join(', '));
+      return { inserted: p.inserts.length, updated: p.updates.length, cancelled: p.cancels.length, unmatched: p.unmatched.length };
+    } catch (e) {
+      await noteError(adm, 'tick: імпорт з листів', errorText(e));
+      return { error: errorText(e) };
+    }
+  };
   const tickJob = async () => {
+    const imported = await importSheets();
     const res = await tick({ ...getEnv(), ...exportEnv(), rebuildReports, exportWriteoffs: woExport }, exportAll);
+    if (imported) res.import = imported;
     for (const x of collectTickErrors(res)) await noteError(adm, 'tick: ' + x.where, x.msg);
     try { await adm.setSetting('last_tick', new Date().toISOString()); } catch (e) { console.error('last_tick: ' + e.message); }
     return res;
