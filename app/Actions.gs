@@ -1017,3 +1017,14 @@ function w06_fillCosts() {
   try { CacheService.getScriptCache().remove('wo_prod_v2'); } catch (e) {}
   console.log('ЗАПИСАНО: ' + p.sure.length + ' клітинок у колонку ' + String.fromCharCode(64 + p.col) + '.');
 }
+function z_showWoBooks() { Logger.log(PropertiesService.getScriptProperties().getProperty('wo_books')); }
+function z_cutoverOff() {
+  var off = { refreshBakeryReports: 1, refreshBreadReports: 1, refreshVegReports: 1,
+              e04_refreshExport: 1, e03_nbhzExport: 1, woNightly: 1, vegGuard: 1 };
+  var n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (off[t.getHandlerFunction()]) { ScriptApp.deleteTrigger(t); n++; }
+  });
+  console.log('Вимкнено тригерів: ' + n);
+  ScriptApp.getProjectTriggers().forEach(function (t) { console.log('Лишився: ' + t.getHandlerFunction()); });
+}

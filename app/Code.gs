@@ -8,6 +8,7 @@ function doGet(e) {
   if (p.ok) return lateApprovePage_(p);   // кнопка "Дозволити" з листа закупниці
   if (p.load) return loadProbe_(p);       // навантажувальний тест, Maintenance.gs
   if (p.admin) return adminPage_();       // пульт керування, Admin.gs (вхід за PIN)
+  if (movedToFly_()) return movedPage_(); // 24.10.2026: сайт переїхав на Fly - нова адреса PWA_URL
 
   return HtmlService.createTemplateFromFile('ui/Index')
     .evaluate()
@@ -18,12 +19,36 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
 }
 
+// ---- Переїзд на Fly (24.10.2026) ----
+// Сторінка продавця більше не працює: показує кнопку на нову адресу і просить оболонку (GitHub Pages) перезавантажитись.
+// Відкат: у редакторі PropertiesService.getScriptProperties().setProperty('moved', '0') - сторінка знову робоча.
+function movedToFly_() {
+  try { return PropertiesService.getScriptProperties().getProperty('moved') !== '0'; } catch (e) { return true; }
+}
+function movedPage_() {
+  var url = PWA_URL;
+  var html = '<!doctype html><meta charset="utf-8"><base target="_top">' +
+    '<style>body{margin:0;font-family:Arial,sans-serif;background:#eceef1;color:#16181d;text-align:center;padding:60px 24px}' +
+    'h2{margin:0 0 10px;font-size:23px}p{font-size:16px;line-height:1.5;color:#5d626b;margin:0 0 26px}' +
+    'a{display:inline-block;background:#e11b22;color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:16px 30px;border-radius:14px}</style>' +
+    '<h2>Сайт замовлень переїхав</h2><p>Замовлення тепер приймаються на новій версії.<br>Натисніть кнопку - далі все як завжди.</p>' +
+    '<a href="' + url + '" target="_top">Відкрити нову версію</a>' +
+    '<script>try{window.top.postMessage({fm:"moved"},"*");}catch(e){}</script>';
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('Замовлення Фемелі Маркет')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
+}
+
 function include(file) {
   return HtmlService.createHtmlOutputFromFile(file).getContent();
 }
 
 function api(action, payload) {
   payload = payload || {};
+  // після переїзду на Fly старі відкриті сторінки нічого не записують - щоб замовлення не лишалися лише в листі
+  if (movedToFly_() && /^(submitOrder|requestLate|woSubmit|woDelete)$/.test(action))
+    return { ok: false, error: 'Сайт переїхав. Закрийте застосунок повністю і відкрийте його знову.' };
   try {
     var data;
     switch (action) {

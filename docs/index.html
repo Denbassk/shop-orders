@@ -62,6 +62,13 @@ html,body{margin:0;padding:0;height:100%;background:#eceef1;overflow:hidden;
   // ?tt=... з персонального посилання прокидуємо всередину
   frame.src = url + location.search;
 
+  // 24.10.2026: стара сторінка Apps Script повідомляє «переїхали» - перезавантажуємо оболонку, вона вже веде на Fly (один раз)
+  window.addEventListener('message', function (ev) {
+    if (!ev.data || ev.data.fm !== 'moved') return;
+    try { if (sessionStorage.getItem('fm_moved')) return; sessionStorage.setItem('fm_moved', '1'); } catch (e) { return; }
+    location.reload();
+  });
+
   var done = false;
   frame.addEventListener('load', function () {
     done = true;
