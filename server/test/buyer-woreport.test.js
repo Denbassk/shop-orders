@@ -194,8 +194,8 @@ test('звіт: позиція без собівартості (ціна 0) по
   assert.ok(cells.includes('Салат з курячим філе та ананасами 175г (без собівартості)'));
 });
 
-test('сторінка ВК: на вкладці «Списання» календар періоду «З - по» передає from/to у запит і не ховає пресети', () => {
+test('сторінка ВК: на вкладці «Списання» календар періоду «З - по» у верхній панелі передає from/to у запит і не ховає пресети', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
-  for (const s of ['function woDateBox', 'id="woFrom"', 'id="woTo"', 'function woPick()', 'from: WO.from, to: WO.to', 'WO.archFrom'])
+  for (const s of ['id="woRepDate"', 'id="woTo"', 'function woPick()', 'function woPickClear', 'color-scheme:dark', 'from: WO.from, to: WO.to', 'WO.archFrom'])
     assert.ok(html.includes(s), s);
 });
