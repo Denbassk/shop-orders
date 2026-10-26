@@ -226,9 +226,9 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .wocard{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
 .wocard.wide{grid-column:1/-1}
 .worep{margin:4px 0 14px}.worow{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:8px 0 10px}.worow label{font-size:13px;color:var(--mu)}.worow input[type=date]{height:48px;border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:12px;padding:0 10px 0 14px;font:inherit;font-size:16px;min-width:0;color-scheme:light}
-[data-theme=dark] .worow input[type=date]{color-scheme:dark}
+/* іконка: чорний значок (color-scheme:light) перефарбовується фільтром у бірюзовий #2DD4BF темної теми - без подвійної інверсії */
 .worow input[type=date]::-webkit-calendar-picker-indicator{width:26px;height:26px;padding:4px;margin-left:6px;cursor:pointer;opacity:.85}
-[data-theme=dark] .worow input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
+[data-theme=dark] .worow input[type=date]::-webkit-calendar-picker-indicator{filter:invert(77%) sepia(52%) saturate(502%) hue-rotate(118deg) brightness(95%) contrast(93%);opacity:1}
 .worow.on input.pk{border-color:var(--tx)}
 .woh{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
 .rk{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--ln)}
