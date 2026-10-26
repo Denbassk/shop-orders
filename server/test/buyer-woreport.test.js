@@ -196,6 +196,6 @@ test('звіт: позиція без собівартості (ціна 0) по
 
 test('сторінка ВК: на вкладці «Списання» календар періоду «З - по» у верхній панелі передає from/to у запит і не ховає пресети', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
-  for (const s of ['id="woRepDate"', 'id="woTo"', 'function woPick()', 'function woPickClear', 'color-scheme:dark', 'from: WO.from, to: WO.to', 'WO.archFrom'])
+  for (const s of ['id="woRepDate"', 'id="woTo"', 'function woPick()', 'function woPickClear', 'calendar-picker-indicator{filter:invert(77%)', 'from: WO.from, to: WO.to', 'WO.archFrom'])
     assert.ok(html.includes(s), s);
 });
