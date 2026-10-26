@@ -30,9 +30,9 @@ test('овочі: кожен рядок позицій, РАЗОМ по ТТ і 
   const kinds = { price: 0, qty: 0, sum: 0, totQty: 0, totSum: 0 };
   plan.data.forEach((row, i) => {
     const r = i + 1, c = (n) => (m.cells[r + ',' + n] || {}).nf;
-    if (typeof row[0] === 'number') { assert.equal(c(3), '#,##0.00', 'ціна, рядок ' + r); assert.equal(c(4), '0.###'); assert.equal(c(5), '#,##0.00'); kinds.price++; }
-    if (row[0] === 'РАЗОМ по ТТ:') { assert.equal(c(4), '0.###'); assert.equal(c(5), '#,##0.00'); kinds.totQty++; }
-    if (row[0] === 'ЗАГАЛЬНИЙ ПІДСУМОК') { assert.equal(c(4), '0.###'); assert.equal(c(5), '#,##0.00'); kinds.totSum++; }
+    if (typeof row[0] === 'number') { assert.equal(c(3), '#,##0.00', 'ціна, рядок ' + r); assert.equal(c(4), '#,##0.00', 'сума (D)'); assert.ok(!c(5), 'кількість (E) без формату 0.###'); kinds.price++; }
+    if (row[0] === 'РАЗОМ по ТТ:') { assert.equal(c(4), '#,##0.00', 'сума (D)'); assert.ok(!c(5), 'кількість (E) без формату 0.###'); kinds.totQty++; }
+    if (row[0] === 'ЗАГАЛЬНИЙ ПІДСУМОК') { assert.equal(c(4), '#,##0.00', 'сума (D)'); assert.ok(!c(5), 'кількість (E) без формату 0.###'); kinds.totSum++; }
   });
   assert.deepEqual(kinds, { price: 12, qty: 0, sum: 0, totQty: 4, totSum: 1 });
 });

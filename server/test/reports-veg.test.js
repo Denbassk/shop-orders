@@ -43,7 +43,7 @@ const RUN = 'buildVegOrdersSheet_(vegTodayRows_()); buildVegSummarySheet_(vegTod
 
 test('Замовлення Овочі + Зведена Овочі: значення і формати збігаються з VegReport.gs (ЮА, чужий день, невідома адреса)', () => {
   const gas = gasRun(ROWS, RUN);
-  const plans = V.buildVegReports(V.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY), { stores: STORES, now: NOW });
+  const plans = V.buildVegReports(V.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY), { stores: STORES, now: NOW, legacy: true });
   for (const name of ['Замовлення Овочі', 'Зведена Овочі']) {
     const d = diffSheets(gas.sheet(VEG_ID, name), ours(plans[name]), { skip: new Set(['grid']) });
     assert.equal(d.length, 0, name + ':\n' + show(d));
@@ -51,7 +51,7 @@ test('Замовлення Овочі + Зведена Овочі: значен�
 });
 
 test('позначка ЮА: у назві ТТ із замовленням і в списку «ТТ без замовлень»; чужого дня точки в списку нема', () => {
-  const plans = V.buildVegReports(V.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY), { stores: STORES, now: NOW });
+  const plans = V.buildVegReports(V.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY), { stores: STORES, now: NOW, legacy: true });
   const col = plans['Замовлення Овочі'].data.map((r) => r[0]);
   assert.ok(col.includes('м. Харків пр-т Байрона, 156 · ЮА'), 'ТТ із замовленням і ЮА');
   assert.ok(col.includes('   Ювілейний, 67 · ЮА'), 'без замовлення і ЮА');
@@ -63,7 +63,7 @@ test('позначка ЮА: у назві ТТ із замовленням і �
 
 test('порожній день: «Замовлень на сьогодні ще немає» в обох листах', () => {
   const gas = gasRun([], RUN);
-  const plans = V.buildVegReports([], { stores: STORES, now: NOW });
+  const plans = V.buildVegReports([], { stores: STORES, now: NOW, legacy: true });
   for (const name of ['Замовлення Овочі', 'Зведена Овочі']) {
     const d = diffSheets(gas.sheet(VEG_ID, name), ours(plans[name]), { skip: new Set(['grid']) });
     assert.equal(d.length, 0, name + ':\n' + show(d));
@@ -78,4 +78,24 @@ test('normalizeRawRows: сьогодні, з назвою (D) і кількіс�
     [TODAY, '09:00:00', 'А', 'Буряк', 18, 0, 0],
   ];
   assert.deepEqual(V.normalizeRawRows(raw, TODAY), [[TODAY, '09:00:00', 'А', 'Морква', 18, 3.5, 63]]);
+});
+
+test('постачальник (26.10.2026): «Сума, грн» перед «Кількість, кг»; кількість без формату 0.### («3,» не показується); значення ті самі, що в старому вигляді', () => {
+  const rows = () => V.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY);
+  const neu = V.buildVegReports(rows(), { stores: STORES, now: NOW });
+  const old = V.buildVegReports(rows(), { stores: STORES, now: NOW, legacy: true });
+  for (const name of ['Замовлення Овочі', 'Зведена Овочі']) {
+    const a = neu[name], b = old[name];
+    assert.equal(a.data.length, b.data.length);
+    a.data.forEach((row, i) => {
+      const o = b.data[i];
+      if (['№', 'Назва овочу'].includes(String(o[1])) || o[0] === '№') { assert.deepEqual(row.slice(3), ['Сума, грн', 'Кількість, кг']); return; }
+      assert.deepEqual([row[0], row[1], row[2], row[3], row[4]], [o[0], o[1], o[2], o[4], o[3]], name + ' рядок ' + (i + 1));
+    });
+    const w = writerFor({ properties: { sheetId: 7, gridProperties: { rowCount: 1000, columnCount: 26 } } }, a.data, a.width);
+    a.apply(w);
+    const nf = w.requests().filter((q) => q.repeatCell && q.repeatCell.cell.userEnteredFormat.numberFormat)
+      .map((q) => [q.repeatCell.range.startColumnIndex, q.repeatCell.cell.userEnteredFormat.numberFormat.pattern]);
+    assert.ok(nf.length && nf.every(([c, p]) => p === '#,##0.00' && (c === 2 || c === 3)), name + ': формати ' + JSON.stringify(nf));
+  }
 });

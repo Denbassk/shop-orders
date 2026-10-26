@@ -119,12 +119,19 @@ function bakery({ orders, summary, routes }) {
     top: top(prods), groups: { title: 'Розвозка по маршрутах', list: rl }, missing, missingTitle: 'Не замовили' };
 }
 
+// Колонки кількості і суми беремо із шапки листа: з 26.10.2026 «Сума, грн» стоїть перед «Кількість, кг» (раніше навпаки)
+function vegCols(rows) {
+  const h = (rows || []).find((r) => (r || []).some((v) => /^Кількість/i.test(txt(v))) && (r || []).some((v) => /^Сума/i.test(txt(v))));
+  if (!h) return { qi: 3, si: 4 };
+  return { qi: h.findIndex((v) => /^Кількість/i.test(txt(v))), si: h.findIndex((v) => /^Сума/i.test(txt(v))) };
+}
 function veg({ orders, summary }) {
   if (!orders) throw new Error('Немає листа «Замовлення Овочі» - звіт ще не зібрано');
   const cov = coverage(orders);
-  const tot = totalRow(orders, /^ЗАГАЛЬНИЙ ПІДСУМОК/i, 3, 4);
+  const oc = vegCols(orders), sc = vegCols(summary);
+  const tot = totalRow(orders, /^ЗАГАЛЬНИЙ ПІДСУМОК/i, oc.qi, oc.si);
   const prods = new Map();
-  (summary || []).forEach((r) => { if (num(r[0]) != null && txt(r[1])) addTo(prods, txt(r[1]), num(r[3]), num(r[4])); });
+  (summary || []).forEach((r) => { if (num(r[0]) != null && txt(r[1])) addTo(prods, txt(r[1]), num(r[sc.qi]), num(r[sc.si])); });
   let missing = missingList(orders);
   if (!missing && cov && cov[0] === cov[1]) missing = [];
   return { unit: 'кг',

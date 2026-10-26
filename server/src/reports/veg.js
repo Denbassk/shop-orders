@@ -1,6 +1,7 @@
 // Звіти овочів: «Замовлення Овочі» і «Зведена Овочі». Перенос app/VegReport.gs (buildVegOrdersSheet_, buildVegSummarySheet_,
 // vegTodayRows_, vegStoresToday_) і позначки ЮА з app/Registry.gs (isUaStore_, uaAddrKeys_, UA_MARK).
-// Тексти, порядок і формати - дослівно. Рядки - з бази (reports/rows.js), список ТТ і дні - зі stores (rowToStore).
+// Тексти, порядок і формати - дослівно, крім виправлень на прохання постачальника (26.10.2026): колонки «Сума, грн» і «Кількість, кг» поміняно місцями,
+// формат кількості без «0.###» (давав «3,» замість «3»). Старий вигляд лишився як opts.legacy - лише для звірки з app/VegReport.gs у тестах. Рядки - з бази (reports/rows.js), список ТТ і дні - зі stores (rowToStore).
 const R = require('../rules');
 
 const VEG_ORDERS_SHEET = 'Замовлення Овочі';
@@ -13,6 +14,14 @@ const cellStr = (v) => String(v == null ? '' : v).trim();
 const vegNum = (v) => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isNaN(n) ? 0 : n; };
 const vegRound = (x) => Math.round(x * 100) / 100;
 
+// Колонки D/E: постачальник - «Сума, грн» (D), «Кількість, кг» (E); legacy (Apps Script) - навпаки
+const layout = (legacy) => ({
+  qtyCol: legacy ? 'D' : 'E', sumCol: legacy ? 'E' : 'D',
+  pair: (qty, sum) => (legacy ? [qty, sum] : [sum, qty]),
+  head: legacy ? ['№', 'Назва овочу', 'Ціна/кг', 'Кількість, кг', 'Сума, грн'] : ['№', 'Назва овочу', 'Ціна/кг', 'Сума, грн', 'Кількість, кг'],
+  qtyFmt: legacy ? { halign: 'center', num: '0.###' } : { halign: 'center' },
+  sumFmt: { halign: 'right', num: '#,##0.00' },
+});
 const isUaStore = (s) => String((s && s.edrpou) || '').replace(/\D/g, '') === UA_EDRPOU;
 
 // uaAddrKeys_: ключі addrKey адрес точок ЮА в полі field (addrVeg, addrNbhz...)
@@ -43,7 +52,7 @@ function normalizeRawRows(rawRows, dmy) {
 }
 
 // ---------- «Замовлення Овочі» ----------
-function ordersPlan(rows, c) {
+function ordersPlan(rows, c, L) {
   const byStore = {};
   rows.forEach((r) => {
     const addr = cellStr(r[2]);
@@ -70,7 +79,7 @@ function ordersPlan(rows, c) {
   push(['Замовлення овочів - ' + c.today, '', '', '', ''], 'title');
   push(['ТТ із замовленнями: ' + Object.keys(byStore).length + ' з ' + all.length + '   (оновлено ' + c.stamp + ')', '', '', '', ''], 'sub');
   push(['', '', '', '', ''], null);
-  push(['№', 'Назва овочу', 'Ціна/кг', 'Кількість, кг', 'Сума, грн'], 'head');
+  push(L.head, 'head');
 
   let num = 1, grandQty = 0, grandSum = 0;
 
@@ -81,17 +90,17 @@ function ordersPlan(rows, c) {
     byStore[store].sort((a, b) => uk(a.name, b.name)).forEach((it) => {
       sQty = vegRound(sQty + it.qty);
       sSum = vegRound(sSum + it.sum);
-      push([num++, it.name, it.price, it.qty, it.sum], 'row');
+      push([num++, it.name, it.price, ...L.pair(it.qty, it.sum)], 'row');
     });
 
-    push(['РАЗОМ по ТТ:', '', '', sQty, sSum], 'total');
+    push(['РАЗОМ по ТТ:', '', '', ...L.pair(sQty, sSum)], 'total');
     push(['', '', '', '', ''], null);
     grandQty = vegRound(grandQty + sQty);
     grandSum = vegRound(grandSum + sSum);
   });
 
   if (Object.keys(byStore).length) {
-    push(['ЗАГАЛЬНИЙ ПІДСУМОК', '', '', grandQty, grandSum], 'grand');
+    push(['ЗАГАЛЬНИЙ ПІДСУМОК', '', '', ...L.pair(grandQty, grandSum)], 'grand');
     push(['', '', '', '', ''], null);
   } else {
     push(['Замовлень на сьогодні ще немає', '', '', '', ''], 'missHead');
@@ -117,18 +126,18 @@ function ordersPlan(rows, c) {
       if (even.length) w.fmt(even, 'A', 'E', { bg: '#F8F9FA' });
       w.fmt(g.row, 'A', 'A', { halign: 'center' });
       w.fmt(g.row, 'C', 'C', { halign: 'center', num: '#,##0.00' });
-      w.fmt(g.row, 'D', 'D', { halign: 'center', num: '0.###' });
-      w.fmt(g.row, 'E', 'E', { halign: 'right', num: '#,##0.00' });
+      w.fmt(g.row, L.qtyCol, L.qtyCol, L.qtyFmt);
+      w.fmt(g.row, L.sumCol, L.sumCol, L.sumFmt);
     }
     if (g.total.length) {
       w.fmt(g.total, 'A', 'E', { bg: '#E8F5E9', color: '#2E7D32', bold: true });
-      w.fmt(g.total, 'D', 'D', { halign: 'center', num: '0.###' });
-      w.fmt(g.total, 'E', 'E', { halign: 'right', num: '#,##0.00' });
+      w.fmt(g.total, L.qtyCol, L.qtyCol, L.qtyFmt);
+      w.fmt(g.total, L.sumCol, L.sumCol, L.sumFmt);
     }
     if (g.grand.length) {
       w.fmt(g.grand, 'A', 'E', { bg: '#1B5E20', color: '#FFFFFF', bold: true, size: 11 });
-      w.fmt(g.grand, 'D', 'D', { halign: 'center', num: '0.###' });
-      w.fmt(g.grand, 'E', 'E', { halign: 'right', num: '#,##0.00' });
+      w.fmt(g.grand, L.qtyCol, L.qtyCol, L.qtyFmt);
+      w.fmt(g.grand, L.sumCol, L.sumCol, L.sumFmt);
     }
     w.fmt(g.missHead, 'A', 'E', { bg: '#FFEBEE', color: '#C62828', bold: true });
     w.fmt(g.miss, 'A', 'A', { color: '#C62828' });
@@ -140,7 +149,7 @@ function ordersPlan(rows, c) {
 }
 
 // ---------- «Зведена Овочі» ----------
-function summaryPlan(rows, c) {
+function summaryPlan(rows, c, L) {
   const sum = {}, stores = {};
   let grandQty = 0, grandSum = 0;
   rows.forEach((r) => {
@@ -167,7 +176,7 @@ function summaryPlan(rows, c) {
   push(['ТТ: ' + Object.keys(stores).length + '   |   разом ' + grandQty + ' кг   |   ' + grandSum.toFixed(2) + ' грн   (оновлено ' + c.stamp + ')',
     '', '', '', ''], 'sub');
   push(['', '', '', '', ''], null);
-  push(['№', 'Назва овочу', 'Ціна/кг', 'Кількість, кг', 'Сума, грн'], 'head');
+  push(L.head, 'head');
 
   if (!rows.length) {
     push(['Замовлень на сьогодні ще немає', '', '', '', ''], 'empty');
@@ -175,10 +184,10 @@ function summaryPlan(rows, c) {
     let num = 1;
     Object.keys(sum).sort(uk).forEach((name) => {
       const it = sum[name];
-      push([num++, name, it.price, it.qty, it.sum], 'row');
+      push([num++, name, it.price, ...L.pair(it.qty, it.sum)], 'row');
     });
     push(['', '', '', '', ''], null);
-    push(['ЗАГАЛОМ', '', '', grandQty, grandSum], 'total');
+    push(['ЗАГАЛОМ', '', '', ...L.pair(grandQty, grandSum)], 'total');
   }
 
   const apply = (w) => {
@@ -193,13 +202,13 @@ function summaryPlan(rows, c) {
       if (even.length) w.fmt(even, 'A', 'E', { bg: '#F8F9FA' });
       w.fmt(g.row, 'A', 'A', { halign: 'center' });
       w.fmt(g.row, 'C', 'C', { halign: 'center', num: '#,##0.00' });
-      w.fmt(g.row, 'D', 'D', { halign: 'center', num: '0.###' });
-      w.fmt(g.row, 'E', 'E', { halign: 'right', num: '#,##0.00' });
+      w.fmt(g.row, L.qtyCol, L.qtyCol, L.qtyFmt);
+      w.fmt(g.row, L.sumCol, L.sumCol, L.sumFmt);
     }
     if (g.total.length) {
       w.fmt(g.total, 'A', 'E', { bg: '#1B5E20', color: '#FFFFFF', bold: true, size: 11 });
-      w.fmt(g.total, 'D', 'D', { halign: 'center', num: '0.###' });
-      w.fmt(g.total, 'E', 'E', { halign: 'right', num: '#,##0.00' });
+      w.fmt(g.total, L.qtyCol, L.qtyCol, L.qtyFmt);
+      w.fmt(g.total, L.sumCol, L.sumCol, L.sumFmt);
     }
     w.fmt(g.empty, 'A', 'E', { bg: '#FFEBEE', color: '#C62828', bold: true });
 
@@ -211,7 +220,7 @@ function summaryPlan(rows, c) {
 
 // rows - робочі рядки (normalizeRawRows / reports/rows.js). opts: { stores (усі, rowToStore), now, nowBy }
 function buildVegReports(rows, opts = {}) {
-  const stores = opts.stores || [];
+  const stores = opts.stores || [], L = layout(!!opts.legacy);
   const clock = (name) => (opts.nowBy && opts.nowBy[name]) || opts.now || new Date();
   const ctxFor = (name) => {
     const at = clock(name), k = R.kyivNow(at);
@@ -220,8 +229,8 @@ function buildVegReports(rows, opts = {}) {
       allToday: stores.filter((s) => s.directions.indexOf('veg') >= 0 && R.dayAllowed('veg', s, dayCtx)) };
   };
   return {
-    [VEG_ORDERS_SHEET]: ordersPlan(rows, ctxFor(VEG_ORDERS_SHEET)),
-    [VEG_SUMMARY_SHEET]: summaryPlan(rows, ctxFor(VEG_SUMMARY_SHEET)),
+    [VEG_ORDERS_SHEET]: ordersPlan(rows, ctxFor(VEG_ORDERS_SHEET), L),
+    [VEG_SUMMARY_SHEET]: summaryPlan(rows, ctxFor(VEG_SUMMARY_SHEET), L),
   };
 }
 
