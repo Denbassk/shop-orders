@@ -56,7 +56,7 @@ test('woStats: за місяць - сума, рядки, продукти, то�
   assert.deepEqual(s.products.map((x) => [x.name, x.sum]), [['Круасан', 140], ['Булка', 110]]);
   assert.deepEqual(s.silent, ['Точка s3']);
   assert.deepEqual(s.missing, [{ edrpou: '45672783', stores: ['Точка s2'] }]);
-  assert.deepEqual([s.costCol, s.prodCount, s.noCost], [true, 1, ['Без ціни']]);
+  assert.deepEqual([s.costCol, s.prodCount, s.noCost], [true, 2, ['Без ціни']]);
   assert.equal(s.from, '01.10.2026');
   assert.equal(s.to, '23.10.2026');
   const ent = await WO.admWoStats({ period: 'month', edrpou: '45672783' }, mkEnv().env);

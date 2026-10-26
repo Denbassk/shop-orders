@@ -103,13 +103,34 @@ async function loadRows(google, arch, fresh) {
   cache.set(key, { t: Date.now(), v });
   return v;
 }
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const dayDiff = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5);
+function validDay(s) {
+  if (!DAY_RE.test(s)) return false;
+  const d = new Date(s + 'T12:00:00Z');
+  return !isNaN(d) && d.toISOString().slice(0, 10) === s;
+}
+// Період: або пресет days (1/7/31/90), або довільні from/to (календар, ГГГГ-ММ-ДД) - до глибини архіву. Рядки старші за 31 день лише в листі «Архив».
 async function stats(dir, p = {}, deps = {}) {
   if (dir !== 'bakery') throw new Error('Списання є лише у випічки і кулінарії');
   const google = deps.google || require('../google'), at = deps.at || new Date();
-  const days = [1, 7, 31, 90].includes(+p.days) ? +p.days : 7;
-  const r = await loadRows(google, days > 31, !!p.fresh);
-  const today = kyivDay(at), from = kyivDay(at, days - 1);
-  return { days, from, to: today, at: new Date(at).toISOString(), ...r.meta,
-    ...aggregate(r.list, { from, to: today, entity: String(p.entity || ''), cat: String(p.cat || ''), today }) };
+  const today = kyivDay(at);
+  let from, to = today, days, custom = false;
+  if (p.from || p.to) {
+    from = String(p.from || p.to); to = String(p.to || p.from);
+    if (!validDay(from) || !validDay(to)) throw new Error('Невірна дата періоду');
+    if (from > to) { const t = from; from = to; to = t; }
+    if (to > today) throw new Error('Дата періоду у майбутньому');
+    days = dayDiff(from, to) + 1; custom = true;
+    if (days > 800) throw new Error('Період задовгий (до 800 днів)');
+  } else {
+    days = [1, 7, 31, 90].includes(+p.days) ? +p.days : 7;
+    from = kyivDay(at, days - 1);
+  }
+  const arch = dayDiff(from, today) > 30;
+  const r = await loadRows(google, arch, !!p.fresh);
+  const archFrom = arch ? r.list.reduce((m, x) => (x.day && (!m || x.day < m) ? x.day : m), '') : '';
+  return { custom, from, to, arch, archFrom, at: new Date(at).toISOString(), ...r.meta,
+    ...aggregate(r.list, { from, to, entity: String(p.entity || ''), cat: String(p.cat || ''), today }) };
 }
 module.exports = { stats, loadRows, aggregate, parseRows, bookIds, entityOf, dayOf, _reset: () => cache.clear() };

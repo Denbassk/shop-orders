@@ -41,7 +41,8 @@ function woClosed(env, settings) {
 function woAllowedDates(now) { return [{ v: now.dmy, t: 'Сьогодні' }]; }
 
 // woProducts_: собівартість у базі є завжди (products.cost), тому costCol = true:
-// продавцям - лише товари з cost > 0, «стоп» не важливий; без собівартості - у noCost (для пульта).
+// продавцям - ВЕСЬ асортимент випічки (як на вкладці «Асортимент» і в листі), «стоп» не важливий: залишки стоп-позицій теж списують.
+// Позиція без собівартості потрапляє у список з ціною 0 (сума 0 - у звіті закупниці вона позначена) і в noCost (для пульта).
 function buildWoProducts(rows, costCol = true) {
   const out = { products: [], categories: [], costCol, noCost: [] };
   (rows || []).slice().sort((a, b) => (a.sort || 0) - (b.sort || 0)).forEach((p) => {
@@ -51,12 +52,12 @@ function buildWoProducts(rows, costCol = true) {
     const retail = Number(p.price) || 0;
     const cost = costCol ? (Number(p.cost) || 0) : 0;
     if (costCol) {
-      if (!(cost > 0)) { out.noCost.push(name); return; }
+      if (!(cost > 0)) out.noCost.push(name);
     } else if (String(p.status || '').toLowerCase() === 'stop') return;
     out.products.push({
       id: String(p.id), barcode, name,
       category: String(p.category || '').trim() || 'Інше',
-      price: Math.round((cost > 0 ? cost : retail) * 100) / 100,
+      price: Math.round((costCol ? cost : retail) * 100) / 100,
     });
   });
   out.products.sort((a, b) => a.category.localeCompare(b.category, 'uk') || a.name.localeCompare(b.name, 'uk'));

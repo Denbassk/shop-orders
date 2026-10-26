@@ -111,8 +111,20 @@ test('/api: woProducts, woSubmit, woMine, woDelete маршрутизуютьс�
   assert.deepEqual(await api('woMine', null), { ok: false, error: 'Торгову точку не знайдено. Оновіть сторінку.' });
 });
 
-test('buildWoProducts: «стоп» з собівартістю - у списку; costCol=false - за продажною, без «стоп»', () => {
-  const rows = [prod('1', 10, { status: 'stop' }), prod('2', null)];
-  assert.deepEqual(W.buildWoProducts(rows).products.map((p) => [p.id, p.price]), [['1', 10]]);
+test('buildWoProducts: увесь асортимент (і «стоп», і без собівартості - з ціною 0, назва в noCost); costCol=false - за продажною, без «стоп»', () => {
+  const rows = [prod('1', 10, { status: 'stop' }), prod('2', null), prod('3', 0, { status: 'stop' })];
+  const all = W.buildWoProducts(rows);
+  assert.deepEqual(all.products.map((p) => [p.id, p.price]), [['1', 10], ['2', 0], ['3', 0]]);
+  assert.deepEqual(all.noCost, ['Товар 2', 'Товар 3']);
   assert.deepEqual(W.buildWoProducts(rows, false).products.map((p) => [p.id, p.price]), [['2', 99]]);
+});
+
+test('woSubmit: позицію без собівартості (як «Салат з курячим філе та ананасами») можна списати - рядок з сумою 0', async () => {
+  const salad = prod('7', null, { status: 'stop', name: 'Салат з курячим філе та ананасами 175г' });
+  const { env, calls } = makeEnv({ data: { products: async () => [prod('1', 10), salad] } });
+  const list = await W.apiWoProducts({ storeId: 'test-a' }, env);
+  assert.ok(list.products.some((p) => p.id === '7'), 'у списку продавця');
+  const r = await W.apiWoSubmit(SUB({ items: [{ id: '7', qty: 2 }] }), env);
+  assert.equal(r.total, 0);
+  assert.deepEqual(calls.tx[0].lines.map((l) => [l.name, l.qty, l.price, l.amount, l.amount_plus]), [['Салат з курячим філе та ананасами 175г', 2, 0, 0, 0]]);
 });

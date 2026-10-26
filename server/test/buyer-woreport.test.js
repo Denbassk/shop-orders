@@ -187,3 +187,15 @@ test('сторінка ВК: на вкладці «Списання» блок �
   for (const s of ['Звіт для друку', 'type="date"', "'/writeoff-report/'", 'function woDownload', 'woRepDate'])
     assert.ok(html.includes(s), s);
 });
+
+test('звіт: позиція без собівартості (ціна 0) позначена в таблиці, щоб бухгалтерія бачила', () => {
+  const r = buildDayReport([row({ id: 'z1', name: 'Салат з курячим філе та ананасами 175г', qty: 2, price: 0, sum: 0, sum20: 0 })], { entity: FEM, day: '2026-10-23' });
+  const cells = require('../src/buyer/woReport').sheetModel(r).flat().filter((c) => c.t).map((c) => c.t);
+  assert.ok(cells.includes('Салат з курячим філе та ананасами 175г (без собівартості)'));
+});
+
+test('сторінка ВК: на вкладці «Списання» календар періоду «З - по» передає from/to у запит і не ховає пресети', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
+  for (const s of ['function woDateBox', 'id="woFrom"', 'id="woTo"', 'function woPick()', 'from: WO.from, to: WO.to', 'WO.archFrom'])
+    assert.ok(html.includes(s), s);
+});

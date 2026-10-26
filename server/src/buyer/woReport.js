@@ -89,7 +89,7 @@ function sheetModel(rep) {
     rows.push([T(s.store + (s.code ? ' · №' + s.code : ''), S.store), E(S.store), E(S.store), E(S.store), E(S.store)]);
     if (s.sellers.length) rows.push([T('Подали: ' + s.sellers.join(', '), S.ital)]);
     rows.push(HEAD.map((h) => T(h, S.head)));
-    for (const i of s.items) rows.push([T(i.name, S.text), N(i.qty, S.qty), N(i.price, S.money), N(i.sum, S.money), N(i.sum20, S.money)]);
+    for (const i of s.items) rows.push([T(i.name + (i.price > 0 ? '' : ' (без собівартості)'), S.text), N(i.qty, S.qty), N(i.price, S.money), N(i.sum, S.money), N(i.sum20, S.money)]);
     rows.push([T('Разом по точці', S.tText), N(s.qty, S.tQty), E(S.tText), N(s.sum, S.tMoney), N(s.sum20, S.tMoney)]);
     rows.push([]);
   }

@@ -32,6 +32,21 @@ test('списання: топи за 7 днів, фільтр категорі�
   assert.equal(k.total.sum, 50);
   await assert.rejects(W.stats('bread', {}, { google: fake, at }));
 });
+test('списання: довільні дати з календаря - один день, діапазон, архів, перевернутий діапазон, помилки', async () => {
+  delete process.env.WO_BOOKS; W._reset();
+  const one = await W.stats('bakery', { from: '2026-10-20', to: '2026-10-20' }, { google: fake, at });
+  assert.deepEqual([one.custom, one.days.length, one.from, one.to, one.arch, one.total.sum, one.total.docs], [true, 1, '2026-10-20', '2026-10-20', false, 100, 1]);
+  const rev = await W.stats('bakery', { from: '2026-10-22', to: '2026-10-20' }, { google: fake, at });
+  assert.deepEqual([rev.from, rev.to, rev.days.length, rev.total.docs], ['2026-10-20', '2026-10-22', 2, 2]);
+  const half = await W.stats('bakery', { from: '2026-10-21' }, { google: fake, at });
+  assert.deepEqual([half.from, half.to, half.total.docs], ['2026-10-21', '2026-10-21', 0], 'одна дата - це день from');
+  const old = await W.stats('bakery', { from: '2026-09-01', to: '2026-09-01' }, { google: fake, at });
+  assert.deepEqual([old.arch, old.total.docs, old.archFrom], [true, 1, '2026-09-01'], 'старіше 31 дня - з листа «Архив»');
+  assert.equal((await W.stats('bakery', { days: 7 }, { google: fake, at })).custom, false);
+  await assert.rejects(W.stats('bakery', { from: '2026-13-01' }, { google: fake, at }), /Невірна дата/);
+  await assert.rejects(W.stats('bakery', { from: '2026-10-23' }, { google: fake, at }), /майбутньому/);
+  await assert.rejects(W.stats('bakery', { from: '2020-01-01', to: '2026-10-22' }, { google: fake, at }), /задовгий/);
+});
 test('списання: підключено в runtime і на сторінці', () => {
   const rt = fs.readFileSync(path.join(__dirname, '..', 'src', 'admin', 'runtime.js'), 'utf8');
   const H = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
