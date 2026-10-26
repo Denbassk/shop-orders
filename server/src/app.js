@@ -118,6 +118,7 @@ function createApp(opts = {}) {
   const linkOk = (req) => buyerLink.verifyBuyerKey(req.params.code, req.params.key, linkSecret());
   const buyerApi = (dir) => (opts.buyerApi ? opts.buyerApi(dir) : getAdminRt().buyerApi(dir));
   const buyerWoReport = (dir, p) => (opts.buyerWoReport ? opts.buyerWoReport(dir, p) : require('./buyer/woReport').dayReport(dir, p));
+  const buyerRawReport = (dir, p) => (opts.buyerRawReport ? opts.buyerRawReport(dir, p) : require('./buyer/rawReport').rawReport(dir, p));
   const buyerXlsx = (dir, key) => (opts.buyerXlsx ? opts.buyerXlsx(dir, key) : getAdminRt().buyerXlsx(dir, key));
   const noStore = (res) => { res.set('Cache-Control', 'no-store'); res.set('Referrer-Policy', 'no-referrer'); };
   app.get('/buyer/:code/:key', (req, res) => {
@@ -168,6 +169,24 @@ function createApp(opts = {}) {
     } catch (e) {
       const user = e && e.name === 'ReportError';
       if (!user) console.error('звіт про списання: ' + ((e && e.message) || e));
+      res.status(user ? 400 : 502).json({ ok: false, error: (e && e.message) || 'Помилка сервера' });
+    }
+  });
+
+  // Сирі замовлення ВК за обраний день (рядки «_Сырые_Заказы_ВК», старші дні - «_Архів»): GET /buyer/<код>/<ключ>/raw-report/bakery?date=ГГГГ-ММ-ДД
+  app.get('/buyer/:code/:key/raw-report/:dir', async (req, res) => {
+    if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Not found' });
+    const dir = people.dirOf(req.params.code, req.params.dir);
+    if (!dir || dir !== req.params.dir) return res.status(404).json({ ok: false, error: 'Not found' });
+    try {
+      const f = await buyerRawReport(dir, { date: typeof req.query.date === 'string' ? req.query.date.slice(0, 20) : '' });
+      noStore(res);
+      res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.set('Content-Disposition', 'attachment; filename="raw.xlsx"; filename*=UTF-8\'\'' +encodeURIComponent(f.name));
+      res.send(f.buf);
+    } catch (e) {
+      const user = e && e.name === 'ReportError';
+      if (!user) console.error('сирі замовлення: ' + ((e && e.message) || e));
       res.status(user ? 400 : 502).json({ ok: false, error: (e && e.message) || 'Помилка сервера' });
     }
   });

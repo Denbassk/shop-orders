@@ -725,6 +725,30 @@ function rpCard(s, k) {
     '</span><span class="s">' + esc(s.about || '') + '</span></button>' +
     (s.missing ? '<span class="pill off">немає листа</span>' : '<button class="btn sm dark" onclick="download(' + k + ')">⬇ Excel</button>') + '</div>';
 }
+// Сирі замовлення за обраний день (з архівом): окремий Excel, дата з календаря
+const RAWREP = { date: '', busy: false };
+function rawCard() {
+  const today = woRepToday(); if (!RAWREP.date) RAWREP.date = today;
+  return section('Сирі замовлення за день', '<div class="card" style="padding:14px 16px"><div class="worow"><label for="rawDate">Дата</label>' +
+    '<input class="pk" type="date" id="rawDate" value="' + esc(RAWREP.date) + '" max="' + esc(today) + '" onchange="RAWREP.date = this.value">' +
+    '<button class="btn dark sm" onclick="rawDownload()">⬇ Скачати Excel</button></div>' +
+    '<div class="hint">Усі рядки листа сирих замовлень за обрану дату: час, адреса, товар, ціна, кількість. Старі дні беруться з архіву.</div></div>');
+}
+async function rawDownload() {
+  const date = ($('rawDate') || {}).value || RAWREP.date;
+  if (RAWREP.busy) return;
+  if (!date) { toast('❌ Оберіть дату'); return; }
+  RAWREP.busy = true; toast('⏳ Готую файл: ' + date.split('-').reverse().join('.') + '…');
+  try {
+    const r = await fetch(BASE + '/raw-report/' + S.dir + '?date=' + encodeURIComponent(date), { cache: 'no-store' });
+    if (!r.ok) { let j = null; try { j = await r.json(); } catch (e) { j = null; } throw new Error((j && j.error) || ('Помилка ' + r.status)); }
+    const m = /filename\*=UTF-8''([^;]+)/.exec(r.headers.get('content-disposition') || '');
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a'); a.href = url; a.download = m ? decodeURIComponent(m[1]) : 'raw.xlsx';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast('Файл завантажено');
+  } catch (e) { toast('❌ ' + e.message); } finally { RAWREP.busy = false; }
+}
 async function showReports(fresh) {
   if (RP.dir !== S.dir) { RP.dir = S.dir; RP.key = ''; RP.data = null; RP.q = ''; }
   const l = RP.list = await call('sheets', { fresh: !!fresh }, 60000);
@@ -733,6 +757,7 @@ async function showReports(fresh) {
   const grp = (g) => l.sheets.map((s, k) => [s, k]).filter(([s]) => (s.group || 'report') === g);
   const rep = grp('report'), ext = grp('extra');
   let h = section('Звіти', '<div class="card">' + rep.map(([s, k]) => rpCard(s, k)).join('') + '</div>');
+  if (S.dir === 'bakery') h += rawCard();
   if (ext.length) h += section('Довідники і службові листи', '<div class="card">' + ext.map(([s, k]) => rpCard(s, k)).join('') + '</div>');
   h += l.mode === 'target'
     ? '<div class="note">Тестова таблиця (BUYER_SHEETS=target).</div><button class="btn ghost" onclick="askReport()">Перезібрати звіт</button>'
