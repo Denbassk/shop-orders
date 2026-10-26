@@ -1650,20 +1650,20 @@ input:focus{border-color:var(--teal)}
  .grip{display:none}
 }
 @media (max-width:640px){
- .tabs{left:0;right:0;bottom:0;transform:none;max-width:none;border-radius:18px 18px 0 0;padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+ .tabs{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));transform:none;width:auto;max-width:none;border-radius:20px;padding:6px 4px}
  .tab{flex:1;flex-direction:column;gap:4px;padding:6px 0;font-size:12px}
  .tab:hover{transform:none}
  .wrap{padding:18px 14px 110px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-/* нижнє меню пульта: як у закупниць - обводка акцентом зі світінням, світліше за картки, активна залита */
-:root{--nvbg:#FFFFFF;--nvtx:#3A464D}
-[data-theme=dark]{--nvbg:#2A383F;--nvtx:#C5D3D8}
-.tabs{background:var(--nvbg)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:2px solid var(--acc)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 20%,transparent),0 10px 28px rgba(16,24,28,.3)!important}
-[data-theme=dark] .tabs{box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 26%,transparent),0 8px 26px rgba(0,0,0,.75)!important}
+/* нижнє меню пульта: як у закупниць - алая обводка зі світінням, світліше за картки, активна залита */
+:root{--nvbg:#FFFFFF;--nvtx:#3A464D;--nvac:#F02A24}
+[data-theme=dark]{--nvbg:#2A383F;--nvtx:#C5D3D8;--nvac:#FF3B30}
+.tabs{background:var(--nvbg)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:2px solid var(--nvac)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--nvac) 24%,transparent),0 10px 28px rgba(16,24,28,.3)!important}
+[data-theme=dark] .tabs{box-shadow:0 0 0 3px color-mix(in srgb,var(--nvac) 28%,transparent),0 8px 26px rgba(0,0,0,.75)!important}
 .tab{color:var(--nvtx)}
-.tab:hover{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--tx)}
-.tab.on{background:var(--acc);color:#fff;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+.tab:hover{background:color-mix(in srgb,var(--nvac) 14%,transparent);color:var(--tx)}
+.tab.on{background:var(--nvac);color:#fff;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
 </style>
 <script>
 (function () {
