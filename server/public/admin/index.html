@@ -1656,6 +1656,14 @@ input:focus{border-color:var(--teal)}
  .wrap{padding:18px 14px 110px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* нижнє меню пульта: як у закупниць - обводка акцентом зі світінням, світліше за картки, активна залита */
+:root{--nvbg:#FFFFFF;--nvtx:#3A464D}
+[data-theme=dark]{--nvbg:#2A383F;--nvtx:#C5D3D8}
+.tabs{background:var(--nvbg)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;border:2px solid var(--acc)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 20%,transparent),0 10px 28px rgba(16,24,28,.3)!important}
+[data-theme=dark] .tabs{box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 26%,transparent),0 8px 26px rgba(0,0,0,.75)!important}
+.tab{color:var(--nvtx)}
+.tab:hover{background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--tx)}
+.tab.on{background:var(--acc);color:#fff;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
 </style>
 <script>
 (function () {

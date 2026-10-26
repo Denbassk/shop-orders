@@ -252,6 +252,14 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .wocard.wide:has(.wod){grid-column:auto}
 @media (min-width:1000px){.wocard.wide:has(.wod){grid-column:span 2}}
 @media (max-width:640px){.wod{height:90px;gap:3px}}
+/* нижнє меню: яскрава обводка кольору напрямку зі світінням, світліше за картки, активна вкладка залита кольором напрямку */
+:root{--nvbg:#FFFFFF;--nvtx:#3A464D}
+[data-theme=dark]{--nvbg:#2A383F;--nvtx:#C5D3D8}
+.tabs{background:var(--nvbg);border-top:2px solid var(--dc);box-shadow:0 -6px 20px color-mix(in srgb,var(--dc) 22%,transparent)}
+.tab{color:var(--nvtx)}
+.tab:hover{color:var(--tx)}
+.tab.on{background:var(--dc);color:#fff;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+@media (min-width:900px){.tabs{border:2px solid var(--dc);background:var(--nvbg);backdrop-filter:none;box-shadow:0 0 0 4px color-mix(in srgb,var(--dc) 20%,transparent),0 10px 28px rgba(16,24,28,.3)}[data-theme=dark] .tabs{box-shadow:0 0 0 4px color-mix(in srgb,var(--dc) 24%,transparent),0 8px 26px rgba(0,0,0,.75)}}
 </style>
 </head>
 <body>
