@@ -53,3 +53,28 @@ test('списання: підключено в runtime і на сторінці
   assert.ok(rt.includes("writeoffs: (p) => require('../buyer/writeoffs').stats(dir, p || {})"));
   for (const s of ['wo: showWo', 'function woNav()', "call('writeoffs'", 'class="wogrid"']) assert.ok(H.includes(s), s);
 });
+test('списання: розкладка рядків (що списали на точці, де списали товар), лічильники, суми подач для розкриття', async () => {
+  delete process.env.WO_BOOKS; W._reset();
+  const d = await W.stats('bakery', { days: 7 }, { google: fake, at });
+  const amosova = d.stores.find((x) => x.name === 'Амосова, 5А · №1');
+  assert.deepEqual(amosova.items.map((i) => [i.name, i.qty, i.sum, i.sum20, i.docs]), [['Сосиска в тісті', 3, 60, 72, 1], ['Окрошка', 1, 50, 60, 1]]);
+  assert.equal(amosova.more, 0);
+  const sos = d.products.find((x) => x.name === 'Сосиска в тісті');
+  assert.deepEqual(sos.items.map((i) => [i.name, i.qty, i.sum]), [['Бучми, 32 · №7', 5, 100], ['Амосова, 5А · №1', 3, 60]], 'де списали товар: точки за собівартістю');
+  assert.equal(d.sellers[0].name, 'Іваненко · Амосова, 5А'); assert.deepEqual(d.sellers[0].items.map((i) => i.name), ['Сосиска в тісті', 'Окрошка']);
+  assert.deepEqual(d.byCat.map((c) => c.name), ['Випічка', 'Кулінарія']);
+  assert.deepEqual(d.byEntity[0].items.map((i) => i.name), ['Випічка', 'Кулінарія'], 'розкладка юрособи - за категоріями');
+  assert.deepEqual(d.counts, { stores: 2, products: 2, sellers: 2, byCat: 2, byEntity: 1 });
+  assert.equal(d.days.length, 2); assert.equal(d.days[0].items, undefined, 'графік по днях без розкладки');
+  const doc = d.recent.find((r) => r.id === 'a1');
+  assert.deepEqual([doc.items, doc.qty, doc.sum, doc.sum20], [2, 4, 110, 132]);
+  assert.deepEqual(doc.lines, [{ name: 'Сосиска в тісті', qty: 3, sum: 60, sum20: 72 }, { name: 'Окрошка', qty: 1, sum: 50, sum20: 60 }]);
+});
+test('списання: рейтинг обрізається до 50, розкладка до 40 з лічильником «ще», counts - до обрізання', () => {
+  const rows = [];
+  for (let i = 0; i < 60; i++) for (let k = 0; k < 45; k++) rows.push({ id: 'x' + i + '_' + k, day: '2026-10-22', at: '2026-10-22', time: '10:00', store: 'Т' + i, code: '', cat: 'Випічка', name: 'П' + k, qty: 1, price: 1, sum: 100 + i - k / 100, sum20: 120, seller: 'S', entity: 'E' });
+  const d = W.aggregate(rows, { from: '2026-10-22', to: '2026-10-22' });
+  assert.equal(d.stores.length, 50); assert.equal(d.counts.stores, 60);
+  assert.equal(d.stores[0].name, 'Т59'); assert.equal(d.stores[0].items.length, 40); assert.equal(d.stores[0].more, 5);
+  assert.equal(d.counts.products, 45); assert.equal(d.products[0].items.length, 40);
+});

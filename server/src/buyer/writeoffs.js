@@ -47,24 +47,39 @@ function aggregate(rows, { from = '', to = '', entity = '', cat = '', today = ''
   const entities = [...new Set(all.map((x) => x.entity))].sort();
   const cats = [...new Set(all.map((x) => x.cat))].sort((a, b) => a.localeCompare(b, 'uk'));
   const f = all.filter((x) => (!entity || x.entity === entity) && (!cat || x.cat === cat));
-  const grp = (key, n = 15) => {
+  const rowOf = (a) => ({ name: a.name, sum: r2(a.sum), sum20: r2(a.sum20), qty: r3(a.qty), docs: a.docs.size });
+  const byName = (a, b) => b.sum - a.sum || a.name.localeCompare(b.name, 'uk');
+  // key - групування; sub - розкладка групи (для розкриття рядка: що саме списано), subN - скільки рядків розкладки віддавати
+  const grp = (key, n = 50, sub = null, subN = 40) => {
     const m = new Map();
-    f.forEach((x) => { const k = key(x); const a = m.get(k) || { name: k, sum: 0, sum20: 0, qty: 0, docs: new Set() };
-      a.sum += x.sum; a.sum20 += x.sum20; a.qty += x.qty; a.docs.add(x.id); m.set(k, a); });
-    return [...m.values()].map((a) => ({ name: a.name, sum: r2(a.sum), sum20: r2(a.sum20), qty: r3(a.qty), docs: a.docs.size }))
-      .sort((a, b) => b.sum - a.sum).slice(0, n);
+    f.forEach((x) => { const k = key(x); const a = m.get(k) || { name: k, sum: 0, sum20: 0, qty: 0, docs: new Set(), subs: new Map() };
+      a.sum += x.sum; a.sum20 += x.sum20; a.qty += x.qty; a.docs.add(x.id);
+      if (sub) { const sk = sub(x), c = a.subs.get(sk) || { name: sk, sum: 0, sum20: 0, qty: 0, docs: new Set() };
+        c.sum += x.sum; c.sum20 += x.sum20; c.qty += x.qty; c.docs.add(x.id); a.subs.set(sk, c); }
+      m.set(k, a); });
+    const all = [...m.values()].sort(byName);
+    const list = all.slice(0, n).map((a) => {
+      const r = rowOf(a);
+      if (sub) { const ds = [...a.subs.values()].sort(byName); r.items = ds.slice(0, subN).map(rowOf); r.more = Math.max(0, ds.length - subN); }
+      return r;
+    });
+    list.total = all.length;   // скільки груп було до обрізання (у JSON не потрапляє - віддаємо окремо в counts)
+    return list;
   };
   const tot = f.reduce((a, x) => { a.sum += x.sum; a.sum20 += x.sum20; a.qty += x.qty; return a; }, { sum: 0, sum20: 0, qty: 0 });
   const docs = new Map();
-  f.forEach((x) => { const d = docs.get(x.id) || { id: x.id, day: x.day, at: x.at, time: x.time, store: x.store, seller: x.seller, entity: x.entity, qty: 0, sum: 0, items: 0 };
-    d.qty += x.qty; d.sum += x.sum; d.items++; docs.set(x.id, d); });
+  f.forEach((x) => { const d = docs.get(x.id) || { id: x.id, day: x.day, at: x.at, time: x.time, store: x.store, seller: x.seller, entity: x.entity, qty: 0, sum: 0, sum20: 0, items: 0, lines: [] };
+    d.qty += x.qty; d.sum += x.sum; d.sum20 += x.sum20; d.items++; d.lines.push({ name: x.name, qty: r3(x.qty), sum: r2(x.sum), sum20: r2(x.sum20) }); docs.set(x.id, d); });
   const recent = [...docs.values()].sort((a, b) => (b.at + b.time).localeCompare(a.at + a.time)).slice(0, 30)
-    .map((d) => ({ ...d, qty: r3(d.qty), sum: r2(d.sum) }));
+    .map((d) => ({ ...d, qty: r3(d.qty), sum: r2(d.sum), sum20: r2(d.sum20) }));
   const todayStores = new Set(rows.filter((x) => x.day === today && (!entity || x.entity === entity)).map((x) => x.store)).size;
+  const storeKey = (x) => x.store + (x.code ? ' · №' + x.code : '');
+  const stores = grp(storeKey, 50, (x) => x.name), products = grp((x) => x.name, 50, storeKey), sellers = grp((x) => x.seller + ' · ' + x.store, 50, (x) => x.name);
+  const byCat = grp((x) => x.cat, 20, (x) => x.name), byEntity = grp((x) => x.entity, 10, (x) => x.cat);
   return { entities, cats,
     total: { sum: r2(tot.sum), sum20: r2(tot.sum20), qty: r3(tot.qty), docs: docs.size, stores: new Set(f.map((x) => x.store)).size },
-    stores: grp((x) => x.store + (x.code ? ' · №' + x.code : '')), products: grp((x) => x.name),
-    sellers: grp((x) => x.seller + ' · ' + x.store), byCat: grp((x) => x.cat, 20), byEntity: grp((x) => x.entity, 10),
+    counts: { stores: stores.total, products: products.total, sellers: sellers.total, byCat: byCat.total, byEntity: byEntity.total },
+    stores, products, sellers, byCat, byEntity,
     days: grp((x) => x.day, 400).sort((a, b) => a.name.localeCompare(b.name)), recent, todayStores };
 }
 const hint = (m, sa) => (/permission|403|not have/i.test(m) ? 'немає доступу' + (sa ? ' - відкрийте таблицю для ' + sa + ' (лише перегляд)' : '') : m);
