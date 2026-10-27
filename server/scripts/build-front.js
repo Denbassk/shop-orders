@@ -44,7 +44,14 @@ function applyChangeOrder(html) {
   // 4. підтвердження перед відправкою і текст кнопки після помилки
   html = patch(html, "  var head = (S.mode === 'replace')\n    ? 'УВАГА: попереднє замовлення за сьогодні буде ВИДАЛЕНО\\nі замінене на це.\\n\\n'\n    : '';",
     "  var head = replaceHead();");
-  html = patch(html, "b.disabled=false; b.textContent='Відправити'; }", "b.disabled=false; b.textContent=(S.mode==='replace'?'Замінити':'Відправити'); }");
+  html = patch(html, "b.disabled=false; b.textContent='Відправити'; }", "b.disabled=false; b.textContent=sendLabel(); }");
+  // кнопка внизу: у режимі зміни "Зберегти" (а не "Замінити" - це збиває з пантелику, ніби замовлення вводять заново)
+  html = patch(html, "(S.mode === 'replace' ? 'Замінити' : 'Відправити') + '</button>", "sendLabel() + '</button>");
+  html = patch(html, "'\\n\\nВідправити?')) return;\n  var b=el('send'); b.disabled=true; b.textContent='Відправка…';",
+    "'\\n\\n' + (S.mode === 'replace' ? 'Зберегти зміни?' : 'Відправити?'))) return;\n  var b=el('send'); b.disabled=true; b.textContent=(S.mode === 'replace' ? 'Збереження…' : 'Відправка…');");
+  // екран після відправки: після зміни - "Зміни збережено" без слів про видалення/заміну рядків
+  html = patch(html, "'<h2>Замовлення прийнято</h2><p><b>'", "'<h2>' + (r.replaced ? 'Зміни збережено' : 'Замовлення прийнято') + '</h2><p><b>'");
+  html = patch(html, "    (r.replaced ? '<p style=\"color:#7a5200\">Попереднє замовлення замінено' +\n                  (r.removed ? ' (прибрано рядків: ' + r.removed + ')' : '') + '</p>' : '') +\n", '');
   // 5. lateHtml/setMode (режими "Дозамовити"/"Переробити все") -> код front-change.js; плашка збирається lateBoxHtml
   const a = html.indexOf('function lateHtml(d){'), b = html.indexOf('function injectLate(){');
   if (a < 0 || b < a) throw new Error('Не знайдено lateHtml/injectLate в Index.html');

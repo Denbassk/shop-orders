@@ -537,7 +537,7 @@ function drawBot(){
   el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum">' + sum +
     '</div><button class="btn" id="send"' +
     (!n||low||sendLocked() ? ' disabled' : '') + ' onclick="send()">' +
-    (S.mode === 'replace' ? 'Замінити' : 'Відправити') + '</button></div></div>';
+    sendLabel() + '</button></div></div>';
 }
 function send(){
   var items = Object.keys(S.cart).map(function(id){ return { id:id, qty:S.cart[id] }; });
@@ -549,8 +549,8 @@ function send(){
   var head = replaceHead();
   if (!confirm(head + 'ТОРГОВА ТОЧКА:\n' + who + '\n\n' +
                S.boot.directions[S.dir].title + '\n' + what +
-               '\n\nВідправити?')) return;
-  var b=el('send'); b.disabled=true; b.textContent='Відправка…';
+               '\n\n' + (S.mode === 'replace' ? 'Зберегти зміни?' : 'Відправити?'))) return;
+  var b=el('send'); b.disabled=true; b.textContent=(S.mode === 'replace' ? 'Збереження…' : 'Відправка…');
   trySend(items, 0);
 }
 
@@ -571,7 +571,7 @@ function trySend(items, attempt){
         return;
       }
       alert(msg.replace(/^BUSY:\s*/, 'Сервер зайнятий. '));
-      if (b){ b.disabled=false; b.textContent=(S.mode==='replace'?'Замінити':'Відправити'); }
+      if (b){ b.disabled=false; b.textContent=sendLabel(); }
     });
 }
 function done(r){
@@ -579,11 +579,9 @@ function done(r){
   el('bot').innerHTML=''; el('back').style.display='none';
   el('ttl').textContent = S.store.label;
   el('wrap').innerHTML = '<div class="ok"><div class="big">&#10003;</div>' +
-    '<h2>Замовлення прийнято</h2><p><b>' + esc(r.direction) + '</b> · ' + esc(r.store) + '</p>' +
+    '<h2>' + (r.replaced ? 'Зміни збережено' : 'Замовлення прийнято') + '</h2><p><b>' + esc(r.direction) + '</b> · ' + esc(r.store) + '</p>' +
     '<p>' + r.positions + ' позицій' +
       ((S.prod && S.prod.hidePrice) ? '' : ' на ' + money(r.total) + ' грн') + '</p>' +
-    (r.replaced ? '<p style="color:#7a5200">Попереднє замовлення замінено' +
-                  (r.removed ? ' (прибрано рядків: ' + r.removed + ')' : '') + '</p>' : '') +
     '<p>' + esc(r.date||'') + ' ' + esc(r.time) + '</p>' +
     (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
     (r.buffered ? '<p style="color:#7a5200">Таблиця зараз повільна — замовлення збережене і само запишеться в неї за кілька хвилин. Повторно не відправляйте.</p>' : '') +
@@ -687,10 +685,9 @@ function changeHtml(d){
   if (!(d.windowOpen || d.lateRequest === 'approved')) return '';
   if (S.edit){
     var i = S.editInfo || {};
-    return 'Ви змінюєте замовлення: було <b>' + i.positions + ' поз.' +
-           (d.hidePrice ? '' : ', ' + money(i.total) + ' грн') + '</b>.<br>' +
-           'Після відправки воно <b>повністю замінюється</b> тим, що зараз у кошику.' +
-           '<button id="cnlbtn" onclick="cancelEdit()">Скасувати зміну</button>';
+    return 'Ви редагуєте замовлення. Було: <b>' + i.positions + ' поз.' +
+           (d.hidePrice ? '' : ', ' + money(i.total) + ' грн') + '</b>.' +
+           '<button id="cnlbtn" onclick="cancelEdit()">Скасувати</button>';
   }
   return 'Замовлення на сьогодні вже відправлено.' +
          '<button id="chgbtn" onclick="startEdit()">Змінити замовлення</button>';
@@ -700,7 +697,7 @@ function changeHtml(d){
    вже не можна (дедлайн минув, дозвіл спливув). Серверний locked тут не годиться: для вже замовленої точки він завжди true. */
 function sendLocked(){
   var d = S.prod;
-  if (d.alreadyOrdered) return !(S.edit && (d.windowOpen || d.lateRequest === 'approved'));
+  if (d.alreadyOrdered) return !(S.edit && (d.windowOpen || d.lateRequest === 'approved')) || !changeLines().length;   // без змін зберігати нічого
   return !!d.locked;
 }
 
@@ -719,7 +716,7 @@ function startEdit(){
     S.cart = {};
     (r.items || []).forEach(function(it){ if (known[it.id] && it.qty > 0) S.cart[it.id] = it.qty; });
     S.edit = true; S.mode = 'replace';
-    S.editInfo = { positions:r.positions, total:r.total };
+    S.editInfo = { positions:r.positions, total:r.total, gone:r.gone || [], orig:JSON.parse(JSON.stringify(S.cart)) };
     drawProd();
     if (r.gone && r.gone.length)
       alert('Цих позицій уже нема в асортименті, у нове замовлення вони не потраплять:\n' +
@@ -735,12 +732,31 @@ function cancelEdit(){
   drawProd();
 }
 
-/* Початок підтвердження перед відправкою: у режимі заміни показує, що саме замінюється. */
+/* Напис на кнопці внизу: у режимі зміни "Зберегти" ("Замінити" збивало з пантелику - ніби замовлення вводять заново). */
+function sendLabel(){
+  return S.mode === 'replace' ? 'Зберегти' : 'Відправити';
+}
+
+/* Що змінилось проти відправленого замовлення: "Назва: 1 → 4", "+ Назва: 2" (додано), "- Назва" (прибрано). */
+function changeLines(){
+  var i = S.editInfo || {}, orig = i.orig || {}, names = {}, out = [];
+  S.prod.products.forEach(function(p){ names[p.id] = p.name; });
+  Object.keys(S.cart).forEach(function(id){
+    var q = S.cart[id], o = orig[id];
+    if (o == null) out.push('+ ' + names[id] + ': ' + q);
+    else if (o !== q) out.push(names[id] + ': ' + o + ' → ' + q);
+  });
+  Object.keys(orig).forEach(function(id){ if (S.cart[id] == null) out.push('- ' + names[id]); });
+  (i.gone || []).forEach(function(g){ out.push('- ' + g.name); });
+  return out;
+}
+
+/* Початок підтвердження перед збереженням: список змін. */
 function replaceHead(){
   if (S.mode !== 'replace') return '';
-  var i = S.editInfo || {};
-  return 'УВАГА: попереднє замовлення (' + i.positions + ' поз.' +
-         (S.prod.hidePrice ? '' : ', ' + money(i.total) + ' грн') + ')\nбуде ПОВНІСТЮ ЗАМІНЕНЕ на це.\n\n';
+  var lines = changeLines(), shown = lines.slice(0, 12);
+  if (lines.length > 12) shown.push('…і ще ' + (lines.length - 12));
+  return 'ЗМІНИ:\n' + shown.join('\n') + '\n\n';
 }
 
 function injectLate(){

@@ -25,10 +25,9 @@ function changeHtml(d){
   if (!(d.windowOpen || d.lateRequest === 'approved')) return '';
   if (S.edit){
     var i = S.editInfo || {};
-    return 'Ви змінюєте замовлення: було <b>' + i.positions + ' поз.' +
-           (d.hidePrice ? '' : ', ' + money(i.total) + ' грн') + '</b>.<br>' +
-           'Після відправки воно <b>повністю замінюється</b> тим, що зараз у кошику.' +
-           '<button id="cnlbtn" onclick="cancelEdit()">Скасувати зміну</button>';
+    return 'Ви редагуєте замовлення. Було: <b>' + i.positions + ' поз.' +
+           (d.hidePrice ? '' : ', ' + money(i.total) + ' грн') + '</b>.' +
+           '<button id="cnlbtn" onclick="cancelEdit()">Скасувати</button>';
   }
   return 'Замовлення на сьогодні вже відправлено.' +
          '<button id="chgbtn" onclick="startEdit()">Змінити замовлення</button>';
@@ -38,7 +37,7 @@ function changeHtml(d){
    вже не можна (дедлайн минув, дозвіл спливув). Серверний locked тут не годиться: для вже замовленої точки він завжди true. */
 function sendLocked(){
   var d = S.prod;
-  if (d.alreadyOrdered) return !(S.edit && (d.windowOpen || d.lateRequest === 'approved'));
+  if (d.alreadyOrdered) return !(S.edit && (d.windowOpen || d.lateRequest === 'approved')) || !changeLines().length;   // без змін зберігати нічого
   return !!d.locked;
 }
 
@@ -57,7 +56,7 @@ function startEdit(){
     S.cart = {};
     (r.items || []).forEach(function(it){ if (known[it.id] && it.qty > 0) S.cart[it.id] = it.qty; });
     S.edit = true; S.mode = 'replace';
-    S.editInfo = { positions:r.positions, total:r.total };
+    S.editInfo = { positions:r.positions, total:r.total, gone:r.gone || [], orig:JSON.parse(JSON.stringify(S.cart)) };
     drawProd();
     if (r.gone && r.gone.length)
       alert('Цих позицій уже нема в асортименті, у нове замовлення вони не потраплять:\n' +
@@ -73,11 +72,30 @@ function cancelEdit(){
   drawProd();
 }
 
-/* Початок підтвердження перед відправкою: у режимі заміни показує, що саме замінюється. */
+/* Напис на кнопці внизу: у режимі зміни "Зберегти" ("Замінити" збивало з пантелику - ніби замовлення вводять заново). */
+function sendLabel(){
+  return S.mode === 'replace' ? 'Зберегти' : 'Відправити';
+}
+
+/* Що змінилось проти відправленого замовлення: "Назва: 1 → 4", "+ Назва: 2" (додано), "- Назва" (прибрано). */
+function changeLines(){
+  var i = S.editInfo || {}, orig = i.orig || {}, names = {}, out = [];
+  S.prod.products.forEach(function(p){ names[p.id] = p.name; });
+  Object.keys(S.cart).forEach(function(id){
+    var q = S.cart[id], o = orig[id];
+    if (o == null) out.push('+ ' + names[id] + ': ' + q);
+    else if (o !== q) out.push(names[id] + ': ' + o + ' → ' + q);
+  });
+  Object.keys(orig).forEach(function(id){ if (S.cart[id] == null) out.push('- ' + names[id]); });
+  (i.gone || []).forEach(function(g){ out.push('- ' + g.name); });
+  return out;
+}
+
+/* Початок підтвердження перед збереженням: список змін. */
 function replaceHead(){
   if (S.mode !== 'replace') return '';
-  var i = S.editInfo || {};
-  return 'УВАГА: попереднє замовлення (' + i.positions + ' поз.' +
-         (S.prod.hidePrice ? '' : ', ' + money(i.total) + ' грн') + ')\nбуде ПОВНІСТЮ ЗАМІНЕНЕ на це.\n\n';
+  var lines = changeLines(), shown = lines.slice(0, 12);
+  if (lines.length > 12) shown.push('…і ще ' + (lines.length - 12));
+  return 'ЗМІНИ:\n' + shown.join('\n') + '\n\n';
 }
 

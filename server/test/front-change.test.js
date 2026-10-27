@@ -74,22 +74,23 @@ test('changeHtml: кнопка "Змінити замовлення" лише к
   assert.equal(ctx.changeHtml(prod({ alreadyOrdered: false })), '', 'замовлення нема - нема що міняти');
 });
 
-test('changeHtml у режимі зміни: було N поз. на X грн, повна заміна, "Скасувати зміну"', () => {
+test('changeHtml у режимі правки: "Ви редагуєте замовлення. Було: N поз., X грн", кнопка "Скасувати"; слів про заміну нема', () => {
   const { ctx } = sandbox();
   ctx.S.edit = true; ctx.S.editInfo = { positions: 4, total: 695.9 };
   const h = ctx.changeHtml(prod({ alreadyOrdered: true }));
-  assert.ok(h.includes('було <b>4 поз., 695.9 грн</b>') && h.includes('повністю замінюється') && h.includes('cancelEdit()'));
-  assert.ok(!h.includes('startEdit'));
-  assert.ok(ctx.changeHtml(prod({ alreadyOrdered: true, hidePrice: true })).includes('було <b>4 поз.</b>'));
+  assert.ok(h.includes('Ви редагуєте замовлення. Було: <b>4 поз., 695.9 грн</b>') && h.includes('cancelEdit()') && h.includes('>Скасувати<'));
+  assert.ok(!h.includes('startEdit') && !/замін/i.test(h));
+  assert.ok(ctx.changeHtml(prod({ alreadyOrdered: true, hidePrice: true })).includes('Було: <b>4 поз.</b>'));
 });
 
-test('sendLocked: замовлення є -> відправка лише в режимі зміни і поки змінювати можна; замовлення нема -> серверний locked', () => {
+test('sendLocked: замовлення є -> зберегти можна лише в режимі правки, поки змінювати можна і коли щось змінено; замовлення нема -> серверний locked', () => {
   const { ctx } = sandbox();
-  const set = (d, edit) => { ctx.S.prod = prod({ products: [], ...d }); ctx.S.edit = !!edit; return ctx.sendLocked(); };
-  assert.equal(set({ alreadyOrdered: true, locked: true }, false), true, 'є замовлення, зміну не почато');
-  assert.equal(set({ alreadyOrdered: true, locked: true }, true), false, 'до дедлайну, режим зміни: серверний locked=true НЕ блокує');
-  assert.equal(set({ alreadyOrdered: true, locked: false, windowOpen: false, lateRequest: 'approved' }, true), false, 'після дедлайну з дозволом');
-  assert.equal(set({ alreadyOrdered: true, locked: false, windowOpen: false, lateRequest: 'none' }, true), true, 'дозвіл спливув під час зміни');
+  const set = (d, edit, cart = {}, orig = { a: 1 }) => { ctx.S.prod = prod({ products: [{ id: 'a', name: 'А' }, { id: 'b', name: 'Б' }], ...d }); ctx.S.edit = !!edit; ctx.S.cart = cart; ctx.S.editInfo = { orig }; return ctx.sendLocked(); };
+  assert.equal(set({ alreadyOrdered: true, locked: true }, false), true, 'є замовлення, правку не почато');
+  assert.equal(set({ alreadyOrdered: true, locked: true }, true, { a: 2 }), false, 'до дедлайну, правка зі змінами: серверний locked=true НЕ блокує');
+  assert.equal(set({ alreadyOrdered: true, locked: true }, true, { a: 1 }), true, 'правка без змін - зберігати нічого');
+  assert.equal(set({ alreadyOrdered: true, locked: false, windowOpen: false, lateRequest: 'approved' }, true, { a: 2 }), false, 'після дедлайну з дозволом');
+  assert.equal(set({ alreadyOrdered: true, locked: false, windowOpen: false, lateRequest: 'none' }, true, { a: 2 }), true, 'дозвіл спливув під час правки');
   assert.equal(set({ alreadyOrdered: false, locked: false }, false), false, 'перше замовлення, прийом відкритий');
   assert.equal(set({ alreadyOrdered: false, locked: true, windowOpen: false }, false), true, 'прийом закрито, дозволу нема');
 });
@@ -108,7 +109,7 @@ test('startEdit: бере поточне замовлення З СЕРВЕРА,
   await ctx.startEdit();
   assert.deepEqual(plain(calls), [['currentOrder', { dir: 'bakery', storeId: 'st-1' }]]);
   assert.deepEqual(plain(ctx.S.cart), { a: 3, b: 1.5 });
-  assert.deepEqual(plain([ctx.S.edit, ctx.S.mode, ctx.S.editInfo]), [true, 'replace', { positions: 3, total: 125 }]);
+  assert.deepEqual(plain([ctx.S.edit, ctx.S.mode, ctx.S.editInfo]), [true, 'replace', { positions: 3, total: 125, gone: [], orig: { a: 3, b: 1.5 } }]);
   assert.equal(drawn.length, 1);
 });
 
@@ -134,11 +135,41 @@ test('cancelEdit: кошик порожній, режим знову звича�
   assert.deepEqual(plain([ctx.S.edit, ctx.S.mode, ctx.S.editInfo, Object.keys(ctx.S.cart).length, drawn.length]), [false, 'new', null, 0, 1]);
 });
 
-test('replaceHead: лише в режимі заміни; показує, що саме замінюється', () => {
+test('sendLabel: у режимі зміни кнопка "Зберегти", а не "Замінити"; у звичайному "Відправити"', () => {
   const { ctx } = sandbox();
-  assert.equal(ctx.replaceHead(), '');
-  Object.assign(ctx.S, { mode: 'replace', editInfo: { positions: 4, total: 695.9 } });
-  assert.equal(ctx.replaceHead(), 'УВАГА: попереднє замовлення (4 поз., 695.9 грн)\nбуде ПОВНІСТЮ ЗАМІНЕНЕ на це.\n\n');
-  ctx.S.prod.hidePrice = true;
-  assert.ok(ctx.replaceHead().includes('(4 поз.)'));
+  assert.equal(ctx.sendLabel(), 'Відправити');
+  ctx.S.mode = 'replace';
+  assert.equal(ctx.sendLabel(), 'Зберегти');
+});
+
+test('збірка: внизу "Зберегти" (sendLabel), підтвердження "Зберегти зміни?", слова "Замінити" на кнопці нема', () => {
+  const html = build();
+  assert.ok(html.includes("sendLabel() + '</button>"));
+  assert.ok(html.includes("'Зберегти зміни?'") && html.includes("'Збереження…'"));
+  assert.ok(!html.includes("'Замінити'"));
+  assert.ok(html.includes("r.replaced ? 'Зміни збережено' : 'Замовлення прийнято'"));
+  assert.ok(!html.includes('прибрано рядків') && !html.includes('Попереднє замовлення замінено') && !html.includes('ПОВНІСТЮ ЗАМІНЕНЕ'));
+  assert.ok(!html.includes("'\\n\\nВідправити?'"));
+});
+
+test('changeLines / replaceHead: підтвердження показує зміни (було → стало, додано, прибрано), а не "буде замінене"', () => {
+  const { ctx } = sandbox();
+  Object.assign(ctx.S.prod, { products: [{ id: 'a', name: 'Сосиска' }, { id: 'b', name: 'Пюре' }, { id: 'c', name: 'Окрошка' }, { id: 'd', name: 'Салат' }] });
+  assert.equal(ctx.replaceHead(), '', 'не в режимі правки');
+  Object.assign(ctx.S, { mode: 'replace', cart: { a: 5, b: 4, d: 2 }, editInfo: { orig: { a: 5, b: 1, c: 4 }, gone: [{ name: 'Стара', qty: 2 }] } });
+  assert.deepEqual(plain(ctx.changeLines()), ['Пюре: 1 → 4', '+ Салат: 2', '- Окрошка', '- Стара']);
+  assert.equal(ctx.replaceHead(), 'ЗМІНИ:\nПюре: 1 → 4\n+ Салат: 2\n- Окрошка\n- Стара\n\n');
+  assert.ok(!ctx.replaceHead().includes('ЗАМІНЕН'));
+  ctx.S.cart = { a: 5, b: 1, c: 4 }; ctx.S.editInfo = { orig: { a: 5, b: 1, c: 4 } };
+  assert.deepEqual(plain(ctx.changeLines()), [], 'без змін');
+});
+
+test('replaceHead: більше 12 змін - перші 12 і "…і ще N"', () => {
+  const { ctx } = sandbox();
+  const products = Array.from({ length: 15 }, (_, i) => ({ id: 'p' + i, name: 'Т' + i }));
+  Object.assign(ctx.S, { mode: 'replace', cart: {}, editInfo: { orig: Object.fromEntries(products.map((p) => [p.id, 1])) } });
+  ctx.S.prod.products = products;
+  const h = ctx.replaceHead();
+  assert.equal(h.split('\n').filter((l) => l.startsWith('- ')).length, 12);
+  assert.ok(h.includes('…і ще 3'));
 });
