@@ -12,6 +12,7 @@ function createApi(getEnv, log = console.error) {
         case 'bootstrap': data = await read.apiBootstrap(getEnv()); break;
         case 'products':  data = await read.apiProducts(payload, getEnv()); break;
         case 'refresh':   data = await read.apiRefresh(payload, getEnv()); break;
+        case 'currentOrder': data = await read.apiCurrentOrder(payload, getEnv()); break;
         case 'submitOrder': data = await submit.apiSubmitOrder(payload, getEnv()); break;
         case 'requestLate': data = await submit.apiRequestLate(payload, getEnv()); break;
         // списання випічки і кулінарії - api/writeoff.js (WriteOff.gs)

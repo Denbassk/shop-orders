@@ -450,8 +450,8 @@ function openDir(k){
     return;
   }
   if (S.store.ordered[k] && !confirm('Замовлення на сьогодні вже відправлено.\n\n' +
-      'Відкрити, щоб переглянути або попросити дозвіл на добавку?')) return;
-  S.dir=k; S.screen='prod'; S.cart={}; S.q=''; S.cat=null; S.oid=uuid(); S.mode='add';
+      'Відкрити, щоб подивитись або змінити його?')) return;
+  S.dir=k; S.screen='prod'; S.cart={}; S.q=''; S.cat=null; S.oid=uuid(); S.mode='new'; S.edit=false; S.editInfo=null;
   showLoader(WAIT_MSG[Math.floor(Math.random() * WAIT_MSG.length)], 'Секунду, вантажимо товари');
   el('bot').innerHTML='';
   call('products', { dir:k, storeId:S.store.id }).then(function(d){
@@ -470,7 +470,7 @@ function drawProd(){
   if (!d.products.length)
     h += '<div class="err">Асортимент порожній: усі позиції на стопі або лист ще не ' +
          'заповнено. Замовити не вийде - повідомте закупницю.</div>';
-  if (d.alreadyOrdered && d.lateRequest !== 'approved')
+  if (d.alreadyOrdered && d.lateRequest !== 'approved' && !d.windowOpen)
     h += '<div class="err">Замовлення на сьогодні вже відправлено</div>';
   if (d.closed)
     h += '<div class="err">Прийом на сьогодні закрито (до ' + esc(dir.deadline) + ')</div>';
@@ -528,8 +528,7 @@ function total(){
 }
 function drawBot(){
   var n=Object.keys(S.cart).length, t=total();
-  // добавка з дозволу закупниці мінімалкою не обмежена
-  var min = (S.prod.lateRequest === 'approved') ? 0 : (S.prod.minOrder || 0);
+  var min = S.prod.minOrder || 0;
   var low = min > 0 && t < min - 0.01;
   var sum = S.prod.hidePrice
     ? '<b>' + n + '</b>позицій у замовленні'
@@ -537,7 +536,7 @@ function drawBot(){
       (low ? ' · <span class="warn">мінімум ' + money(min) + ' грн</span>' : '');
   el('bot').innerHTML = '<div class="bot"><div class="in"><div class="sum">' + sum +
     '</div><button class="btn" id="send"' +
-    (!n||low||S.prod.locked ? ' disabled' : '') + ' onclick="send()">' +
+    (!n||low||sendLocked() ? ' disabled' : '') + ' onclick="send()">' +
     (S.mode === 'replace' ? 'Замінити' : 'Відправити') + '</button></div></div>';
 }
 function send(){
@@ -547,9 +546,7 @@ function send(){
   var what = S.prod.hidePrice
     ? items.length + ' позицій'
     : money(total()) + ' грн, ' + items.length + ' поз.';
-  var head = (S.mode === 'replace')
-    ? 'УВАГА: попереднє замовлення за сьогодні буде ВИДАЛЕНО\nі замінене на це.\n\n'
-    : '';
+  var head = replaceHead();
   if (!confirm(head + 'ТОРГОВА ТОЧКА:\n' + who + '\n\n' +
                S.boot.directions[S.dir].title + '\n' + what +
                '\n\nВідправити?')) return;
@@ -574,7 +571,7 @@ function trySend(items, attempt){
         return;
       }
       alert(msg.replace(/^BUSY:\s*/, 'Сервер зайнятий. '));
-      if (b){ b.disabled=false; b.textContent='Відправити'; }
+      if (b){ b.disabled=false; b.textContent=(S.mode==='replace'?'Замінити':'Відправити'); }
     });
 }
 function done(r){
@@ -669,43 +666,86 @@ drawProd = function(){
 };
 function lateHtml(d){
   if (!d || !d.canRequestLate) return '';
-  if (d.lateRequest === 'approved'){
-    var add = (S.mode !== 'replace');
-    return 'Закупниця дозволила зміни' +
-      (d.lateLeftMin ? ' - ще <b>' + d.lateLeftMin + ' хв</b>' : '') + '.' +
-      '<div class="modes">' +
-        '<button class="' + (add ? 'on' : '') + '" onclick="setMode(\'add\')">' +
-        'Дозамовити</button>' +
-        '<button class="' + (add ? '' : 'on') + '" onclick="setMode(\'replace\')">' +
-        'Переробити все</button>' +
-      '</div>' +
-      (add
-        ? 'Вкажіть <b>лише те, що додаєте</b>. Попереднє замовлення лишається.'
-        : 'Вкажіть <b>усе замовлення заново</b>. Попереднє за сьогодні буде видалено — ' +
-          'так прибирають зайву позицію або міняють кількість.');
-  }
+  if (d.lateRequest === 'approved')
+    return 'Закупниця дозволила ' + (d.alreadyOrdered ? 'змінити замовлення' : 'відправити замовлення') +
+      (d.lateLeftMin ? ' - ще <b>' + d.lateLeftMin + ' хв</b>' : '') + '.';
   if (d.lateRequest === 'pending')
-    return 'Запит надіслано закупниці. Щойно вона дозволить - кнопка "Відправити" ' +
-           'увімкнеться сама, сторінку оновлювати не треба.' +
+    return 'Запит надіслано закупниці. Щойно вона дозволить - ' +
+           (d.alreadyOrdered ? 'тут з\'явиться кнопка "Змінити замовлення"' : 'кнопка "Відправити" увімкнеться сама') +
+           ', сторінку оновлювати не треба.' +
            (d.lateMailed === false
              ? '<br><br>Сповіщення ще не налаштоване - зателефонуйте закупниці.' : '');
-  if (d.closed || d.alreadyOrdered)
-    return (d.closed ? 'Прийом на сьогодні закрито (до ' + esc(d.deadline) + '). '
-                     : 'Замовлення на сьогодні вже відправлено. ') +
-           'Можна попросити дозвіл на дозамовлення.' +
-           '<button id="askbtn" onclick="askLate()">Попросити дозвіл</button>';
-  return '';
+  return 'Прийом на сьогодні закрито (до ' + esc(d.deadline) + '). ' +
+         (d.alreadyOrdered ? 'Щоб змінити замовлення' : 'Щоб відправити замовлення') + ', потрібен дозвіл закупниці.' +
+         '<button id="askbtn" onclick="askLate()">Попросити дозвіл</button>';
 }
 
-function setMode(m){
-  S.mode = m;
-  injectLate();
-  drawBot();
+/* Замовлення вже є і змінювати його зараз можна (прийом відкритий або є дозвіл): кнопка "Змінити замовлення",
+   а в режимі зміни - нагадування, що старе замовлення буде повністю замінене. */
+function changeHtml(d){
+  if (!d || !d.alreadyOrdered) return '';
+  if (!(d.windowOpen || d.lateRequest === 'approved')) return '';
+  if (S.edit){
+    var i = S.editInfo || {};
+    return 'Ви змінюєте замовлення: було <b>' + i.positions + ' поз.' +
+           (d.hidePrice ? '' : ', ' + money(i.total) + ' грн') + '</b>.<br>' +
+           'Після відправки воно <b>повністю замінюється</b> тим, що зараз у кошику.' +
+           '<button id="cnlbtn" onclick="cancelEdit()">Скасувати зміну</button>';
+  }
+  return 'Замовлення на сьогодні вже відправлено.' +
+         '<button id="chgbtn" onclick="startEdit()">Змінити замовлення</button>';
+}
+
+/* Кнопка "Відправити/Замінити" вимкнена? Якщо замовлення вже є - лише поки не натиснули "Змінити замовлення" або коли змінювати
+   вже не можна (дедлайн минув, дозвіл спливув). Серверний locked тут не годиться: для вже замовленої точки він завжди true. */
+function sendLocked(){
+  var d = S.prod;
+  if (d.alreadyOrdered) return !(S.edit && (d.windowOpen || d.lateRequest === 'approved'));
+  return !!d.locked;
+}
+
+function lateBoxHtml(d){
+  return [lateHtml(d), changeHtml(d)].filter(function(x){ return !!x; }).join('<br><br>');
+}
+
+/* Підставляє в кошик поточне замовлення (з сервера, а не з пам'яті телефону) і вмикає режим заміни. */
+function startEdit(){
+  var b = el('chgbtn');
+  if (b){ b.disabled = true; b.textContent = 'Завантажуємо…'; }
+  call('currentOrder', { dir:S.dir, storeId:S.store.id }).then(function(r){
+    if (S.screen !== 'prod' || !S.prod) return;
+    var known = {};
+    S.prod.products.forEach(function(p){ known[p.id] = 1; });
+    S.cart = {};
+    (r.items || []).forEach(function(it){ if (known[it.id] && it.qty > 0) S.cart[it.id] = it.qty; });
+    S.edit = true; S.mode = 'replace';
+    S.editInfo = { positions:r.positions, total:r.total };
+    drawProd();
+    if (r.gone && r.gone.length)
+      alert('Цих позицій уже нема в асортименті, у нове замовлення вони не потраплять:\n' +
+            r.gone.map(function(g){ return g.name + ' × ' + g.qty; }).join('\n'));
+  }).catch(function(e){
+    alert((e && e.message) || e);
+    if (b){ b.disabled = false; b.textContent = 'Змінити замовлення'; }
+  });
+}
+
+function cancelEdit(){
+  S.edit = false; S.mode = 'new'; S.editInfo = null; S.cart = {};
+  drawProd();
+}
+
+/* Початок підтвердження перед відправкою: у режимі заміни показує, що саме замінюється. */
+function replaceHead(){
+  if (S.mode !== 'replace') return '';
+  var i = S.editInfo || {};
+  return 'УВАГА: попереднє замовлення (' + i.positions + ' поз.' +
+         (S.prod.hidePrice ? '' : ', ' + money(i.total) + ' грн') + ')\nбуде ПОВНІСТЮ ЗАМІНЕНЕ на це.\n\n';
 }
 
 function injectLate(){
   if (S.screen !== 'prod') return;
-  var html = lateHtml(S.prod);
+  var html = lateBoxHtml(S.prod);
   var box = el('ltbox');
   if (!html){ if (box && box.parentNode) box.parentNode.removeChild(box); return; }
   if (!box){

@@ -208,3 +208,13 @@ test('5 адрес для читача: приклади з бойового Д�
     assert.equal(R.addrKey(R.shortenAddress(p)), rec.addrKeyShort);
   }
 });
+
+test('windowOpen: до дедлайну і при late_all відкрито; після дедлайну - ні; дозвіл ОДНІЄЇ точки вікно для всіх не відкриває', () => {
+  const ok = '2026-10-19T12:00:00+03:00', late = '2026-10-19T14:00:00+03:00';            // ВК: дедлайн 13:00
+  assert.equal(R.windowOpen('bakery', ctxAt(ok)), true);
+  assert.equal(R.windowOpen('bakery', ctxAt(late)), false);
+  assert.equal(R.windowOpen('bakery', ctxAt(late, { settings: { late_all: { bakery: '2026-10-19' } } })), true);
+  assert.equal(R.windowOpen('bakery', ctxAt(late, { settings: { late_all: { bakery: '2026-10-18' } } })), false, 'late_all іншого дня не діє');
+  const approved = [{ dir: 'bakery', store_id: 's1', requested_at: '2026-10-19T13:50:00+03:00', approved_at: '2026-10-19T13:55:00+03:00' }];
+  assert.equal(R.windowOpen('bakery', ctxAt(late, { lateRows: approved })), false);
+});

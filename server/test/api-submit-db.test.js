@@ -82,7 +82,7 @@ test('БД: два паралельні submitOrder різних order_id одн
   const ok = res.filter((x) => x.status === 'fulfilled'), bad = res.filter((x) => x.status === 'rejected');
   assert.equal(ok.length, 1);
   assert.equal(bad.length, 1);
-  assert.equal(bad[0].reason.message, 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено. Для добавки натисніть "Попросити дозвіл".');
+  assert.equal(bad[0].reason.message, 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено. Щоб змінити його, натисніть "Змінити замовлення".');
   const o = await orders(s);
   assert.equal(o.length, 1);
   assert.equal(o[0].order_lines.length, 2);
@@ -104,14 +104,22 @@ test('БД: паралельний повтор того самого order_id -
   assert.equal((await orders(s)).length, 1);
 });
 
-test('БД: з дозволом друге замовлення - добавка (is_addon), обидва active', opts, async () => {
+test('БД: з дозволом друга звичайна відправка (не replace) відхиляється - добавок (is_addon) більше не створюється', opts, async () => {
   const s = store('addon');
   await send(s, `${RUN}-o1`);
   const lateRows = [{ dir: 'bread', store_id: s, requested_at: '2026-10-19T16:20:00+03:00', approved_at: '2026-10-19T16:20:00+03:00' }];
-  const r = await send(s, `${RUN}-o2`, {}, env(s, { at: AFTER_BREAD, lateRows }));
-  assert.equal(r.ok, true);
+  await assert.rejects(send(s, `${RUN}-o2`, {}, env(s, { at: AFTER_BREAD, lateRows })), /Змінити замовлення/);
   const o = await orders(s);
-  assert.deepEqual(o.map((x) => [x.status, x.is_addon]), [['active', false], ['active', true]]);
+  assert.deepEqual(o.map((x) => [x.status, x.is_addon]), [['active', false]]);
+});
+
+test('БД: до дедлайну replace без дозволу - старе cancelled, нове active', opts, async () => {
+  const s = store('repl-early');
+  await send(s, `${RUN}-e1`);
+  const r = await send(s, `${RUN}-e2`, { mode: 'replace', items: [{ id: '222', qty: 3 }] });          // 450 грн: мінімалка (400) діє і на заміну
+  assert.deepEqual([r.ok, r.replaced, r.removed], [true, true, 2]);
+  const o = await orders(s);
+  assert.deepEqual(o.map((x) => [x.status, x.is_addon]), [['cancelled', false], ['active', false]]);
 });
 
 test('БД: replace з дозволом - старе cancelled, removed = рядки старого, нове active', opts, async () => {
@@ -126,11 +134,11 @@ test('БД: replace з дозволом - старе cancelled, removed = ряд
   assert.ok(Date.parse(old.changed_at) >= Date.parse(old.created_at), 'changed_at оновлено для вигрузки (Task 5)');
 });
 
-test('БД: replace, коли нічого скасовувати - removed:0, нове active', opts, async () => {
+test('БД: replace, коли замовлення ще нема - це звичайне перше замовлення (replaced:false, removed:0)', opts, async () => {
   const s = store('repl0');
   const lateRows = [{ dir: 'bread', store_id: s, requested_at: '2026-10-19T16:20:00+03:00', approved_at: '2026-10-19T16:20:00+03:00' }];
   const r = await send(s, `${RUN}-z1`, { mode: 'replace' }, env(s, { at: AFTER_BREAD, lateRows }));
-  assert.deepEqual([r.ok, r.replaced, r.removed], [true, true, 0]);
+  assert.deepEqual([r.ok, r.replaced, r.removed], [true, false, 0]);
 });
 
 test('БД: "вже сьогодні" без дозволу - відмова до запису; скасоване замовлення не рахується', opts, async () => {

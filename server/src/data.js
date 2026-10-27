@@ -82,6 +82,21 @@ function createData(sb, { now = Date.now } = {}) {
     return count > 0;
   }
 
+  // Усі активні рядки точки за день (основне замовлення + добавки, якщо вони лишились зі старих часів), зведені за товаром:
+  // [{ product_id, name, price (ціна постачальника), qty }] у порядку першої появи
+  async function activeOrderLines(dir, storeId, day) {
+    const rows = must('orders', await sb.from('orders').select('is_addon,order_lines(line_no,product_id,name,price,qty)')
+      .eq('dir', dir).eq('store_id', storeId).eq('order_date', day).eq('status', 'active')
+      .order('created_at'));
+    const byId = new Map();
+    rows.forEach((o) => (o.order_lines || []).slice().sort((a, b) => a.line_no - b.line_no).forEach((l) => {
+      const id = String(l.product_id), qty = Number(l.qty), cur = byId.get(id);
+      if (cur) cur.qty = Math.round((cur.qty + qty) * 1000) / 1000;
+      else byId.set(id, { product_id: id, name: l.name, price: Number(l.price), qty });
+    }));
+    return [...byId.values()];
+  }
+
   // атомарний запис замовлення - supabase/migrations/…_orders_tx.sql
   async function submitOrderTx(p) {
     return must('submit_order_tx', await sb.rpc('submit_order_tx', { p }));
@@ -223,7 +238,7 @@ function createData(sb, { now = Date.now } = {}) {
     }
   }
   return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
-    orderResult, hasOrderToday, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate,
+    orderResult, hasOrderToday, activeOrderLines, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate,
     exportSnapshot, markExported, reportSnapshot,
     woResult, submitWriteoffTx, woDocsOfStore, woRange, woFind, woMarkDeleted, adminLog, woExportSnapshot, woMarkExported };
 }

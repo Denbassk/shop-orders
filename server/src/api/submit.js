@@ -1,5 +1,9 @@
 // Прийом замовлення і запит дозволу. Перенос apiSubmitOrder_ (app/Orders.gs) і apiRequestLate_ (app/LateRequest.gs).
-// Порядок перевірок і тексти - дослівно. Запис - одна транзакція submit_order_tx (supabase/migrations/…_orders_tx.sql).
+// Порядок перевірок і тексти - дослівно, КРІМ правил зміни замовлення (27.10.2026, інцидент Бучми 32б1: добавка з дозволу задвоїла позиції):
+//   - добавок нема: відправлене замовлення міняється лише заміною (mode 'replace' з підставленим поточним замовленням);
+//   - до дедлайну (або коли закупниця відкрила прийом усім) заміну продавець робить сам, без дозволу;
+//   - після дедлайну потрібен дозвіл, і він дає лише заміну (або перше замовлення, якщо його за день ще нема).
+// Запис - одна транзакція submit_order_tx (supabase/migrations/…_orders_tx.sql).
 //
 // env = { at, data, veg, late, mailer, queueExport? }; data додатково до read.js:
 //   orderResult(orderId) -> збережена відповідь | null | hasOrderToday(dir, storeId, day) -> bool
@@ -11,9 +15,9 @@ const { sendAndMark } = require('../lateMail');
 
 const money = (n) => Math.round(n * 100) / 100;
 
+// Добавок більше нема: змінити відправлене замовлення можна лише заміною (кнопка "Змінити замовлення").
 function alreadyText(cfg) {
-  return 'Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено.' +
-    (cfg.lateRequest ? ' Для добавки натисніть "Попросити дозвіл".' : '');
+  return 'Замовлення на "' + cfg.title + '" для цієї ТТ вже сьогодні відправлено. Щоб змінити його, натисніть "Змінити замовлення".';
 }
 
 async function loadCommon(env, dirKey, storeId) {
@@ -49,11 +53,10 @@ async function apiSubmitOrder(payload, env) {
   const pairCtx = { ...ctx, lateRows: await env.data.lateRows(dirKey, store.id) };
   if (!R.dayAllowed(dirKey, store, pairCtx)) throw new Error(R.dayOffText(dirKey, store, pairCtx));
 
-  // Дозвіл закупниці = зміни. Знімає ТРИ замки: дедлайн, повторне замовлення на сьогодні і мінімальну суму.
+  // Дозвіл закупниці діє лише після дедлайну і лише на заміну замовлення (або на перше замовлення, якщо його ще нема).
   const approvedNow = !!cfg.lateRequest && R.lateStatus(dirKey, store.id, pairCtx) === 'approved';
-
-  // 'replace' - замовлення переписується з нуля: старі рядки за сьогодні скасовуються
-  const replaceAll = approvedNow && String(payload.mode || '') === 'replace';
+  // Поки прийом відкритий (до дедлайну або закупниця відкрила його всім), заміну продавець робить сам.
+  const canChange = R.windowOpen(dirKey, pairCtx) || approvedNow;
 
   if (R.deadlinePassed(dirKey, store.id, pairCtx)) {
     throw new Error(cfg.lateRequest
@@ -88,13 +91,19 @@ async function apiSubmitOrder(payload, env) {
 
   if (!lines.length) throw new Error('Не розпізнано жодної позиції');
 
-  const minSupplier = approvedNow ? 0 : R.minOrderOf(cfg, env.at);
+  const hasOrder = await env.data.hasOrderToday(dirKey, store.id, now.day);
+
+  // 'replace' - замовлення переписується з нуля: активні рядки за сьогодні скасовуються. Без замовлення нема що міняти.
+  const replaceAll = hasOrder && canChange && String(payload.mode || '') === 'replace';
+
+  // Мінімалку знімає лише дозвіл на ПЕРШЕ замовлення за день після дедлайну; заміна - повне замовлення, мінімалка діє.
+  const minSupplier = (approvedNow && !hasOrder) ? 0 : R.minOrderOf(cfg, env.at);
   if (minSupplier > 0 && totalSupplier < minSupplier - 0.01) {
     throw new Error('Мінімальне замовлення ' + money(minSupplier * cfg.markup) + ' грн. Зараз ' +
       money(totalSupplier * cfg.markup) + ' грн');
   }
 
-  if (!approvedNow && await env.data.hasOrderToday(dirKey, store.id, now.day)) {
+  if (hasOrder && !replaceAll) {
     // Гонка: перша копія цього ж order_id (повтор при поганому зв'язку) могла закомітитись між перевіркою
     // повтору нагорі і цією - тоді це не «вже сьогодні», а той самий запит: віддаємо збережену відповідь.
     const prev = orderId ? await env.data.orderResult(orderId) : null;
@@ -113,7 +122,9 @@ async function apiSubmitOrder(payload, env) {
   const res = await env.data.submitOrderTx({
     order_id: orderId || ('srv-' + randomUUID()),
     dir: dirKey, store_id: store.id, order_date: now.day,
-    mode: replaceAll ? 'replace' : 'new', approved: approvedNow,
+    // approved завжди false: submit_order_tx не створює добавку (is_addon). Якщо між перевіркою і записом з'явилося інше
+    // основне замовлення, унікальний індекс orders_one_active_per_day дасть 'already', а не другий основний запис.
+    mode: replaceAll ? 'replace' : 'new', approved: false,
     total: totalShown, result, lines,
   });
 
@@ -136,6 +147,15 @@ async function apiRequestLate(payload, env) {
 
   if (R.lateStatus(dirKey, store.id, pairCtx) === 'approved')
     return { status: 'approved', mailed: true, leftMin: R.lateLeftMin(dirKey, store.id, pairCtx) };
+
+  // Дозвіл потрібен лише після дедлайну. Поки прийом відкритий, замовлення міняють самі (mode 'replace').
+  if (R.windowOpen(dirKey, pairCtx))
+    throw new Error('Прийом на "' + cfg.title + '" відкритий до ' + cfg.deadline +
+      ' - дозвіл не потрібен. Замовлення можна змінити самостійно.');
+
+  // Запит уже чекає: не пишемо його вдруге і не шлемо другий лист (другий телефон або повторне натискання).
+  if (R.lateStatus(dirKey, store.id, pairCtx) === 'pending')
+    return { status: 'pending', mailed: !!env.mailer.recipient(cfg, store), leftMin: 0 };
 
   const day = R.kyivNow(env.at).day;
   await env.data.requestLate(dirKey, store.id, day, env.at);

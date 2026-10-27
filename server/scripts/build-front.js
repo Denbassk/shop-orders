@@ -22,6 +22,37 @@ function call(action, payload){
   });
 }`;
 
+// Точкова правка Index.html: якщо місця нема (Index.html змінився) - збірка падає, а не мовчки лишає стару поведінку.
+function patch(html, from, to) {
+  if (!html.includes(from)) throw new Error('Не знайдено місце правки в Index.html: ' + from.slice(0, 70).replace(/\n/g, '\\n'));
+  return html.replace(from, () => to);
+}
+
+// Зміна відправленого замовлення (див. scripts/front-change.js): добавок нема, лише заміна з підставленим замовленням.
+function applyChangeOrder(html) {
+  // 1. openDir: підтвердження для вже відправленого і скидання режиму зміни
+  html = patch(html, "'Відкрити, щоб переглянути або попросити дозвіл на добавку?')) return;",
+    "'Відкрити, щоб подивитись або змінити його?')) return;");
+  html = patch(html, "S.oid=uuid(); S.mode='add';", "S.oid=uuid(); S.mode='new'; S.edit=false; S.editInfo=null;");
+  // 2. червоний напис "вже відправлено" лише коли змінити не можна; інакше замість нього кнопка "Змінити замовлення"
+  html = patch(html, "if (d.alreadyOrdered && d.lateRequest !== 'approved')", "if (d.alreadyOrdered && d.lateRequest !== 'approved' && !d.windowOpen)");
+  // 3. мінімалка діє завжди (знімає її лише сервер для першого замовлення за дозволом - вона вже в minOrder);
+  //    відправка вимкнена, поки замовлення не підставлено кнопкою "Змінити замовлення"
+  html = patch(html, "  // добавка з дозволу закупниці мінімалкою не обмежена\n  var min = (S.prod.lateRequest === 'approved') ? 0 : (S.prod.minOrder || 0);",
+    "  var min = S.prod.minOrder || 0;");
+  html = patch(html, "(!n||low||S.prod.locked ? ' disabled' : '')", "(!n||low||sendLocked() ? ' disabled' : '')");
+  // 4. підтвердження перед відправкою і текст кнопки після помилки
+  html = patch(html, "  var head = (S.mode === 'replace')\n    ? 'УВАГА: попереднє замовлення за сьогодні буде ВИДАЛЕНО\\nі замінене на це.\\n\\n'\n    : '';",
+    "  var head = replaceHead();");
+  html = patch(html, "b.disabled=false; b.textContent='Відправити'; }", "b.disabled=false; b.textContent=(S.mode==='replace'?'Замінити':'Відправити'); }");
+  // 5. lateHtml/setMode (режими "Дозамовити"/"Переробити все") -> код front-change.js; плашка збирається lateBoxHtml
+  const a = html.indexOf('function lateHtml(d){'), b = html.indexOf('function injectLate(){');
+  if (a < 0 || b < a) throw new Error('Не знайдено lateHtml/injectLate в Index.html');
+  html = html.slice(0, a) + fs.readFileSync(path.join(__dirname, 'front-change.js'), 'utf8').replace(/\r\n/g, '\n').replace(/^\/\*[\s\S]*?\*\/\n/, '') + html.slice(b);
+  html = patch(html, 'var html = lateHtml(S.prod);', 'var html = lateBoxHtml(S.prod);');
+  return html;
+}
+
 function build() {
   const read = (rel) => fs.readFileSync(path.join(APP, rel), 'utf8');
   const logo = (read('Logo.gs').match(/var LOGO_DATA_URI = '(data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+)'/) || [])[1];
@@ -43,6 +74,9 @@ function build() {
   const b = html.indexOf('function esc(s)', a);
   if (a < 0 || b < 0) throw new Error('Не знайдено call() в Index.html');
   html = html.slice(0, a) + CALL_SNIPPET + '\n' + html.slice(b);
+
+  // 3б. зміна відправленого замовлення: заміна замість добавок
+  html = applyChangeOrder(html);
 
   // 4. голова сторінки: назва, viewport без масштабування, іконка (HtmlService додавав їх у doGet)
   html = html.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<title>Замовлення Фемелі Маркет</title>\n' +

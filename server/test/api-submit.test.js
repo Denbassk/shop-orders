@@ -132,12 +132,14 @@ test('мінімалка: minOrderOf з minOrderChanges; з 01.10 - 400, до - 
   await rejects(base({ items: [{ id: '111', qty: 1 }] }), 'Мінімальне замовлення 400 грн. Зараз 399.98 грн', p(399.98));
 });
 
-test('вже сьогодні відправлено: з кнопкою добавки / без неї (напрямок без lateRequest)', async () => {
+const ALREADY = 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено. Щоб змінити його, натисніть "Змінити замовлення".';
+
+test('вже сьогодні відправлено: звичайна відправка (mode не replace) відхиляється з підказкою "Змінити замовлення"', async () => {
   const already = { data: { hasOrderToday: async () => true } };
-  await rejects(base(), 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено. Для добавки натисніть "Попросити дозвіл".', already);
+  await rejects(base(), ALREADY, already);
+  await rejects(base({ mode: 'add' }), ALREADY, already);          // старий екран з режимом "Дозамовити": добавок більше нема
   const noLate = { ...DIRECTIONS, bread: { ...DIRECTIONS.bread, lateRequest: false } };
-  await rejects(base(), 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено.',
-    { data: { hasOrderToday: async () => true, directions: async () => noLate } });
+  await rejects(base(), ALREADY, { data: { hasOrderToday: async () => true, directions: async () => noLate } });
 });
 
 test('порядок перевірок: дедлайн раніше за порожнє, порожнє раніше за "вже відправлено"', async () => {
@@ -204,14 +206,12 @@ test('гонка: той самий order_id записався між orderResu
   assert.deepEqual(calls.exports, []);
 });
 
-test('чужий запис за сьогодні (інший order_id) -> як і раніше "вже сьогодні відправлено"', async () => {
-  await rejects(base(), 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено. Для добавки натисніть "Попросити дозвіл".',
-    { data: { hasOrderToday: async () => true } });
+test('чужий запис за сьогодні (інший order_id) -> "вже сьогодні відправлено"', async () => {
+  await rejects(base(), ALREADY, { data: { hasOrderToday: async () => true } });
 });
 
 test('транзакція: конфлікт унікального індексу -> текст "вже сьогодні відправлено"', async () => {
-  await rejects(base(), 'Замовлення на "Хліб Рома" для цієї ТТ вже сьогодні відправлено. Для добавки натисніть "Попросити дозвіл".',
-    { data: { submitOrderTx: async () => ({ ok: false, reason: 'already' }) } });
+  await rejects(base(), ALREADY, { data: { submitOrderTx: async () => ({ ok: false, reason: 'already' }) } });
 });
 
 test('помилка бази при записі - наверх як помилка, queueExport не викликано', async () => {
@@ -224,17 +224,21 @@ test('помилка бази при записі - наверх як помил
 const lateRow = (o) => ({ dir: 'bread', store_id: STORE, requested_at: null, approved_at: null, ...o });
 const approvedRows = (iso) => async () => [lateRow({ requested_at: iso, approved_at: iso })];
 
-test('дозвіл: знімає дедлайн (16:30, хліб) і мінімалку; у транзакцію йде approved:true', async () => {
+test('дозвіл: знімає дедлайн (16:30, хліб); першому замовленню за день (замовлення ще нема) знімає і мінімалку', async () => {
   const { r, calls } = await submit(base({ items: [{ id: '111', qty: 1 }] }), { at: AFTER_BREAD, data: { lateRows: approvedRows('2026-10-19T16:20:00+03:00') } });
-  assert.equal(r.total, 100);                                     // менше 400, але дозвіл
-  assert.equal(calls.tx[0].approved, true);
+  assert.equal(r.total, 100);                                     // менше 400, але це перше замовлення за дозволом
+  assert.equal(calls.tx[0].mode, 'new');
 });
 
-test('дозвіл: знімає "вже відправлено" (добавка)', async () => {
-  const { r, calls } = await submit(base(), { at: AFTER_BREAD, data: { lateRows: approvedRows('2026-10-19T16:20:00+03:00'), hasOrderToday: async () => true } });
-  assert.equal(r.ok, true);
-  assert.equal(calls.tx[0].mode, 'new');
-  assert.equal(calls.tx[0].approved, true);
+test('дозвіл НЕ створює добавку: у транзакцію завжди approved:false (гонка дасть "вже відправлено", а не другий основний)', async () => {
+  const { calls } = await submit(base(), { at: AFTER_BREAD, data: { lateRows: approvedRows('2026-10-19T16:20:00+03:00') } });
+  assert.equal(calls.tx[0].approved, false);
+});
+
+test('дозвіл + замовлення вже є + звичайна відправка (не replace) -> відхилено; добавок нема', async () => {
+  const over = { at: AFTER_BREAD, data: { lateRows: approvedRows('2026-10-19T16:20:00+03:00'), hasOrderToday: async () => true } };
+  await rejects(base(), ALREADY, over);
+  await rejects(base({ mode: 'add' }), ALREADY, over);
 });
 
 test('дозвіл діє 30 хв: на 29-й хвилині проходить, на 31-й знову закрито', async () => {
@@ -245,18 +249,35 @@ test('дозвіл діє 30 хв: на 29-й хвилині проходить,
   await rejects(base(), 'Прийом на "Хліб Рома" закрито (до 16:00). Натисніть "Попросити дозвіл" або зателефонуйте закупниці.', { data, at: at('16:51') });
 });
 
-test('replace: лише з дозволом; з дозволом -> mode=replace, replaced:true, removed з транзакції', async () => {
-  const withApproval = { at: AFTER_BREAD, data: {
-    lateRows: approvedRows('2026-10-19T16:20:00+03:00'),
-    hasOrderToday: async () => true,
-    submitOrderTx: async (p) => ({ ok: true, duplicate: false, removed: 7, result: { ...p.result, removed: 7 } }),
-  } };
+const REPLACED_TX = async (p) => ({ ok: true, duplicate: false, removed: 7, result: { ...p.result, removed: 7 } });
+
+test('replace ДО дедлайну: без дозволу, замовлення вже є -> mode=replace, replaced:true, removed з транзакції', async () => {
+  const { r, calls } = await submit(base({ mode: 'replace' }), { data: { hasOrderToday: async () => true, submitOrderTx: REPLACED_TX } });
+  assert.deepEqual([r.replaced, r.removed], [true, 7]);
+  assert.equal(calls.tx.length, 0, 'свій submitOrderTx замінено, у calls нічого');
+  const { calls: c2 } = await submit(base({ mode: 'replace' }), { data: { hasOrderToday: async () => true } });
+  assert.deepEqual([c2.tx[0].mode, c2.tx[0].approved], ['replace', false]);
+  assert.deepEqual(c2.exports, ['bread'], 'заміна теж іде у вигрузку');
+});
+
+test('replace ПІСЛЯ дедлайну: без дозволу - дедлайн; з дозволом - заміна', async () => {
+  const noPermit = { at: AFTER_BREAD, data: { hasOrderToday: async () => true } };
+  await rejects(base({ mode: 'replace' }), 'Прийом на "Хліб Рома" закрито (до 16:00). Натисніть "Попросити дозвіл" або зателефонуйте закупниці.', noPermit);
+  const withApproval = { at: AFTER_BREAD, data: { lateRows: approvedRows('2026-10-19T16:20:00+03:00'), hasOrderToday: async () => true, submitOrderTx: REPLACED_TX } };
   const { r } = await submit(base({ mode: 'replace' }), withApproval);
   assert.deepEqual([r.replaced, r.removed], [true, 7]);
+});
 
-  // без дозволу mode=replace ігнорується: це звичайна відправка
-  const { calls } = await submit(base({ mode: 'replace' }));
+test('replace, коли замовлення ще нема -> це звичайне перше замовлення (mode=new, replaced:false)', async () => {
+  const { r, calls } = await submit(base({ mode: 'replace' }));
   assert.equal(calls.tx[0].mode, 'new');
+  assert.equal(r.replaced, false);
+});
+
+test('replace: мінімалка діє і з дозволом (це повне замовлення, не добавка)', async () => {
+  const over = { at: AFTER_BREAD, data: { lateRows: approvedRows('2026-10-19T16:20:00+03:00'), hasOrderToday: async () => true } };
+  await rejects(base({ mode: 'replace', items: [{ id: '111', qty: 1 }] }), 'Мінімальне замовлення 400 грн. Зараз 100 грн', over);
+  await rejects(base({ mode: 'replace', items: [{ id: '111', qty: 1 }] }), 'Мінімальне замовлення 400 грн. Зараз 100 грн', { data: { hasOrderToday: async () => true } });
 });
 
 test('late_all відкриває прийом після дедлайну, але не знімає мінімалку', async () => {
@@ -264,4 +285,11 @@ test('late_all відкриває прийом після дедлайну, ал
   const { r } = await submit(base(), open);
   assert.equal(r.ok, true);
   await rejects(base({ items: [{ id: '111', qty: 1 }] }), 'Мінімальне замовлення 400 грн. Зараз 100 грн', open);
+});
+
+test('late_all: після дедлайну точки міняють замовлення самі (replace), без запиту дозволу; добавки нема', async () => {
+  const open = { at: AFTER_BREAD, data: { settings: async () => ({ late_all: { bread: '2026-10-19' } }), hasOrderToday: async () => true } };
+  const { calls } = await submit(base({ mode: 'replace' }), open);
+  assert.equal(calls.tx[0].mode, 'replace');
+  await rejects(base(), ALREADY, open);
 });

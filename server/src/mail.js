@@ -1,5 +1,6 @@
 // Лист закупниці з кнопкою "ДОЗВОЛИТИ" (sendLateMail_ з app/LateRequest.gs) через Gmail SMTP (nodemailer).
 const R = require('./rules');
+const { currentText } = require('./currentOrder');
 
 // Кому слати листи. Кілька адрес - через кому.
 const LATE_MAIL = {
@@ -15,15 +16,17 @@ function esc(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function buildLateMail(cfg, store, { url, at, to }) {
+// current - { positions, total, hidePrice } поточного замовлення точки (необов'язково): закупниця бачить, що саме вона дозволяє міняти
+function buildLateMail(cfg, store, { url, at, to, current }) {
   const html =
     '<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:460px;' +
     'margin:0 auto;padding:22px 18px;color:#16181d">' +
     '<div style="font-size:13px;color:#6b7280">Замовлення після дедлайну</div>' +
     '<div style="font-size:22px;font-weight:800;margin:6px 0 2px">' + esc(store.label) + '</div>' +
     '<div style="font-size:16px;margin:8px 0 2px">' + esc(cfg.title) + '</div>' +
-    '<div style="font-size:13px;color:#6b7280;margin-bottom:22px">запит о ' +
+    '<div style="font-size:13px;color:#6b7280;margin-bottom:' + (current ? '10' : '22') + 'px">запит о ' +
       R.kyivNow(at).time + ', дедлайн був ' + esc(cfg.deadline) + '</div>' +
+    (current ? '<div style="font-size:15px;margin-bottom:22px">Зараз замовлено: <b>' + esc(currentText(current)) + '</b></div>' : '') +
     '<a href="' + url + '" style="display:block;text-align:center;background:#e11b22;color:#fff;' +
     'text-decoration:none;padding:17px;border-radius:13px;font-size:18px;font-weight:800">' +
     'ДОЗВОЛИТИ</a>' +
@@ -43,11 +46,11 @@ function createMailer({ transport, user, testTo = '', lateMail = LATE_MAIL }) {
   const recipient = (cfg, store) =>
     String(isTestStore(store) ? testTo : lateMail[cfg.key] || '').trim();
 
-  async function sendLateMail(cfg, store, { url, at }) {
+  async function sendLateMail(cfg, store, { url, at, current }) {
     const test = isTestStore(store);
     const to = recipient(cfg, store);
     if (!to) return false;
-    const m = buildLateMail(cfg, store, { url, at, to });
+    const m = buildLateMail(cfg, store, { url, at, to, current });
     await transport.sendMail({
       from: '"Замовлення Фемелі Маркет" <' + user + '>',
       to: m.to,

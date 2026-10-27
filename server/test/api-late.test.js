@@ -161,6 +161,34 @@ test('requestLate: дозвіл уже діє -> approved, без листа і 
   assert.deepEqual([calls.requested.length, calls.bg.length], [0, 0]);
 });
 
+test('requestLate ДО дедлайну: відмова, нічого не записано і не надіслано (замовлення міняють самі)', async () => {
+  const { env, calls } = makeEnv({ at: new Date('2026-10-19T10:00:00+03:00') });
+  await assert.rejects(apiRequestLate({ dir: 'bread', storeId: STORE.id }, env),
+    { message: 'Прийом на "Хліб Рома" відкритий до 16:00 - дозвіл не потрібен. Замовлення можна змінити самостійно.' });
+  assert.deepEqual([calls.requested.length, calls.bg.length], [0, 0]);
+});
+
+test('requestLate: після ручного відкриття прийому (late_all) теж відмова - дозвіл не потрібен', async () => {
+  const { env, calls } = makeEnv({ data: { settings: async () => ({ late_all: { bread: '2026-10-19' } }) } });
+  await assert.rejects(apiRequestLate({ dir: 'bread', storeId: STORE.id }, env), /дозвіл не потрібен/);
+  assert.equal(calls.requested.length, 0);
+});
+
+test('requestLate: запит уже чекає (pending) -> той самий статус, без другого запису і без другого листа', async () => {
+  const rows = [{ dir: 'bread', store_id: STORE.id, requested_at: '2026-10-19T16:20:00+03:00', approved_at: null }];
+  const { env, calls } = makeEnv({ data: { lateRows: async () => rows } });
+  assert.deepEqual(await apiRequestLate({ dir: 'bread', storeId: STORE.id }, env), { status: 'pending', mailed: true, leftMin: 0 });
+  assert.deepEqual([calls.requested.length, calls.bg.length], [0, 0]);
+});
+
+test('requestLate: запит старший за LATE_Q_TTL_MIN (120 хв) - новий запит і новий лист', async () => {
+  const rows = [{ dir: 'bread', store_id: STORE.id, requested_at: '2026-10-19T14:00:00+03:00', approved_at: null }];
+  const { env, calls } = makeEnv({ data: { lateRows: async () => rows } });
+  await apiRequestLate({ dir: 'bread', storeId: STORE.id }, env);
+  assert.equal(calls.requested.length, 1);
+  assert.equal(calls.bg.length, 1);
+});
+
 test('requestLate: помилки дослівно', async () => {
   const { env } = makeEnv();
   await assert.rejects(apiRequestLate({ dir: 'bread', storeId: 'нема' }, env), { message: 'Торгову точку не знайдено. Оновіть сторінку.' });
@@ -177,6 +205,47 @@ test('/ok: правильний підпис -> "Дозволено на 30 хв
   assert.ok(r.html.includes('<title>Дозволено на 30 хв</title>'));
   assert.ok(r.html.includes('<b>Хліб Рома</b><br>Бучми, 32<br><br>Продавець зможе відправити замовлення протягом хвилини.<br>Через 30 хвилин прийом закриється знову.'));
   assert.deepEqual(calls.approved, [['bread', STORE.id, '2026-10-19', AT]]);
+});
+
+test('/ok: повторний клік, поки дозвіл діє, НЕ продовжує вікно - запису нема, показано, скільки лишилось', async () => {
+  const rows = [{ dir: 'bread', store_id: STORE.id, requested_at: '2026-10-19T16:10:00+03:00', approved_at: '2026-10-19T16:20:00+03:00' }];
+  const { env, calls } = makeEnv({ data: { lateRows: async () => rows } });
+  const r = await approvePage(q('bread', STORE.id, '2026-10-19'), env);
+  assert.equal(r.status, 200);
+  assert.ok(r.html.includes('<title>Вже дозволено</title>') && r.html.includes('ще 20 хв'), r.html);
+  assert.deepEqual(calls.approved, []);
+});
+
+test('/ok: дозвіл, що вже спливув, видається знову', async () => {
+  const rows = [{ dir: 'bread', store_id: STORE.id, requested_at: '2026-10-19T15:00:00+03:00', approved_at: '2026-10-19T15:10:00+03:00' }];
+  const { env, calls } = makeEnv({ data: { lateRows: async () => rows } });
+  const r = await approvePage(q('bread', STORE.id, '2026-10-19'), env);
+  assert.ok(r.html.includes('<title>Дозволено на 30 хв</title>'));
+  assert.equal(calls.approved.length, 1);
+});
+
+const CURRENT = [{ product_id: '1', name: 'Батон', price: 100, qty: 3 }, { product_id: '2', name: 'Багет', price: 50, qty: 2 }];
+
+test('/ok (форма) і лист: показують, що точка вже замовила - позиції і сума', async () => {
+  const { env } = makeEnv({ data: { activeOrderLines: async () => CURRENT } });
+  const f = await approveForm(q('bread', STORE.id, '2026-10-19'), env);
+  assert.ok(f.html.includes('Зараз замовлено: <b>2 поз., 400 грн</b>'), f.html);
+  const m = buildLateMail(DIRECTIONS.bread, STORE, { url: 'u', at: AT, current: { positions: 2, total: 400 } });
+  assert.ok(m.html.includes('Зараз замовлено: <b>2 поз., 400 грн</b>'));
+  const none = buildLateMail(DIRECTIONS.bread, STORE, { url: 'u', at: AT });
+  assert.ok(!none.html.includes('Зараз замовлено'));
+});
+
+test('/ok (форма): без замовлення за день або при збої читання - рядка нема, форма все одно є', async () => {
+  const empty = makeEnv({ data: { activeOrderLines: async () => [] } });
+  assert.ok(!(await approveForm(q('bread', STORE.id, '2026-10-19'), empty.env)).html.includes('Зараз замовлено'));
+  const orig = console.error; console.error = () => {};
+  try {
+    const broken = makeEnv({ data: { activeOrderLines: async () => { throw new Error('db down'); } } });
+    const r = await approveForm(q('bread', STORE.id, '2026-10-19'), broken.env);
+    assert.equal(r.status, 200);
+    assert.ok(r.html.includes('<form') && !r.html.includes('Зараз замовлено'));
+  } finally { console.error = orig; }
 });
 
 test('/ok: параметр ok= як у старих листах Apps Script теж приймається', async () => {

@@ -7,6 +7,7 @@
 //   directions() -> {dir: cfg} | products(dir) -> рядки products (усі статуси)
 //   orderedToday(day 'yyyy-MM-dd') -> {dir: Set(store_id)} | lateRows(dir, storeId) -> рядки late_requests
 const R = require('../rules');
+const { summarize } = require('../currentOrder');
 
 const UA_EDRPOU = '45672783';
 const isUaStore = (s) => String((s && s.edrpou) || '').replace(/\D/g, '') === UA_EDRPOU;
@@ -146,6 +147,8 @@ async function apiProducts(payload, env) {
   const approved = lateSt === 'approved';
   const closed = R.deadlinePassed(dirKey, store.id, pairCtx);
   const already = isOrdered(ordered, dirKey, store.id);
+  // прийом відкритий для всіх (до дедлайну або late_all): відправлене замовлення міняють самі, дозвіл не потрібен
+  const open = R.windowOpen(dirKey, pairCtx);
 
   const cats = [];
   if (cfg.hasCategories) {
@@ -158,18 +161,47 @@ async function apiProducts(payload, env) {
     hidePrice: !!cfg.hidePrice,
     step: cfg.step,
     deadline: cfg.deadline,
-    minOrder: approved ? 0 : money(R.minOrderOf(cfg, env.at) * cfg.markup),
+    // мінімалку знімає лише дозвіл на ПЕРШЕ замовлення за день; заміна відправленого - повне замовлення, мінімалка діє
+    minOrder: (approved && !already) ? 0 : money(R.minOrderOf(cfg, env.at) * cfg.markup),
     categories: cats,
     products,
     closed,
     alreadyOrdered: already,
-    // locked - кнопка "Відправити" вимкнена. Дозвіл закупниці знімає обидва замки:
-    // і дедлайн, і "сьогодні вже замовляли" (інакше добавку зробити неможливо).
+    // locked - кнопка "Відправити" вимкнена. Дозвіл закупниці знімає обидва замки: і дедлайн, і "сьогодні вже замовляли".
+    // Якщо замовлення вже є, екран усе одно вмикає відправку лише після "Змінити замовлення" (заміна з підставленим замовленням).
     locked: (closed || already) && !approved,
-    canRequestLate: !!cfg.lateRequest && (closed || already),
+    // Запит дозволу має сенс лише ПІСЛЯ дедлайну. До нього (windowOpen) продавець міняє замовлення сам.
+    canRequestLate: !!cfg.lateRequest && !open && (closed || already),
+    windowOpen: open,
     lateRequest: lateSt,
     lateLeftMin: approved ? R.lateLeftMin(dirKey, store.id, pairCtx) : 0,
   };
 }
 
-module.exports = { apiBootstrap, apiRefresh, apiProducts };
+// Поточне замовлення точки за сьогодні для "Змінити замовлення": позиції, які можна підставити в кошик (є в активному
+// асортименті), і ті, що вже зникли (items / gone). Нічого не змінює; рішення "можна міняти" приймає submitOrder.
+async function apiCurrentOrder(payload, env) {
+  payload = payload || {};
+  const dirKey = String(payload.dir || '');
+  const d = env.data;
+  const [stores, settings, directions] = await Promise.all([d.stores(), d.settings(), d.directions()]);
+  const cfg = R.dirCfg(dirKey, { directions });
+  const store = stores.find((s) => s.id === String(payload.storeId));
+  if (!store) throw new Error('Торгову точку не знайдено. Оновіть сторінку.');
+  if (!R.dirEnabled(dirKey, settings)) throw new Error('Напрямок "' + cfg.title + '" зараз вимкнено.');
+  if (store.directions.indexOf(dirKey) < 0) throw new Error('Для цієї ТТ напрямок "' + cfg.title + '" не передбачений');
+
+  const cur = summarize(cfg, await d.activeOrderLines(dirKey, store.id, R.kyivNow(env.at).day));
+  if (!cur) throw new Error('Замовлення на сьогодні не знайдено. Оновіть сторінку.');
+
+  let rows = (await d.products(dirKey)).filter((p) => p.status === 'active');
+  if (dirKey === 'veg') rows = await env.veg.resolve(rows);
+  const live = new Set(rows.map((p) => String(p.id)));
+  return {
+    positions: cur.positions, total: cur.total, hidePrice: cur.hidePrice,
+    items: cur.lines.filter((l) => live.has(l.product_id)).map((l) => ({ id: l.product_id, qty: l.qty })),
+    gone: cur.lines.filter((l) => !live.has(l.product_id)).map((l) => ({ name: l.name, qty: l.qty })),
+  };
+}
+
+module.exports = { apiBootstrap, apiRefresh, apiProducts, apiCurrentOrder };

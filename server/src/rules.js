@@ -106,6 +106,12 @@ function deadlinePassed(dirKey, storeId, ctx) {
   return (n.hh * 60 + n.mm) >= (+p[0] * 60 + +p[1]);
 }
 
+// Прийом напрямку відкритий для всіх точок: дедлайн ще не настав або закупниця відкрила прийом усім (late_all).
+// Поки відкритий - продавець міняє своє замовлення сам, без запиту дозволу (див. apiSubmitOrder, mode 'replace').
+function windowOpen(dirKey, ctx) {
+  return !deadlinePassed(dirKey, undefined, ctx);
+}
+
 // ============================================================
 // ГРАФІК ПО ДНЯХ ТИЖНЯ
 // ============================================================
@@ -238,7 +244,7 @@ function statusKey(dirKey, store, ctx) {
 module.exports = {
   LATE_OVERRIDES_DAY, LATE_TTL_MIN, LATE_Q_TTL_MIN, DAY_KEYS, DAY_FULL,
   kyivNow, dirCfg, disabledDirections, dirEnabled,
-  lateAllowed, lateStatus, lateLeftMin, deadlinePassed,
+  lateAllowed, lateStatus, lateLeftMin, deadlinePassed, windowOpen,
   parseDays, todayDow, storeDays, dayAllowed, dayNamesOf, dayOffText,
   dmyToDay, minOrderOf,
   shortenAddress, addrKey, canonKey, statusKey,

@@ -5,6 +5,7 @@
 // Обидві повертають { status, html }: 403 - підпис не збігся, 400 - інша причина відмови, 200 - успіх.
 const R = require('../rules');
 const { esc } = require('../mail');
+const { currentOrderOf, currentText } = require('../currentOrder');
 
 function render(okState, head, body) {
   return '<!DOCTYPE html><html lang="uk"><head><meta charset="utf-8">' +
@@ -56,8 +57,10 @@ async function approveForm(query, env) {
   if (c.fail) return c.fail;
   const hidden = [['dir', c.q.dirKey], ['st', c.q.storeId], ['d', c.q.day], ['s', c.q.sig]]
     .map(([k, v]) => '<input type="hidden" name="' + k + '" value="' + esc(v) + '">').join('');
+  const cur = await currentOrderOf(env, c.cfg, c.q.storeId, c.q.day);
   const html = render(true, 'Дозволити замовлення?',
     '<b>' + esc(c.cfg.title) + '</b><br>' + esc(c.label) +
+    (cur ? '<br><br>Зараз замовлено: <b>' + esc(currentText(cur)) + '</b>' : '') +
     '<div style="margin:26px 0 0"><form method="post" action="/ok">' + hidden +
     '<button type="submit" style="width:100%;background:#e11b22;color:#fff;border:0;padding:17px;border-radius:13px;' +
     'font-size:18px;font-weight:800;cursor:pointer">Дозволити</button></form></div>' +
@@ -70,6 +73,16 @@ async function approvePage(query, env) {
   const c = await check(query, env);
   if (c.fail) return c.fail;
   const { dirKey, storeId, day } = c.q;
+
+  // Дозвіл уже діє (повторний клік, інша закупниця): вікно не продовжуємо - тоді воно було б безкінечним.
+  try {
+    const pairCtx = { at: env.at, lateRows: await env.data.lateRows(dirKey, storeId) };
+    if (R.lateStatus(dirKey, storeId, pairCtx) === 'approved') {
+      return { status: 200, html: render(true, 'Вже дозволено',
+        '<b>' + esc(c.cfg.title) + '</b><br>' + esc(c.label) +
+        '<br><br>Дозвіл уже діє, ще ' + R.lateLeftMin(dirKey, storeId, pairCtx) + ' хв. Повторно натискати не треба.') };
+    }
+  } catch (e) { console.error('/ok: дозвіл не перевірено, видаємо як зазвичай: ' + e.message); }
 
   try { await env.data.approveLate(dirKey, storeId, day, env.at); }
   catch (e) { console.error('дозвіл не записано: ' + e.message); return { status: 500, html: render(false, 'Не вийшло', 'Не вдалося записати дозвіл. Спробуйте ще раз.') }; }
