@@ -118,6 +118,7 @@ function createApp(opts = {}) {
   const linkOk = (req) => buyerLink.verifyBuyerKey(req.params.code, req.params.key, linkSecret());
   const buyerApi = (dir) => (opts.buyerApi ? opts.buyerApi(dir) : getAdminRt().buyerApi(dir));
   const buyerWoReport = (dir, p) => (opts.buyerWoReport ? opts.buyerWoReport(dir, p) : require('./buyer/woReport').dayReport(dir, p));
+  const buyerWoSlices = (dir, p) => (opts.buyerWoSlices ? opts.buyerWoSlices(dir, p) : require('./buyer/woSlices').slicesReport(dir, p));
   const buyerRawReport = (dir, p) => (opts.buyerRawReport ? opts.buyerRawReport(dir, p) : require('./buyer/rawReport').rawReport(dir, p));
   const buyerXlsx = (dir, key) => (opts.buyerXlsx ? opts.buyerXlsx(dir, key) : getAdminRt().buyerXlsx(dir, key));
   const noStore = (res) => { res.set('Cache-Control', 'no-store'); res.set('Referrer-Policy', 'no-referrer'); };
@@ -154,14 +155,16 @@ function createApp(opts = {}) {
     } catch (e) { res.status(502).json({ ok: false, error: (e && e.message) || 'Помилка сервера' }); }
   });
 
-  // Звіт про списання ВК за день для друку: GET /buyer/<код>/<ключ>/writeoff-report/bakery?date=ГГГГ-ММ-ДД&entity=<юрособа>
-  app.get('/buyer/:code/:key/writeoff-report/:dir', async (req, res) => {
+  // Excel зі списаннями закупниці ВК (лише читання таблиць списань; помилка для людини - 400, збій - 502):
+  //   writeoff-report/bakery?date=ГГГГ-ММ-ДД&entity=<юрособа> - звіт за день для друку
+  //   writeoff-slices/bakery?days=7 | from=&to=&entity=&cat= - звіт за період: точки, товари, продавці, категорії, юрособи
+  const woXlsxRoute = (name, build) => app.get('/buyer/:code/:key/' + name + '/:dir', async (req, res) => {
     if (!linkOk(req)) return res.status(404).json({ ok: false, error: 'Not found' });
     const dir = people.dirOf(req.params.code, req.params.dir);
     if (!dir || dir !== req.params.dir) return res.status(404).json({ ok: false, error: 'Not found' });
     const q = (k) => (typeof req.query[k] === 'string' ? req.query[k].slice(0, 80) : '');
     try {
-      const f = await buyerWoReport(dir, { date: q('date'), entity: q('entity') });
+      const f = await build(dir, q);
       noStore(res);
       res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.set('Content-Disposition', 'attachment; filename="report.xlsx"; filename*=UTF-8\'\'' + encodeURIComponent(f.name));
@@ -172,6 +175,8 @@ function createApp(opts = {}) {
       res.status(user ? 400 : 502).json({ ok: false, error: (e && e.message) || 'Помилка сервера' });
     }
   });
+  woXlsxRoute('writeoff-report', (dir, q) => buyerWoReport(dir, { date: q('date'), entity: q('entity') }));
+  woXlsxRoute('writeoff-slices', (dir, q) => buyerWoSlices(dir, { days: q('days'), from: q('from'), to: q('to'), entity: q('entity'), cat: q('cat') }));
 
   // Сирі замовлення ВК за обраний день (рядки «_Сырые_Заказы_ВК», старші дні - «_Архів»): GET /buyer/<код>/<ключ>/raw-report/bakery?date=ГГГГ-ММ-ДД
   app.get('/buyer/:code/:key/raw-report/:dir', async (req, res) => {

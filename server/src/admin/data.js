@@ -85,9 +85,9 @@ function createAdminData(sb) {
     if (keep.length) must('orders', await sb.from('orders').update({ changed_at: ts }).in('id', keep).eq('status', 'active'));
     if (emptied.length) must('orders', await sb.from('orders').update({ status: 'cancelled', changed_at: ts }).in('id', emptied).eq('status', 'active'));
   }
-  // асортимент напрямку для закупниці - без кешу; правка лише ціни/стоп/наявності
+  // асортимент напрямку для закупниці - без кешу; правка ціни/стоп/наявності і собівартості (випічка)
   async function dirProducts(dir) {
-    return must('products', await sb.from('products').select('id,barcode,name,price,category,availability,box,status,sort').eq('dir', dir));
+    return must('products', await sb.from('products').select('id,barcode,name,price,category,availability,box,status,sort,cost').eq('dir', dir));
   }
   async function addProduct(row) {
     must('products', await sb.from('products').insert(row));

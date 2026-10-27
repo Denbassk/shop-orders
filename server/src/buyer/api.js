@@ -1,7 +1,7 @@
 // Сторінка закупниці напрямку (/buyer/<dir>): хто замовив сьогодні, видалення замовлення точки, асортимент.
 // Видалення - перенос delCancelOrder_/onDeleteSheetEdit (app/DeleteSheet.gs): тексти й запис у журнал дослівно.
 // Асортимент (ціна, стоп, наявність) - нове за планом Task 9: оригіналу в Apps Script немає (закупниці правили лист «Ассортимент»).
-// До Task 11 правку асортименту перезапише import-reference --force (правда - у листах Google).
+// Після переходу (23.10.2026) правда про асортимент - таблиця products у базі; лист «Ассортимент» сервер не читає (лише ручний scripts/import-reference.js --force його перезапише).
 const { DIRECTIONS } = require('../directions');
 const R = require('../rules');
 const { STORE_NOT_FOUND } = require('../admin/write');
@@ -63,8 +63,9 @@ async function buyerProducts(dir, env) {
   const list = (await env.adm.dirProducts(dir)).map((x) => ({
     id: x.id, name: x.name, barcode: x.barcode || '', price: Number(x.price) || 0, stop: x.status === 'stop',
     category: x.category || '', availability: x.availability || '', box: x.box || '', sort: Number(x.sort) || 0,
+    cost: dir === 'bakery' ? Number(x.cost) || 0 : 0,
   })).sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name, 'uk'));
-  return { dir, title: cfg.title, hasAvailability: dir === 'bakery', products: list };
+  return { dir, title: cfg.title, hasAvailability: dir === 'bakery', hasCost: dir === 'bakery', products: list };
 }
 
 const NOT_FOUND = 'Товар не знайдено. Оновіть сторінку.';
@@ -88,6 +89,13 @@ async function buyerSetProduct(dir, p, env) {
     if (dir !== 'bakery') throw new Error('Наявність - лише для випічки');
     const a = String(p.availability || '').trim().slice(0, 60);
     if (a !== (cur.availability || '')) { patch.availability = a; log.push('наявність "' + (cur.availability || '') + '" → "' + a + '"'); }
+  }
+  if (p.cost !== undefined) {
+    if (dir !== 'bakery') throw new Error('Собівартість - лише для випічки і кулінарії');
+    const raw = String(p.cost == null ? '' : p.cost).trim().replace(',', '.'), v = Number(raw);
+    if (raw === '' || !isFinite(v) || v < 0 || v > 100000) throw new Error('Невірна собівартість: ' + cur.name);
+    const cost = Math.round(v * 100) / 100;
+    if (cost !== (Number(cur.cost) || 0)) { patch.cost = cost; log.push('собівартість ' + (Number(cur.cost) || 0) + ' → ' + cost); }
   }
   if (!log.length) throw new Error('Змін немає');
   if (!await env.adm.setProduct(dir, cur.id, patch)) throw new Error(NOT_FOUND);
@@ -133,7 +141,7 @@ async function buyerAddProduct(dir, p, env) {
   await logSafe(env, 'Додано в асортимент', cfg.title + ' / ' + name + ': ' + money2(row.price) + ' грн' +
     (row.category ? ', ' + row.category : '') + (row.cost != null ? ', собівартість ' + money2(row.cost) : '') + (barcode ? ', ' + barcode : ''));
   return { id, name, price: row.price, barcode, category: row.category || '', availability: row.availability || '', stop: false, sort: row.sort,
-    noCost: bakery && row.cost == null };
+    cost: row.cost || 0, noCost: bakery && !(row.cost > 0) };
 }
 const money2 = (n) => String(Math.round(Number(n) * 100) / 100);
 

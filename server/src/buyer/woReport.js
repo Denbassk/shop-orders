@@ -48,10 +48,12 @@ function buildDayReport(rows, { entity, day }) {
 
 // ---------- xlsx ----------
 // стилі (індекси cellXfs)
-const S = { def: 0, title: 1, bold: 2, store: 3, head: 4, text: 5, qty: 6, money: 7, tText: 8, tQty: 9, tMoney: 10, ital: 11 };
+const S = { def: 0, title: 1, bold: 2, store: 3, head: 4, text: 5, qty: 6, money: 7, tText: 8, tQty: 9, tMoney: 10, ital: 11,
+  gQty: 12, gMoney: 13, gPct: 14, tPct: 15, item: 16, itemRed: 17, note: 18, kvKey: 19, kvVal: 20, kvMoney: 21, gRank: 22 };
 const STYLES = XH + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-  + '<fonts count="4"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font>'
-  + '<font><b/><sz val="14"/><name val="Arial"/></font><font><i/><sz val="9"/><name val="Arial"/></font></fonts>'
+  + '<numFmts count="1"><numFmt numFmtId="164" formatCode="0.0%"/></numFmts>'
+  + '<fonts count="5"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font>'
+  + '<font><b/><sz val="14"/><name val="Arial"/></font><font><i/><sz val="9"/><name val="Arial"/></font><font><i/><sz val="10"/><color rgb="FFC00000"/><name val="Arial"/></font></fonts>'
   + '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
   + '<fill><patternFill patternType="solid"><fgColor rgb="FFD9D9D9"/><bgColor indexed="64"/></patternFill></fill>'
   + '<fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/><bgColor indexed="64"/></patternFill></fill></fills>'
@@ -59,7 +61,7 @@ const STYLES = XH + '<styleSheet xmlns="http://schemas.openxmlformats.org/spread
   + '<border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top>'
   + '<bottom style="thin"><color auto="1"/></bottom><diagonal/></border></borders>'
   + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-  + '<cellXfs count="12">'
+  + '<cellXfs count="23">'
   + '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'                                                                                 // 0 def
   + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'                                                                   // 1 title
   + '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'                                                                   // 2 bold
@@ -72,6 +74,18 @@ const STYLES = XH + '<styleSheet xmlns="http://schemas.openxmlformats.org/spread
   + '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf>'  // 9 total qty
   + '<xf numFmtId="4" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>'                             // 10 total money
   + '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>'                                                                   // 11 italic
+  // звіт за період: 12 gQty 13 gMoney 14 gPct (рядок групи: жирний, сіра заливка) 15 tPct 16 item 17 itemRed 18 note 19 kvKey 20 kvVal 21 kvMoney 22 gRank
+  + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>'
+  + '<xf numFmtId="4" fontId="1" fillId="2" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top"/></xf>'
+  + '<xf numFmtId="164" fontId="1" fillId="2" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top"/></xf>'
+  + '<xf numFmtId="164" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>'
+  + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1" indent="1"/></xf>'
+  + '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1" indent="1"/></xf>'
+  + '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+  + '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+  + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="top"/></xf>'
+  + '<xf numFmtId="4" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="top"/></xf>'
+  + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>'
   + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
 
 const HEAD = ['Товар', 'Кількість', 'Собівартість', 'Сума', 'Сума з націнкою'];
@@ -100,8 +114,9 @@ function sheetModel(rep) {
   return rows;
 }
 
-function buildDayXlsx(rep) {
-  const xmlRows = sheetModel(rep).map((cells, ri) => {
+const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+function rowsXml(model) {
+  return model.map((cells, ri) => {
     const xs = cells.map((c, ci) => {
       const ref = colName(ci) + (ri + 1), st = ' s="' + c.s + '"';
       if ('n' in c) return '<c r="' + ref + '"' + st + '><v>' + c.n + '</v></c>';
@@ -110,33 +125,46 @@ function buildDayXlsx(rep) {
     });
     return xs.length ? '<row r="' + (ri + 1) + '">' + xs.join('') + '</row>' : '';
   }).join('');
-  const sheet = XH + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+}
+// sh: { name, model, widths, freeze (скільки верхніх рядків закріпити), landscape, repeat (номер рядка шапки для друку), merges: ['A1:G1'] }
+function sheetXml(sh) {
+  const pane = sh.freeze ? '<pane ySplit="' + sh.freeze + '" topLeftCell="A' + (sh.freeze + 1) + '" activePane="bottomLeft" state="frozen"/>' : '';
+  return XH + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
     + '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
-    + '<sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews>'
-    + '<cols>' + WIDTHS.map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>').join('') + '</cols>'
-    + '<sheetData>' + xmlRows + '</sheetData>'
+    + '<sheetViews><sheetView workbookViewId="0" showGridLines="0">' + pane + '</sheetView></sheetViews>'
+    + '<cols>' + sh.widths.map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>').join('') + '</cols>'
+    + '<sheetData>' + rowsXml(sh.model) + '</sheetData>'
+    + (sh.merges && sh.merges.length ? '<mergeCells count="' + sh.merges.length + '">' + sh.merges.map((m) => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>' : '')
     + '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.6" header="0.3" footer="0.3"/>'
-    + '<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>'
+    + '<pageSetup paperSize="9" orientation="' + (sh.landscape ? 'landscape' : 'portrait') + '" fitToWidth="1" fitToHeight="0"/>'
     + '<headerFooter><oddFooter>&amp;RСтор. &amp;P з &amp;N</oddFooter></headerFooter>'
     + '</worksheet>';
-  const REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+}
+function packXlsx(sheets) {
+  const names = sheets.map((sh) => sheetName(sh.name)), Q = "'";
+  const defined = sheets.map((sh, i) => (sh.repeat ? '<definedName name="_xlnm.Print_Titles" localSheetId="' + i + '">' + Q + esc(names[i]) + Q + '!$' + sh.repeat + ':$' + sh.repeat + '</definedName>' : '')).join('');
   return zip([
     { name: '[Content_Types].xml', data: XH + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
       + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
       + '<Default Extension="xml" ContentType="application/xml"/>'
       + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-      + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+      + sheets.map((sh, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')
       + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
     { name: '_rels/.rels', data: XH + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
       + '<Relationship Id="rId1" Type="' + REL + '/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
     { name: 'xl/workbook.xml', data: XH + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="' + REL + '">'
-      + '<sheets><sheet name="' + esc(sheetName(rep.entity + ' ' + dmyOf(rep.day))) + '" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+      + '<sheets>' + names.map((nm, i) => '<sheet name="' + esc(nm) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets>'
+      + (defined ? '<definedNames>' + defined + '</definedNames>' : '') + '</workbook>' },
     { name: 'xl/_rels/workbook.xml.rels', data: XH + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-      + '<Relationship Id="rId1" Type="' + REL + '/worksheet" Target="worksheets/sheet1.xml"/>'
-      + '<Relationship Id="rId2" Type="' + REL + '/styles" Target="styles.xml"/></Relationships>' },
+      + sheets.map((sh, i) => '<Relationship Id="rId' + (i + 1) + '" Type="' + REL + '/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('')
+      + '<Relationship Id="rId' + (sheets.length + 1) + '" Type="' + REL + '/styles" Target="styles.xml"/></Relationships>' },
     { name: 'xl/styles.xml', data: STYLES },
-    { name: 'xl/worksheets/sheet1.xml', data: sheet },
+    ...sheets.map((sh, i) => ({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: sheetXml(sh) })),
   ]);
+}
+
+function buildDayXlsx(rep) {
+  return packXlsx([{ name: rep.entity + ' ' + dmyOf(rep.day), model: sheetModel(rep), widths: WIDTHS }]);
 }
 
 // ---------- запит ----------
@@ -168,4 +196,4 @@ async function dayReport(dir, p = {}, deps = {}) {
   return { name: 'Списання ВК ' + entity + ' ' + dmyOf(day) + '.xlsx', buf: buildDayXlsx(rep) };
 }
 
-module.exports = { buildDayReport, buildDayXlsx, sheetModel, dayReport, ReportError };
+module.exports = { buildDayReport, buildDayXlsx, sheetModel, dayReport, ReportError, packXlsx, S, r2, r3, uk, dmyOf, validDay, shiftDay };
