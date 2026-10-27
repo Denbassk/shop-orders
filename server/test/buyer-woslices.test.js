@@ -182,24 +182,11 @@ test('окремий звіт (slice): один аркуш без «Підсум
   await assert.rejects(slicesReport('bakery', { from: '2026-10-22', slice: 'nope' }, { load: loadOk(), at: AT }), (e) => e instanceof ReportError && /Невідомий звіт: nope/.test(e.message));
 });
 
-test('окремий звіт «Подачі»: усі подачі періоду, нові зверху, склад - товари; шапка подачі з датою, точкою, продавцем', async () => {
-  const rep = buildSlices(inRange('2026-10-22', '2026-10-23'), { from: '2026-10-22', to: '2026-10-23' }, 'docs');
-  const g = rep.slices[0].groups;
-  assert.equal(rep.slices[0].sheet, 'Подачі');
-  assert.equal(g.length, 5, 'усі 5 подач (a, b, c, d, e), не лише 30 останніх');
-  assert.equal(g[0].name.slice(0, 5), '23.10');
-  assert.ok(g.some((x) => x.name === '23.10 10:00 · Байрона, 138/1 · №31 · Фадеева · Фемели Маркет'));
-  const a = g.find((x) => x.name.includes('Фадеева'));
-  assert.deepEqual(a.items.map((i) => [i.name, i.qty, i.sum]), [['Хліб', 3, 30], ['Салат А', 2, 20]]);
-  assert.equal(a.docs, 1);
-  const p = parts((await slicesReport('bakery', { from: '2026-10-22', to: '2026-10-23', slice: 'docs' }, { load: loadOk(), at: AT })).buf);
-  assert.ok(p['xl/worksheets/sheet1.xml'].includes('Подача: дата · точка · продавець'));
-});
-
 // ---------- сторінка закупниці ----------
-test('сторінка ВК: у куті кожного звіту своя мала кнопка «⬇ Excel» (стара загальна іконка і меню прибрані), запит несе slice, період і фільтри', () => {
+test('сторінка ВК: у куті кожного звіту своя мала кнопка «⬇ Excel» лише в п’яти звітах - точки, товари, продавці, категорії, юрособи (стара загальна іконка і меню прибрані), запит несе slice, період і фільтри', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
-  for (const k of ['stores', 'products', 'sellers', 'cats', 'entities', 'docs']) assert.ok(html.includes("woList({ key: '" + k + "',"), k);
+  for (const k of ['stores', 'products', 'sellers', 'cats', 'entities']) assert.ok(html.includes("woList({ key: '" + k + "',"), k);
+  assert.ok(html.includes("woList({ title: 'Останні подачі',") && !html.includes("key: 'docs'"), 'у «Останніх подачах» кнопки немає');
   for (const s of ['class="btn dark sm wox"', "onclick=\"woSliceDl(\\'' + o.key + '\\')\"", '⬇ Excel</button>', 'function woSliceDl(key)', "'&slice=' + encodeURIComponent(key)", "'days=' + WO.days",
     "'&entity=' + encodeURIComponent(WO.entity)", "'&cat=' + encodeURIComponent(WO.cat)", "'/writeoff-slices/'", 'function woFetchFile', 'WOREP.busy'])
     assert.ok(html.includes(s), s);

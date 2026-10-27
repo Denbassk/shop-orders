@@ -926,7 +926,7 @@ function woDownload(i) {
   return woFetchFile(BASE + '/writeoff-report/' + S.dir + '?date=' + encodeURIComponent(date) + '&entity=' + encodeURIComponent(entity), 'Готую звіт: ' + entity + ' · ' + woDmy(date), 'writeoff.xlsx');
 }
 // окремий Excel для кожної картки: той самий період і фільтри, що на екрані
-const WO_SLICE_NAME = { stores: 'Точки', products: 'Товари', sellers: 'Продавці', cats: 'Категорії', entities: 'Юрособи', docs: 'Подачі' };
+const WO_SLICE_NAME = { stores: 'Точки', products: 'Товари', sellers: 'Продавці', cats: 'Категорії', entities: 'Юрособи' };
 function woSliceDl(key) {
   const q = WO.from ? 'from=' + encodeURIComponent(WO.from) + '&to=' + encodeURIComponent(WO.to || WO.from) : 'days=' + WO.days;
   return woFetchFile(BASE + '/writeoff-slices/' + S.dir + '?' + q + '&entity=' + encodeURIComponent(WO.entity) + '&cat=' + encodeURIComponent(WO.cat) + '&slice=' + encodeURIComponent(key),
@@ -996,7 +996,7 @@ function woList(opt, list) {
   if (!list || !list.length) return '';
   const o = Object.assign({ docs: (x) => x.docs, itemDocs: (x) => x.docs, docsInSub: true, docsHead: WO_T.docs }, opt);
   const mx = Math.max(1, ...list.map((x) => x.sum)), n = o.total || list.length;
-  return '<section class="wocard wolist"><button class="btn dark sm wox" onclick="woSliceDl(\'' + o.key + '\')" title="' + esc('Завантажити Excel: ' + o.title) + '" aria-label="' + esc('Завантажити Excel: ' + o.title) + '">⬇ Excel</button><div class="woh"><span>' + esc(o.title) + '</span><small>' + esc((n > list.length ? 'перші ' + list.length + ' з ' + n : 'усього ' + n) + ' · ' + o.hint) + '</small></div>' +
+  return '<section class="wocard wolist">' + (o.key ? '<button class="btn dark sm wox" onclick="woSliceDl(\'' + o.key + '\')" title="' + esc('Завантажити Excel: ' + o.title) + '" aria-label="' + esc('Завантажити Excel: ' + o.title) + '">⬇ Excel</button>' : '') + '<div class="woh"><span>' + esc(o.title) + '</span><small>' + esc((n > list.length ? 'перші ' + list.length + ' з ' + n : 'усього ' + n) + ' · ' + o.hint) + '</small></div>' +
     '<div class="wolst">' + woHead(o.nameHead, o.docsHead) + list.map((x, i) => woRow(x, i, mx, o)).join('') + '</div></section>';
 }
 const WO_ITEMS = (x) => x.items;
@@ -1007,7 +1007,7 @@ function woDays(list) {
     '<div class="wdc" title="' + esc(woDmy(x.name).slice(0, 5) + ': ' + WO_T.cost + ' ' + fmtM(x.sum) + ' · ' + WO_T.mk + ' ' + fmtM(x.sum20) + ' · ' + WO_T.qty + ' ' + fmtN(x.qty) + ' · ' + WO_T.docs + ' ' + x.docs) + '"><span class="wdb"><i' + (lab ? ' data-v="' + esc(fmtN(Math.round(x.sum))) + '"' : '') + ' style="height:' + Math.max(3, Math.round(x.sum / mx * 100)) + '%"></i></span><span class="wdx">' + (i % step ? '' : esc(woDmy(x.name).slice(0, 5))) + '</span></div>').join('') + '</div></section>';
 }
 function woRecent(list) {
-  return woList({ key: 'docs', title: 'Останні подачі', hint: 'за датою · розкрийте - що в подачі', nameHead: 'Точка · дата · продавець', docsHead: 'Позицій', rank: false, bar: false, docs: (x) => x.items, docsInSub: false, itemDocs: () => '',
+  return woList({ title: 'Останні подачі', hint: 'за датою · розкрийте - що в подачі', nameHead: 'Точка · дата · продавець', docsHead: 'Позицій', rank: false, bar: false, docs: (x) => x.items, docsInSub: false, itemDocs: () => '',
     sub: (x) => [woDmy(x.day).slice(0, 5) + (x.time ? ' ' + x.time : ''), x.seller, x.entity, x.items + ' поз.'].join(' · '),
     items: (x) => x.lines, itemHead: 'Склад подачі: товар' }, (list || []).map((x) => Object.assign({ name: x.store }, x)));
 }

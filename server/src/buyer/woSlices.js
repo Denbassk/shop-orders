@@ -15,9 +15,6 @@ const SLICES = [
   { key: 'cats', sheet: 'Категорії', nameHead: 'Категорія', note: 'Склад кожної категорії - товари', group: (x) => x.cat, item: (x) => x.name },
   { key: 'entities', sheet: 'Юрособи', nameHead: 'Юрособа', note: 'Склад кожної юрособи - категорії', group: (x) => x.entity, item: (x) => x.cat },
 ];
-// окремий звіт «Подачі» (кнопка в куті картки «Останні подачі»): усі подачі періоду, нові зверху, склад - товари
-const DOCS = { key: 'docs', sheet: 'Подачі', nameHead: 'Подача: дата · точка · продавець', note: 'Усі подачі за період, нові зверху; склад подачі - товари', recent: true,
-  group: (x) => x.id, label: (x) => dmyOf(x.day).slice(0, 5) + (x.time ? ' ' + x.time : '') + ' · ' + storeKey(x) + ' · ' + x.seller + ' · ' + x.entity, item: (x) => x.name };
 const HEAD = ['№', null, 'Списано, шт', 'Подач', 'Собівартість, грн', 'З націнкою, грн', 'Частка, %'];
 const WIDTHS = [5, 58, 13, 9, 17, 17, 11];
 
@@ -28,7 +25,7 @@ function groupBy(rows, d, totalSum) {
   for (const x of rows) {
     const k = key(x);
     let g = m.get(k);
-    if (!g) m.set(k, g = { name: d.label ? d.label(x) : k, at: (x.at || x.day) + ' ' + (x.time || ''), qty: 0, sum: 0, sum20: 0, docs: new Set(), items: new Map() });
+    if (!g) m.set(k, g = { name: k, qty: 0, sum: 0, sum20: 0, docs: new Set(), items: new Map() });
     g.qty += x.qty; g.sum += x.sum; g.sum20 += x.sum20; g.docs.add(x.id);
     const ik = itemKey(x);
     let it = g.items.get(ik);
@@ -36,8 +33,7 @@ function groupBy(rows, d, totalSum) {
     it.qty += x.qty; it.sum += x.sum; it.sum20 += x.sum20; it.docs.add(x.id); it.rows++; if (isZero(x)) it.zero++;
   }
   const byName = (a, b) => b.sum - a.sum || uk(a.name, b.name);
-  const order = d.recent ? (a, b) => b.at.localeCompare(a.at) || byName(a, b) : byName;
-  return [...m.values()].sort(order).map((g) => ({
+  return [...m.values()].sort(byName).map((g) => ({
     name: g.name, qty: r3(g.qty), sum: r2(g.sum), sum20: r2(g.sum20), docs: g.docs.size, share: totalSum > 0 ? g.sum / totalSum : 0,
     items: [...g.items.values()].sort(byName).map((it) => ({ name: it.name, qty: r3(it.qty), sum: r2(it.sum), sum20: r2(it.sum20), docs: it.docs.size,
       cost: !it.zero ? 'ok' : it.zero === it.rows ? 'none' : 'part' })),
@@ -53,7 +49,7 @@ function buildSlices(rows, { from, to, entity = '', cat = '' }, only = '') {
   const total = { qty: r3(tot.qty), sum: r2(tot.sum), sum20: r2(tot.sum20), docs: new Set(f.map((x) => x.id)).size,
     stores: new Set(f.map((x) => x.store)).size, rows: f.length, zeroRows: zero.length, zeroNames: [...new Set(zero.map((x) => x.name))].sort(uk) };
   return { from, to, entity, cat, total,
-    slices: (only ? SLICES.concat(DOCS).filter((d) => d.key === only) : SLICES).map((d) => ({ key: d.key, sheet: d.sheet, nameHead: d.nameHead, note: d.note, groups: groupBy(f, d, tot.sum) })) };
+    slices: (only ? SLICES.filter((d) => d.key === only) : SLICES).map((d) => ({ key: d.key, sheet: d.sheet, nameHead: d.nameHead, note: d.note, groups: groupBy(f, d, tot.sum) })) };
 }
 
 const periodText = (r) => (r.from === r.to ? dmyOf(r.from) : dmyOf(r.from) + ' – ' + dmyOf(r.to));
@@ -122,7 +118,7 @@ function buildSlicesXlsx(rep, at = new Date()) {
   return packXlsx(sheets);
 }
 
-// p: { days | from, to, entity, cat, slice } - slice: stores | products | sellers | cats | entities | docs (один звіт), без нього - усі аркуші; deps.load(arch, fresh) -> { list, meta: { books, errors } }; deps.at - «зараз» для тестів
+// p: { days | from, to, entity, cat, slice } - slice: stores | products | sellers | cats | entities (один звіт), без нього - усі аркуші; deps.load(arch, fresh) -> { list, meta: { books, errors } }; deps.at - «зараз» для тестів
 async function slicesReport(dir, p = {}, deps = {}) {
   if (dir !== 'bakery') throw new ReportError('Звіт про списання є лише у випічки і кулінарії');
   const at = deps.at || new Date(), today = R.kyivNow(at).day;
@@ -138,7 +134,7 @@ async function slicesReport(dir, p = {}, deps = {}) {
     from = shiftDay(today, days - 1); to = today;
   }
   const entity = String(p.entity || '').trim(), cat = String(p.cat || '').trim(), only = String(p.slice || '').trim();
-  if (only && ![...SLICES, DOCS].some((d) => d.key === only)) throw new ReportError('Невідомий звіт: ' + only);
+  if (only && !SLICES.some((d) => d.key === only)) throw new ReportError('Невідомий звіт: ' + only);
   const load = deps.load || ((arch, fresh) => require('./writeoffs').loadRows(require('../google'), arch, fresh));
   const { list, meta } = await load(from < shiftDay(today, 30), true);   // старші за 31 день - лише в листі «Архив»
   const books = (meta && meta.books) || [], errors = (meta && meta.errors) || [];
@@ -151,4 +147,4 @@ async function slicesReport(dir, p = {}, deps = {}) {
   return { name, buf: buildSlicesXlsx(rep, at) };
 }
 
-module.exports = { DOCS, buildSlices, buildSlicesXlsx, sliceModel, summaryModel, slicesReport, SLICES };
+module.exports = { buildSlices, buildSlicesXlsx, sliceModel, summaryModel, slicesReport, SLICES };
