@@ -8,10 +8,18 @@ const { build } = require('../scripts/build-front');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'front-change.js'), 'utf8');
 
-function sandbox({ callImpl } = {}) {
+function sandbox({ callImpl, storage = {}, storageBroken = false } = {}) {
   const alerts = [], calls = [], drawn = [];
   const els = {};
+  const document = {
+    createElement: () => ({ id: '', className: '', innerHTML: '', parentNode: null, listeners: {}, addEventListener(t, f) { this.listeners[t] = f; } }),
+    body: { appendChild(n) { n.parentNode = document.body; els[n.id] = n; }, removeChild(n) { delete els[n.id]; n.parentNode = null; } },
+  };
+  const localStorage = storageBroken
+    ? { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } }
+    : { getItem: (k) => (k in storage ? storage[k] : null), setItem: (k, v) => { storage[k] = v; } };
   const ctx = {
+    document, localStorage,
     S: { screen: 'prod', dir: 'bakery', store: { id: 'st-1' }, cart: {}, mode: 'new', edit: false, editInfo: null,
       prod: { products: [{ id: 'a' }, { id: 'b' }], hidePrice: false } },
     el: (id) => els[id] || null, esc: (s) => String(s).replace(/</g, '&lt;'), money: (n) => String(n),
@@ -21,7 +29,7 @@ function sandbox({ callImpl } = {}) {
   };
   vm.createContext(ctx);
   vm.runInContext(SRC, ctx);
-  return { ctx, alerts, calls, drawn, els };
+  return { ctx, alerts, calls, drawn, els, storage };
 }
 const prod = (o) => ({ canRequestLate: false, alreadyOrdered: false, windowOpen: true, lateRequest: 'none', deadline: '13:00', hidePrice: false, ...o });
 const plain = (x) => JSON.parse(JSON.stringify(x));          // об'єкти з vm-контексту -> звичайні для deepEqual
@@ -172,4 +180,66 @@ test('replaceHead: більше 12 змін - перші 12 і "…і ще N"', 
   const h = ctx.replaceHead();
   assert.equal(h.split('\n').filter((l) => l.startsWith('- ')).length, 12);
   assert.ok(h.includes('…і ще 3'));
+});
+
+// ---------- разове оголошення ----------
+const noticeOpen = (ctx, d) => { ctx.S.screen = 'prod'; ctx.S.prod = prod({ products: [], ...d }); ctx.changeNotice(); };
+const click = (node, className) => node.listeners.click({ target: className ? { className } : node });
+
+test('changeNotice: показується там, де ще не замовляли і прийом відкритий; текст про зміну без дозволу, до дедлайну, підсумкову кількість', () => {
+  const { ctx, els } = sandbox();
+  noticeOpen(ctx, { alreadyOrdered: false, windowOpen: true, deadline: '13:00' });
+  const h = els['chg-ov'].innerHTML;
+  assert.ok(h.includes('Замовлення тепер можна змінити') && h.includes('«Змінити замовлення»'));
+  assert.ok(h.includes('без дозволу закупниці') && h.includes('в усіх напрямках') && h.includes('до <b>13:00</b>'));
+  assert.ok(h.includes('підсумкову кількість') && h.includes('Зрозуміло'));
+});
+
+test('changeNotice: не показується, якщо замовлення вже є (побачить завтра або в іншому напрямку без замовлення), після дедлайну, не на екрані товарів', () => {
+  const a = sandbox(); noticeOpen(a.ctx, { alreadyOrdered: true, windowOpen: true });
+  assert.equal(a.els['chg-ov'], undefined);
+  const b = sandbox(); noticeOpen(b.ctx, { alreadyOrdered: false, windowOpen: false });
+  assert.equal(b.els['chg-ov'], undefined);
+  const c = sandbox(); c.ctx.S.screen = 'store'; c.ctx.S.prod = prod({ products: [] }); c.ctx.changeNotice();
+  assert.equal(c.els['chg-ov'], undefined);
+});
+
+test('changeNotice: "Зрозуміло" закриває і запам\'ятовує на пристрої - наступного разу не показується', () => {
+  const { ctx, els, storage } = sandbox();
+  noticeOpen(ctx, { alreadyOrdered: false, windowOpen: true });
+  click(els['chg-ov'], 'rem-go chg-ok');
+  assert.equal(els['chg-ov'], undefined);
+  assert.equal(storage.fm_chg_notice, '1');
+  noticeOpen(ctx, { alreadyOrdered: false, windowOpen: true });
+  assert.equal(els['chg-ov'], undefined);
+  // новий запуск застосунку на тому ж пристрої: прочитано з localStorage
+  const again = sandbox({ storage });
+  noticeOpen(again.ctx, { alreadyOrdered: false, windowOpen: true });
+  assert.equal(again.els['chg-ov'], undefined);
+});
+
+test('changeNotice: клік мимо вікна (нічого не натиснуто) не закриває; клік по затемненню закриває; не дублюється при перемальовуванні', () => {
+  const { ctx, els } = sandbox();
+  noticeOpen(ctx, { alreadyOrdered: false, windowOpen: true });
+  const node = els['chg-ov'];
+  click(node, 'rem-box chg-box');                       // всередині вікна, але не на кнопці
+  assert.ok(els['chg-ov']);
+  ctx.changeNotice(); ctx.changeNotice();               // drawProd викликається часто
+  assert.equal(els['chg-ov'], node);
+  node.listeners.click({ target: node });               // затемнення
+  assert.equal(els['chg-ov'], undefined);
+});
+
+test('changeNotice: localStorage заблоковано - працює, а "бачили" тримається до перезавантаження', () => {
+  const { ctx, els } = sandbox({ storageBroken: true });
+  noticeOpen(ctx, { alreadyOrdered: false, windowOpen: true });
+  assert.ok(els['chg-ov']);
+  click(els['chg-ov'], 'rem-go chg-ok');
+  noticeOpen(ctx, { alreadyOrdered: false, windowOpen: true });
+  assert.equal(els['chg-ov'], undefined);
+});
+
+test('збірка: changeNotice викликається після кожного малювання екрана товарів', () => {
+  const html = build();
+  assert.ok(html.includes("try { injectLate(); } catch (e) {}\n  try { changeNotice(); } catch (e) {}\n};"));
 });

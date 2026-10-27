@@ -52,6 +52,8 @@ function applyChangeOrder(html) {
   // екран після відправки: після зміни - "Зміни збережено" без слів про видалення/заміну рядків
   html = patch(html, "'<h2>Замовлення прийнято</h2><p><b>'", "'<h2>' + (r.replaced ? 'Зміни збережено' : 'Замовлення прийнято') + '</h2><p><b>'");
   html = patch(html, "    (r.replaced ? '<p style=\"color:#7a5200\">Попереднє замовлення замінено' +\n                  (r.removed ? ' (прибрано рядків: ' + r.removed + ')' : '') + '</p>' : '') +\n", '');
+  // разове оголошення про зміну замовлення: після кожного малювання екрана товарів (див. changeNotice у front-change.js)
+  html = patch(html, "  try { injectLate(); } catch (e) {}\n};", "  try { injectLate(); } catch (e) {}\n  try { changeNotice(); } catch (e) {}\n};");
   // 5. lateHtml/setMode (режими "Дозамовити"/"Переробити все") -> код front-change.js; плашка збирається lateBoxHtml
   const a = html.indexOf('function lateHtml(d){'), b = html.indexOf('function injectLate(){');
   if (a < 0 || b < a) throw new Error('Не знайдено lateHtml/injectLate в Index.html');

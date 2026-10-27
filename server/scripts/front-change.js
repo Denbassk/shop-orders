@@ -45,6 +45,34 @@ function lateBoxHtml(d){
   return [lateHtml(d), changeHtml(d)].filter(function(x){ return !!x; }).join('<br><br>');
 }
 
+/* Разове оголошення: замовлення можна міняти самому до кінця прийому. Показується на екрані товарів напрямку, де точка ще
+   не замовляла і прийом відкритий (тобто тим, хто ще не замовив, - одразу; хто вже замовив, - завтра або коли відкриє інший
+   напрямок без замовлення). Запам'ятовується на пристрої (fm_chg_notice); якщо localStorage недоступний - до перезавантаження. */
+var chgSeen = false;
+function changeNotice(){
+  var d = S.prod;
+  if (S.screen !== 'prod' || !d || d.alreadyOrdered || !d.windowOpen) return;
+  if (chgSeen || el('chg-ov')) return;
+  try { if (localStorage.getItem('fm_chg_notice')) { chgSeen = true; return; } } catch (e) {}
+  var o = document.createElement('div');
+  o.id = 'chg-ov'; o.className = 'rem-ov';
+  o.innerHTML = '<div class="rem-box chg-box" role="dialog" aria-modal="true" aria-labelledby="chg-h">' +
+    '<h3 id="chg-h">Замовлення тепер можна змінити</h3>' +
+    '<p>Помилилися або треба щось додати чи прибрати? Після відправки відкрийте напрямок і натисніть <b>«Змінити замовлення»</b>.</p>' +
+    '<p>Це працює в усіх напрямках, <b>без дозволу закупниці</b> - до кінця прийому замовлень' +
+      (d.deadline ? ' (тут до <b>' + esc(d.deadline) + '</b>)' : '') + '.</p>' +
+    '<p>У кошику вказуйте <b>підсумкову кількість</b> - скільки має бути в замовленні, а не скільки додати.</p>' +
+    '<button class="rem-go chg-ok">Зрозуміло</button></div>';
+  o.addEventListener('click', function(e){
+    var t = e.target, c = (t && t.className) || '';
+    if (t !== o && String(c).indexOf('chg-ok') < 0) return;
+    chgSeen = true;
+    try { localStorage.setItem('fm_chg_notice', '1'); } catch (err) {}
+    if (o.parentNode) o.parentNode.removeChild(o);
+  });
+  document.body.appendChild(o);
+}
+
 /* Підставляє в кошик поточне замовлення (з сервера, а не з пам'яті телефону) і вмикає режим заміни. */
 function startEdit(){
   var b = el('chgbtn');
