@@ -154,7 +154,7 @@ test('http: GET /buyer/bakery/<ключ>/writeoff-slices/bakery -> xlsx; пар�
     assert.match(r.headers.get('content-type'), /spreadsheetml/);
     assert.ok(r.headers.get('content-disposition').includes(encodeURIComponent('Списання ВК за період 22.10.2026-23.10.2026.xlsx')));
     assert.equal(await r.text(), 'PKsl');
-    assert.deepEqual(calls[0], ['bakery', { days: '', from: '2026-10-22', to: '2026-10-23', entity: UA, cat: 'Кулінарія' }]);
+    assert.deepEqual(calls[0], ['bakery', { days: '', from: '2026-10-22', to: '2026-10-23', entity: UA, cat: 'Кулінарія', slice: '' }]);
     assert.equal((await fetch(base + 'writeoff-slices/veg' + q)).status, 404);
     assert.equal((await fetch(b + '/buyer/bakery/' + buyerKey('hlib', S) + '/writeoff-slices/bakery' + q)).status, 404);
     r = await fetch(base + 'writeoff-report/bakery?date=2026-10-23&entity=' + encodeURIComponent(UA));
@@ -168,12 +168,49 @@ test('http: GET /buyer/bakery/<ключ>/writeoff-slices/bakery -> xlsx; пар�
   });
 });
 
+// ---------- окремі звіти з кнопок у кутах карток ----------
+test('окремий звіт (slice): один аркуш без «Підсумок», назва з назвою звіту; невідомий звіт - помилка', async () => {
+  const f = await slicesReport('bakery', { from: '2026-10-22', to: '2026-10-23', slice: 'products' }, { load: loadOk(), at: AT });
+  assert.equal(f.name, 'Списання ВК Товари 22.10.2026-23.10.2026.xlsx');
+  const p = parts(f.buf);
+  assert.ok(p['xl/worksheets/sheet1.xml'] && !p['xl/worksheets/sheet2.xml']);
+  assert.ok(p['xl/workbook.xml'].includes('name="Товари"') && !p['xl/workbook.xml'].includes('Підсумок'));
+  assert.ok(p['xl/worksheets/sheet1.xml'].includes('Салат А') && p['xl/worksheets/sheet1.xml'].includes('Склад кожного товару'));
+  assert.ok(p['xl/workbook.xml'].includes("'Товари'!$5:$5"), 'шапка друкується на кожній сторінці');
+  const all = await slicesReport('bakery', { from: '2026-10-22', to: '2026-10-23' }, { load: loadOk(), at: AT });
+  assert.ok(parts(all.buf)['xl/worksheets/sheet6.xml'], 'без slice - усі аркуші, як раніше');
+  await assert.rejects(slicesReport('bakery', { from: '2026-10-22', slice: 'nope' }, { load: loadOk(), at: AT }), (e) => e instanceof ReportError && /Невідомий звіт: nope/.test(e.message));
+});
+
+test('окремий звіт «Подачі»: усі подачі періоду, нові зверху, склад - товари; шапка подачі з датою, точкою, продавцем', async () => {
+  const rep = buildSlices(inRange('2026-10-22', '2026-10-23'), { from: '2026-10-22', to: '2026-10-23' }, 'docs');
+  const g = rep.slices[0].groups;
+  assert.equal(rep.slices[0].sheet, 'Подачі');
+  assert.equal(g.length, 5, 'усі 5 подач (a, b, c, d, e), не лише 30 останніх');
+  assert.equal(g[0].name.slice(0, 5), '23.10');
+  assert.ok(g.some((x) => x.name === '23.10 10:00 · Байрона, 138/1 · №31 · Фадеева · Фемели Маркет'));
+  const a = g.find((x) => x.name.includes('Фадеева'));
+  assert.deepEqual(a.items.map((i) => [i.name, i.qty, i.sum]), [['Хліб', 3, 30], ['Салат А', 2, 20]]);
+  assert.equal(a.docs, 1);
+  const p = parts((await slicesReport('bakery', { from: '2026-10-22', to: '2026-10-23', slice: 'docs' }, { load: loadOk(), at: AT })).buf);
+  assert.ok(p['xl/worksheets/sheet1.xml'].includes('Подача: дата · точка · продавець'));
+});
+
 // ---------- сторінка закупниці ----------
-test('сторінка ВК: у куті картки «Звіт для друку» іконка завантаження з меню: звіт за період і звіти за день; звіт за період бере період і фільтри з екрана', () => {
+test('сторінка ВК: у куті кожного звіту своя мала кнопка «⬇ Excel» (стара загальна іконка і меню прибрані), запит несе slice, період і фільтри', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
-  for (const s of ['class="wxb', 'aria-label="Завантажити звіти (Excel)"', 'function woMenuHtml', 'function woSlices()', "'/writeoff-slices/'", "'days=' + WO.days", "'&entity=' + encodeURIComponent(WO.entity)", "'&cat=' + encodeURIComponent(WO.cat)",
-    'Звіт за період', 'Точки, товари, продавці, категорії, юрособи', 'function woFetchFile', 'WOREP.busy'])
+  for (const k of ['stores', 'products', 'sellers', 'cats', 'entities', 'docs']) assert.ok(html.includes("woList({ key: '" + k + "',"), k);
+  for (const s of ['class="btn dark sm wox"', "onclick=\"woSliceDl(\\'' + o.key + '\\')\"", '⬇ Excel</button>', 'function woSliceDl(key)', "'&slice=' + encodeURIComponent(key)", "'days=' + WO.days",
+    "'&entity=' + encodeURIComponent(WO.entity)", "'&cat=' + encodeURIComponent(WO.cat)", "'/writeoff-slices/'", 'function woFetchFile', 'WOREP.busy'])
     assert.ok(html.includes(s), s);
-  assert.match(html, /\.wxb\{position:absolute;top:10px;right:10px;width:44px;height:44px/);
-  assert.ok(!html.includes('Поки працює стара система'), 'застаріла підказка про старну систему прибрана');
+  assert.match(html, /\.btn\.sm\.wox\{position:absolute;top:8px;right:12px/);
+  assert.match(html, /\.wolist\{display:flex;flex-direction:column;height:440px/);
+  for (const gone of ['wxb', 'wxm', 'woMenu', 'ICO_DL', 'woSlices()']) assert.ok(!html.includes(gone), 'прибрано: ' + gone);
+  assert.ok(!html.includes('Поки працює стара система'), 'застаріла підказка прибрана');
+});
+
+test('сторінка ВК: заголовки колонок і цифри в списках вирівняні по центру', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
+  assert.ok(html.includes('.wocol>*,.wos>:nth-child(n+3),.wi>:nth-child(n+3){text-align:center}'));
+  assert.ok(!html.includes('.wi>:nth-child(n+3){text-align:right}'));
 });

@@ -176,7 +176,7 @@ function createApp(opts = {}) {
     }
   });
   woXlsxRoute('writeoff-report', (dir, q) => buyerWoReport(dir, { date: q('date'), entity: q('entity') }));
-  woXlsxRoute('writeoff-slices', (dir, q) => buyerWoSlices(dir, { days: q('days'), from: q('from'), to: q('to'), entity: q('entity'), cat: q('cat') }));
+  woXlsxRoute('writeoff-slices', (dir, q) => buyerWoSlices(dir, { days: q('days'), from: q('from'), to: q('to'), entity: q('entity'), cat: q('cat'), slice: q('slice') }));
 
   // Сирі замовлення ВК за обраний день (рядки «_Сырые_Заказы_ВК», старші дні - «_Архів»): GET /buyer/<код>/<ключ>/raw-report/bakery?date=ГГГГ-ММ-ДД
   app.get('/buyer/:code/:key/raw-report/:dir', async (req, res) => {

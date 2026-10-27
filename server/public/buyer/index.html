@@ -227,14 +227,9 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .wocard{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh);min-width:0}
 .wocard.wide{grid-column:1/-1}
 .worep{position:relative;margin:4px 0 14px}
-.wxb{position:absolute;top:10px;right:10px;width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--ln);border-radius:12px;background:var(--sf);color:var(--tx);cursor:pointer;transition:transform .15s,box-shadow .15s,background .15s}
-.wxb:hover,.wxb.on{transform:translateY(-2px);box-shadow:var(--sh);background:var(--sf2)}
-.wxm{position:absolute;top:60px;right:10px;z-index:6;width:min(340px,calc(100% - 20px));padding:6px;border:1px solid var(--ln);border-radius:14px;background:var(--sf);box-shadow:var(--sh2)}
-.wxm .wxh{padding:8px 10px 4px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)}
-.wxm button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:44px;padding:9px 10px;border:0;border-radius:10px;background:transparent;color:var(--tx);font:inherit;font-size:14px;font-weight:700;text-align:left;cursor:pointer}
-.wxm button:hover{background:var(--sf2)}
-.wxm button small{font-size:12px;font-weight:500;color:var(--mu)}
-.worep .woh{padding-right:56px}.worow{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:8px 0 10px}.worow label{font-size:13px;color:var(--mu)}.worow input[type=date]{height:48px;border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:12px;padding:0 10px 0 14px;font:inherit;font-size:16px;min-width:0;color-scheme:light}
+.wolist,.wochart{position:relative}
+.btn.sm.wox{position:absolute;top:8px;right:12px;z-index:2;height:34px;padding:0 11px;font-size:12px;border-radius:10px;white-space:nowrap}
+.wolist .woh{padding-right:92px;min-height:34px;align-items:center}.worow{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:8px 0 10px}.worow label{font-size:13px;color:var(--mu)}.worow input[type=date]{height:48px;border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:12px;padding:0 10px 0 14px;font:inherit;font-size:16px;min-width:0;color-scheme:light}
 /* іконка: чорний значок (color-scheme:light) перефарбовується фільтром у бірюзовий #2DD4BF темної теми - без подвійної інверсії */
 .worow input[type=date]::-webkit-calendar-picker-indicator{width:26px;height:26px;padding:4px;margin-left:6px;cursor:pointer;opacity:.85}
 [data-theme=dark] .worow input[type=date]::-webkit-calendar-picker-indicator{filter:invert(77%) sepia(52%) saturate(502%) hue-rotate(118deg) brightness(95%) contrast(93%);opacity:1}
@@ -249,7 +244,7 @@ table.gs{border-collapse:separate;border-spacing:0;font-size:13.5px;width:max-co
 .wolst{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0 -8px;padding:0 8px}
 .wocol,.wos,.wi{display:grid;grid-template-columns:24px minmax(0,1fr) 54px 40px 84px 84px;gap:0 8px;align-items:center}
 .wocol{position:sticky;top:0;z-index:1;background:var(--sf);padding:4px 0 6px;font-size:11px;font-weight:700;line-height:1.2;color:var(--mu);border-bottom:1px solid var(--ln);align-items:end}
-.wocol>:nth-child(n+3),.wos>:nth-child(n+3),.wi>:nth-child(n+3){text-align:right}
+.wocol>*,.wos>:nth-child(n+3),.wi>:nth-child(n+3){text-align:center}
 .wr{border-bottom:1px solid var(--ln)}
 .wos{padding:9px 0;cursor:pointer;list-style:none;font-size:13px}
 .wos::-webkit-details-marker{display:none}
@@ -889,7 +884,7 @@ async function showProducts() {
 }
 const WO = { days: 7, from: '', to: '', archFrom: '', entity: '', cat: '', data: null, force: false };
 // Звіт про списання за день для друку: окремий файл Excel по кожній юрособі
-const WOREP = { date: '', busy: false, menu: false };
+const WOREP = { date: '', busy: false };
 const WO_ENTITIES = ['Фемели Маркет', 'ЮА Маркет'];
 function woRepToday() { return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Kyiv' }); }
 function woRepEntities() { return WO.data && WO.data.books && WO.data.books.length ? WO.data.books : WO_ENTITIES; }
@@ -897,32 +892,22 @@ function woRepDraw() {
   const box = $('worep'); if (!box) return;
   const today = woRepToday(); if (!WOREP.date) WOREP.date = today;
   const on = !!WO.from, min = WO.archFrom ? ' min="' + esc(WO.archFrom) + '"' : '';
-  box.innerHTML = '<div class="wocard wide worep"><button class="wxb' + (WOREP.menu ? ' on' : '') + '" onclick="woMenu(event)" title="Завантажити звіти (Excel)" aria-label="Завантажити звіти (Excel)" aria-expanded="' + (WOREP.menu ? 'true' : 'false') + '">' + ICO_DL + '</button>' + (WOREP.menu ? woMenuHtml() : '') + '<div class="woh">Звіт для друку</div><div class="worow' + (on ? ' on' : '') + '"><label for="woRepDate">Дата списання</label>' +
+  box.innerHTML = '<div class="wocard wide worep"><div class="woh">Звіт для друку</div><div class="worow' + (on ? ' on' : '') + '"><label for="woRepDate">Дата списання</label>' +
     '<input class="pk" type="date" id="woRepDate" value="' + esc(WO.from || WOREP.date) + '" max="' + esc(today) + '"' + min + ' onchange="woPick()">' +
     '<label for="woTo">по</label><input class="pk" type="date" id="woTo" value="' + esc(WO.to && WO.to !== WO.from ? WO.to : '') + '" max="' + esc(today) + '"' + min + ' onchange="woPick()">' +
     (on ? '<button class="wob" onclick="woPickClear()">✕ Скинути</button>' : '') +
     woRepEntities().map((e, i) => '<button class="btn dark sm" onclick="woDownload(' + i + ')">⬇ ' + esc(e) + '</button>').join('') + '</div>' +
     '<div class="hint">Дата (і «по» - щоб побачити період) керує статистикою нижче. Excel для друку - окремий файл по кожній юрособі за дату списання (з «Дата списання»): точки, товари, кількість, собівартість, суми. Готовий до друку на A4.</div></div>';
 }
-const ICO_DL = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>';
 function woPeriodText() {
   const d = WO.data, from = WO.from || (d && d.from) || '', to = WO.to || (d && d.to) || '';
   if (!from) return WO.days === 1 ? 'сьогодні' : 'останні ' + WO.days + ' днів';
   return from === to ? woDmy(from) : woDmy(from) + ' – ' + woDmy(to);
 }
-function woMenuHtml() {
-  return '<div class="wxm" role="menu" onclick="event.stopPropagation()"><div class="wxh">Excel-звіти</div>' +
-    '<button role="menuitem" onclick="woSlices()">⬇ Звіт за період<small>' + esc('Точки, товари, продавці, категорії, юрособи · ' + woPeriodText() + ' · ' + (WO.entity || 'усі юрособи') + ' · ' + (WO.cat || 'усі категорії')) + '</small></button>' +
-    '<div class="wxh">Звіт за день для друку</div>' +
-    woRepEntities().map((e, i) => '<button role="menuitem" onclick="woDownload(' + i + ')">⬇ ' + esc(e) + '<small>' + esc('за дату зі «Дата списання»: ' + woDmy((($('woRepDate') || {}).value || WOREP.date || woRepToday()))) + '</small></button>').join('') + '</div>';
-}
-function woMenu(ev) { if (ev) ev.stopPropagation(); WOREP.menu = !WOREP.menu; woRepDraw(); }
-document.addEventListener('click', () => { if (WOREP.menu) { WOREP.menu = false; woRepDraw(); } });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && WOREP.menu) { WOREP.menu = false; woRepDraw(); } });
-// завантаження xlsx з сервера (звіт за день і за період): один спільний шлях з тостами та захистом від подвійного кліку
+// завантаження xlsx з сервера (звіт за день і окремі звіти за період): один спільний шлях з тостами та захистом від подвійного кліку
 async function woFetchFile(url, wait, fallbackName) {
   if (WOREP.busy) return;
-  WOREP.busy = true; WOREP.menu = false; woRepDraw();
+  WOREP.busy = true;
   toast('⏳ ' + wait + '…');
   try {
     const r = await fetch(url, { cache: 'no-store' });
@@ -940,10 +925,12 @@ function woDownload(i) {
   if (!date) { toast('❌ Оберіть дату списання'); return; }
   return woFetchFile(BASE + '/writeoff-report/' + S.dir + '?date=' + encodeURIComponent(date) + '&entity=' + encodeURIComponent(entity), 'Готую звіт: ' + entity + ' · ' + woDmy(date), 'writeoff.xlsx');
 }
-// звіт за той самий період і фільтри, що на екрані
-function woSlices() {
+// окремий Excel для кожної картки: той самий період і фільтри, що на екрані
+const WO_SLICE_NAME = { stores: 'Точки', products: 'Товари', sellers: 'Продавці', cats: 'Категорії', entities: 'Юрособи', docs: 'Подачі' };
+function woSliceDl(key) {
   const q = WO.from ? 'from=' + encodeURIComponent(WO.from) + '&to=' + encodeURIComponent(WO.to || WO.from) : 'days=' + WO.days;
-  return woFetchFile(BASE + '/writeoff-slices/' + S.dir + '?' + q + '&entity=' + encodeURIComponent(WO.entity) + '&cat=' + encodeURIComponent(WO.cat), 'Готую звіт за період: ' + woPeriodText(), 'writeoff-slices.xlsx');
+  return woFetchFile(BASE + '/writeoff-slices/' + S.dir + '?' + q + '&entity=' + encodeURIComponent(WO.entity) + '&cat=' + encodeURIComponent(WO.cat) + '&slice=' + encodeURIComponent(key),
+    'Готую Excel: ' + WO_SLICE_NAME[key] + ' · ' + woPeriodText(), 'writeoff-' + key + '.xlsx');
 }
 function woNav() {
   if ($('t-wo') || !S.me || !S.me.dirs.some((d) => d.dir === 'bakery')) return;
@@ -1009,7 +996,7 @@ function woList(opt, list) {
   if (!list || !list.length) return '';
   const o = Object.assign({ docs: (x) => x.docs, itemDocs: (x) => x.docs, docsInSub: true, docsHead: WO_T.docs }, opt);
   const mx = Math.max(1, ...list.map((x) => x.sum)), n = o.total || list.length;
-  return '<section class="wocard wolist"><div class="woh"><span>' + esc(o.title) + '</span><small>' + esc((n > list.length ? 'перші ' + list.length + ' з ' + n : 'усього ' + n) + ' · ' + o.hint) + '</small></div>' +
+  return '<section class="wocard wolist"><button class="btn dark sm wox" onclick="woSliceDl(\'' + o.key + '\')" title="' + esc('Завантажити Excel: ' + o.title) + '" aria-label="' + esc('Завантажити Excel: ' + o.title) + '">⬇ Excel</button><div class="woh"><span>' + esc(o.title) + '</span><small>' + esc((n > list.length ? 'перші ' + list.length + ' з ' + n : 'усього ' + n) + ' · ' + o.hint) + '</small></div>' +
     '<div class="wolst">' + woHead(o.nameHead, o.docsHead) + list.map((x, i) => woRow(x, i, mx, o)).join('') + '</div></section>';
 }
 const WO_ITEMS = (x) => x.items;
@@ -1020,7 +1007,7 @@ function woDays(list) {
     '<div class="wdc" title="' + esc(woDmy(x.name).slice(0, 5) + ': ' + WO_T.cost + ' ' + fmtM(x.sum) + ' · ' + WO_T.mk + ' ' + fmtM(x.sum20) + ' · ' + WO_T.qty + ' ' + fmtN(x.qty) + ' · ' + WO_T.docs + ' ' + x.docs) + '"><span class="wdb"><i' + (lab ? ' data-v="' + esc(fmtN(Math.round(x.sum))) + '"' : '') + ' style="height:' + Math.max(3, Math.round(x.sum / mx * 100)) + '%"></i></span><span class="wdx">' + (i % step ? '' : esc(woDmy(x.name).slice(0, 5))) + '</span></div>').join('') + '</div></section>';
 }
 function woRecent(list) {
-  return woList({ title: 'Останні подачі', hint: 'за датою · розкрийте - що в подачі', nameHead: 'Точка · дата · продавець', docsHead: 'Позицій', rank: false, bar: false, docs: (x) => x.items, docsInSub: false, itemDocs: () => '',
+  return woList({ key: 'docs', title: 'Останні подачі', hint: 'за датою · розкрийте - що в подачі', nameHead: 'Точка · дата · продавець', docsHead: 'Позицій', rank: false, bar: false, docs: (x) => x.items, docsInSub: false, itemDocs: () => '',
     sub: (x) => [woDmy(x.day).slice(0, 5) + (x.time ? ' ' + x.time : ''), x.seller, x.entity, x.items + ' поз.'].join(' · '),
     items: (x) => x.lines, itemHead: 'Склад подачі: товар' }, (list || []).map((x) => Object.assign({ name: x.store }, x)));
 }
@@ -1043,11 +1030,11 @@ function woDraw(d) {
   if (!t.docs) { $('wov').innerHTML = h + '<div class="note">За цей період списань немає.</div>' + early; return; }
   h += woLegend() + woDays(d.days);
   h += '<div class="wogrid">' +
-    woList({ title: 'Точки', hint: 'рейтинг за собівартістю', nameHead: 'Точка', total: c.stores, items: WO_ITEMS, itemHead: 'Що списали: товар' }, d.stores) +
-    woList({ title: 'Товари', hint: 'рейтинг за собівартістю', nameHead: 'Товар', total: c.products, items: WO_ITEMS, itemHead: 'Де списали: точка' }, d.products) +
-    woList({ title: 'Продавці', hint: 'продавець · точка', nameHead: 'Продавець · точка', total: c.sellers, items: WO_ITEMS, itemHead: 'Що списав: товар' }, d.sellers) +
-    woList({ title: 'Категорії', hint: 'рейтинг за собівартістю', nameHead: 'Категорія', total: c.byCat, items: WO_ITEMS, itemHead: 'З чого складається: товар' }, d.byCat) +
-    (d.byEntity && d.byEntity.length > 1 ? woList({ title: 'Юрособи', hint: 'за собівартістю', nameHead: 'Юрособа', total: c.byEntity, items: WO_ITEMS, itemHead: 'Категорія' }, d.byEntity) : '') +
+    woList({ key: 'stores', title: 'Точки', hint: 'рейтинг за собівартістю', nameHead: 'Точка', total: c.stores, items: WO_ITEMS, itemHead: 'Що списали: товар' }, d.stores) +
+    woList({ key: 'products', title: 'Товари', hint: 'рейтинг за собівартістю', nameHead: 'Товар', total: c.products, items: WO_ITEMS, itemHead: 'Де списали: точка' }, d.products) +
+    woList({ key: 'sellers', title: 'Продавці', hint: 'продавець · точка', nameHead: 'Продавець · точка', total: c.sellers, items: WO_ITEMS, itemHead: 'Що списав: товар' }, d.sellers) +
+    woList({ key: 'cats', title: 'Категорії', hint: 'рейтинг за собівартістю', nameHead: 'Категорія', total: c.byCat, items: WO_ITEMS, itemHead: 'З чого складається: товар' }, d.byCat) +
+    (d.byEntity && d.byEntity.length > 1 ? woList({ key: 'entities', title: 'Юрособи', hint: 'за собівартістю', nameHead: 'Юрособа', total: c.byEntity, items: WO_ITEMS, itemHead: 'Категорія' }, d.byEntity) : '') +
     woRecent(d.recent) + '</div>';
   h += '<div class="hint">' + esc('Джерело - таблиці списань (' + (d.books || []).join(', ') + '), лише читання. Період ' + woDmy(d.from) + ' - ' + woDmy(d.to) + (d.arch ? ', з архівом' : '')) + '</div>';
   h += early;
