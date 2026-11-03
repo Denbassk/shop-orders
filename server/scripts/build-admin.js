@@ -106,6 +106,9 @@ function build() {
   once("'Дедлайн <b>' + esc(x.deadline || '—') + '</b>, сейчас '", "dlInfoHtml(x) + ', сейчас '");
   once("item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\\'restore\\',{dir:\\'' + k + '\\'})') +",
     "item('Время приёма', dlSub(x), '', 'go(\\'deadline\\',{dir:\\'' + k + '\\'})') +\n      item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\\'restore\\',{dir:\\'' + k + '\\'})') +");
+  once("item('Время приёма', dlSub(x), '', 'go(\\'deadline\\',{dir:\\'' + k + '\\'})') +",
+    "item('Время приёма', dlSub(x), '', 'go(\\'deadline\\',{dir:\\'' + k + '\\'})') +\n      " +
+    "item('Ассортимент и цены', k === 'veg' ? 'цены из прайса поставщика — только просмотр' : 'список, стоп, массовая смена цен на % или сумму', '', 'go(\\'assort\\',{dir:\\'' + k + '\\'})') +");
   once("'<span class=\"s\" style=\"display:block\">до ' + esc(x.deadline || '—') +",
     "'<span class=\"s\" style=\"display:block\">до ' + esc(x.deadline || '—') + (x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '') +");
   let out = html.replace(/<\/body>/i, () => SHIM + '</body>');
@@ -138,6 +141,13 @@ function build() {
     const i = out.lastIndexOf('</body>');
     const dlHtml = fs.readFileSync(DL, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
     out = out.slice(0, i) + dlHtml + '\n' + out.slice(i);
+  }
+  // экран «Ассортимент и цены» - scripts/admin-assortment.html (после admin-deadline.html: оборачивает load())
+  const AS = path.join(__dirname, 'admin-assortment.html');
+  if (fs.existsSync(AS)) {
+    const i = out.lastIndexOf('</body>');
+    const asHtml = fs.readFileSync(AS, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
+    out = out.slice(0, i) + asHtml + '\n' + out.slice(i);
   }
   return out;
 }

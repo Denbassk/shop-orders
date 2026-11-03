@@ -809,6 +809,7 @@ function loadDir(k) {
         : item('Открыть приём всем до конца дня', 'дедлайн ' + esc(x.deadline || '—') + ' сегодня не действует',
                '', 'askOpenAll(\'' + k + '\')')) +
       item('Время приёма', dlSub(x), '', 'go(\'deadline\',{dir:\'' + k + '\'})') +
+      item('Ассортимент и цены', k === 'veg' ? 'цены из прайса поставщика — только просмотр' : 'список, стоп, массовая смена цен на % или сумму', '', 'go(\'assort\',{dir:\'' + k + '\'})') +
       item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\'restore\',{dir:\'' + k + '\'})') +
       ((k === 'bakery' || k === 'veg')
         ? item('Убрать дубли', 'задвоенные строки в рабочем листе', '', 'go(\'dups\',{dir:\'' + k + '\'})') : '') +
@@ -2355,6 +2356,174 @@ var loadBaseDl_ = load;
 load = function () {
   if (S.screen === 'deadline') return loadDeadline(S.dir);
   return loadBaseDl_();
+};
+</script>
+<style>
+.asbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.asbar button{flex:1 1 150px;padding:12px 10px;border:1px solid var(--ln,#DCE0E5);border-radius:14px;background:var(--sf,#fff);color:var(--tx,#16181D);font:inherit;font-weight:600;cursor:pointer}
+.ascnt{margin:14px 4px 0;font-size:14px;font-weight:600}
+.asrow{display:flex;align-items:baseline;gap:10px;padding:12px 16px;border-bottom:1px solid var(--ln,#DCE0E5)}
+.asrow:last-child{border-bottom:0}
+.asrow .nm{flex:1;min-width:0;font-size:15px;line-height:1.35}
+.asrow .pr{flex:none;white-space:nowrap;font-weight:600}
+.asrow .pr s{opacity:.55;font-weight:400}
+.asrow .up{color:#B3261E}.asrow .dn{color:#166B3A}
+.asstop{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:#7A828E;color:#fff;font-size:11px;font-weight:700;vertical-align:2px}
+.ashead{display:flex;justify-content:space-between;padding:10px 16px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.6;border-bottom:1px solid var(--ln,#DCE0E5)}
+</style>
+<script>
+// ===== shop-orders: ассортимент и цены =====
+var AS = { dir: '', d: null, q: '', sel: {}, mode: 'pct', value: '' };
+
+function asMoney(n) { return (Math.round(Number(n) * 100) / 100).toFixed(2); }
+function asNum(s) { return Number(String(s == null ? '' : s).trim().replace(',', '.')); }
+function asChange(mode, value) {
+  var v = asNum(value);
+  return mode === 'pct' ? (v > 0 ? '+' : '') + v + '%' : (v > 0 ? '+' : '') + v + ' грн';
+}
+
+function loadAssort(k) {
+  var m = DIRS[k];
+  setHead('Ассортимент', m.t);
+  spin();
+  call('assortment', { dir: k }).then(function (d) {
+    AS = { dir: k, d: d, q: '', sel: {}, mode: 'pct', value: '' };
+    drawAssort();
+  }).catch(fail);
+}
+
+function asFiltered() {
+  var q = AS.q.trim().toLowerCase(), out = [];
+  AS.d.products.forEach(function (p, i) {
+    if (!q || (p.name + ' ' + p.barcode).toLowerCase().indexOf(q) >= 0) out.push(i);
+  });
+  return out;
+}
+
+function drawAssort() {
+  var d = AS.d, h = '';
+  if (d.priceLocked) h += '<div class="note">' + esc(d.lockedReason) + '. Здесь можно только смотреть.</div>';
+  else if (d.hidePrice) h += '<div class="note">Продавцы этого направления цен не видят, но цены используются в расчётах.</div>';
+  h += '<div style="margin:12px 0"><input type="search" id="as_q" placeholder="Поиск по названию или штрихкоду" value="' + attr(AS.q) + '"></div>';
+  if (!d.priceLocked) {
+    h += '<div class="card" style="padding:16px">' +
+      '<div class="s" style="margin:0 4px 10px">Изменить цены у отмеченных позиций</div>' +
+      '<div class="chips" id="as_mode" style="margin:0 0 12px">' +
+        '<button type="button" class="chip" data-m="pct" onclick="asMode(\'pct\')">На %</button>' +
+        '<button type="button" class="chip" data-m="sum" onclick="asMode(\'sum\')">На сумму</button>' +
+      '</div>' +
+      '<div class="s" id="as_lbl" style="margin:0 4px 8px"></div>' +
+      '<input type="text" id="as_val" inputmode="decimal" autocomplete="off" placeholder="Например 5 или -3,5" value="' + attr(AS.value) + '">' +
+      '<div class="asbar">' +
+        '<button type="button" onclick="asSelectFound()">Выбрать все найденные</button>' +
+        '<button type="button" onclick="asClear()">Снять выбор</button>' +
+      '</div>' +
+      '<div class="ascnt" id="as_cnt"></div>' +
+      '<div style="margin-top:14px"><button class="btn" onclick="previewAssort()">Посмотреть изменения</button></div>' +
+    '</div>';
+  }
+  h += '<div id="as_list" style="margin-top:18px"></div>';
+  view(h);
+  var q = document.getElementById('as_q');
+  q.addEventListener('input', function () { AS.q = q.value; fillAssortList(); });
+  var v = document.getElementById('as_val');
+  if (v) v.addEventListener('input', function () { AS.value = v.value; });
+  asMode(AS.mode);
+  fillAssortList();
+}
+
+function asMode(m) {
+  AS.mode = m;
+  var chips = document.querySelectorAll('#as_mode .chip');
+  for (var i = 0; i < chips.length; i++) chips[i].className = 'chip' + (chips[i].getAttribute('data-m') === m ? ' on' : '');
+  var l = document.getElementById('as_lbl');
+  if (l) l.textContent = m === 'pct' ? 'На сколько процентов (минус — снизить)' : 'На сколько гривен (минус — снизить)';
+}
+
+function fillAssortList() {
+  var el = document.getElementById('as_list');
+  if (!el) return;
+  var d = AS.d, idx = asFiltered();
+  if (!idx.length) { el.innerHTML = '<div class="note">Ничего не найдено</div>'; asCount(); return; }
+  var rows = idx.map(function (i) {
+    var p = d.products[i];
+    var price = esc(asMoney(p.price)) + (d.markup !== 1 ? ' <s>продавцу ' + esc(asMoney(p.sellerPrice)) + '</s>' : '');
+    var sub = (p.barcode ? esc(p.barcode) : '') + (p.category ? (p.barcode ? ' · ' : '') + esc(p.category) : '');
+    var name = esc(p.name) + (p.stop ? '<span class="asstop">стоп</span>' : '');
+    if (d.priceLocked) return '<div class="asrow"><span class="nm">' + name + (sub ? '<span class="s" style="display:block">' + sub + '</span>' : '') + '</span><span class="pr">' + price + '</span></div>';
+    return '<label class="pick" style="display:flex"><input type="checkbox"' + (AS.sel[p.id] ? ' checked' : '') + ' onchange="asToggle(' + i + ',this.checked)">' +
+      '<span class="grow"><span class="t">' + name + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' +
+      '<span class="right" style="white-space:nowrap">' + price + '</span></label>';
+  }).join('');
+  el.innerHTML = '<div class="card">' + rows + '</div>';
+  asCount();
+}
+
+function asToggle(i, on) {
+  var p = AS.d.products[i];
+  if (on) AS.sel[p.id] = true; else delete AS.sel[p.id];
+  asCount();
+}
+function asSelectFound() {
+  asFiltered().forEach(function (i) { AS.sel[AS.d.products[i].id] = true; });
+  fillAssortList();
+}
+function asClear() { AS.sel = {}; fillAssortList(); }
+function asCount() {
+  var c = document.getElementById('as_cnt');
+  if (c) c.textContent = 'Отмечено: ' + Object.keys(AS.sel).length + ' из ' + AS.d.products.length;
+}
+
+function previewAssort() {
+  var ids = Object.keys(AS.sel);
+  if (!ids.length) return toast('Отметьте позиции');
+  var v = document.getElementById('as_val');
+  if (v) AS.value = v.value;
+  if (!String(AS.value).trim() || isNaN(asNum(AS.value))) return toast('Укажите число');
+  spin('Считаю новые цены…');
+  call('priceBulkPreview', { dir: AS.dir, ids: ids, mode: AS.mode, value: AS.value }).then(drawAssortPreview)
+    .catch(function (e) { drawAssort(); toast(e && e.message ? e.message : String(e)); });
+}
+
+function drawAssortPreview(r) {
+  var m = DIRS[AS.dir], h = '';
+  h += '<div class="info">Изменение <b>' + esc(asChange(r.mode, r.value)) + '</b> · позиций: <b>' + r.n + '</b>' +
+    (r.n ? '<br>Сумма цен: ' + esc(asMoney(r.sumOld)) + ' → <b>' + esc(asMoney(r.sumNew)) + '</b>' : '') + '</div>';
+  if (r.skipped.length) h += '<div class="note" style="margin-top:12px">Пропущено без цены: ' +
+    r.skipped.map(function (x) { return esc(x.name); }).join(', ') + '</div>';
+  if (r.n) {
+    h += '<div class="card" style="margin-top:16px"><div class="ashead"><span>Название</span><span>Было → Стало</span></div>' +
+      r.rows.map(function (x) {
+        var up = x.new > x.old;
+        return '<div class="asrow"><span class="nm">' + esc(x.name) + '</span><span class="pr"><s>' + esc(asMoney(x.old)) + '</s> → <span class="' + (up ? 'up' : 'dn') + '">' + esc(asMoney(x.new)) + '</span></span></div>';
+      }).join('') + '</div>';
+    h += '<div style="margin-top:18px"><button class="btn" onclick="askAssortApply()">Сохранить</button></div>';
+  } else {
+    h += '<div class="note" style="margin-top:12px">Ни одна цена не изменится.</div>';
+  }
+  h += '<button class="btn ghost" onclick="drawAssort()">Назад к списку</button>';
+  AS.prev = r;
+  view('<div style="grid-column:1/-1;max-width:720px">' + h + '</div>');
+}
+
+function askAssortApply() {
+  var r = AS.prev, k = AS.dir, m = DIRS[k];
+  if (!r || !r.n) return;
+  confirmSheet({
+    title: 'Изменить цены?', sub: m.t, yes: 'Сохранить цены',
+    what: [r.n + ' позиций: ' + asChange(r.mode, r.value) + ' (сумма цен ' + asMoney(r.sumOld) + ' → ' + asMoney(r.sumNew) + ')',
+           'Продавцы увидят новые цены в течение минуты; уже отправленные заказы не меняются',
+           'Действие попадёт в журнал'],
+    run: function () { return call('priceBulkApply', { dir: k, mode: r.mode, value: r.value, rows: r.rows.map(function (x) { return { id: x.id, old: x.old }; }) }); },
+    done: function (res) { toast('Цены обновлены: ' + res.changed + ' поз.'); loadAssort(k); }
+  });
+}
+
+// экран assort - в общий диспетчер load()
+var loadBaseAs_ = load;
+load = function () {
+  if (S.screen === 'assort') return loadAssort(S.dir);
+  return loadBaseAs_();
 };
 </script>
 </body>

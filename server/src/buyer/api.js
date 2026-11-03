@@ -4,6 +4,7 @@
 // Після переходу (23.10.2026) правда про асортимент - таблиця products у базі; лист «Ассортимент» сервер не читає (лише ручний scripts/import-reference.js --force його перезапише).
 const { DIRECTIONS } = require('../directions');
 const R = require('../rules');
+const P = require('../prices');
 const { STORE_NOT_FOUND } = require('../admin/write');
 const { nameKey } = require('../import/parse');
 
@@ -76,9 +77,8 @@ async function buyerSetProduct(dir, p, env) {
   if (!cur) throw new Error(NOT_FOUND);
   const patch = {}, log = [];
   if (p.price !== undefined) {
-    const v = Number(String(p.price).replace(',', '.'));
-    if (!isFinite(v) || v < 0 || v > 100000 || String(p.price).trim() === '') throw new Error('Невірна ціна: ' + cur.name);
-    const price = Math.round(v * 100) / 100;
+    const price = P.parseMoney(p.price);
+    if (isNaN(price)) throw new Error('Невірна ціна: ' + cur.name);
     if (price !== Number(cur.price)) { patch.price = price; log.push('ціна ' + Number(cur.price) + ' → ' + price); }
   }
   if (typeof p.stop === 'boolean') {
@@ -92,9 +92,8 @@ async function buyerSetProduct(dir, p, env) {
   }
   if (p.cost !== undefined) {
     if (dir !== 'bakery') throw new Error('Собівартість - лише для випічки і кулінарії');
-    const raw = String(p.cost == null ? '' : p.cost).trim().replace(',', '.'), v = Number(raw);
-    if (raw === '' || !isFinite(v) || v < 0 || v > 100000) throw new Error('Невірна собівартість: ' + cur.name);
-    const cost = Math.round(v * 100) / 100;
+    const cost = P.parseMoney(p.cost);
+    if (isNaN(cost)) throw new Error('Невірна собівартість: ' + cur.name);
     if (cost !== (Number(cur.cost) || 0)) { patch.cost = cost; log.push('собівартість ' + (Number(cur.cost) || 0) + ' → ' + cost); }
   }
   if (!log.length) throw new Error('Змін немає');
@@ -112,22 +111,20 @@ async function buyerAddProduct(dir, p, env) {
   const name = String(p.name == null ? '' : p.name).trim().replace(/\s+/g, ' ');
   if (!name) throw new Error('Вкажіть назву');
   if (name.length > 120) throw new Error('Назва задовга (до 120 символів)');
-  const priceRaw = String(p.price == null ? '' : p.price).trim().replace(',', '.');
-  const price = Number(priceRaw);
-  if (priceRaw === '' || !isFinite(price) || price < 0 || price > 100000) throw new Error('Невірна ціна: вкажіть число від 0');
+  const price = P.parseMoney(p.price);
+  if (isNaN(price)) throw new Error('Невірна ціна: вкажіть число від 0');
   const barcode = String(p.barcode == null ? '' : p.barcode).trim();
   if (barcode && !/^\d{4,20}$/.test(barcode)) throw new Error('Штрихкод - лише цифри (4-20) або порожньо');
   const id = barcode || nameKey(name);
-  const row = { dir, id, barcode, name, price: Math.round(price * 100) / 100, status: 'active' };
+  const row = { dir, id, barcode, name, price, status: 'active' };
   const bakery = dir === 'bakery';
   if (bakery) {
     row.category = String(p.category == null ? '' : p.category).trim().slice(0, CATEGORY_MAX) || null;
     row.availability = String(p.availability == null ? '' : p.availability).trim().slice(0, 60) || null;
-    const costRaw = String(p.cost == null ? '' : p.cost).trim().replace(',', '.');
-    if (costRaw !== '') {
-      const cost = Number(costRaw);
-      if (!isFinite(cost) || cost < 0 || cost > 100000) throw new Error('Невірна собівартість');
-      row.cost = Math.round(cost * 100) / 100;
+    if (String(p.cost == null ? '' : p.cost).trim() !== '') {
+      const cost = P.parseMoney(p.cost);
+      if (isNaN(cost)) throw new Error('Невірна собівартість');
+      row.cost = cost;
     }
   } else if (dir === 'bread' || dir === 'nbhz') {
     const box = String(p.box == null ? '' : p.box).trim().slice(0, 20);

@@ -16,6 +16,7 @@ const write = require('./write');
 const tools = require('./tools');
 const wo = require('./writeoffs');
 const stores = require('./stores');
+const assort = require('./assortment');
 
 function createAdminRuntime(opts = {}) {
   loadEnv();
@@ -63,6 +64,9 @@ function createAdminRuntime(opts = {}) {
     closeAll: (p) => write.admCloseAll(p, env()),
     setDeadline: (p) => write.admSetDeadline(p, env()),
     revertDeadline: (p) => write.admRevertDeadline(p, env()),
+    assortment: (p) => assort.admAssortment(p, env()),
+    priceBulkPreview: (p) => assort.admPricePreview(p, env()),
+    priceBulkApply: (p) => assort.admPriceApply(p, env()),
     setDirEnabled: (p) => write.admSetDirEnabled(p, env()),
     editOrder: (p) => write.admEditOrder(p, env()),
     batch: (p) => write.admBatch(p, (a, q) => api(a, q)),

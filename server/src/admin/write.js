@@ -193,4 +193,4 @@ async function admBatch(payload, call) {
   return Promise.all(calls.map((c) => ((!c || !ADM_BATCH_OK[c.a]) ? { ok: false, error: 'not allowed' } : call(c.a, c.p || {}))));
 }
 
-module.exports = { STORE_NOT_FOUND, admCancelOrder, admOpenStore, admOpenAll, admCloseAll, admSetDeadline, admRevertDeadline, admSetDirEnabled, admEditOrder, admBatch };
+module.exports = { STORE_NOT_FOUND, cfgOf, logSafe, admCancelOrder, admOpenStore, admOpenAll, admCloseAll, admSetDeadline, admRevertDeadline, admSetDirEnabled, admEditOrder, admBatch };
