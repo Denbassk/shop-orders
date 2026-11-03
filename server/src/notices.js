@@ -44,4 +44,15 @@ function makeNotice(p, at) {
   return { id: at.getTime().toString(36), text, dir, until, modal: p.modal === true, at: at.toISOString() };
 }
 
-module.exports = { MAX_ACTIVE, TEXT_MAX, MAX_DAYS, stamp, parseUntil, isActive, activeList, forSeller, makeNotice };
+// «Хто побачив»: магазини, яких стосується повідомлення (усі або з цим напрямком; тестові точки 'test-…' не рахуються), і їхні відмітки.
+// acks - рядки service_notice_ack ({notice_id, store_id, seen_at, ack_at}); відмітки магазинів, яких повідомлення не стосується, ігноруються.
+const isTestStore = (s) => String(s.id).startsWith('test-');
+function ackStats(n, stores, acks) {
+  const rel = stores.filter((s) => !isTestStore(s) && (!n.dir || (s.directions || []).indexOf(n.dir) >= 0));
+  const byStore = new Map((acks || []).filter((a) => a.notice_id === n.id).map((a) => [a.store_id, a]));
+  const seenRows = rel.filter((s) => byStore.has(s.id)).map((s) => ({ store: s, ack: byStore.get(s.id) }));
+  return { total: rel.length, seen: seenRows.length, acked: seenRows.filter((r) => r.ack.ack_at).length,
+    missing: rel.filter((s) => !byStore.has(s.id)), seenRows };
+}
+
+module.exports = { ackStats, MAX_ACTIVE, TEXT_MAX, MAX_DAYS, stamp, parseUntil, isActive, activeList, forSeller, makeNotice };

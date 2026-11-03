@@ -95,7 +95,12 @@ function createAdminData(sb) {
   async function setProduct(dir, id, patch) {
     return must('products', await sb.from('products').update(patch).eq('dir', dir).eq('id', id).select('id')).length > 0;
   }
-  return { dayOrders, allStores, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
+  // хто побачив / підтвердив сервісні повідомлення (service_notice_ack): рядки по списку повідомлень
+  async function noticeAcks(ids) {
+    if (!ids.length) return [];
+    return must('service_notice_ack', await sb.from('service_notice_ack').select('notice_id,store_id,seen_at,ack_at').in('notice_id', ids));
+  }
+  return { noticeAcks, dayOrders, allStores, logRows, reportAts, setReportAt, adminLog, cancelDay, getSetting, setSetting,
     dayStoreLines, setLineQty, deleteLine, touchOrders, storeRow, updateStore, insertStore, maxStoreSort, dirProducts, setProduct, addProduct };
 }
 

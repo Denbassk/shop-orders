@@ -134,6 +134,21 @@ function createData(sb, { now = Date.now } = {}) {
       .lt('requested_at', olderThan.toISOString()).gt('requested_at', notBefore.toISOString()));
   }
 
+  // --- «побачили / підтвердили» сервісне повідомлення (service_notice_ack, міграція 20261103000001) ---
+  // seen_at ставиться один раз: повторний upsert (ignoreDuplicates) перший час не перезаписує
+  async function noticeSeen(storeId, ids) {
+    if (!ids.length) return;
+    must('service_notice_ack', await sb.from('service_notice_ack').upsert(
+      ids.map((id) => ({ notice_id: id, store_id: storeId })), { onConflict: 'notice_id,store_id', ignoreDuplicates: true }));
+  }
+  // ack_at = зараз; з переданих колонок оновлюється лише вона (seen_at лишається, а для нового рядка бере default now())
+  async function noticeAcked(storeId, ids) {
+    if (!ids.length) return;
+    const ts = new Date(now()).toISOString();
+    must('service_notice_ack', await sb.from('service_notice_ack').upsert(
+      ids.map((id) => ({ notice_id: id, store_id: storeId, ack_at: ts })), { onConflict: 'notice_id,store_id' }));
+  }
+
   // --- вигрузка в сирі листи (export/raw.js) ---
   const isDirty = (o) => !o.exported_at || Date.parse(o.exported_at) < Date.parse(o.changed_at);
 
@@ -246,7 +261,7 @@ function createData(sb, { now = Date.now } = {}) {
   }
   return { stores, settings, directions, products, orderedToday, lateRows, saveVegPrices,
     orderResult, hasOrderToday, activeOrderLines, submitOrderTx, requestLate, approveLate, markLateMailed, unmailedLate,
-    exportSnapshot, markExported, reportSnapshot,
+    exportSnapshot, markExported, reportSnapshot, noticeSeen, noticeAcked,
     woResult, submitWriteoffTx, woDocsOfStore, woRange, woFind, woMarkDeleted, adminLog, woExportSnapshot, woMarkExported };
 }
 

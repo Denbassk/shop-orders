@@ -1211,12 +1211,48 @@ function noticeModal(list){
   document.body.appendChild(o);
 }
 
+/* Відмітка для пульту «магазин побачив / підтвердив» (noticeSeen -> service_notice_ack): лише коли відомо, який це магазин (обраний або
+   запам'ятаний телефоном - myStore), вкладка видима, а повідомлення стосується цього магазину. Кожне - один раз на магазин і пристрій:
+   «вже повідомили» (fm_notice_rep) живе на пристрої, без localStorage - до перезавантаження. Збій мережі нічого не ламає: повторимо при наступному показі. */
+var NTC_REP_KEY = 'fm_notice_rep';
+var ntcRepMem = {};
+var ntcRepBusy = {};
+function ntcRepIds(){
+  try { var a = JSON.parse(localStorage.getItem(NTC_REP_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+function ntcRepIs(k){ return !!ntcRepMem[k] || ntcRepIds().indexOf(k) >= 0; }
+function ntcRepMark(keys){
+  keys.forEach(function(k){ ntcRepMem[k] = true; });
+  try {
+    var a = ntcRepIds();
+    keys.forEach(function(k){ if (a.indexOf(k) < 0) a.push(k); });
+    localStorage.setItem(NTC_REP_KEY, JSON.stringify(a.slice(-200)));
+  } catch (e) {}
+}
+function ntcReport(list){
+  if (document.hidden || typeof call !== 'function') return;
+  var st = S.store || (typeof myStore === 'function' ? myStore() : null);
+  if (!st) return;
+  var seen = [], acked = [], keys = [];
+  list.forEach(function(n){
+    if (n.dir && (st.directions || []).indexOf(n.dir) < 0) return;           // банер на екрані вибору точки видно всім, а «побачив» - лише адресату
+    var ks = 's|' + n.id + '|' + st.id, ka = 'a|' + n.id + '|' + st.id;
+    if (!ntcRepIs(ks) && !ntcRepBusy[ks]) { seen.push(n.id); keys.push(ks); }
+    if (n.modal && ntcIsSeen(n.id) && !ntcRepIs(ka) && !ntcRepBusy[ka]) { acked.push(n.id); keys.push(ka); }
+  });
+  if (!keys.length) return;
+  keys.forEach(function(k){ ntcRepBusy[k] = true; });
+  var free = function(){ keys.forEach(function(k){ delete ntcRepBusy[k]; }); };
+  call('noticeSeen', { storeId: st.id, seen: seen, acked: acked }).then(function(){ ntcRepMark(keys); free(); }, free);
+}
+
 function renderNotices(){
   var box = el('nbox');
   if (!box) return;
   var list = noticesFor();
   box.innerHTML = noticeBannerHtml(list);
   noticeModal(list);
+  ntcReport(list);
 }
 ['screenStore', 'openStore', 'drawProd'].forEach(function(n){
   var f = window[n];

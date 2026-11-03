@@ -66,6 +66,7 @@ function createAdminRuntime(opts = {}) {
     setDeadline: (p) => write.admSetDeadline(p, env()),
     revertDeadline: (p) => write.admRevertDeadline(p, env()),
     noticeList: (p) => notices.admNoticeList(p, env()),
+    noticeWho: (p) => notices.admNoticeWho(p, env()),
     noticeAdd: (p) => notices.admNoticeAdd(p, env()),
     noticeOff: (p) => notices.admNoticeOff(p, env()),
     assortment: (p) => assort.admAssortment(p, env()),

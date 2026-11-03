@@ -274,7 +274,10 @@ test('пульт: пункт «Время приёма» у меню напря�
   assert.ok(dir.includes("item('Время приёма'"), 'пункт меню в «Управление приёмом»');
   assert.ok(dir.includes("go(\\'deadline\\',{dir:\\'' + k + '\\'})"));
   assert.ok(dir.includes('dlInfoHtml(x)'), 'шапка напрямка показує ефективний і прописаний дедлайн');
-  assert.ok(html.includes("(x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '')"), 'на «Сегодня» позначено тимчасовий дедлайн');
+  // пометка - в ДЕЙСТВУЮЩЕМ экране «Сегодня» (тема admin-theme.html перекрывает loadToday з app/ui і малює картки сама)
+  const today = html.slice(html.lastIndexOf('function loadToday()'));
+  const card = today.slice(today.indexOf('<span class="m">до '), today.indexOf('<span class="m">до ') + 400);
+  assert.ok(card.includes("(x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '')"), 'на картці «Сегодня» позначено тимчасовий дедлайн: ' + card);
   const tail = html.slice(html.indexOf('shop-orders: время приёма'));
   for (const s of ['function loadDeadline(', 'function askDeadlineApply(', 'function askDeadlineRevert(', "call('today')",
     "call('setDeadline'", "call('revertDeadline'", 'confirmSheet({', 'Только сегодня', 'По датам', 'Применить', 'Вернуть как в Довіднике',

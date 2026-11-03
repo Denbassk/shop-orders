@@ -2,6 +2,7 @@
 const read = require('./read');
 const submit = require('./submit');
 const writeoff = require('./writeoff');
+const notice = require('./notice');
 
 function createApi(getEnv, log = console.error) {
   return async function api(action, payload) {
@@ -15,6 +16,7 @@ function createApi(getEnv, log = console.error) {
         case 'currentOrder': data = await read.apiCurrentOrder(payload, getEnv()); break;
         case 'submitOrder': data = await submit.apiSubmitOrder(payload, getEnv()); break;
         case 'requestLate': data = await submit.apiRequestLate(payload, getEnv()); break;
+        case 'noticeSeen': data = await notice.apiNoticeSeen(payload, getEnv()); break;
         // списання випічки і кулінарії - api/writeoff.js (WriteOff.gs)
         case 'woProducts': data = await writeoff.apiWoProducts(payload, getEnv()); break;
         case 'woSubmit':   data = await writeoff.apiWoSubmit(payload, getEnv()); break;

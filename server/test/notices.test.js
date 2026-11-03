@@ -238,8 +238,12 @@ test('збірка сайту продавця: контейнер #nbox між 
 // ---------- пульт ----------
 test('пульт: «Сообщение продавцам» у швидких діях, екран notice (список, форма, вимкнення), пропозиція повідомлення після зміни/відкату дедлайну', () => {
   const html = require('../scripts/build-admin').build();
-  assert.ok(html.includes("item('Сообщение продавцам'"), 'пункт у «Быстрые действия»');
-  assert.ok(html.includes("go(\\'notice\\',{})"));
+  // кнопка - в ДЕЙСТВУЮЩЕМ экране «Сегодня»: тема (admin-theme.html) перекрывает loadToday з app/ui, і саме вона малює ряд кнопок
+  const today = html.slice(html.lastIndexOf('function loadToday()'));
+  const start = today.search(/<div class="atools[^"]*">/);
+  const row = today.slice(start, today.indexOf('</div>', start));
+  assert.ok(row.includes("<button class=\"achip\" onclick=\"go(\\'notice\\',{})\">Сообщение продавцам</button>"), 'кнопка в ряду быстрых действий на экране «Сегодня»: ' + row);
+  assert.ok(row.includes('График по точкам') && row.includes('Здоровье системы') && row.includes('Журнал действий'), 'прежние кнопки на месте');
   const tail = html.slice(html.indexOf('shop-orders: сообщения продавцам'));
   for (const s of ['function loadNotices(', 'function askNoticeAdd(', 'function askNoticeOff(', 'function offerNotice(', "call('noticeList'", "call('noticeAdd'", "call('noticeOff'",
     'confirmSheet({', 'Опубликовать', 'Выключить', 'Показать окном', 'Всем продавцам', "S.screen === 'notice'", 'Сообщить продавцам']) assert.ok(tail.includes(s), s);

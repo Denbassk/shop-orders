@@ -117,6 +117,9 @@ input:focus{border-color:var(--teal)}
 .achip{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:7px 13px;min-height:44px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .achip:hover{transform:translateY(-2px);box-shadow:var(--sh)}
 .achip.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+/* ряд быстрых действий на «Сегодня»: обводка цвета темы, чтобы кнопки не терялись среди карточек; фильтры точек ниже её не получают */
+.qa .achip{border:2px solid var(--teal);font-weight:800}
+.qa .achip:hover{background:color-mix(in srgb,var(--teal) 14%,var(--sf))}
 .achip i{font-style:normal;opacity:.6;margin-left:6px}
 .adot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
 .atiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
@@ -251,10 +254,11 @@ function loadToday() {
         (x.noDayToday
           ? '<span class="m">Сегодня (' + esc(d.dow) + ') по графику не заказывает ни одна из ' + x.all + ' точек</span>'
           : '<span class="big">' + x.ordered + ' <small>из ' + x.total + '</small></span><span class="bar"><i style="width:' + pct + '%;background:' + m.c + '"></i></span>') +
-        '<span class="m">до ' + esc(x.deadline || '—') + (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
+        '<span class="m">до ' + esc(x.deadline || '—') + (x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '') + (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
         (x.byDays && x.offDay ? ' · вне графика ' + x.offDay : '') + '</span></button>';
     }).join('') + '</div>';
-    h += '<div class="atools"><button class="achip" onclick="go(\'schedule\',{dir:\'\'})">График по точкам</button>' +
+    h += '<div class="atools qa"><button class="achip" onclick="go(\'schedule\',{dir:\'\'})">График по точкам</button>' +
+      '<button class="achip" onclick="go(\'notice\',{})">Сообщение продавцам</button>' +
       '<button class="achip" onclick="go(\'health\',{})">Здоровье системы</button>' +
       '<button class="achip" onclick="tabGo(\'log\')">Журнал действий</button></div>';
     h += '<div id="adm-t"><div class="spin">Загрузка точек…</div></div>';

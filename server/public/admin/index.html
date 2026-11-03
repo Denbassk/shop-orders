@@ -740,7 +740,7 @@ function loadToday() {
           '<span class="sq" style="background:' + m.c + '">' + m.s + '</span>' +
           '<span class="grow"><span class="t" style="font-size:17px;font-weight:700;display:block">' +
             esc(m.t) + '</span>' +
-            '<span class="s" style="display:block">до ' + esc(x.deadline || '—') + (x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '') +
+            '<span class="s" style="display:block">до ' + esc(x.deadline || '—') +
             (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
             (x.byDays && x.offDay ? ' · вне графика ' + x.offDay : '') + '</span></span>' +
           pill + '</span>' +
@@ -767,7 +767,6 @@ function loadToday() {
       item('Восстановить из бэкапа', 'вернуть строки, которых нет в листе', '', 'tabGo(\'restore\')') +
       item('Убрать дубли', 'найти и удалить задвоенные строки заказов', '', 'go(\'dups\',{dir:\'bakery\'})') +
       item('Здоровье системы', 'отчёты, триггеры, ошибки', '', 'go(\'health\',{})') +
-      item('Сообщение продавцам', 'баннер на сайте продавцов: «приём сдвинут» и т. п.', '', 'go(\'notice\',{})') +
       item('Журнал действий', 'что и когда нажимали', '', 'tabGo(\'log\')') +
       '</div>');
 
@@ -1705,6 +1704,9 @@ input:focus{border-color:var(--teal)}
 .achip{border:1px solid var(--ln);background:var(--sf);color:var(--tx);border-radius:999px;padding:7px 13px;min-height:44px;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .achip:hover{transform:translateY(-2px);box-shadow:var(--sh)}
 .achip.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+/* ряд быстрых действий на «Сегодня»: обводка цвета темы, чтобы кнопки не терялись среди карточек; фильтры точек ниже её не получают */
+.qa .achip{border:2px solid var(--teal);font-weight:800}
+.qa .achip:hover{background:color-mix(in srgb,var(--teal) 14%,var(--sf))}
 .achip i{font-style:normal;opacity:.6;margin-left:6px}
 .adot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
 .atiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
@@ -1839,10 +1841,11 @@ function loadToday() {
         (x.noDayToday
           ? '<span class="m">Сегодня (' + esc(d.dow) + ') по графику не заказывает ни одна из ' + x.all + ' точек</span>'
           : '<span class="big">' + x.ordered + ' <small>из ' + x.total + '</small></span><span class="bar"><i style="width:' + pct + '%;background:' + m.c + '"></i></span>') +
-        '<span class="m">до ' + esc(x.deadline || '—') + (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
+        '<span class="m">до ' + esc(x.deadline || '—') + (x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '') + (x.reportAt ? ' · отчёт в ' + esc(x.reportAt) : '') +
         (x.byDays && x.offDay ? ' · вне графика ' + x.offDay : '') + '</span></button>';
     }).join('') + '</div>';
-    h += '<div class="atools"><button class="achip" onclick="go(\'schedule\',{dir:\'\'})">График по точкам</button>' +
+    h += '<div class="atools qa"><button class="achip" onclick="go(\'schedule\',{dir:\'\'})">График по точкам</button>' +
+      '<button class="achip" onclick="go(\'notice\',{})">Сообщение продавцам</button>' +
       '<button class="achip" onclick="go(\'health\',{})">Здоровье системы</button>' +
       '<button class="achip" onclick="tabGo(\'log\')">Журнал действий</button></div>';
     h += '<div id="adm-t"><div class="spin">Загрузка точек…</div></div>';
@@ -2541,6 +2544,8 @@ load = function () {
 textarea.ntin{resize:vertical;min-height:96px;line-height:1.4}
 .ntrow{display:flex;gap:12px;align-items:flex-start}
 .ntrow .grow{flex:1;min-width:0}
+.ntbtns{flex:none;display:flex;flex-direction:column;gap:8px}
+.ntseen{margin-top:4px;font-weight:600}
 .ntoff{flex:none;padding:8px 12px;border:1px solid var(--ln,#DCE0E5);border-radius:12px;background:var(--sf,#fff);color:var(--tx,#16181D);font:inherit;font-weight:600;cursor:pointer}
 </style>
 <script>
@@ -2561,8 +2566,10 @@ function drawNotices() {
     h += section('Сейчас показывается (' + d.notices.length + ')', '<div class="card">' + d.notices.map(function (n, i) {
       return '<div class="item" style="align-items:flex-start"><span class="ntrow" style="width:100%"><span class="grow">' +
         '<span class="t" style="white-space:normal;word-break:break-word">' + esc(n.text).replace(/\n/g, '<br>') + '</span>' +
-        '<span class="s">Кому: ' + esc(n.dir ? (DIRS[n.dir] ? DIRS[n.dir].t : n.dir) : 'всем продавцам') + ' · до ' + esc(ntWhen(n.until)) + (n.modal ? ' · и окном' : '') + '</span></span>' +
-        '<button class="ntoff" onclick="askNoticeOff(' + i + ')">Выключить</button></span></div>';
+        '<span class="s">Кому: ' + esc(n.dir ? (DIRS[n.dir] ? DIRS[n.dir].t : n.dir) : 'всем продавцам') + ' · до ' + esc(ntWhen(n.until)) + (n.modal ? ' · и окном' : '') + '</span>' +
+        (n.seen == null ? '' : '<span class="s ntseen">Увидели ' + n.seen + ' из ' + n.total + (n.modal ? ' · подтвердили ' + n.acked : '') + '</span>') + '</span>' +
+        '<span class="ntbtns">' + (n.seen == null ? '' : '<button class="ntoff" onclick="openNoticeWho(' + i + ')">Кто не видел</button>') +
+        '<button class="ntoff" onclick="askNoticeOff(' + i + ')">Выключить</button></span></span></div>';
     }).join('') + '</div>');
   } else {
     h += '<div class="info">Сейчас продавцам ничего не показывается.</div>';
@@ -2613,6 +2620,39 @@ function askNoticeOff(i) {
   });
 }
 
+// «Кто увидел»: какие магазины видели сообщение (на любом телефоне открыли приложение, пока оно действует), а какие нет - тем можно позвонить
+function openNoticeWho(i) {
+  var n = NT.d.notices[i];
+  if (!n) return;
+  NT.who = n.id;
+  go('noticewho', {});
+}
+
+function loadNoticeWho() {
+  setHead('Кто увидел', 'сообщение продавцам');
+  spin();
+  call('noticeWho', { id: NT.who }).then(function (r) {
+    var h = '<div class="info"><b style="white-space:normal;word-break:break-word">' + esc(r.text).replace(/\n/g, '<br>') + '</b><br>' +
+      'Кому: ' + esc(r.dir && DIRS[r.dir] ? DIRS[r.dir].t : 'всем продавцам') + ' · до ' + esc(ntWhen(r.until)) + '<br>' +
+      'Увидели <b>' + r.seen + ' из ' + r.total + '</b>' + (r.modal ? ' · Подтвердили (нажали «Зрозуміло») <b>' + r.acked + '</b>' : '') + '</div>';
+    if (r.missing.length) {
+      h += section('Не видели (' + r.missing.length + ')', '<div class="card">' + r.missing.map(function (s) {
+        return item(s.label, (s.code ? '№ ' + esc(s.code) : '') + (s.route ? (s.code ? ' · ' : '') + 'маршрут ' + esc(s.route) : ''), '', '');
+      }).join('') + '</div>');
+    } else {
+      h += '<div class="ok" style="margin-top:14px">Все магазины увидели сообщение.</div>';
+    }
+    if (r.seenList.length) {
+      h += section('Видели (' + r.seenList.length + ')', '<div class="card">' + r.seenList.map(function (s) {
+        return item(s.label, 'открыли в ' + esc(s.seenAt), r.modal ? (s.acked ? '<span style="color:#166B3A;font-weight:600">подтвердили</span>' : '<span style="opacity:.55">не нажали</span>') : '', '');
+      }).join('') + '</div>');
+    }
+    h += '<div class="s" style="margin:16px 4px 0;line-height:1.5">Магазин считается «увидевшим», когда на любом его телефоне открыли приложение, пока сообщение действует. ' +
+      'У тех, кто в «Не видели», приложение, скорее всего, сегодня не открывали, баннер до них не дошёл: стоит позвонить. Обновить цифры — кнопкой ↻ вверху.</div>';
+    view('<div style="grid-column:1/-1;max-width:720px">' + h + '</div>');
+  }).catch(fail);
+}
+
 // Предложение после смены / отката времени приёма (admin-deadline.html): готовый украинский текст, одно нажатие - и баннер у продавцов.
 // r - ответ setDeadline ({dir, title, deadline, from, to}) или revertDeadline ({dir, title, base, reverted}).
 function offerNotice(r) {
@@ -2639,6 +2679,7 @@ function offerNotice(r) {
 var loadBaseNt_ = load;
 load = function () {
   if (S.screen === 'notice') return loadNotices();
+  if (S.screen === 'noticewho') return loadNoticeWho();
   return loadBaseNt_();
 };
 </script>
