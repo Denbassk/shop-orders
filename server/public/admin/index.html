@@ -1684,6 +1684,31 @@ input:focus{border-color:var(--teal)}
   hdr.insertBefore(b, btns[btns.length - 1]);
 })();
 </script>
+<style>
+/* adm-home: «Домой» в шапке (на ноутбуке нижняя панель - «таблетка» внизу по центру, далеко от курсора) */
+.homebtn{width:auto;padding:0 16px;gap:8px;font-size:14px;font-weight:700;white-space:nowrap;transition:background .15s,transform .15s}
+.homebtn:hover{background:#3A3E47;transform:translateY(-2px)}
+.homebtn.on{opacity:.5;cursor:default;transform:none}
+.homebtn.on:hover{background:#2C2F36}
+@media (max-width:640px){.homebtn{display:none}}
+</style>
+<script>
+/* adm-home */
+(function () {
+  var hdr = document.querySelector('.hdr'); if (!hdr) return;
+  var b = document.createElement('button');
+  b.className = 'icobtn homebtn'; b.type = 'button';
+  b.setAttribute('aria-label', 'Домой'); b.setAttribute('title', 'На главную - «Сегодня»');
+  b.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>Домой';
+  b.onclick = function () { tabGo('today'); };      // как нижняя вкладка «Сегодня»: история переходов сбрасывается
+  var ref = hdr.querySelector('.thbtn');
+  if (!ref) { var btns = hdr.querySelectorAll('.icobtn'); ref = btns[btns.length - 1]; }
+  hdr.insertBefore(b, ref);
+  // на самом экране «Сегодня» кнопка приглушена: уже дома. Тот же хук, что красит нижние вкладки
+  var orig = window.tabs;
+  if (typeof orig === 'function') window.tabs = function (name) { var r = orig.apply(this, arguments); b.classList.toggle('on', name === 'today'); return r; };
+})();
+</script>
 
 <style>
 /* adm-tiles */
