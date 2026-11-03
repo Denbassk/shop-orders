@@ -153,22 +153,23 @@ test('noticeList: без повідомлень - без запиту до ба�
   assert.equal(st.asked.length, 0);
 });
 
-test('noticeWho: хто не бачив (за назвою uk, з номером і маршрутом), хто бачив (час за Києвом, чи підтвердив)', async () => {
+test('noticeWho: один список магазинів за адресою (uk): статус none / seen / ack, номер, маршрут, час «побачив» за Києвом', async () => {
   const { env } = pult([n1({ modal: true })], ROWS);
   const r = await A.admNoticeWho({ id: 'a' }, env);
   assert.deepEqual([r.id, r.total, r.seen, r.acked, r.modal, r.dirTitle], ['a', 3, 2, 1, true, 'Усі продавці']);
-  assert.deepEqual(r.missing, [{ id: 's3', label: 'Амосова, 5А', code: '12', route: '1' }]);
-  assert.deepEqual(r.seenList, [
-    { id: 's2', label: 'Байрона, 138/1', seenAt: '03.11 10:30', acked: false },
-    { id: 's1', label: 'Зернова, 6/5', seenAt: '03.11 10:00', acked: true },
+  assert.deepEqual(r.rows, [
+    { id: 's3', label: 'Амосова, 5А', code: '12', route: '1', status: 'none', seenAt: '' },
+    { id: 's2', label: 'Байрона, 138/1', code: '11', route: '2', status: 'seen', seenAt: '03.11 10:30' },
+    { id: 's1', label: 'Зернова, 6/5', code: '10', route: '1', status: 'ack', seenAt: '03.11 10:00' },
   ]);
+  assert.equal(r.missing, undefined); assert.equal(r.seenList, undefined);          // замість двох окремих списків - один rows
 });
 
 test('noticeWho: напрямкове - знаменник лише магазини з напрямком; невідоме/минуле повідомлення - помилка', async () => {
   const { env } = pult([n1({ id: 'b', dir: 'bread' }), n1({ id: 'old', until: '2026-11-03 09:00' })], ROWS);
   const r = await A.admNoticeWho({ id: 'b' }, env);
   assert.deepEqual([r.total, r.seen, r.dirTitle], [2, 1, DIRECTIONS.bread.title]);
-  assert.deepEqual(r.missing.map((x) => x.id), ['s3']);
+  assert.deepEqual(r.rows.map((x) => [x.id, x.status]), [['s3', 'none'], ['s1', 'seen']]);          // s2 (лише НБХЗ) і test-1 у списку нема
   await assert.rejects(A.admNoticeWho({ id: 'zzz' }, env), /Невідоме повідомлення/);
   await assert.rejects(A.admNoticeWho({ id: 'old' }, env), /Невідоме повідомлення/);
   await assert.rejects(A.admNoticeWho({}, env), /Невідоме повідомлення/);
@@ -263,7 +264,9 @@ test('відправка: «вже повідомили» живе на прис
 test('пульт: у списку «Увидели N из M», кнопка «Кто не видел», екран noticewho зі списками «Не видели / Видели»', () => {
   const html = require('../scripts/build-admin').build();
   const tail = html.slice(html.indexOf('shop-orders: сообщения продавцам'));
-  for (const s of ['function loadNoticeWho(', "call('noticeWho'", "S.screen === 'noticewho'", 'Увидели', 'Не видели', 'Подтвердили', 'Кто не видел', "go('noticewho'"]) assert.ok(tail.includes(s), s);
+  for (const s of ['function loadNoticeWho(', "call('noticeWho'", "S.screen === 'noticewho'", 'Увидели', 'Не видели', 'Подтвердили', 'Кто не видел', "go('noticewho'",
+    'function nwDraw(', 'function nwFilter(', 'Адрес, № или маршрут', 'class="atiles nwt"', 'Не видел', 'Подтвердил', 'nwbar']) assert.ok(tail.includes(s), s);
+  assert.ok(!tail.includes('seenList') && !tail.includes('r.missing'), 'клієнт бере єдиний rows');
 });
 
 test('noticeList: таблиці підтверджень нема (міграцію не застосовано) або база не відповіла - список відкривається без цифр, а не падає', async () => {
@@ -271,4 +274,12 @@ test('noticeList: таблиці підтверджень нема (міграц
   env.adm.noticeAcks = async () => { throw new Error('relation "service_notice_ack" does not exist'); };
   const r = await A.admNoticeList({}, env);
   assert.deepEqual(r.notices.map((n) => [n.id, n.total, n.seen, n.acked]), [['a', null, null, null]]);
+});
+
+test('noticeWho: адреси сортуються з числовим порядком будинків (34, 70, 106, а не 106, 34, 70)', async () => {
+  const st = ['Павлова, 106', 'Павлова, 34', 'Павлова, 70', 'Павлова, 5А'].map((label, i) => ({ id: 'p' + i, label, code: '', route: '', directions: ['bread'] }));
+  const env = { at: AT, log: () => {}, data: { stores: async () => st },
+    adm: { getSetting: async () => [n1()], setSetting: async () => {}, adminLog: async () => {}, noticeAcks: async () => [] } };
+  const r = await A.admNoticeWho({ id: 'a' }, env);
+  assert.deepEqual(r.rows.map((x) => x.label), ['Павлова, 5А', 'Павлова, 34', 'Павлова, 70', 'Павлова, 106']);
 });

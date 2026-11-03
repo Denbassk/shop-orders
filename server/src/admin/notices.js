@@ -11,7 +11,7 @@ const dm = (until) => until.slice(8, 10) + '.' + until.slice(5, 7) + ' ' + until
 
 const pad = (n) => ('0' + n).slice(-2);
 const hm = (iso) => { const k = R.kyivNow(new Date(iso)); return k.dmy.slice(0, 5) + ' ' + pad(k.hh) + ':' + pad(k.mm); };
-const byLabel = (a, b) => a.label.localeCompare(b.label, 'uk');
+const byLabel = (a, b) => a.label.localeCompare(b.label, 'uk', { numeric: true });          // адреси: «34, 70, 106», а не «106, 34, 70»
 
 // «Побачили N з M»: одним запитом по всіх діючих повідомленнях. Якщо таблиці підтверджень нема (міграція не застосована) або база не відповіла -
 // список усе одно відкривається, лише без цифр (seen/acked/total = null).
@@ -38,8 +38,12 @@ async function admNoticeWho(payload, env) {
   const [stores, acks] = await Promise.all([env.data.stores(), env.adm.noticeAcks([id])]);
   const st = N.ackStats(n, stores, acks);
   return { id, text: n.text, dir: n.dir || '', dirTitle: toOf(n), until: n.until, modal: !!n.modal, total: st.total, seen: st.seen, acked: st.acked,
-    missing: st.missing.map((s) => ({ id: s.id, label: s.label, code: s.code || '', route: s.route || '' })).sort(byLabel),
-    seenList: st.seenRows.map((r) => ({ id: r.store.id, label: r.store.label, seenAt: hm(r.ack.seen_at), acked: !!r.ack.ack_at })).sort(byLabel) };
+    // один список магазинів за адресою (uk): none - не бачив, seen - бачив, ack - натиснув «Зрозуміло»; seenAt - коли вперше побачив (Київ)
+    rows: [
+      ...st.missing.map((s) => ({ id: s.id, label: s.label, code: s.code || '', route: s.route || '', status: 'none', seenAt: '' })),
+      ...st.seenRows.map((r) => ({ id: r.store.id, label: r.store.label, code: r.store.code || '', route: r.store.route || '',
+        status: r.ack.ack_at ? 'ack' : 'seen', seenAt: hm(r.ack.seen_at) })),
+    ].sort(byLabel) };
 }
 
 // payload: { text, dir ('' | 'all' | напрямок), until ('yyyy-MM-ddTHH:MM' за Києвом), modal }

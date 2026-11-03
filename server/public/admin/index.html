@@ -2547,6 +2547,17 @@ textarea.ntin{resize:vertical;min-height:96px;line-height:1.4}
 .ntbtns{flex:none;display:flex;flex-direction:column;gap:8px}
 .ntseen{margin-top:4px;font-weight:600}
 .ntoff{flex:none;padding:8px 12px;border:1px solid var(--ln,#DCE0E5);border-radius:12px;background:var(--sf,#fff);color:var(--tx,#16181D);font:inherit;font-weight:600;cursor:pointer}
+.nwinfo .nwtxt{display:block;white-space:normal;overflow-wrap:anywhere;font-size:16px}
+.nwinfo .s{display:block;margin-top:6px}
+.nwnum{display:block;margin-top:10px}
+.nwbar{display:block;height:8px;border-radius:99px;background:var(--sf2);margin-top:8px;overflow:hidden}
+.nwbar i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.nwtools{margin-top:14px}
+.nwt .atile{cursor:default}.nwt .atile:hover{transform:none;box-shadow:none}
+.atile.seen{--st:var(--teal);background:color-mix(in srgb,var(--teal) 7%,var(--sf))}
+.atile.seen .st{color:var(--teal);background:color-mix(in srgb,var(--teal) 14%,var(--sf))}
+.nwhint{margin:16px 4px 0;line-height:1.5}
+@media (max-width:520px){.nwtools input[type=search]{max-width:none;flex-basis:100%}.nwt .tt{flex-direction:column;align-items:flex-start}}
 </style>
 <script>
 // ===== shop-orders: сообщения продавцам =====
@@ -2628,29 +2639,64 @@ function openNoticeWho(i) {
   go('noticewho', {});
 }
 
+// «Кто увидел»: ОДИН список магазинов по адресу (плитки, как «Точки сегодня»), у каждого статус: не видел / видел / подтвердил.
+// Фильтры (Все / Не видели / Видели / Подтвердили) и поиск по адресу, № или маршруту; на телефоне плитки в две колонки, на ноутбуке - сеткой.
+var NW = { r: null, f: 'all', q: '' };
+
 function loadNoticeWho() {
   setHead('Кто увидел', 'сообщение продавцам');
   spin();
   call('noticeWho', { id: NT.who }).then(function (r) {
-    var h = '<div class="info"><b style="white-space:normal;word-break:break-word">' + esc(r.text).replace(/\n/g, '<br>') + '</b><br>' +
-      'Кому: ' + esc(r.dir && DIRS[r.dir] ? DIRS[r.dir].t : 'всем продавцам') + ' · до ' + esc(ntWhen(r.until)) + '<br>' +
-      'Увидели <b>' + r.seen + ' из ' + r.total + '</b>' + (r.modal ? ' · Подтвердили (нажали «Зрозуміло») <b>' + r.acked + '</b>' : '') + '</div>';
-    if (r.missing.length) {
-      h += section('Не видели (' + r.missing.length + ')', '<div class="card">' + r.missing.map(function (s) {
-        return item(s.label, (s.code ? '№ ' + esc(s.code) : '') + (s.route ? (s.code ? ' · ' : '') + 'маршрут ' + esc(s.route) : ''), '', '');
-      }).join('') + '</div>');
-    } else {
-      h += '<div class="ok" style="margin-top:14px">Все магазины увидели сообщение.</div>';
-    }
-    if (r.seenList.length) {
-      h += section('Видели (' + r.seenList.length + ')', '<div class="card">' + r.seenList.map(function (s) {
-        return item(s.label, 'открыли в ' + esc(s.seenAt), r.modal ? (s.acked ? '<span style="color:#166B3A;font-weight:600">подтвердили</span>' : '<span style="opacity:.55">не нажали</span>') : '', '');
-      }).join('') + '</div>');
-    }
-    h += '<div class="s" style="margin:16px 4px 0;line-height:1.5">Магазин считается «увидевшим», когда на любом его телефоне открыли приложение, пока сообщение действует. ' +
-      'У тех, кто в «Не видели», приложение, скорее всего, сегодня не открывали, баннер до них не дошёл: стоит позвонить. Обновить цифры — кнопкой ↻ вверху.</div>';
-    view('<div style="grid-column:1/-1;max-width:720px">' + h + '</div>');
+    var same = NW.r && NW.r.id === r.id;                       // обновление ↻ того же сообщения не сбрасывает фильтр и поиск
+    NW = { r: r, f: same ? NW.f : 'all', q: same ? NW.q : '' };
+    nwDraw();
   }).catch(fail);
+}
+
+function nwDraw() {
+  var r = NW.r, pct = r.total ? Math.round(r.seen / r.total * 100) : 0;
+  var h = '<div class="info nwinfo"><b class="nwtxt">' + esc(r.text).replace(/\n/g, '<br>') + '</b>' +
+    '<span class="s">Кому: ' + esc(r.dir && DIRS[r.dir] ? DIRS[r.dir].t : 'всем продавцам') + ' · до ' + esc(ntWhen(r.until)) + '</span>' +
+    '<span class="nwnum">Увидели <b>' + r.seen + ' из ' + r.total + '</b>' + (r.modal ? ' · Подтвердили (нажали «Зрозуміло») <b>' + r.acked + '</b>' : '') + '</span>' +
+    '<span class="nwbar"><i style="width:' + pct + '%"></i></span></div>';
+  h += '<div class="atools nwtools"><input type="search" id="nw_q" class="atq" placeholder="Адрес, № или маршрут" value="' + attr(NW.q) + '">' +
+    '<span id="nw_chips" style="display:contents"></span></div>';
+  h += '<div id="nw_list"></div>';
+  h += '<div class="s nwhint">Магазин считается «увидевшим», когда на любом его телефоне открыли приложение, пока сообщение действует. ' +
+    'У кого «Не видел» — приложение, скорее всего, не открывали: стоит позвонить. Обновить цифры — кнопкой ↻ вверху.</div>';
+  view('<div style="grid-column:1/-1">' + h + '</div>');
+  var q = document.getElementById('nw_q');
+  q.addEventListener('input', function () { NW.q = q.value; nwFill(); });
+  nwFill();
+}
+
+function nwFilter(f) { NW.f = f; nwFill(); }
+
+function nwTile(x, modal) {
+  var cls = x.status === 'none' ? 'wait' : (x.status === 'ack' || !modal ? 'done' : 'seen');
+  var st = x.status === 'none' ? 'Не видел' : (x.status === 'ack' ? 'Подтвердил ✓' : 'Видел');
+  var meta = (x.code ? '№ ' + esc(x.code) : '') + (x.route ? (x.code ? ' · ' : '') + 'маршрут ' + esc(x.route) : '');
+  return '<div class="atile ' + cls + '"><div class="tt"><span class="nm">' + esc(x.label) + '</span><span class="st">' + st + '</span></div>' +
+    (meta ? '<span class="mt">' + meta + '</span>' : '') + (x.seenAt ? '<span class="mt">открыли ' + esc(x.seenAt) + '</span>' : '') + '</div>';
+}
+
+function nwFill() {
+  var r = NW.r, rows = r.rows, q = NW.q.trim().toLowerCase();
+  var c = { all: rows.length, none: 0, seen: 0, ack: 0 };
+  rows.forEach(function (x) { if (x.status === 'none') c.none++; else c.seen++; if (x.status === 'ack') c.ack++; });
+  var defs = [['all', 'Все'], ['none', 'Не видели'], ['seen', 'Видели']].concat(r.modal ? [['ack', 'Подтвердили']] : []);
+  document.getElementById('nw_chips').innerHTML = defs.map(function (d) {
+    return '<button type="button" class="achip' + (NW.f === d[0] ? ' on' : '') + '" onclick="nwFilter(\'' + d[0] + '\')">' + d[1] + '<i>' + c[d[0]] + '</i></button>';
+  }).join('');
+  var list = rows.filter(function (x) {
+    if (NW.f === 'none' && x.status !== 'none') return false;
+    if (NW.f === 'seen' && x.status === 'none') return false;
+    if (NW.f === 'ack' && x.status !== 'ack') return false;
+    return !q || (x.label + ' ' + x.code + ' ' + x.route).toLowerCase().indexOf(q) >= 0;
+  });
+  document.getElementById('nw_list').innerHTML = !list.length
+    ? '<div class="' + (NW.f === 'none' && !q ? 'ok' : 'note') + '">' + (NW.f === 'none' && !q ? 'Все магазины увидели сообщение.' : 'Ничего не найдено') + '</div>'
+    : '<div class="atiles nwt">' + list.map(function (x) { return nwTile(x, r.modal); }).join('') + '</div>';
 }
 
 // Предложение после смены / отката времени приёма (admin-deadline.html): готовый украинский текст, одно нажатие - и баннер у продавцов.
