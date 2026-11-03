@@ -87,6 +87,17 @@ function build() {
   // 3б. зміна відправленого замовлення: заміна замість добавок
   html = applyChangeOrder(html);
 
+  // 3в. тимчасова зміна дедлайну з пульту: refresh віддає ефективні дедлайни - відкритий екран бере їх без перезавантаження
+  //     (нагадування «до дедлайну 60/30 хв» і текст «закрито (до …)» рахуються з S.boot.directions[k].deadline / S.prod.deadline)
+  html = patch(html, "      if (S.boot.directions[k]) S.boot.directions[k].closed = d.closed[k];\n    });\n",
+    "      if (S.boot.directions[k]) S.boot.directions[k].closed = d.closed[k];\n    });\n" +
+    "    if (d.deadlines){\n" +
+    "      Object.keys(d.deadlines).forEach(function(k){\n" +
+    "        if (S.boot.directions[k]) S.boot.directions[k].deadline = d.deadlines[k];\n" +
+    "      });\n" +
+    "      if (S.prod && d.deadlines[S.prod.dir]) S.prod.deadline = d.deadlines[S.prod.dir];\n" +
+    "    }\n");
+
   // 4. голова сторінки: назва, viewport без масштабування, іконка (HtmlService додавав їх у doGet)
   html = html.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<title>Замовлення Фемелі Маркет</title>\n' +
     '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">\n' +

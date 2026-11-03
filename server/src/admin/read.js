@@ -63,6 +63,7 @@ async function admToday(env) {
     });
     dirs.push({
       key: k, title: cfg.title, color: cfg.color, deadline: cfg.deadline || '',
+      baseDeadline: R.baseDeadlineOf(cfg), deadlineOverride: cfg.deadlineOverride || null,
       closed: R.deadlinePassed(k, undefined, ctx), openedAll: R.lateAllowed(k, ctx), enabled: R.dirEnabled(k, settings),
       total, ordered, waiting: waiting.slice(0, 40),
       all, offDay, byDays: !!cfg.orderDays,
@@ -71,7 +72,7 @@ async function admToday(env) {
       minLeft: cfg.deadline ? deadlineLeftMin(cfg.deadline, n) : null,
     });
   }
-  return { today: n.dmy, time: pad(n.hh) + ':' + pad(n.mm), dow: DAY_RU_FULL[n.dow], dirs };
+  return { today: n.dmy, day: n.day, time: pad(n.hh) + ':' + pad(n.mm), dow: DAY_RU_FULL[n.dow], dirs };
 }
 
 // графік по всіх точках: кому що і коли доступно

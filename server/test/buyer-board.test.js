@@ -5,7 +5,8 @@ const path = require('node:path');
 const B = require('../src/buyer/api');
 const h = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
 test('info: правила прийому', async () => {
-  const env = { at: new Date('2026-10-22T10:00:00+03:00'), adm: { getSetting: async () => ({}) } };
+  const env = { at: new Date('2026-10-22T10:00:00+03:00'), adm: { getSetting: async () => ({}) },
+    data: { directions: async () => require('../src/directions').DIRECTIONS } };
   const r = await B.buyerInfo('bread', env);
   assert.equal(r.rules.minOrder, 400);
   assert.equal(r.rules.byDays, false);

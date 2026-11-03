@@ -20,6 +20,7 @@ const minOf = (s) => { const [h, m] = String(s).split(':').map(Number); return h
 async function admHealth(env) {
   const at = env.at, day = R.kyivNow(at).day, now = minOf(hmOf(at)), todayDM = dmOf(at);
   const settings = (await env.data.settings()) || {};
+  const effDirs = await env.data.directions();                 // дедлайн - ефективний (тимчасова зміна з пульту)
   let status = null, ats = {};
   try { status = await env.data.orderedToday(day); } catch (e) { status = null; }
   try { ats = (await env.adm.reportAts()) || {}; } catch (e) { ats = {}; }
@@ -28,7 +29,7 @@ async function admHealth(env) {
   const bump = (lv) => { if (rank[lv] > rank[worst]) worst = lv; if (rank[lv] > 0) problems++; };
 
   const dirs = Object.keys(DIRECTIONS).map((k) => {
-    const cfg = DIRECTIONS[k];
+    const cfg = effDirs[k] || DIRECTIONS[k];
     const d = ats[k] ? new Date(ats[k]) : null;
     const rep = d && !isNaN(d) && R.kyivNow(d).day === day ? hmOf(d) : '';
     const ordered = status ? (status[k] ? status[k].size : 0) : -1;

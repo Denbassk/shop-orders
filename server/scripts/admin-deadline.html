@@ -1,0 +1,127 @@
+<!-- Экран «Время приёма» (направление -> Управление приёмом): временно сдвинуть дедлайн приёма заказов на сегодня или на период дат,
+     вернуть «как в Довіднике» одной кнопкой. Дедлайн в базе не меняется (settings.deadline_override, действия setDeadline / revertDeadline);
+     после последнего дня периода время возвращается само. Вставляется в конец страницы скриптом build-admin.js после admin-card.html;
+     app/ui не меняется (пункт меню и шапку направления вставляет build-admin.js). Тексты - по-русски, как весь пульт. -->
+<style>
+.dlin{width:100%;padding:16px;border:1px solid var(--ln,#DCE0E5);border-radius:16px;background:var(--sf,#fff);color:var(--tx,#16181D);font:inherit;font-size:18px;box-sizing:border-box}
+.dlin:focus{border-color:var(--tx,#16181D);outline:none}
+.dlrow{display:flex;gap:12px}
+.dlrow > div{flex:1;min-width:0}
+@media(max-width:480px){.dlrow{flex-direction:column !important}}
+.dltmp{color:#B26A00;font-weight:600}
+</style>
+<script>
+// ===== shop-orders: время приёма =====
+var DL = { dir: '', today: '', time: '', mode: 'today', x: null };
+
+function dlRu(d) { return d ? d.slice(8, 10) + '.' + d.slice(5, 7) : ''; }
+function dlPeriod(o) { return o.from === o.to ? dlRu(o.from) : dlRu(o.from) + ' – ' + dlRu(o.to); }
+
+// шапка направления: действующее время и, если оно временное, прописанное в Довіднике
+function dlInfoHtml(x) {
+  var o = x.deadlineOverride;
+  if (o && o.active) return 'Дедлайн <b>' + esc(x.deadline || '—') + '</b> <span class="dltmp">(временно, в Довіднике ' + esc(x.baseDeadline || '—') + ')</span>';
+  return 'Дедлайн <b>' + esc(x.deadline || '—') + '</b>';
+}
+function dlSub(x) {
+  var o = x.deadlineOverride;
+  if (o && o.active) return 'сейчас до ' + esc(x.deadline) + ' — временно (' + esc(dlPeriod(o)) + '), в Довіднике ' + esc(x.baseDeadline || '—');
+  if (o) return 'запланировано: до ' + esc(o.deadline) + ' на ' + esc(dlPeriod(o));
+  return 'сейчас до ' + esc(x.deadline || '—') + ' — можно сдвинуть на день или период';
+}
+
+function dlStatus(x, now) {
+  var o = x.deadlineOverride, base = esc(x.baseDeadline || '—');
+  if (o && o.active)
+    return 'Сейчас приём до <b>' + esc(x.deadline) + '</b> — это <b>временно</b> (' + esc(dlPeriod(o)) + '). ' +
+      'В Довіднике: <b>' + base + '</b>. После последнего дня время вернётся само, либо нажмите «Вернуть как в Довіднике».';
+  if (o)
+    return 'Сейчас приём до <b>' + base + '</b>. Запланировано: до <b>' + esc(o.deadline) + '</b> на ' + esc(dlPeriod(o)) + '.';
+  return 'Сейчас приём до <b>' + base + '</b> — как прописано в Довіднике. Изменений нет. Сейчас ' + esc(now) + '.';
+}
+
+function loadDeadline(k) {
+  var m = DIRS[k];
+  setHead('Время приёма', m.t);
+  spin();
+  call('today').then(function (d) {
+    var x = null;
+    d.dirs.forEach(function (y) { if (y.key === k) x = y; });
+    if (!x) return fail(new Error('Направление не найдено'));
+    var o = x.deadlineOverride;
+    DL = { dir: k, today: d.day, time: d.time, x: x, mode: (o && o.from !== o.to) ? 'range' : 'today' };
+
+    var h = '<div class="info">' + dlStatus(x, d.time) + '</div>';
+    h += section('Новое время приёма',
+      '<div class="card" style="padding:16px">' +
+        '<div class="s" style="margin:0 4px 8px">Приём закрывается в</div>' +
+        '<input type="time" id="dl_time" class="dlin" step="60" value="' + attr(o ? o.deadline : (x.deadline || '')) + '">' +
+        '<div class="s" style="margin:18px 4px 10px">Когда действует</div>' +
+        '<div class="chips" id="dl_mode" style="margin:0">' +
+          '<button type="button" class="chip" data-m="today" onclick="dlMode(\'today\')">Только сегодня</button>' +
+          '<button type="button" class="chip" data-m="range" onclick="dlMode(\'range\')">По датам</button>' +
+        '</div>' +
+        '<div id="dl_range" class="dlrow" style="display:none;margin-top:14px">' +
+          '<div><div class="s" style="margin:0 4px 8px">С</div><input type="date" id="dl_from" class="dlin" min="' + attr(d.day) + '" value="' + attr(o ? o.from : d.day) + '"></div>' +
+          '<div><div class="s" style="margin:0 4px 8px">По (включительно)</div><input type="date" id="dl_to" class="dlin" min="' + attr(d.day) + '" value="' + attr(o ? o.to : d.day) + '"></div>' +
+        '</div>' +
+      '</div>');
+    h += '<button class="btn" onclick="askDeadlineApply()">Применить</button>';
+    if (o) h += '<button class="btn ghost" onclick="askDeadlineRevert()">Вернуть как в Довіднике</button>';
+    h += '<div class="s" style="margin:16px 4px 0;line-height:1.5">Время в Довіднике не меняется. Продавцы увидят новое время в течение минуты, ' +
+      'закупщица — сразу. Каждое изменение попадает в журнал.</div>';
+    view(h);
+    dlMode(DL.mode);
+  }).catch(fail);
+}
+
+function dlMode(m) {
+  DL.mode = m;
+  var chips = document.querySelectorAll('#dl_mode .chip');
+  for (var i = 0; i < chips.length; i++) chips[i].className = 'chip' + (chips[i].getAttribute('data-m') === m ? ' on' : '');
+  var r = document.getElementById('dl_range');
+  if (r) r.style.display = m === 'range' ? 'flex' : 'none';
+}
+
+function askDeadlineApply() {
+  var k = DL.dir, m = DIRS[k], x = DL.x;
+  var t = (document.getElementById('dl_time') || {}).value || '';
+  if (!/^\d{2}:\d{2}$/.test(t)) return toast('Укажите время');
+  var from = DL.today, to = DL.today;
+  if (DL.mode === 'range') {
+    from = (document.getElementById('dl_from') || {}).value || '';
+    to = (document.getElementById('dl_to') || {}).value || '';
+    if (!from || !to) return toast('Укажите обе даты');
+    if (to < from) return toast('Дата «по» раньше даты «с»');
+    if (to < DL.today) return toast('Этот период уже прошёл');
+    if (from < DL.today) from = DL.today;
+  }
+  var period = from === to ? (from === DL.today ? 'Только сегодня (' + dlRu(from) + ')' : 'Только ' + dlRu(from)) : 'С ' + dlRu(from) + ' по ' + dlRu(to) + ' включительно';
+  var what = ['Приём «' + m.t + '» будет закрываться в ' + t + ' вместо ' + (x.baseDeadline || '—'), period];
+  if (from <= DL.today && t <= DL.time) what.push('Сейчас уже ' + DL.time + ' — приём закроется сразу после применения');
+  what.push('В Довіднике время не меняется; после последнего дня вернётся само', 'Действие попадёт в журнал');
+  confirmSheet({
+    title: 'Изменить время приёма?', sub: m.t, what: what, yes: 'Применить',
+    run: function () { return call('setDeadline', { dir: k, deadline: t, from: from, to: to }); },
+    done: function (r) { toast('Приём ' + m.short + ' теперь до ' + r.deadline + (r.active ? '' : ' (с ' + dlRu(r.from) + ')')); apply('dir', { dir: k }); }
+  });
+}
+
+function askDeadlineRevert() {
+  var k = DL.dir, m = DIRS[k], x = DL.x;
+  confirmSheet({
+    title: 'Вернуть как в Довіднике?', sub: m.t,
+    what: ['Приём снова закрывается в ' + (x.baseDeadline || '—'), 'Принятые заказы остаются на месте', 'Действие попадёт в журнал'],
+    yes: 'Вернуть',
+    run: function () { return call('revertDeadline', { dir: k }); },
+    done: function () { toast('Время приёма: как в Довіднике'); apply('dir', { dir: k }); }
+  });
+}
+
+// экран deadline - в общий диспетчер load() из app/ui/AdminJs.html
+var loadBaseDl_ = load;
+load = function () {
+  if (S.screen === 'deadline') return loadDeadline(S.dir);
+  return loadBaseDl_();
+};
+</script>

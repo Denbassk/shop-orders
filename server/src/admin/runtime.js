@@ -24,7 +24,8 @@ function createAdminRuntime(opts = {}) {
   const adm = createAdminData(sb);
   adm.dayLate = require('../buyer/data').dayLateOf(sb);   // запити дозволу за день - сторінка закупниці
   // пульт читає налаштування без 10-секундного кешу: після перемикання екран одразу показує новий стан
-  const dataFresh = { ...data, settings: () => createData(sb).settings(), stores: () => createData(sb).stores() };
+  const dataFresh = { ...data, settings: () => createData(sb).settings(), stores: () => createData(sb).stores(),
+    directions: () => createData(sb).directions() };
   const roles = ['admin', ...Object.keys(DIRECTIONS).map((d) => 'buyer:' + d)];
   const hashes = Object.fromEntries(roles.map((r) => [r, process.env[hashEnvName(r)] || '']).filter(([, h]) => h));
   const auth = createAuth({ secret: process.env.ADMIN_JWT_SECRET || '', hashes, fails: createSbFails(sb) });
@@ -60,6 +61,8 @@ function createAdminRuntime(opts = {}) {
     openStore: (p) => write.admOpenStore(p, env()),
     openAll: (p) => write.admOpenAll(p, env()),
     closeAll: (p) => write.admCloseAll(p, env()),
+    setDeadline: (p) => write.admSetDeadline(p, env()),
+    revertDeadline: (p) => write.admRevertDeadline(p, env()),
     setDirEnabled: (p) => write.admSetDirEnabled(p, env()),
     editOrder: (p) => write.admEditOrder(p, env()),
     batch: (p) => write.admBatch(p, (a, q) => api(a, q)),

@@ -167,7 +167,8 @@ async function buyerLate(dir, env) {
 async function buyerInfo(dir, env) {
   const cfg = cfgOf(dir);
   const lateAll = (await env.adm.getSetting('late_all')) || {};
-  const deadline = cfg.deadline || '';
+  const eff = (await env.data.directions())[dir] || cfg;     // ефективний дедлайн (тимчасова зміна з пульту), а не статичний
+  const deadline = eff.deadline || '';
   let reportAt = '';
   try {
     const v = env.reportAt ? await env.reportAt(dir) : '';
@@ -175,6 +176,7 @@ async function buyerInfo(dir, env) {
   } catch (e) { reportAt = ''; }
   return { dir, title: cfg.title, color: cfg.color || '', unit: cfg.unit || '', deadline,
     closed: !!deadline && HM.format(env.at) >= deadline, openAll: lateAll[dir] === dayOf(env),
+    baseDeadline: R.baseDeadlineOf(eff), deadlineTemp: eff.deadlineOverride && eff.deadlineOverride.active ? eff.deadlineOverride : null,
     lateRequest: !!cfg.lateRequest, reportAt, hasAvailability: dir === 'bakery',
     rules: { byDays: !!cfg.orderDays, dayOffText: cfg.dayOffText || '', unit: cfg.unit || '', lateMin: R.LATE_TTL_MIN,
       minOrder: (cfg.minOrderChanges && cfg.minOrderChanges.length ? cfg.minOrderChanges[cfg.minOrderChanges.length - 1].value : cfg.minOrder) || 0 } };

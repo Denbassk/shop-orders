@@ -82,7 +82,10 @@ test('refresh: усі зняті відповіді збігаються з бо
   assert.equal(fx.refresh.length, 14);
   for (const r of fx.refresh) {
     assert.ok(r.response.ok);
-    assert.deepEqual(await apiRefresh(r.payload, env()), r.response.data, JSON.stringify(r.payload));
+    // нове поле deadlines (ефективні дедлайни для відкритих екранів продавців) - у бойовій відповіді його не було
+    const { deadlines, ...got } = await apiRefresh(r.payload, env());
+    assert.deepEqual(got, r.response.data, JSON.stringify(r.payload));
+    assert.deepEqual(Object.keys(deadlines), Object.keys(r.response.data.closed));
   }
 });
 

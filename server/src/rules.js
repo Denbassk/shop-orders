@@ -96,6 +96,41 @@ function lateLeftMin(dirKey, storeId, ctx) {
   return ms > 0 ? Math.ceil(ms / 60000) : 0;
 }
 
+// --- Тимчасова зміна дедлайну (пульт) ---
+// settings.deadline_override = { <dir>: { deadline: 'HH:MM', from: 'yyyy-MM-dd', to: 'yyyy-MM-dd', at: ISO } }.
+// Базове cfg.deadline (БД, directions.cfg) не чіпаємо. Діє, поки сьогодні (Київ) у [from, to]; після to запис ігнорується,
+// тож автоповернення не потребує ні cron, ні прибирання. Відкат = видалення запису (admin/write.js).
+const HM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const isHM = (s) => HM_RE.test(String(s || ''));
+const isDay = (s) => DAY_RE.test(String(s || '')) && !isNaN(new Date(s + 'T00:00:00Z').getTime());
+
+// 'active' (сьогодні в діапазоні) | 'scheduled' (діапазон попереду) | 'expired' (минув) | 'bad' (запис пошкоджений)
+function deadlineOverrideState(ov, today) {
+  if (!ov || !isHM(ov.deadline) || !isDay(ov.from) || !isDay(ov.to) || ov.to < ov.from) return 'bad';
+  if (today > ov.to) return 'expired';
+  return today >= ov.from ? 'active' : 'scheduled';
+}
+
+// ЄДИНЕ місце, де дедлайн напрямку стає ефективним: { dir: cfg } -> { dir: cfg' }, де cfg'.deadline - те, що діє зараз.
+// baseDeadline - прописаний у БД; deadlineOverride - { deadline, from, to, active, at } (активний або запланований).
+// Усі читачі cfg.deadline (продавець, закупниця, пульт, листи, здоров'я) беруть напрямки через data.directions(), що викликає це.
+function withDeadlineOverrides(directions, overrides, at) {
+  if (!overrides || typeof overrides !== 'object') return directions;
+  const today = kyivNow(at).day;
+  let out = directions;
+  Object.keys(overrides).forEach((k) => {
+    const cfg = directions[k], ov = overrides[k], st = deadlineOverrideState(ov, today);
+    if (!cfg || st === 'bad' || st === 'expired') return;
+    if (out === directions) out = { ...directions };
+    out[k] = { ...cfg, deadline: st === 'active' ? ov.deadline : cfg.deadline, baseDeadline: cfg.deadline,
+      deadlineOverride: { deadline: ov.deadline, from: ov.from, to: ov.to, active: st === 'active', at: ov.at || '' } };
+  });
+  return out;
+}
+
+const baseDeadlineOf = (cfg) => (cfg.baseDeadline !== undefined ? cfg.baseDeadline : cfg.deadline) || '';
+
 function deadlinePassed(dirKey, storeId, ctx) {
   const cfg = dirCfg(dirKey, ctx);
   if (!cfg.deadline) return false;
@@ -245,6 +280,7 @@ module.exports = {
   LATE_OVERRIDES_DAY, LATE_TTL_MIN, LATE_Q_TTL_MIN, DAY_KEYS, DAY_FULL,
   kyivNow, dirCfg, disabledDirections, dirEnabled,
   lateAllowed, lateStatus, lateLeftMin, deadlinePassed, windowOpen,
+  isHM, isDay, deadlineOverrideState, withDeadlineOverrides, baseDeadlineOf,
   parseDays, todayDow, storeDays, dayAllowed, dayNamesOf, dayOffText,
   dmyToDay, minOrderOf,
   shortenAddress, addrKey, canonKey, statusKey,

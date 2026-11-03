@@ -15,7 +15,8 @@ const byKey = (r) => Object.fromEntries(r.dirs.map((d) => [d.key, d]));
 function mkEnv(o = {}) {
   const st = { log: [], set: o.set || {} };
   const env = { at: AT, log: () => {},
-    data: { settings: async () => ({ ...(o.noTick ? {} : { last_tick: new Date(AT.getTime() - 3 * 60000).toISOString() }), ...(o.settings || { app_version: 'v1' }) }),
+    data: { directions: async () => o.directions || DIRECTIONS,
+      settings: async () => ({ ...(o.noTick ? {} : { last_tick: new Date(AT.getTime() - 3 * 60000).toISOString() }), ...(o.settings || { app_version: 'v1' }) }),
       orderedToday: async (d) => { st.day = d; if (o.failOrders) throw new Error('x'); return o.ordered || {}; } },
     adm: { reportAts: async () => o.ats || {}, adminLog: async (a, d) => { st.log.push([a, d]); },
       getSetting: async (k) => { if (o.failGet) throw new Error('db'); return k in st.set ? st.set[k] : null; },
@@ -60,6 +61,16 @@ test('health: звіт старший за HEALTH_STALE_MIN до дедлайн�
   assert.equal(d.bread.level, 'warn');
   assert.equal(d.bread.text, 'Отчёт собран ' + (S + 5) + ' мин назад, в ' + hm(old) + ' · заказали 1');
   assert.deepEqual([d.nbhz.level, d.nbhz.text], ['ok', 'Отчёт в ' + hm(fresh) + ' · заказали 1']);
+});
+
+test('health: «звіт застарів» рахується від ефективного (тимчасового) дедлайну', async () => {
+  const old = new Date(AT - (S + 5) * 60000);
+  const R = require('../src/rules');
+  const ordered = { bread: new Set(['s1']) }, ats = { bread: old.toISOString() };
+  // тепер 10:00; прописано 16:00 -> вікно перевірки до 17:00 -> warn; тимчасово 08:00 -> вікно до 09:00 вже минуло -> ok
+  assert.equal(byKey(await T.admHealth(mkEnv({ ordered, ats }).env)).bread.level, 'warn');
+  const directions = R.withDeadlineOverrides(DIRECTIONS, { bread: { deadline: '08:00', from: DAY, to: DAY } }, AT);
+  assert.equal(byKey(await T.admHealth(mkEnv({ ordered, ats, directions }).env)).bread.level, 'ok');
 });
 
 test('health: вимкнений напрямок -> off, не проблема', async () => {

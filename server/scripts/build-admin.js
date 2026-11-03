@@ -97,6 +97,17 @@ function build() {
   html = html.replace(/Продавцам доступно <b>/, () => 'Продавцам доступен весь ассортимент: <b>')
     .replace(noCostRe, (_, mid) => "товаров. '" + mid + "'Без себестоимости (в списаниях идут с суммой 0): '")
     .replace(noCostEndRe, () => 'Впишите себестоимость в лист «Ассортимент» (колонка «Себестоимость») — суммы пойдут со следующих списаний.');
+  // «Время приёма» (временный дедлайн, scripts/admin-deadline.html): пункт меню направления, шапка направления, пометка на «Сегодня»
+  const once = (from, to) => {
+    const n = html.split(from).length - 1;
+    if (n !== 1) throw new Error('Правка «Время приёма»: місце знайдено ' + n + ' раз (очікується 1): ' + from.slice(0, 60));
+    html = html.replace(from, () => to);
+  };
+  once("'Дедлайн <b>' + esc(x.deadline || '—') + '</b>, сейчас '", "dlInfoHtml(x) + ', сейчас '");
+  once("item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\\'restore\\',{dir:\\'' + k + '\\'})') +",
+    "item('Время приёма', dlSub(x), '', 'go(\\'deadline\\',{dir:\\'' + k + '\\'})') +\n      item('Проверить бэкап', 'сравнить с рабочим листом', '', 'go(\\'restore\\',{dir:\\'' + k + '\\'})') +");
+  once("'<span class=\"s\" style=\"display:block\">до ' + esc(x.deadline || '—') +",
+    "'<span class=\"s\" style=\"display:block\">до ' + esc(x.deadline || '—') + (x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '') +");
   let out = html.replace(/<\/body>/i, () => SHIM + '</body>');
   // тема пульта (темна/світла, ширина ноутбука) - з scripts/admin-theme.html
   const TH = path.join(__dirname, 'admin-theme.html');
@@ -120,6 +131,13 @@ function build() {
     const i = out.lastIndexOf('</body>');
     const cdHtml = fs.readFileSync(CD, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
     out = out.slice(0, i) + cdHtml + '\n' + out.slice(i);
+  }
+  // экран «Время приёма» - scripts/admin-deadline.html (после admin-card.html: подменяет load())
+  const DL = path.join(__dirname, 'admin-deadline.html');
+  if (fs.existsSync(DL)) {
+    const i = out.lastIndexOf('</body>');
+    const dlHtml = fs.readFileSync(DL, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
+    out = out.slice(0, i) + dlHtml + '\n' + out.slice(i);
   }
   return out;
 }

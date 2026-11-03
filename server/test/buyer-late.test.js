@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { DIRECTIONS } = require('../src/directions');
 const people = require('../src/buyer/people');
 const api = require('../src/buyer/api');
 const { createXlsx } = require('../src/buyer/xlsx');
@@ -41,7 +42,7 @@ test('late: запити дозволу за сьогодні замість л�
 });
 
 test('info: дедлайн, закрито за розкладом, прийом усім сьогодні, час звіту', async () => {
-  const mk = (at, lateAll) => ({ at, adm: { getSetting: async (k) => (k === 'late_all' ? lateAll : null) }, reportAt: async () => '09:41' });
+  const mk = (at, lateAll) => ({ at, data: { directions: async () => DIRECTIONS }, adm: { getSetting: async (k) => (k === 'late_all' ? lateAll : null) }, reportAt: async () => '09:41' });
   let r = await api.buyerInfo('bakery', mk(AT, { bakery: DAY }));
   assert.equal(r.deadline, '13:00');
   assert.equal(r.closed, false);

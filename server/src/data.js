@@ -30,13 +30,20 @@ function createData(sb, { now = Date.now } = {}) {
     return Object.fromEntries(rows.map((r) => [r.key, r.value]));
   }, 10000, now);
 
-  const directions = memo(async () => {
+  const directionsBase = memo(async () => {
     const rows = must('directions', await sb.from('directions').select('dir,cfg'));
     const byDir = Object.fromEntries(rows.map((r) => [r.dir, r.cfg]));
     const out = {};
     Object.keys(DIRECTIONS).concat(Object.keys(byDir)).forEach((k) => { if (byDir[k]) out[k] = byDir[k]; });   // порядок: bread, nbhz, bakery, veg
     return out;
   }, 30000, now);
+
+  // База кешується на 30 с, а тимчасовий дедлайн (settings.deadline_override) накладається при кожному виклику:
+  // перехід через північ і кінець діапазону не чекають кешу.
+  const directions = async () => {
+    const [base, s] = await Promise.all([directionsBase(), settings()]);
+    return R.withDeadlineOverrides(base, s.deadline_override, new Date(now()));
+  };
 
   const productsMemo = {};
   const products = (dir) => {

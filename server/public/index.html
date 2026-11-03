@@ -613,6 +613,12 @@ function beat(){
     Object.keys(d.closed).forEach(function(k){
       if (S.boot.directions[k]) S.boot.directions[k].closed = d.closed[k];
     });
+    if (d.deadlines){
+      Object.keys(d.deadlines).forEach(function(k){
+        if (S.boot.directions[k]) S.boot.directions[k].deadline = d.deadlines[k];
+      });
+      if (S.prod && d.deadlines[S.prod.dir]) S.prod.deadline = d.deadlines[S.prod.dir];
+    }
 
     if (S.screen==='store' && document.activeElement !== el('q')) screenStore();
     else if (S.screen==='dir') openStore(S.store);

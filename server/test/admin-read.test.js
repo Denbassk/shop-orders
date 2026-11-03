@@ -38,7 +38,7 @@ test('today: лічильники, waiting, minLeft, дата/час/день; �
   const r = await admToday(env());
   assert.equal(r.today, '20.10.2026'); assert.equal(r.time, '10:30'); assert.equal(r.dow, 'вторник');
   assert.deepEqual(r.dirs.map((d) => d.key), ['bread', 'veg']);
-  assert.deepEqual(r.dirs[0], { key: 'bread', title: 'Хліб', color: '#a52', deadline: '16:00',
+  assert.deepEqual(r.dirs[0], { key: 'bread', title: 'Хліб', color: '#a52', deadline: '16:00', baseDeadline: '16:00', deadlineOverride: null,
     closed: false, openedAll: false, enabled: true, total: 2, ordered: 1, waiting: ['Бучми, 32'],
     all: 2, offDay: 0, byDays: false, noDayToday: false, reportAt: '', minLeft: 330 });
   const v = r.dirs[1];

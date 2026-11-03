@@ -79,8 +79,12 @@ async function apiRefresh(payload, env) {
     ord[s.id] = o;
   });
 
-  const closed = {};
-  Object.keys(directions).forEach((k) => { if (!off[k]) closed[k] = R.deadlinePassed(k, undefined, ctx); });
+  const closed = {}, deadlines = {};
+  Object.keys(directions).forEach((k) => {
+    if (off[k]) return;
+    closed[k] = R.deadlinePassed(k, undefined, ctx);
+    deadlines[k] = directions[k].deadline;          // ефективний: відкритий екран продавця підхоплює тимчасову зміну без перезавантаження
+  });
 
   // стан конкретної пари "точка + напрямок", щоб телефон сам вмикав і гасив кнопку
   let late = 'none', lateLeft = 0, locked = null;
@@ -99,7 +103,7 @@ async function apiRefresh(payload, env) {
   return {
     version: settings.app_version,
     today: R.kyivNow(env.at).dmy,
-    ordered: ord, closed, late, lateLeft, locked,
+    ordered: ord, closed, deadlines, late, lateLeft, locked,
   };
 }
 

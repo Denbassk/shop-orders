@@ -62,6 +62,60 @@ async function admCloseAll(payload, env) {
   return { ok: true };
 }
 
+// Тимчасова зміна дедлайну прийому напрямку (settings.deadline_override, див. rules.withDeadlineOverrides).
+// payload: { dir, deadline 'HH:MM', from? 'yyyy-MM-dd' (за замовч. сьогодні), to? (за замовч. = from, «лише один день») }.
+// Базовий дедлайн у БД не змінюється; повернення - дата `to` минула сама або admRevertDeadline.
+const MAX_OVERRIDE_DAYS = 62;
+const dayDiff = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+const ruDay = (d) => d.slice(8, 10) + '.' + d.slice(5, 7);
+const rangeText = (from, to) => (from === to ? ruDay(from) : ruDay(from) + ' – ' + ruDay(to));
+const minOfHM = (s) => +s.slice(0, 2) * 60 + +s.slice(3);
+
+// пошкоджені й минулі записи випадають при кожному збереженні
+function liveOverrides(cur, today) {
+  const out = {};
+  Object.keys(cur && typeof cur === 'object' ? cur : {}).forEach((k) => {
+    const st = R.deadlineOverrideState(cur[k], today);
+    if (st === 'active' || st === 'scheduled') out[k] = cur[k];
+  });
+  return out;
+}
+
+async function admSetDeadline(payload, env) {
+  const dir = String(payload.dir || '');
+  const cfg = cfgOf(dir);
+  const n = R.kyivNow(env.at), today = n.day;
+  const deadline = String(payload.deadline || '').trim();
+  if (!R.isHM(deadline)) throw new Error('Вкажіть час у форматі ГГ:ХХ (наприклад 17:00)');
+  let from = payload.from ? String(payload.from) : today;
+  const to = payload.to ? String(payload.to) : from;
+  if (!R.isDay(from) || !R.isDay(to)) throw new Error('Невірна дата');
+  if (to < from) throw new Error('Дата «по» раніше дати «з»');
+  if (to < today) throw new Error('Цей період уже минув');
+  if (from < today) from = today;                          // «з» у минулому = діє від сьогодні
+  if (dayDiff(from, to) + 1 > MAX_OVERRIDE_DAYS) throw new Error('Період довший за ' + MAX_OVERRIDE_DAYS + ' днів');
+  const eff = (await env.data.directions())[dir];
+  const base = eff ? R.baseDeadlineOf(eff) : (cfg.deadline || '');
+  const v = liveOverrides(await env.adm.getSetting('deadline_override'), today);
+  v[dir] = { deadline, from, to, at: new Date(env.at).toISOString() };
+  await env.adm.setSetting('deadline_override', v);
+  await logSafe(env, 'Тимчасово змінено час прийому', cfg.title + ': ' + deadline + ' замість ' + (base || '—') + ', ' + rangeText(from, to));
+  const active = from <= today;
+  return { ok: true, dir, deadline, from, to, base, active, closedNow: active && (n.hh * 60 + n.mm) >= minOfHM(deadline) };
+}
+
+// «Відкотити»: прибирає тимчасовий дедлайн - діє той, що прописано в БД
+async function admRevertDeadline(payload, env) {
+  const dir = String(payload.dir || '');
+  const cfg = cfgOf(dir);
+  const v = liveOverrides(await env.adm.getSetting('deadline_override'), dayOf(env));
+  const had = !!v[dir];
+  delete v[dir];
+  await env.adm.setSetting('deadline_override', v);
+  if (had) await logSafe(env, 'Повернуто час прийому', cfg.title + ' - як у Довіднику');
+  return { ok: true, reverted: had };
+}
+
 // Увімкнути/вимкнути напрямок ЦІЛКОМ - зникає з меню всіх продавців. Існуючі замовлення і звіти не чіпає.
 async function admSetDirEnabled(payload, env) {
   const dir = String(payload.dir || '');
@@ -139,4 +193,4 @@ async function admBatch(payload, call) {
   return Promise.all(calls.map((c) => ((!c || !ADM_BATCH_OK[c.a]) ? { ok: false, error: 'not allowed' } : call(c.a, c.p || {}))));
 }
 
-module.exports = { STORE_NOT_FOUND, admCancelOrder, admOpenStore, admOpenAll, admCloseAll, admSetDirEnabled, admEditOrder, admBatch };
+module.exports = { STORE_NOT_FOUND, admCancelOrder, admOpenStore, admOpenAll, admCloseAll, admSetDeadline, admRevertDeadline, admSetDirEnabled, admEditOrder, admBatch };
