@@ -2382,10 +2382,18 @@ load = function () {
 .asrow .up{color:#B3261E}.asrow .dn{color:#166B3A}
 .asstop{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:#7A828E;color:#fff;font-size:11px;font-weight:700;vertical-align:2px}
 .ashead{display:flex;justify-content:space-between;padding:10px 16px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.6;border-bottom:1px solid var(--ln,#DCE0E5)}
+.asstopb{border-color:var(--warn)!important;color:var(--warn)!important}
+.astools{margin:12px 0}
+@media (max-width:520px){.astools input[type=search]{max-width:none;flex-basis:100%}}
+.asprice{margin-top:16px;border-top:1px solid var(--ln,#DCE0E5)}
+.asprice summary{cursor:pointer;font-weight:700;padding:14px 4px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.asprice summary::-webkit-details-marker{display:none}
+.asprice summary::after{content:"▾";opacity:.6;transition:transform .15s}
+.asprice[open] summary::after{transform:rotate(180deg)}
 </style>
 <script>
 // ===== shop-orders: ассортимент и цены =====
-var AS = { dir: '', d: null, q: '', sel: {}, mode: 'pct', value: '' };
+var AS = { dir: '', d: null, q: '', f: 'all', sel: {}, mode: 'pct', value: '' };
 
 function asMoney(n) { return (Math.round(Number(n) * 100) / 100).toFixed(2); }
 function asNum(s) { return Number(String(s == null ? '' : s).trim().replace(',', '.')); }
@@ -2394,47 +2402,57 @@ function asChange(mode, value) {
   return mode === 'pct' ? (v > 0 ? '+' : '') + v + '%' : (v > 0 ? '+' : '') + v + ' грн';
 }
 
-function loadAssort(k) {
+function loadAssort(k, keep) {
   var m = DIRS[k];
   setHead('Ассортимент', m.t);
   spin();
   call('assortment', { dir: k }).then(function (d) {
-    AS = { dir: k, d: d, q: '', sel: {}, mode: 'pct', value: '' };
+    AS = { dir: k, d: d, q: keep ? keep.q : '', f: keep ? keep.f : 'all', sel: {}, mode: 'pct', value: '' };
     drawAssort();
   }).catch(fail);
 }
 
+// индексы позиций после фильтра (все / активные / на стопе) и поиска
 function asFiltered() {
   var q = AS.q.trim().toLowerCase(), out = [];
   AS.d.products.forEach(function (p, i) {
+    if (AS.f === 'active' && p.stop) return;
+    if (AS.f === 'stop' && !p.stop) return;
     if (!q || (p.name + ' ' + p.barcode).toLowerCase().indexOf(q) >= 0) out.push(i);
   });
   return out;
 }
 
+function asFilter(f) { AS.f = f; fillAssortList(); }
+
 function drawAssort() {
   var d = AS.d, h = '';
-  if (d.priceLocked) h += '<div class="note">' + esc(d.lockedReason) + '. Здесь можно только смотреть.</div>';
+  if (d.priceLocked) h += '<div class="note">' + esc(d.lockedReason) + '. Цены здесь только смотреть; ставить позиции на стоп можно.</div>';
   else if (d.hidePrice) h += '<div class="note">Продавцы этого направления цен не видят, но цены используются в расчётах.</div>';
-  h += '<div style="margin:12px 0"><input type="search" id="as_q" placeholder="Поиск по названию или штрихкоду" value="' + attr(AS.q) + '"></div>';
+  h += '<div class="atools astools"><input type="search" id="as_q" class="atq" placeholder="Поиск по названию или штрихкоду" value="' + attr(AS.q) + '">' +
+    '<span id="as_chips" style="display:contents"></span></div>';
+  h += '<div class="card" style="padding:16px">' +
+    '<div class="ascnt" id="as_cnt" style="margin:0 4px 10px"></div>' +
+    '<div class="asbar" style="margin-top:0">' +
+      '<button type="button" onclick="asSelectFound()">Выбрать все найденные</button>' +
+      '<button type="button" onclick="asClear()">Снять выбор</button>' +
+    '</div>' +
+    '<div class="asbar">' +
+      '<button type="button" class="asstopb" onclick="askAssortStop(true)">Поставить на стоп</button>' +
+      '<button type="button" onclick="askAssortStop(false)">Снять со стопа</button>' +
+    '</div>';
   if (!d.priceLocked) {
-    h += '<div class="card" style="padding:16px">' +
-      '<div class="s" style="margin:0 4px 10px">Изменить цены у отмеченных позиций</div>' +
-      '<div class="chips" id="as_mode" style="margin:0 0 12px">' +
+    // на ноутбуке блок цен открыт сразу; на телефоне свёрнут (чтобы список был рядом), если там уже не вписано значение
+    h += '<details class="asprice"' + (window.innerWidth > 700 || String(AS.value).trim() ? ' open' : '') + '><summary>Изменить цены у отмеченных позиций</summary>' +
+      '<div class="chips" id="as_mode" style="margin:12px 0 12px">' +
         '<button type="button" class="chip" data-m="pct" onclick="asMode(\'pct\')">На %</button>' +
         '<button type="button" class="chip" data-m="sum" onclick="asMode(\'sum\')">На сумму</button>' +
       '</div>' +
       '<div class="s" id="as_lbl" style="margin:0 4px 8px"></div>' +
       '<input type="text" id="as_val" inputmode="decimal" autocomplete="off" placeholder="Например 5 или -3,5" value="' + attr(AS.value) + '">' +
-      '<div class="asbar">' +
-        '<button type="button" onclick="asSelectFound()">Выбрать все найденные</button>' +
-        '<button type="button" onclick="asClear()">Снять выбор</button>' +
-      '</div>' +
-      '<div class="ascnt" id="as_cnt"></div>' +
-      '<div style="margin-top:14px"><button class="btn" onclick="previewAssort()">Посмотреть изменения</button></div>' +
-    '</div>';
+      '<div style="margin-top:14px"><button class="btn" onclick="previewAssort()">Посмотреть изменения</button></div></details>';
   }
-  h += '<div id="as_list" style="margin-top:18px"></div>';
+  h += '</div><div id="as_list" style="margin-top:18px"></div>';
   view(h);
   var q = document.getElementById('as_q');
   q.addEventListener('input', function () { AS.q = q.value; fillAssortList(); });
@@ -2456,19 +2474,45 @@ function fillAssortList() {
   var el = document.getElementById('as_list');
   if (!el) return;
   var d = AS.d, idx = asFiltered();
-  if (!idx.length) { el.innerHTML = '<div class="note">Ничего не найдено</div>'; asCount(); return; }
+  var nStop = d.products.filter(function (p) { return p.stop; }).length;
+  var defs = [['all', 'Все', d.products.length], ['active', 'Активные', d.products.length - nStop], ['stop', 'На стопе', nStop]];
+  document.getElementById('as_chips').innerHTML = defs.map(function (x) {
+    return '<button type="button" class="achip' + (AS.f === x[0] ? ' on' : '') + '" onclick="asFilter(\'' + x[0] + '\')">' + x[1] + '<i>' + x[2] + '</i></button>';
+  }).join('');
+  if (!idx.length) {
+    var nothing = AS.f === 'stop' && !AS.q.trim();
+    el.innerHTML = '<div class="' + (nothing ? 'ok' : 'note') + '">' + (nothing ? 'Сейчас на стопе ничего нет' : 'Ничего не найдено') + '</div>';
+    asCount(); return;
+  }
   var rows = idx.map(function (i) {
     var p = d.products[i];
     var price = esc(asMoney(p.price)) + (d.markup !== 1 ? ' <s>продавцу ' + esc(asMoney(p.sellerPrice)) + '</s>' : '');
     var sub = (p.barcode ? esc(p.barcode) : '') + (p.category ? (p.barcode ? ' · ' : '') + esc(p.category) : '');
     var name = esc(p.name) + (p.stop ? '<span class="asstop">стоп</span>' : '');
-    if (d.priceLocked) return '<div class="asrow"><span class="nm">' + name + (sub ? '<span class="s" style="display:block">' + sub + '</span>' : '') + '</span><span class="pr">' + price + '</span></div>';
     return '<label class="pick" style="display:flex"><input type="checkbox"' + (AS.sel[p.id] ? ' checked' : '') + ' onchange="asToggle(' + i + ',this.checked)">' +
       '<span class="grow"><span class="t">' + name + '</span>' + (sub ? '<span class="s">' + sub + '</span>' : '') + '</span>' +
       '<span class="right" style="white-space:nowrap">' + price + '</span></label>';
   }).join('');
   el.innerHTML = '<div class="card">' + rows + '</div>';
   asCount();
+}
+
+// «Поставить на стоп» / «Снять со стопа» для отмеченных (assortStop): позиции, уже в нужном состоянии, сервер пропускает
+function askAssortStop(stop) {
+  var k = AS.dir, m = DIRS[k], ids = Object.keys(AS.sel), names = [];
+  if (!ids.length) return toast('Отметьте позиции');
+  AS.d.products.forEach(function (p) { if (AS.sel[p.id]) names.push(p.name); });
+  confirmSheet({
+    title: stop ? 'Поставить на стоп?' : 'Снять со стопа?', sub: m.t, yes: stop ? 'Поставить на стоп' : 'Снять со стопа',
+    what: [names.length + ' позиций: ' + names.slice(0, 6).join(', ') + (names.length > 6 ? ' и ещё ' + (names.length - 6) : ''),
+           stop ? 'Продавцы перестанут видеть эти позиции в течение минуты; уже отправленные заказы не меняются' : 'Продавцы снова увидят эти позиции в течение минуты',
+           'Действие попадёт в журнал'],
+    run: function () { return call('assortStop', { dir: k, ids: ids, stop: stop }); },
+    done: function (res) {
+      toast((stop ? 'На стопе: ' : 'Стоп снят: ') + res.changed + ' поз.' + (res.skipped ? ' (' + res.skipped + ' уже было)' : ''));
+      loadAssort(k, { f: AS.f, q: AS.q });                          // свежий список, фильтр и поиск остаются
+    }
+  });
 }
 
 function asToggle(i, on) {

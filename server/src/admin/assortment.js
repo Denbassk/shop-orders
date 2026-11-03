@@ -32,6 +32,16 @@ async function admAssortment(payload, env) {
   return { dir, title: cfg.title, unit: cfg.unit || '', markup, hidePrice: !!cfg.hidePrice, priceLocked: locked, lockedReason: locked ? LOCKED : '', products };
 }
 
+// позиції за payload.ids (відмічені в списку): непорожньо, без дублів, не більше MAX_ROWS, усі існують
+function pickByIds(all, payload) {
+  const ids = Array.isArray(payload.ids) ? payload.ids.map(String) : [];
+  if (!ids.length) throw new Error('Оберіть позиції');
+  if (ids.length > MAX_ROWS) throw new Error('Позицій не більше ' + MAX_ROWS + ' за раз');
+  if (new Set(ids).size !== ids.length) throw new Error('Позиція вказана двічі');
+  const byId = new Map(all.map((x) => [String(x.id), x]));
+  return ids.map((id) => { const x = byId.get(id); if (!x) throw new Error(NOT_FOUND); return x; });
+}
+
 const sum2 = (rows, f) => P.round2(rows.reduce((s, r) => s + r[f], 0));
 
 // Перегляд: нічого не пише. payload: { dir, ids: [..] | all: true, mode: 'pct'|'sum', value }
@@ -44,12 +54,7 @@ async function admPricePreview(payload, env) {
   if (payload.all === true) {
     list = all;
   } else {
-    const ids = Array.isArray(payload.ids) ? payload.ids.map(String) : [];
-    if (!ids.length) throw new Error('Оберіть позиції');
-    if (ids.length > MAX_ROWS) throw new Error('Позицій не більше ' + MAX_ROWS + ' за раз');
-    if (new Set(ids).size !== ids.length) throw new Error('Позиція вказана двічі');
-    const byId = new Map(all.map((x) => [String(x.id), x]));
-    list = ids.map((id) => { const x = byId.get(id); if (!x) throw new Error(NOT_FOUND); return x; });
+    list = pickByIds(all, payload);
   }
   if (list.length > MAX_ROWS) throw new Error('Позицій не більше ' + MAX_ROWS + ' за раз - оберіть частину');
   list = list.slice().sort(bySort);
@@ -100,4 +105,33 @@ async function admPriceApply(payload, env) {
   return { changed: done.length, rows: done };
 }
 
-module.exports = { admAssortment, admPricePreview, admPriceApply, MAX_ROWS };
+// Стоп / зняття стопу пачкою (у закупниці - по одній позиції, buyer/api.js setProduct { stop }). payload: { dir, ids, stop: true|false }.
+// Ціни овочей з прайсу заблоковані, а стоп - ні (як у закупниці): статус vegPrices не перезаписує. Позиції, що вже в потрібному стані, пропускаються.
+async function admAssortStop(payload, env) {
+  payload = payload || {};
+  const dir = String(payload.dir || '');
+  const cfg = cfgOf(dir);
+  if (typeof payload.stop !== 'boolean') throw new Error('Невірна дія');
+  const target = payload.stop ? 'stop' : 'active';
+  const list = pickByIds(await env.adm.dirProducts(dir), payload).sort(bySort);
+  const todo = list.filter((x) => x.status !== target);
+  if (!todo.length) throw new Error('Змін немає');
+  const done = [];
+  let failed = null;
+  try {
+    for (const x of todo) {
+      if (!await env.adm.setProduct(dir, x.id, { status: target })) { failed = x; throw new Error(NOT_FOUND); }
+      done.push(x);
+    }
+  } finally {
+    if (done.length) {
+      const head = cfg.title + ': ' + (payload.stop ? 'стоп' : 'знято стоп') + ' - ' + done.length + ' поз.' +
+        (failed ? ' (збій на «' + failed.name + '», решту не записано)' : '');
+      const names = done.slice(0, LOG_ITEMS).map((x) => x.name).join('; ') + (done.length > LOG_ITEMS ? '; …ще ' + (done.length - LOG_ITEMS) : '');
+      await logSafe(env, 'Змінено асортимент', (head + ': ' + names).slice(0, LOG_MAX));
+    }
+  }
+  return { changed: done.length, skipped: list.length - todo.length, names: done.map((x) => x.name) };
+}
+
+module.exports = { admAssortment, admPricePreview, admPriceApply, admAssortStop, MAX_ROWS };
