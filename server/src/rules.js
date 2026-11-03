@@ -104,6 +104,8 @@ const HM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const isHM = (s) => HM_RE.test(String(s || ''));
 const isDay = (s) => DAY_RE.test(String(s || '')) && !isNaN(new Date(s + 'T00:00:00Z').getTime());
+// різниця в днях між двома датами 'yyyy-MM-dd' (b - a)
+const dayDiff = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
 
 // 'active' (сьогодні в діапазоні) | 'scheduled' (діапазон попереду) | 'expired' (минув) | 'bad' (запис пошкоджений)
 function deadlineOverrideState(ov, today) {
@@ -280,7 +282,7 @@ module.exports = {
   LATE_OVERRIDES_DAY, LATE_TTL_MIN, LATE_Q_TTL_MIN, DAY_KEYS, DAY_FULL,
   kyivNow, dirCfg, disabledDirections, dirEnabled,
   lateAllowed, lateStatus, lateLeftMin, deadlinePassed, windowOpen,
-  isHM, isDay, deadlineOverrideState, withDeadlineOverrides, baseDeadlineOf,
+  isHM, isDay, dayDiff, deadlineOverrideState, withDeadlineOverrides, baseDeadlineOf,
   parseDays, todayDow, storeDays, dayAllowed, dayNamesOf, dayOffText,
   dmyToDay, minOrderOf,
   shortenAddress, addrKey, canonKey, statusKey,

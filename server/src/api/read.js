@@ -8,6 +8,7 @@
 //   orderedToday(day 'yyyy-MM-dd') -> {dir: Set(store_id)} | lateRows(dir, storeId) -> рядки late_requests
 const R = require('../rules');
 const { summarize } = require('../currentOrder');
+const N = require('../notices');
 
 const UA_EDRPOU = '45672783';
 const isUaStore = (s) => String((s && s.edrpou) || '').replace(/\D/g, '') === UA_EDRPOU;
@@ -63,6 +64,7 @@ async function apiBootstrap(env) {
     stores: list, directions: dirs, version: settings.app_version,
     today: R.kyivNow(env.at).dmy, testMode: !!settings.test_mode,
     woDeadline: settings.wo_deadline,
+    notices: N.forSeller(settings.service_notice, env.at),         // сервісні повідомлення з пульту (банер угорі)
   };
 }
 
@@ -103,7 +105,7 @@ async function apiRefresh(payload, env) {
   return {
     version: settings.app_version,
     today: R.kyivNow(env.at).dmy,
-    ordered: ord, closed, deadlines, late, lateLeft, locked,
+    ordered: ord, closed, deadlines, notices: N.forSeller(settings.service_notice, env.at), late, lateLeft, locked,
   };
 }
 

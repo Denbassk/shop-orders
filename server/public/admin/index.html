@@ -767,6 +767,7 @@ function loadToday() {
       item('Восстановить из бэкапа', 'вернуть строки, которых нет в листе', '', 'tabGo(\'restore\')') +
       item('Убрать дубли', 'найти и удалить задвоенные строки заказов', '', 'go(\'dups\',{dir:\'bakery\'})') +
       item('Здоровье системы', 'отчёты, триггеры, ошибки', '', 'go(\'health\',{})') +
+      item('Сообщение продавцам', 'баннер на сайте продавцов: «приём сдвинут» и т. п.', '', 'go(\'notice\',{})') +
       item('Журнал действий', 'что и когда нажимали', '', 'tabGo(\'log\')') +
       '</div>');
 
@@ -2336,7 +2337,11 @@ function askDeadlineApply() {
   confirmSheet({
     title: 'Изменить время приёма?', sub: m.t, what: what, yes: 'Применить',
     run: function () { return call('setDeadline', { dir: k, deadline: t, from: from, to: to }); },
-    done: function (r) { toast('Приём ' + m.short + ' теперь до ' + r.deadline + (r.active ? '' : ' (с ' + dlRu(r.from) + ')')); apply('dir', { dir: k }); }
+    done: function (r) {
+      apply('dir', { dir: k });
+      if (typeof offerNotice === 'function') offerNotice(r);        // «Сообщить продавцам?» - одним нажатием (admin-notices.html)
+      else toast('Приём ' + m.short + ' теперь до ' + r.deadline + (r.active ? '' : ' (с ' + dlRu(r.from) + ')'));
+    }
   });
 }
 
@@ -2347,7 +2352,11 @@ function askDeadlineRevert() {
     what: ['Приём снова закрывается в ' + (x.baseDeadline || '—'), 'Принятые заказы остаются на месте', 'Действие попадёт в журнал'],
     yes: 'Вернуть',
     run: function () { return call('revertDeadline', { dir: k }); },
-    done: function () { toast('Время приёма: как в Довіднике'); apply('dir', { dir: k }); }
+    done: function (r) {
+      apply('dir', { dir: k });
+      if (r && r.reverted && typeof offerNotice === 'function') offerNotice(r);
+      else toast('Время приёма: как в Довіднике');
+    }
   });
 }
 
@@ -2524,6 +2533,113 @@ var loadBaseAs_ = load;
 load = function () {
   if (S.screen === 'assort') return loadAssort(S.dir);
   return loadBaseAs_();
+};
+</script>
+<style>
+.ntin{width:100%;padding:14px 16px;border:1px solid var(--ln,#DCE0E5);border-radius:16px;background:var(--sf,#fff);color:var(--tx,#16181D);font:inherit;font-size:16px;box-sizing:border-box}
+.ntin:focus{border-color:var(--tx,#16181D);outline:none}
+textarea.ntin{resize:vertical;min-height:96px;line-height:1.4}
+.ntrow{display:flex;gap:12px;align-items:flex-start}
+.ntrow .grow{flex:1;min-width:0}
+.ntoff{flex:none;padding:8px 12px;border:1px solid var(--ln,#DCE0E5);border-radius:12px;background:var(--sf,#fff);color:var(--tx,#16181D);font:inherit;font-weight:600;cursor:pointer}
+</style>
+<script>
+// ===== shop-orders: сообщения продавцам =====
+var NT = { d: null };
+
+function ntWhen(until) { return dlRu(until.slice(0, 10)) + ' ' + until.slice(11); }
+
+function loadNotices() {
+  setHead('Сообщение продавцам', 'баннер на сайте продавцов');
+  spin();
+  call('noticeList').then(function (d) { NT.d = d; drawNotices(); }).catch(fail);
+}
+
+function drawNotices() {
+  var d = NT.d, h = '';
+  if (d.notices.length) {
+    h += section('Сейчас показывается (' + d.notices.length + ')', '<div class="card">' + d.notices.map(function (n, i) {
+      return '<div class="item" style="align-items:flex-start"><span class="ntrow" style="width:100%"><span class="grow">' +
+        '<span class="t" style="white-space:normal;word-break:break-word">' + esc(n.text).replace(/\n/g, '<br>') + '</span>' +
+        '<span class="s">Кому: ' + esc(n.dir ? (DIRS[n.dir] ? DIRS[n.dir].t : n.dir) : 'всем продавцам') + ' · до ' + esc(ntWhen(n.until)) + (n.modal ? ' · и окном' : '') + '</span></span>' +
+        '<button class="ntoff" onclick="askNoticeOff(' + i + ')">Выключить</button></span></div>';
+    }).join('') + '</div>');
+  } else {
+    h += '<div class="info">Сейчас продавцам ничего не показывается.</div>';
+  }
+  var dirOpts = '<option value="">Всем продавцам</option>' + ORDER.map(function (k) { return '<option value="' + attr(k) + '">' + esc(DIRS[k].t) + '</option>'; }).join('');
+  h += section('Новое сообщение',
+    '<div class="card" style="padding:16px">' +
+      '<div class="s" style="margin:0 4px 8px">Текст (его увидят продавцы — пишите по-украински)</div>' +
+      '<textarea id="nt_text" class="ntin" maxlength="300" placeholder="Наприклад: Прийом «Хліб Рома» сьогодні до 13:45"></textarea>' +
+      '<div class="s" style="margin:18px 4px 8px">Кому</div>' +
+      '<select id="nt_dir" class="ntin">' + dirOpts + '</select>' +
+      '<div class="s" style="margin:18px 4px 8px">Показывать до</div>' +
+      '<input type="datetime-local" id="nt_until" class="ntin" min="' + attr(d.now.replace(' ', 'T')) + '" value="' + attr(d.day + 'T23:59') + '">' +
+      '<label class="pick" style="margin-top:14px"><input type="checkbox" id="nt_modal"><span class="grow"><span class="t">Показать окном</span>' +
+        '<span class="s">один раз на телефоне, поверх экрана — для важного</span></span></label>' +
+    '</div>');
+  h += '<button class="btn" onclick="askNoticeAdd()">Опубликовать</button>';
+  h += '<div class="s" style="margin:16px 4px 0;line-height:1.5">Баннер виден вверху сайта продавца и появляется у открытых страниц в течение минуты. ' +
+    'После выбранного времени исчезает сам. Одновременно — не больше ' + d.max + ' сообщений.</div>';
+  view(h);
+}
+
+function ntVal(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+
+function askNoticeAdd() {
+  var text = ntVal('nt_text').trim(), dir = ntVal('nt_dir'), until = ntVal('nt_until').slice(0, 16);
+  var modal = !!(document.getElementById('nt_modal') || {}).checked;
+  if (!text) return toast('Введите текст сообщения');
+  if (!until) return toast('Укажите, до какого времени показывать');
+  var to = dir ? DIRS[dir].t : 'всем продавцам';
+  confirmSheet({
+    title: 'Опубликовать сообщение?', sub: 'Кому: ' + to, yes: 'Опубликовать',
+    what: ['Текст: ' + text, 'Показывать до ' + ntWhen(until.replace('T', ' ')), modal ? 'Ещё и окном: один раз на каждом телефоне' : 'Только баннером вверху экрана',
+           'Продавцы увидят в течение минуты', 'Действие попадёт в журнал'],
+    run: function () { return call('noticeAdd', { text: text, dir: dir, until: until, modal: modal }); },
+    done: function () { toast('Сообщение опубликовано'); loadNotices(); }
+  });
+}
+
+function askNoticeOff(i) {
+  var n = NT.d.notices[i];
+  if (!n) return;
+  confirmSheet({
+    title: 'Выключить сообщение?', sub: n.dir && DIRS[n.dir] ? DIRS[n.dir].t : 'Всем продавцам', yes: 'Выключить',
+    what: ['Текст: ' + n.text, 'Баннер исчезнет у продавцов в течение минуты', 'Действие попадёт в журнал'],
+    run: function () { return call('noticeOff', { id: n.id }); },
+    done: function () { toast('Сообщение выключено'); loadNotices(); }
+  });
+}
+
+// Предложение после смены / отката времени приёма (admin-deadline.html): готовый украинский текст, одно нажатие - и баннер у продавцов.
+// r - ответ setDeadline ({dir, title, deadline, from, to}) или revertDeadline ({dir, title, base, reverted}).
+function offerNotice(r) {
+  var k = r.dir, today = (typeof DL === 'object' && DL.today) || '', text, until;
+  if (r.deadline) {
+    var when = r.from === r.to ? (r.from === today ? 'сьогодні' : dlRu(r.from)) : 'з ' + dlRu(r.from) + ' по ' + dlRu(r.to);
+    text = 'Прийом «' + r.title + '» ' + when + ' до ' + r.deadline;
+    until = r.to + 'T23:59';
+  } else {
+    text = 'Прийом «' + r.title + '» знову до ' + r.base + ' (як зазвичай)';
+    until = today + 'T23:59';
+  }
+  confirmSheet({
+    title: 'Сообщить продавцам?', sub: DIRS[k].t, yes: 'Опубликовать',
+    what: ['Новое время уже действует. Сообщение заметят и те, кто не открывал приложение', 'Текст: ' + text,
+           'Баннер вверху сайта до ' + dlRu(until.slice(0, 10)) + ' 23:59, только у продавцов с этим направлением',
+           'Передумали — выключите в «Сообщение продавцам» (Сегодня → Быстрые действия)'],
+    run: function () { return call('noticeAdd', { text: text, dir: k, until: until, modal: false }); },
+    done: function () { toast('Сообщение продавцам опубликовано'); }
+  });
+}
+
+// экран notice - в общий диспетчер load()
+var loadBaseNt_ = load;
+load = function () {
+  if (S.screen === 'notice') return loadNotices();
+  return loadBaseNt_();
 };
 </script>
 </body>

@@ -22,6 +22,18 @@ function call(action, payload){
   });
 }`;
 
+// Банер сервісних повідомлень (scripts/front-notice.js): стилі і перемальовування на кожному екрані (screenStore/openStore/drawProd малюють лише #wrap).
+const NOTICE_CSS = '.nbn{display:flex;gap:10px;align-items:flex-start;margin:10px 14px 0;padding:12px 14px;border-radius:14px;background:#fff4d6;' +
+  'border:1px solid #f0d49a;color:#5c3f00;font-size:15px;line-height:1.4}' +
+  '.nbi{flex:none;width:22px;height:22px;border-radius:50%;background:#c98a00;color:#fff;font-weight:800;font-size:14px;font-style:italic;' +
+  'display:flex;align-items:center;justify-content:center}' +
+  '.nbt{flex:1;min-width:0;overflow-wrap:anywhere}';
+const NOTICE_HOOKS = "['screenStore', 'openStore', 'drawProd'].forEach(function(n){\n" +
+  "  var f = window[n];\n" +
+  "  if (typeof f !== 'function') return;\n" +
+  "  window[n] = function(){ var r = f.apply(this, arguments); try { renderNotices(); } catch (e) {} return r; };\n" +
+  "});\n";
+
 // Точкова правка Index.html: якщо місця нема (Index.html змінився) - збірка падає, а не мовчки лишає стару поведінку.
 function patch(html, from, to) {
   if (!html.includes(from)) throw new Error('Не знайдено місце правки в Index.html: ' + from.slice(0, 70).replace(/\n/g, '\\n'));
@@ -96,7 +108,16 @@ function build() {
     "        if (S.boot.directions[k]) S.boot.directions[k].deadline = d.deadlines[k];\n" +
     "      });\n" +
     "      if (S.prod && d.deadlines[S.prod.dir]) S.prod.deadline = d.deadlines[S.prod.dir];\n" +
+    "    }\n" +
+    "    if (d.notices){\n" +
+    "      S.boot.notices = d.notices;\n" +
+    "      try { renderNotices(); } catch (e) {}\n" +
     "    }\n");
+
+  // 3г. сервісні повідомлення з пульту: контейнер банера між шапкою і #wrap + код scripts/front-notice.js перед </body>
+  html = patch(html, '<div class="wrap" id="wrap"></div>', '<div id="nbox"></div>\n<div class="wrap" id="wrap"></div>');
+  const noticeJs = fs.readFileSync(path.join(__dirname, 'front-notice.js'), 'utf8').replace(/\r\n/g, '\n').trim();
+  html = patch(html, '</body>', '<style>' + NOTICE_CSS + '</style>\n<script>\n' + noticeJs + '\n' + NOTICE_HOOKS + '</script>\n</body>');
 
   // 4. голова сторінки: назва, viewport без масштабування, іконка (HtmlService додавав їх у doGet)
   html = html.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<title>Замовлення Фемелі Маркет</title>\n' +

@@ -109,6 +109,9 @@ function build() {
   once("item('Время приёма', dlSub(x), '', 'go(\\'deadline\\',{dir:\\'' + k + '\\'})') +",
     "item('Время приёма', dlSub(x), '', 'go(\\'deadline\\',{dir:\\'' + k + '\\'})') +\n      " +
     "item('Ассортимент и цены', k === 'veg' ? 'цены из прайса поставщика — только просмотр' : 'список, стоп, массовая смена цен на % или сумму', '', 'go(\\'assort\\',{dir:\\'' + k + '\\'})') +");
+  once("item('Здоровье системы', 'отчёты, триггеры, ошибки', '', 'go(\\'health\\',{})') +",
+    "item('Здоровье системы', 'отчёты, триггеры, ошибки', '', 'go(\\'health\\',{})') +\n      " +
+    "item('Сообщение продавцам', 'баннер на сайте продавцов: «приём сдвинут» и т. п.', '', 'go(\\'notice\\',{})') +");
   once("'<span class=\"s\" style=\"display:block\">до ' + esc(x.deadline || '—') +",
     "'<span class=\"s\" style=\"display:block\">до ' + esc(x.deadline || '—') + (x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '') +");
   let out = html.replace(/<\/body>/i, () => SHIM + '</body>');
@@ -148,6 +151,13 @@ function build() {
     const i = out.lastIndexOf('</body>');
     const asHtml = fs.readFileSync(AS, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
     out = out.slice(0, i) + asHtml + '\n' + out.slice(i);
+  }
+  // экран «Сообщение продавцам» + offerNotice() - scripts/admin-notices.html (последним: оборачивает load())
+  const NTC = path.join(__dirname, 'admin-notices.html');
+  if (fs.existsSync(NTC)) {
+    const i = out.lastIndexOf('</body>');
+    const ntHtml = fs.readFileSync(NTC, 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '').trim();
+    out = out.slice(0, i) + ntHtml + '\n' + out.slice(i);
   }
   return out;
 }

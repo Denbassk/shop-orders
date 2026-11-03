@@ -126,7 +126,7 @@ test('setDeadline: лише сьогодні за замовчуванням (fr
   const { env, st } = mkEnv();
   const r = await W.admSetDeadline({ dir: 'bread', deadline: '17:00' }, env);
   assert.deepEqual(st.set.deadline_override, { bread: { deadline: '17:00', from: DAY, to: DAY, at: AT.toISOString() } });
-  assert.deepEqual(r, { ok: true, dir: 'bread', deadline: '17:00', from: DAY, to: DAY, base: '16:00', active: true, closedNow: false });
+  assert.deepEqual(r, { ok: true, dir: 'bread', title: DIRECTIONS.bread.title, deadline: '17:00', from: DAY, to: DAY, base: '16:00', active: true, closedNow: false });
   assert.deepEqual(st.log, [['Тимчасово змінено час прийому', DIRECTIONS.bread.title + ': 17:00 замість 16:00, 03.11']]);
 });
 
@@ -187,10 +187,11 @@ test('setDeadline: при збереженні минулі й пошкодже�
 
 test('revertDeadline: прибирає лише свій напрямок, журнал; повторний виклик - нічого не пише в журнал', async () => {
   const { env, st } = mkEnv({ deadline_override: { bread: ov(), nbhz: ov({ deadline: '18:00' }) } });
-  assert.deepEqual(await W.admRevertDeadline({ dir: 'bread' }, env), { ok: true, reverted: true });
+  const info = { dir: 'bread', title: DIRECTIONS.bread.title, base: '16:00' };         // для пропозиції «сповістити продавців» у пульті
+  assert.deepEqual(await W.admRevertDeadline({ dir: 'bread' }, env), { ok: true, reverted: true, ...info });
   assert.deepEqual(Object.keys(st.set.deadline_override), ['nbhz']);
   assert.deepEqual(st.log, [['Повернуто час прийому', DIRECTIONS.bread.title + ' - як у Довіднику']]);
-  assert.deepEqual(await W.admRevertDeadline({ dir: 'bread' }, env), { ok: true, reverted: false });
+  assert.deepEqual(await W.admRevertDeadline({ dir: 'bread' }, env), { ok: true, reverted: false, ...info });
   assert.equal(st.log.length, 1);
   await assert.rejects(W.admRevertDeadline({ dir: 'xx' }, env), /Невідомий напрямок/);
 });

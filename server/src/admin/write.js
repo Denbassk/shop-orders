@@ -66,7 +66,6 @@ async function admCloseAll(payload, env) {
 // payload: { dir, deadline 'HH:MM', from? 'yyyy-MM-dd' (за замовч. сьогодні), to? (за замовч. = from, «лише один день») }.
 // Базовий дедлайн у БД не змінюється; повернення - дата `to` минула сама або admRevertDeadline.
 const MAX_OVERRIDE_DAYS = 62;
-const dayDiff = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
 const ruDay = (d) => d.slice(8, 10) + '.' + d.slice(5, 7);
 const rangeText = (from, to) => (from === to ? ruDay(from) : ruDay(from) + ' – ' + ruDay(to));
 const minOfHM = (s) => +s.slice(0, 2) * 60 + +s.slice(3);
@@ -93,7 +92,7 @@ async function admSetDeadline(payload, env) {
   if (to < from) throw new Error('Дата «по» раніше дати «з»');
   if (to < today) throw new Error('Цей період уже минув');
   if (from < today) from = today;                          // «з» у минулому = діє від сьогодні
-  if (dayDiff(from, to) + 1 > MAX_OVERRIDE_DAYS) throw new Error('Період довший за ' + MAX_OVERRIDE_DAYS + ' днів');
+  if (R.dayDiff(from, to) + 1 > MAX_OVERRIDE_DAYS) throw new Error('Період довший за ' + MAX_OVERRIDE_DAYS + ' днів');
   const eff = (await env.data.directions())[dir];
   const base = eff ? R.baseDeadlineOf(eff) : (cfg.deadline || '');
   const v = liveOverrides(await env.adm.getSetting('deadline_override'), today);
@@ -101,7 +100,7 @@ async function admSetDeadline(payload, env) {
   await env.adm.setSetting('deadline_override', v);
   await logSafe(env, 'Тимчасово змінено час прийому', cfg.title + ': ' + deadline + ' замість ' + (base || '—') + ', ' + rangeText(from, to));
   const active = from <= today;
-  return { ok: true, dir, deadline, from, to, base, active, closedNow: active && (n.hh * 60 + n.mm) >= minOfHM(deadline) };
+  return { ok: true, dir, title: cfg.title, deadline, from, to, base, active, closedNow: active && (n.hh * 60 + n.mm) >= minOfHM(deadline) };
 }
 
 // «Відкотити»: прибирає тимчасовий дедлайн - діє той, що прописано в БД
@@ -113,7 +112,8 @@ async function admRevertDeadline(payload, env) {
   delete v[dir];
   await env.adm.setSetting('deadline_override', v);
   if (had) await logSafe(env, 'Повернуто час прийому', cfg.title + ' - як у Довіднику');
-  return { ok: true, reverted: had };
+  const eff = (await env.data.directions())[dir];
+  return { ok: true, reverted: had, dir, title: cfg.title, base: eff ? R.baseDeadlineOf(eff) : (cfg.deadline || '') };
 }
 
 // Увімкнути/вимкнути напрямок ЦІЛКОМ - зникає з меню всіх продавців. Існуючі замовлення і звіти не чіпає.

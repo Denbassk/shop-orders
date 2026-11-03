@@ -59,7 +59,8 @@ const env = (over = {}, at = AT) => ({ at, data: makeData(over.data), veg: over.
 
 // ---------- ключі і значення = бойова відповідь ----------
 test('bootstrap: повна відповідь = фікстура з бойового /exec (39 точок)', async () => {
-  const got = await apiBootstrap(env());
+  const { notices, ...got } = await apiBootstrap(env());                       // notices (сервісні повідомлення з пульту) - нове поле, у бойовій відповіді його не було
+  assert.deepEqual(notices, []);
   const want = fx.bootstrap.data;
   assert.deepEqual(Object.keys(got).sort(), Object.keys(want).sort());
   assert.equal(got.stores.length, 39);
@@ -83,7 +84,8 @@ test('refresh: усі зняті відповіді збігаються з бо
   for (const r of fx.refresh) {
     assert.ok(r.response.ok);
     // нове поле deadlines (ефективні дедлайни для відкритих екранів продавців) - у бойовій відповіді його не було
-    const { deadlines, ...got } = await apiRefresh(r.payload, env());
+    const { deadlines, notices, ...got } = await apiRefresh(r.payload, env());
+    assert.deepEqual(notices, []);
     assert.deepEqual(got, r.response.data, JSON.stringify(r.payload));
     assert.deepEqual(Object.keys(deadlines), Object.keys(r.response.data.closed));
   }

@@ -103,7 +103,11 @@ function askDeadlineApply() {
   confirmSheet({
     title: 'Изменить время приёма?', sub: m.t, what: what, yes: 'Применить',
     run: function () { return call('setDeadline', { dir: k, deadline: t, from: from, to: to }); },
-    done: function (r) { toast('Приём ' + m.short + ' теперь до ' + r.deadline + (r.active ? '' : ' (с ' + dlRu(r.from) + ')')); apply('dir', { dir: k }); }
+    done: function (r) {
+      apply('dir', { dir: k });
+      if (typeof offerNotice === 'function') offerNotice(r);        // «Сообщить продавцам?» - одним нажатием (admin-notices.html)
+      else toast('Приём ' + m.short + ' теперь до ' + r.deadline + (r.active ? '' : ' (с ' + dlRu(r.from) + ')'));
+    }
   });
 }
 
@@ -114,7 +118,11 @@ function askDeadlineRevert() {
     what: ['Приём снова закрывается в ' + (x.baseDeadline || '—'), 'Принятые заказы остаются на месте', 'Действие попадёт в журнал'],
     yes: 'Вернуть',
     run: function () { return call('revertDeadline', { dir: k }); },
-    done: function () { toast('Время приёма: как в Довіднике'); apply('dir', { dir: k }); }
+    done: function (r) {
+      apply('dir', { dir: k });
+      if (r && r.reverted && typeof offerNotice === 'function') offerNotice(r);
+      else toast('Время приёма: как в Довіднике');
+    }
   });
 }
 
