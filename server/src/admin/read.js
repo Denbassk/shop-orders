@@ -48,6 +48,7 @@ function deadlineLeftMin(deadline, n) {
 // екран "Сегодня"
 async function admToday(env) {
   const { stores, settings, ctx, keys, isOrd } = await load(env);
+  const { incomingBanner } = require('./incoming');          // змінені вхідні ціни (settings.incoming_price_changes) - банер на «Сегодня»
   const n = R.kyivNow(env.at);
   const dirs = [];
   for (const k of keys) {
@@ -72,7 +73,7 @@ async function admToday(env) {
       minLeft: cfg.deadline ? deadlineLeftMin(cfg.deadline, n) : null,
     });
   }
-  return { today: n.dmy, day: n.day, time: pad(n.hh) + ':' + pad(n.mm), dow: DAY_RU_FULL[n.dow], dirs };
+  return { today: n.dmy, day: n.day, time: pad(n.hh) + ':' + pad(n.mm), dow: DAY_RU_FULL[n.dow], dirs, incoming: incomingBanner(settings) };
 }
 
 // графік по всіх точках: кому що і коли доступно

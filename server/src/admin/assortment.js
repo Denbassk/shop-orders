@@ -29,7 +29,8 @@ async function admAssortment(payload, env) {
       return { id: x.id, name: x.name, barcode: x.barcode || '', price, sellerPrice: P.round2(price * markup), stop: x.status === 'stop', category: x.category || '' };
     });
   const locked = !!cfg.priceSpreadsheetId;
-  return { dir, title: cfg.title, unit: cfg.unit || '', markup, hidePrice: !!cfg.hidePrice, priceLocked: locked, lockedReason: locked ? LOCKED : '', products };
+  const incoming = await require('./incoming').incomingInfo(dir, env);        // null - напрямок без цін з приходів (зараз є лише хліб Рома)
+  return { dir, title: cfg.title, unit: cfg.unit || '', markup, hidePrice: !!cfg.hidePrice, priceLocked: locked, lockedReason: locked ? LOCKED : '', products, incoming };
 }
 
 // позиції за payload.ids (відмічені в списку): непорожньо, без дублів, не більше MAX_ROWS, усі існують

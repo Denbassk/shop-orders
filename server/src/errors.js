@@ -32,6 +32,7 @@ function collectTickErrors(res) {
   if (mail.error) add('листи про дозвіл', mail.error);
   else if (mail.failed) out.push({ where: 'листи про дозвіл', msg: 'Не відправлено листів: ' + mail.failed + ' (довідправить наступний tick; перевірити SMTP_USER/SMTP_PASS)' });
   if (res && res.writeoffs && res.writeoffs.error) add('списання', res.writeoffs.error);
+  if (res && res.incoming && res.incoming.error) add('ціни з приходів', res.incoming.error);
   return out;
 }
 

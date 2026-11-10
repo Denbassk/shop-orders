@@ -264,6 +264,12 @@ function loadToday() {
     var stale = d.dirs.filter(function (x) { return x.enabled && x.ordered > 0 && !x.reportAt; });
     if (stale.length) h += '<button class="bad" style="display:block;width:100%;text-align:left;cursor:pointer" onclick="go(\'health\',{})">' +
       'Заказы есть, а отчёт сегодня не собирался: ' + stale.map(function (x) { return esc(DIRS[x.key] ? DIRS[x.key].short : x.key); }).join(', ') + '. Нажмите, чтобы проверить.</button>';
+    // вхідна ціна в приходах змінилась (автоперевірка, settings.incoming_price_changes): прайс не змінено, кнопка - в «Ассортимент и цены»
+    Object.keys(d.incoming || {}).forEach(function (k) {
+      var b = d.incoming[k];
+      h += '<button class="note" style="display:block;width:100%;text-align:left;cursor:pointer;font:inherit" onclick="go(\'assort\',{dir:\'' + k + '\'})">' +
+        '«' + esc(DIRS[k] ? DIRS[k].t : k) + '»: входящая цена изменилась у ' + b.n + ' поз. — в прайсе ещё старые. Нажмите, чтобы посмотреть и обновить.</button>';
+    });
     h += '<div class="atop">' + ORDER.map(function (k) {
       var x = null;
       d.dirs.forEach(function (y) { if (y.key === k) x = y; });

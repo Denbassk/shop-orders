@@ -94,9 +94,25 @@ function createRuntime() {
       return { error: errorText(e) };
     }
   };
+  // Автоперевірка вхідних цін з приходів (BigQuery): раз на 3 год, лише повідомляє (settings + журнал), прайс не міняє.
+  // Збій BigQuery не повторюється щотіка: наступна спроба через 30 хв. INCOMING_PRICES=off - вимкнути.
+  const incomingAdmin = require('./admin/incoming');
+  const incomingData = require('./incoming');
+  const INCOMING_RETRY_MS = 30 * 60000;
+  let incomingFailAt = 0;
+  const checkIncoming = async () => {
+    if (process.env.INCOMING_PRICES === 'off') return null;
+    if (incomingFailAt && Date.now() - incomingFailAt < INCOMING_RETRY_MS) return { skipped: 'після збою - пауза 30 хв' };
+    try {
+      const r = await incomingAdmin.checkIncomingPrices({ at: new Date(), adm, log: console.error,
+        incoming: { fetch: (dir) => incomingData.fetchIncoming(require('./bigquery').defaultBq(), incomingData.INCOMING[dir]) } });
+      incomingFailAt = 0;
+      return r;
+    } catch (e) { incomingFailAt = Date.now(); throw e; }
+  };
   const tickJob = async () => {
     const imported = await importSheets();
-    const res = await tick({ ...getEnv(), ...exportEnv(), rebuildReports, exportWriteoffs: woExport }, exportAll);
+    const res = await tick({ ...getEnv(), ...exportEnv(), rebuildReports, exportWriteoffs: woExport, checkIncoming }, exportAll);
     if (imported) res.import = imported;
     for (const x of collectTickErrors(res)) await noteError(adm, 'tick: ' + x.where, x.msg);
     try { await adm.setSetting('last_tick', new Date().toISOString()); } catch (e) { console.error('last_tick: ' + e.message); }

@@ -1851,6 +1851,12 @@ function loadToday() {
     var stale = d.dirs.filter(function (x) { return x.enabled && x.ordered > 0 && !x.reportAt; });
     if (stale.length) h += '<button class="bad" style="display:block;width:100%;text-align:left;cursor:pointer" onclick="go(\'health\',{})">' +
       'Заказы есть, а отчёт сегодня не собирался: ' + stale.map(function (x) { return esc(DIRS[x.key] ? DIRS[x.key].short : x.key); }).join(', ') + '. Нажмите, чтобы проверить.</button>';
+    // вхідна ціна в приходах змінилась (автоперевірка, settings.incoming_price_changes): прайс не змінено, кнопка - в «Ассортимент и цены»
+    Object.keys(d.incoming || {}).forEach(function (k) {
+      var b = d.incoming[k];
+      h += '<button class="note" style="display:block;width:100%;text-align:left;cursor:pointer;font:inherit" onclick="go(\'assort\',{dir:\'' + k + '\'})">' +
+        '«' + esc(DIRS[k] ? DIRS[k].t : k) + '»: входящая цена изменилась у ' + b.n + ' поз. — в прайсе ещё старые. Нажмите, чтобы посмотреть и обновить.</button>';
+    });
     h += '<div class="atop">' + ORDER.map(function (k) {
       var x = null;
       d.dirs.forEach(function (y) { if (y.key === k) x = y; });
@@ -2404,7 +2410,7 @@ load = function () {
 .asrow .nm{flex:1;min-width:0;font-size:15px;line-height:1.35}
 .asrow .pr{flex:none;white-space:nowrap;font-weight:600}
 .asrow .pr s{opacity:.55;font-weight:400}
-.asrow .up{color:#B3261E}.asrow .dn{color:#166B3A}
+.asrow .up,.pick .right .up{color:#B3261E}.asrow .dn,.pick .right .dn{color:#166B3A}
 .asstop{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:#7A828E;color:#fff;font-size:11px;font-weight:700;vertical-align:2px}
 .ashead{display:flex;justify-content:space-between;padding:10px 16px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.6;border-bottom:1px solid var(--ln,#DCE0E5)}
 .asstopb{border-color:var(--warn)!important;color:var(--warn)!important}
@@ -2454,6 +2460,15 @@ function drawAssort() {
   var d = AS.d, h = '';
   if (d.priceLocked) h += '<div class="note">' + esc(d.lockedReason) + '. Цены здесь только смотреть; ставить позиции на стоп можно.</div>';
   else if (d.hidePrice) h += '<div class="note">Продавцы этого направления цен не видят, но цены используются в расчётах.</div>';
+  if (d.incoming) {
+    var ic = d.incoming, when = ic.checkedAt ? incWhen(ic.checkedAt) : '';
+    h += '<div class="card incbox" style="padding:16px;margin-bottom:14px"><div class="ascnt" style="margin:0 4px 6px">Входящие цены из приходов</div>' +
+      '<div class="' + (ic.n ? 'note' : 's') + '" style="margin:0 4px 12px">' +
+      (ic.n ? 'Входящая цена изменилась у ' + ic.n + ' поз. — в прайсе ещё старые.' + (ic.big ? ' С изменением больше 30%: ' + ic.big + '.' : '')
+            : 'Расхождений с приходами не найдено' + (when ? ' (проверено ' + esc(when) + ')' : '') + '.') +
+      (ic.n && when ? ' Проверено ' + esc(when) + '.' : '') + '</div>' +
+      '<button class="btn" type="button" onclick="incPreview()">Подтянуть цены из приходов</button></div>';
+  }
   h += '<div class="atools astools"><input type="search" id="as_q" class="atq" placeholder="Поиск по названию или штрихкоду" value="' + attr(AS.q) + '">' +
     '<span id="as_chips" style="display:contents"></span></div>';
   h += '<div class="card" style="padding:16px">' +
@@ -2596,6 +2611,66 @@ function askAssortApply() {
            'Продавцы увидят новые цены в течение минуты; уже отправленные заказы не меняются',
            'Действие попадёт в журнал'],
     run: function () { return call('priceBulkApply', { dir: k, mode: r.mode, value: r.value, rows: r.rows.map(function (x) { return { id: x.id, old: x.old }; }) }); },
+    done: function (res) { toast('Цены обновлены: ' + res.changed + ' поз.'); loadAssort(k); }
+  });
+}
+
+// ===== цены из приходов (BigQuery): incomingPreview / incomingApply (src/admin/incoming.js) =====
+var INC = null;
+function incWhen(iso) {
+  try { return new Date(iso).toLocaleString('ru-RU', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+  catch (e) { return ''; }
+}
+function incDate(s) { var p = String(s || '').split('-'); return p.length === 3 ? p[2] + '.' + p[1] : ''; }
+
+function incPreview() {
+  var k = AS.dir;
+  spin('Запрашиваю приходы…');
+  call('incomingPreview', { dir: k }).then(function (r) {
+    INC = { dir: k, r: r, sel: {} };
+    r.rows.forEach(function (x) { if (!x.big) INC.sel[x.id] = true; });         // подозрительные (> 30%) не отмечены: только осознанно
+    drawInc();
+  }).catch(function (e) { drawAssort(); toast(e && e.message ? e.message : String(e)); });
+}
+
+function drawInc() {
+  var r = INC.r, h = '';
+  if (!r.n) {
+    h += '<div class="ok">Все цены в прайсе совпадают с последними приходами.</div>';
+    if (r.noIncoming) h += '<div class="s" style="margin:10px 4px 0">Без прихода за последние 45 дней: ' + r.noIncoming + ' поз. — их цена не меняется.</div>';
+  } else {
+    h += '<div class="info">Входящая цена изменилась у <b>' + r.n + '</b> поз. Отмечено: <b id="inc_cnt"></b><br>Данные приходов на ' + esc(incWhen(r.checkedAt)) + '</div>';
+    if (r.big) h += '<div class="note" style="margin-top:12px">Изменение больше 30% у ' + r.big + ' поз. — не отмечены, проверьте накладную (акция или ошибка?) и отметьте вручную.</div>';
+    if (r.noIncoming) h += '<div class="s" style="margin:10px 4px 0">Без прихода за 45 дней: ' + r.noIncoming + ' поз. — цена не меняется.</div>';
+    h += '<div class="card" style="margin-top:16px"><div class="ashead"><span>Название · приход</span><span>Было → Стало</span></div>' +
+      r.rows.map(function (x, i) {
+        var up = x.new > x.old, pct = x.pct == null ? '' : (x.pct > 0 ? '+' : '') + x.pct + '%';
+        return '<label class="pick" style="display:flex"><input type="checkbox"' + (INC.sel[x.id] ? ' checked' : '') + ' onchange="incToggle(' + i + ',this.checked)">' +
+          '<span class="grow"><span class="t">' + esc(x.name) + (x.stop ? '<span class="asstop">стоп</span>' : '') + (x.big ? '<span class="asstop" style="background:var(--warn,#B3261E)">&gt;30%</span>' : '') + '</span>' +
+          '<span class="s">приход ' + esc(incDate(x.docDate)) + ' · ' + esc(pct) + '</span></span>' +
+          '<span class="right" style="white-space:nowrap"><s>' + esc(asMoney(x.old)) + '</s> → <b class="' + (up ? 'up' : 'dn') + '">' + esc(asMoney(x.new)) + '</b></span></label>';
+      }).join('') + '</div>';
+    h += '<div style="margin-top:18px"><button class="btn" onclick="askIncApply()">Применить выбранные</button></div>';
+  }
+  h += '<button class="btn ghost" onclick="loadAssort(INC.dir)">Назад к списку</button>';
+  view('<div style="grid-column:1/-1;max-width:720px">' + h + '</div>');
+  incCount();
+}
+function incToggle(i, on) { var x = INC.r.rows[i]; if (on) INC.sel[x.id] = true; else delete INC.sel[x.id]; incCount(); }
+function incCount() { var c = document.getElementById('inc_cnt'); if (c) c.textContent = Object.keys(INC.sel).length + ' из ' + INC.r.n; }
+
+function askIncApply() {
+  var k = INC.dir, m = DIRS[k], rows = INC.r.rows.filter(function (x) { return INC.sel[x.id]; });
+  if (!rows.length) return toast('Отметьте позиции');
+  var so = 0, sn = 0;
+  rows.forEach(function (x) { so += x.old; sn += x.new; });
+  confirmSheet({
+    title: 'Подтянуть цены из приходов?', sub: m.t, yes: 'Применить цены',
+    what: [rows.length + ' позиций (сумма цен ' + asMoney(so) + ' → ' + asMoney(sn) + ')',
+           'Сервер ещё раз сверит цены с приходами; если что-то изменилось — ничего не запишет',
+           'Продавцы увидят новые цены в течение минуты; уже отправленные заказы не меняются',
+           'Действие попадёт в журнал'],
+    run: function () { return call('incomingApply', { dir: k, rows: rows.map(function (x) { return { id: x.id, old: x.old, new: x.new }; }) }); },
     done: function (res) { toast('Цены обновлены: ' + res.changed + ' поз.'); loadAssort(k); }
   });
 }
