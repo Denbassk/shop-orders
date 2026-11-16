@@ -499,8 +499,16 @@ async function showTodayBase(quiet) {
   else if (er[S.dir]) $('tdsum').innerHTML = '<div class="note" style="grid-column:1/-1">' + esc('Таблиця Google: ' + er[S.dir]) + '</div>';
   else if (S.sums[S.dir]) sumDraw(S.sums[S.dir]);
 }
+// напрямки точки, що підходять під активний фільтр (для змішаних плиток: і «зроблено», і «чекаємо»)
+function dirsOf(s) {
+  const all = S.me.dirs.filter((d) => s.d[d.dir]);
+  if (S.f === 'all' || S.f === 'ua') return all;
+  const g = ({ done: 'ok', ordered: 'ok' })[S.f] || S.f;
+  const part = all.filter((d) => cellOf(d.dir, s.d[d.dir]).cls === g);
+  return part.length ? part : all;
+}
 function aggCls(s) {
-  const cs = S.me.dirs.filter((d) => s.d[d.dir]).map((d) => cellOf(d.dir, s.d[d.dir]).cls);
+  const cs = dirsOf(s).map((d) => cellOf(d.dir, s.d[d.dir]).cls);
   return ['ok', 'late', 'wait', 'off'].find((z) => cs.includes(z)) || 'none';
 }
 function gsn(v) {
@@ -598,7 +606,7 @@ function renderTiles() {
 }
 function tileHtml(s, k) {
   const x = { cls: aggCls(s) };
-  const rows = S.me.dirs.filter((d) => s.d[d.dir]).map((d) => {
+  const rows = dirsOf(s).map((d) => {
     const y = cellOf(d.dir, s.d[d.dir]);
     if (S.me.dirs.length === 1) return '<div class="dr one"><span class="ds ' + y.cls + '">' + esc(y.t) + '</span></div>';
     return '<div class="dr' + (y.cls === 'ok' ? ' isok' : '') + '" style="--c:' + colorOf(d.dir) + '"><span class="dot"></span><span class="dn">' + esc(SHORT[d.dir] || d.title) + '</span><span class="ds ' + y.cls + '">' + esc(y.t) + '</span></div>';
