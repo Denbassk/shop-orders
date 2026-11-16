@@ -324,7 +324,7 @@ const BASE = '/buyer/' + CODE + '/' + KEY;
 const API = BASE + '/api';
 const DIRC = { bread: '#D98B3A', nbhz: '#B5835A', bakery: '#F26A2E', veg: '#2FB36A' };
 const SHORT = { bread: 'Хліб Рома', nbhz: 'НБХЗ', bakery: 'ВК', veg: 'Овочі' };
-const S = { me: null, dir: '', tab: 'today', info: null, infos: {}, boards: {}, lates: {}, sums: {}, tiles: [], lateAll: [], late: null, products: null, q: '', f: 'all', tq: '', pend: {}, lastPend: -1, anim: false, edit: null };
+const S = { me: null, dir: '', tab: 'today', info: null, infos: {}, boards: {}, lates: {}, sums: {}, tiles: [], lateAll: [], late: null, products: null, q: '', f: 'all', tq: '', pend: {}, lastPend: -1, anim: false, edit: null, waitOpen: {} };
 const $ = (id) => document.getElementById(id);
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 const money = (n) => (Number(n) || 0).toFixed(2);
@@ -480,12 +480,13 @@ async function showTodayBase(quiet) {
     view('<div id="tdroot" class="stack">' + (S.me.dirs.length === 1
       ? section('Сьогодні', '<div class="kpis"><div id="ov" class="dc"></div><div id="tdsum" class="dc"></div></div>', 'час за Києвом ' + nowHM())
       : section('Напрямки зараз', '<div id="ov"></div>', 'час за Києвом ' + nowHM()) + '<div id="tdsum"></div>') +
+      '<div id="tdwait"></div>' +
       '<div><div class="sec">Торгові точки <small id="tdcnt"></small></div>' +
       '<div class="tools"><input type="search" id="tq" placeholder="Пошук: адреса, маршрут, код" value="' + esc(S.tq) + '" oninput="S.tq = this.value; renderTiles()"><div class="fl" id="fl"></div></div>' +
       '<div class="tiles" id="tiles"></div></div><div id="tdtop"></div></div>');
   }
   gsApply();
-  $('ov').innerHTML = ovHtml();
+  $('ov').innerHTML = ovHtml(); waitDraw();
   S.tiles = storesAll(); renderTiles();
   const ds = S.me.dirs.map((d) => d.dir).filter((x) => isShared() || x === S.dir);
   if (isShared()) sumAll(); else if (S.sums[S.dir]) sumDraw(S.sums[S.dir]); else $('tdsum').innerHTML = '<div class="spin sm" style="grid-column:1/-1">Читаю таблицю Google…</div>';
@@ -493,7 +494,7 @@ async function showTodayBase(quiet) {
   await Promise.all(ds.map((x) => call('summary', { dir: x }, 60000).then((d) => { S.sums[x] = d; }).catch((e) => { er[x] = e.message; })));
   if (S.tab !== 'today' || !$('tdsum')) return;
   gsApply();
-  $('ov').innerHTML = ovHtml(); S.tiles = storesAll(); renderTiles();
+  $('ov').innerHTML = ovHtml(); waitDraw(); S.tiles = storesAll(); renderTiles();
   if (isShared()) sumAll(er);
   else if (er[S.dir]) $('tdsum').innerHTML = '<div class="note" style="grid-column:1/-1">' + esc('Таблиця Google: ' + er[S.dir]) + '</div>';
   else if (S.sums[S.dir]) sumDraw(S.sums[S.dir]);
@@ -534,6 +535,23 @@ function sumAll(er) {
     return '<div class="sumd" style="--c:' + colorOf(d.dir) + '"><div class="sec"><span class="dot"></span> ' + esc(d.title) + ' <small>' + esc('з таблиці Google' + (x && x.note ? ' · ' + x.note : '') + (ln ? ' · не зіставлено адрес: ' + ln : '')) + '</small></div>' + body + '</div>';
   }).join('') + '</div>';
   if ($('tdtop')) $('tdtop').innerHTML = '';
+}
+// ---- хто ще не замовив: згорнутий список по кожному напрямку (оновлюється разом з «Сьогодні») ----
+function waitDraw() {
+  const box = $('tdwait'); if (!box) return;
+  const parts = S.me.dirs.map((d) => {
+    const b = S.boards[d.dir] || {}, i = S.infos[d.dir];
+    if (b.error) return '';
+    const list = b.wait || [];
+    const shut = !!(i && i.closed && !i.openAll);
+    const title = (shut ? 'Не замовили' : 'Чекаємо') + ' · ' + d.title;
+    if (!list.length) return '<div class="note">' + esc(d.title) + ': усі точки замовили</div>';
+    const rows = list.map((r) => '<div class="item" style="cursor:default"><span class="grow"><span class="t">' + esc(r.label) + (r.ua ? ' <span class="ua">ЮА Маркет</span>' : '') + '</span>' +
+      ((r.route || r.code) ? '<span class="s">' + esc([r.code ? '№ ' + r.code : '', r.route ? 'маршрут ' + r.route : ''].filter(Boolean).join(' · ')) + '</span>' : '') + '</span></div>').join('');
+    return '<details class="card"' + (S.waitOpen[d.dir] ? ' open' : '') + ' data-dir="' + esc(d.dir) + '" ontoggle="S.waitOpen[this.dataset.dir] = this.open">' +
+      '<summary class="item" style="list-style:none;border-left:4px solid ' + colorOf(d.dir) + '"><span class="grow"><span class="t">' + esc(title) + '</span></span><span class="pill ' + (shut ? 'late' : 'off') + '">' + list.length + '</span></summary>' + rows + '</details>';
+  }).filter(Boolean);
+  box.innerHTML = parts.length ? '<div class="stack sm">' + parts.join('') + '</div>' : '';
 }
 function ovHtml() {
   if (S.me.dirs.length === 1) {
