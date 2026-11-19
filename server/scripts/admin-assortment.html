@@ -59,7 +59,12 @@ function asFilter(f) { AS.f = f; fillAssortList(); }
 
 function drawAssort() {
   var d = AS.d, h = '';
-  if (d.priceLocked) h += '<div class="note">' + esc(d.lockedReason) + '. Цены здесь только смотреть; ставить позиции на стоп можно.</div>';
+  if (d.priceLocked) {
+    h += '<div class="note">' + esc(d.lockedReason) + '. Цены здесь только смотреть; ставить позиции на стоп можно.</div>';
+    h += '<div class="card" style="padding:16px;margin-bottom:14px"><div class="ascnt" style="margin:0 4px 6px">Новые позиции в прайсе</div>' +
+      '<div class="s" style="margin:0 4px 12px">Проверить прайс поставщика на позиции, которых ещё нет в ассортименте.</div>' +
+      '<button class="btn" type="button" onclick="vnPreview()">Проверить прайс</button></div>';
+  }
   else if (d.hidePrice) h += '<div class="note">Продавцы этого направления цен не видят, но цены используются в расчётах.</div>';
   if (d.incoming) {
     var ic = d.incoming, when = ic.checkedAt ? incWhen(ic.checkedAt) : '';
@@ -273,6 +278,49 @@ function askIncApply() {
            'Действие попадёт в журнал'],
     run: function () { return call('incomingApply', { dir: k, rows: rows.map(function (x) { return { id: x.id, old: x.old, new: x.new }; }) }); },
     done: function (res) { toast('Цены обновлены: ' + res.changed + ' поз.'); loadAssort(k); }
+  });
+}
+
+// ===== новые позиции из прайса (ещё не в ассортименте): vegNewPreview / vegNewApply (src/admin/vegNew.js) =====
+var VN = null;
+function vnPreview() {
+  var k = AS.dir;
+  spin('Читаю прайс поставщика…');
+  call('vegNewPreview', { dir: k }).then(function (r) {
+    VN = { dir: k, r: r, sel: {} };
+    r.rows.forEach(function (x) { VN.sel[x.name] = true; });
+    drawVn();
+  }).catch(function (e) { drawAssort(); toast(e && e.message ? e.message : String(e)); });
+}
+function drawVn() {
+  var r = VN.r, h = '';
+  if (!r.n) {
+    h += '<div class="ok">В прайсе новых позиций нет — всё, что там есть, уже в ассортименте.</div>';
+  } else {
+    h += '<div class="info">В прайсе найдено новых позиций: <b>' + r.n + '</b>. Отмечено: <b id="vn_cnt"></b></div>';
+    h += '<div class="card" style="margin-top:16px">' + r.rows.map(function (x, i) {
+      return '<label class="pick" style="display:flex"><input type="checkbox"' + (VN.sel[x.name] ? ' checked' : '') + ' onchange="vnToggle(' + i + ',this.checked)">' +
+        '<span class="grow"><span class="t">' + esc(x.name) + '</span></span>' +
+        '<span class="right" style="white-space:nowrap">' + esc(asMoney(x.price)) + '</span></label>';
+    }).join('') + '</div>';
+    h += '<div style="margin-top:18px"><button class="btn" onclick="askVnApply()">Добавить отмеченные (на стопе)</button></div>';
+  }
+  h += '<button class="btn ghost" onclick="loadAssort(VN.dir)">Назад к списку</button>';
+  view('<div style="grid-column:1/-1;max-width:720px">' + h + '</div>');
+  vnCount();
+}
+function vnToggle(i, on) { var x = VN.r.rows[i]; if (on) VN.sel[x.name] = true; else delete VN.sel[x.name]; vnCount(); }
+function vnCount() { var c = document.getElementById('vn_cnt'); if (c) c.textContent = Object.keys(VN.sel).length + ' из ' + VN.r.n; }
+function askVnApply() {
+  var k = VN.dir, m = DIRS[k], names = Object.keys(VN.sel);
+  if (!names.length) return toast('Отметьте позиции');
+  confirmSheet({
+    title: 'Добавить новые позиции?', sub: m.t, yes: 'Добавить (на стопе)',
+    what: [names.length + ' позиций: ' + names.slice(0, 6).join(', ') + (names.length > 6 ? ' и ещё ' + (names.length - 6) : ''),
+           'Позиции появятся в ассортименте со статусом «стоп» — продавцы их не увидят, пока вы сами не снимете стоп',
+           'Действие попадёт в журнал'],
+    run: function () { return call('vegNewApply', { dir: k, names: names }); },
+    done: function (res) { toast('Добавлено: ' + res.added + ' поз. (на стопе)'); loadAssort(k); }
   });
 }
 

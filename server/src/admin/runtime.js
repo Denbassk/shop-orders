@@ -17,6 +17,8 @@ const tools = require('./tools');
 const wo = require('./writeoffs');
 const stores = require('./stores');
 const assort = require('./assortment');
+const vegNew = require('./vegNew');
+const { readVegPriceRows } = require('../import/parse');
 const notices = require('./notices');
 const incoming = require('./incoming');
 const incomingData = require('../incoming');
@@ -50,7 +52,13 @@ function createAdminRuntime(opts = {}) {
     const at = new Date();
     let ats = null;                                   // час збирання звітів - один запит на виклик
     return { at, data: dataFresh, adm, links, storeEdit: process.env.PULT_STORE_EDIT === 'on',
-      incoming: { fetch: (dir) => incomingData.fetchIncoming(defaultBq(), incomingData.INCOMING[dir]) }, queueWoExport: opts.queueWoExport, rebuild, gOrders: gOrders ? (day, stores) => gOrders.byDir(day, stores) : undefined, queueExport: opts.queueExport || (() => {}),
+      incoming: { fetch: (dir) => incomingData.fetchIncoming(defaultBq(), incomingData.INCOMING[dir]) },
+      vegPriceRows: async () => {
+        const priceId = DIRECTIONS.veg.priceSpreadsheetId;
+        const title = await googleApi.firstSheetTitle(priceId);
+        return readVegPriceRows(await googleApi.getValues(priceId, googleApi.a1q(title, 'A1:Z')));
+      },
+      queueWoExport: opts.queueWoExport, rebuild, gOrders: gOrders ? (day, stores) => gOrders.byDir(day, stores) : undefined, queueExport: opts.queueExport || (() => {}),
       reportAt: async (k) => { ats = ats || adm.reportAts(); return read.reportAtOf((await ats)[k], at); } };
   };
   const api = createAdminApi({
@@ -77,6 +85,8 @@ function createAdminRuntime(opts = {}) {
     priceBulkPreview: (p) => assort.admPricePreview(p, env()),
     priceBulkApply: (p) => assort.admPriceApply(p, env()),
     assortStop: (p) => assort.admAssortStop(p, env()),
+    vegNewPreview: (p) => vegNew.admVegNewPreview(p, env()),
+    vegNewApply: (p) => vegNew.admVegNewApply(p, env()),
     incomingPreview: (p) => incoming.admIncomingPreview(p, env()),
     incomingApply: (p) => incoming.admIncomingApply(p, env()),
     setDirEnabled: (p) => write.admSetDirEnabled(p, env()),

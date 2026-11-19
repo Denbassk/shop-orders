@@ -144,8 +144,9 @@ function parseNbhzProducts(rows, dropped = []) {
 }
 
 // Прайс постачальника: будь-яка пара "назва | число" у таблиці (readVegPriceSheet_).
-function readVegPrices(data) {
-  const found = {};
+// Рядки як є (з оригінальною назвою) - для адмінського «нові позиції» (admin/vegNew.js); перше входження на ключ виграє.
+function readVegPriceRows(data) {
+  const seen = new Set(), rows = [];
   for (let r = 0; r < data.length; r++) {
     for (let c = 0; c < data[r].length - 1; c++) {
       const name = str(data[r][c]);
@@ -155,9 +156,17 @@ function readVegPrices(data) {
       const num = (typeof raw === 'number') ? raw : parseFloat(String(raw == null ? '' : raw).replace(',', '.'));
       if (!(num > 0) || num > 5000) continue;
       const k = nameKey(name);
-      if (!found[k]) found[k] = Math.round(num * 100) / 100;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      rows.push({ name, price: Math.round(num * 100) / 100 });
     }
   }
+  return rows;
+}
+
+function readVegPrices(data) {
+  const found = {};
+  readVegPriceRows(data).forEach((r) => { found[nameKey(r.name)] = r.price; });
   return found;
 }
 
@@ -192,5 +201,5 @@ function numbered(act, stop) {
 
 module.exports = {
   canonKey, parseDays, nameKey, parseStores, storeToRow,
-  parseSheetProducts, parseNbhzProducts, readVegPrices, parseVegProducts, costIdxOf,
+  parseSheetProducts, parseNbhzProducts, readVegPrices, readVegPriceRows, parseVegProducts, costIdxOf,
 };

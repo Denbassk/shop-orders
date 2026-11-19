@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   canonKey, nameKey, parseDays, parseStores, storeToRow,
-  parseSheetProducts, parseNbhzProducts, readVegPrices, parseVegProducts,
+  parseSheetProducts, parseNbhzProducts, readVegPrices, readVegPriceRows, parseVegProducts,
 } = require('../src/import/parse');
 const { DIRECTIONS } = require('../src/directions');
 
@@ -163,6 +163,20 @@ test('readVegPrices: пара "назва | число" будь-де у таб�
   assert.equal(p['буряк'], 7);
   assert.equal(p['цибуля'], undefined, '> 5000 відкидається');
   assert.equal(p['ab'], undefined, 'коротша за 3 символи');
+});
+
+test('readVegPriceRows: ті самі правила, але з оригінальною назвою (для admin/vegNew.js)', () => {
+  const data = [
+    ['Картопля', 12.5, 'Морква', '8,40'],
+    ['12', 5, 'Ab', 3],
+    ['Цибуля', 99999, 'Буряк', 7],
+    ['Картопля', 99, '', ''],
+  ];
+  const rows = readVegPriceRows(data);
+  assert.deepEqual(rows, [{ name: 'Картопля', price: 12.5 }, { name: 'Морква', price: 8.4 }, { name: 'Буряк', price: 7 }]);
+  // узгоджено з readVegPrices (той самий набір позицій і цін)
+  const prices = readVegPrices(data);
+  rows.forEach((r) => assert.equal(prices[nameKey(r.name)], r.price));
 });
 
 test('parseVegProducts: дозволені з "Налаштування" + ціни з прайсу', () => {
