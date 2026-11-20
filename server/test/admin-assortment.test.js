@@ -34,7 +34,7 @@ test('assortment: список напрямку за sort/назвою, ціна
   const r = await A.admAssortment({ dir: 'bread' }, env);
   assert.deepEqual([r.dir, r.title, r.markup, r.priceLocked], ['bread', DIRECTIONS.bread.title, 1, false]);
   assert.deepEqual(r.products.map((p) => p.id), ['p2', 'p1', 'p3', 'p4']);
-  assert.deepEqual(r.products[0], { id: 'p2', name: 'Хліб Дарницький', barcode: '482002', price: 19.99, sellerPrice: 19.99, stop: true, category: '' });
+  assert.deepEqual(r.products[0], { id: 'p2', name: 'Хліб Дарницький', barcode: '482002', price: 19.99, sellerPrice: 19.99, stop: true, category: '', access: { mode: 'all', stores: [] } });
 });
 
 test('assortment: овочі - ціни з прайсу постачальника, лише перегляд (priceLocked), ціна продавцю = ціна × 1.5', async () => {

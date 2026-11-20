@@ -69,8 +69,8 @@ async function apiSubmitOrder(payload, env) {
   if (!items.length) throw new Error('Замовлення порожнє');
   if (items.length > 500) throw new Error('Занадто багато позицій');
 
-  // Ціни беремо ЛИШЕ з сервера (активні позиції; овочі - з актуальним прайсом)
-  let rows = (await env.data.products(dirKey)).filter((p) => p.status === 'active');
+  // Ціни беремо ЛИШЕ з сервера (активні позиції, дозволені цій точці; овочі - з актуальним прайсом)
+  let rows = (await env.data.products(dirKey)).filter((p) => p.status === 'active' && R.productAllowed(p, store.id));
   if (dirKey === 'veg') rows = await env.veg.resolve(rows);
   const priceMap = {};
   rows.forEach((p) => { priceMap[String(p.id)] = p; });

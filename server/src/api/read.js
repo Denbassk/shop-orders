@@ -137,7 +137,7 @@ async function apiProducts(payload, env) {
   const pairCtx = { ...ctx, lateRows: await env.data.lateRows(dirKey, store.id) };
   if (!R.dayAllowed(dirKey, store, pairCtx)) throw new Error(R.dayOffText(dirKey, store, pairCtx));
 
-  let rows = (await env.data.products(dirKey)).filter((p) => p.status === 'active');
+  let rows = (await env.data.products(dirKey)).filter((p) => p.status === 'active' && R.productAllowed(p, store.id));
   if (dirKey === 'veg') rows = await env.veg.resolve(rows);
 
   const products = sortProducts(cfg, rows).map((p) => ({
@@ -200,7 +200,7 @@ async function apiCurrentOrder(payload, env) {
   const cur = summarize(cfg, await d.activeOrderLines(dirKey, store.id, R.kyivNow(env.at).day));
   if (!cur) throw new Error('Замовлення на сьогодні не знайдено. Оновіть сторінку.');
 
-  let rows = (await d.products(dirKey)).filter((p) => p.status === 'active');
+  let rows = (await d.products(dirKey)).filter((p) => p.status === 'active' && R.productAllowed(p, store.id));
   if (dirKey === 'veg') rows = await env.veg.resolve(rows);
   const live = new Set(rows.map((p) => String(p.id)));
   return {

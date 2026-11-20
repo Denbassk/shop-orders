@@ -73,5 +73,5 @@ test('сторінка ВК: у картці товару поле собіва�
     assert.ok(H.includes(s), s);
   assert.ok(H.includes("$('pk').value.trim() !== ''"), 'порожнє поле собівартості не відправляється');
   const rt = fs.readFileSync(path.join(__dirname, '..', 'src', 'admin', 'data.js'), 'utf8');
-  assert.ok(rt.includes("select('id,barcode,name,price,category,availability,box,status,sort,cost')"));
+  assert.match(rt, /async function dirProducts\(dir\) \{\s*return must\('products', await sb\.from\('products'\)\.select\('\*'\)/, 'усі колонки, разом із cost');
 });

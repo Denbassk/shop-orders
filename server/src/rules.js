@@ -278,7 +278,17 @@ function statusKey(dirKey, store, ctx) {
   return addrKey(cfg.shortAddr ? shortenAddress(a) : a);
 }
 
+// Асортимент по точках (products.access_mode / access_stores, міграція 20261120000001): чи може точка бачити й замовляти позицію.
+// 'all' (або порожньо - стара база без колонок) - усі; 'only' - лише перелічені; 'except' - усі, крім перелічених.
+function productAllowed(p, storeId) {
+  const mode = (p && p.access_mode) || 'all';
+  if (mode === 'all') return true;
+  const listed = Array.isArray(p.access_stores) && p.access_stores.indexOf(String(storeId)) >= 0;
+  return mode === 'only' ? listed : mode === 'except' ? !listed : true;
+}
+
 module.exports = {
+  productAllowed,
   LATE_OVERRIDES_DAY, LATE_TTL_MIN, LATE_Q_TTL_MIN, DAY_KEYS, DAY_FULL,
   kyivNow, dirCfg, disabledDirections, dirEnabled,
   lateAllowed, lateStatus, lateLeftMin, deadlinePassed, windowOpen,

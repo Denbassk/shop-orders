@@ -86,8 +86,9 @@ function createAdminData(sb) {
     if (emptied.length) must('orders', await sb.from('orders').update({ status: 'cancelled', changed_at: ts }).in('id', emptied).eq('status', 'active'));
   }
   // асортимент напрямку для закупниці - без кешу; правка ціни/стоп/наявності і собівартості (випічка)
+  // '*': колонки доступу по точках (міграція 20261120000001) можуть ще не існувати - тоді доступ «усім» (accessOf)
   async function dirProducts(dir) {
-    return must('products', await sb.from('products').select('id,barcode,name,price,category,availability,box,status,sort,cost').eq('dir', dir));
+    return must('products', await sb.from('products').select('*').eq('dir', dir));
   }
   async function addProduct(row) {
     must('products', await sb.from('products').insert(row));

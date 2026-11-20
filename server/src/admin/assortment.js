@@ -26,11 +26,63 @@ async function admAssortment(payload, env) {
   const products = (await env.adm.dirProducts(dir)).slice().sort(bySort)
     .map((x) => {
       const price = Number(x.price) || 0;
-      return { id: x.id, name: x.name, barcode: x.barcode || '', price, sellerPrice: P.round2(price * markup), stop: x.status === 'stop', category: x.category || '' };
+      return { id: x.id, name: x.name, barcode: x.barcode || '', price, sellerPrice: P.round2(price * markup), stop: x.status === 'stop', category: x.category || '',
+        access: accessOf(x) };
     });
+  // точки напрямку - для вибору «доступ по точках»
+  const stores = (await dirStores(dir, env)).map((st) => ({ id: st.id, label: st.label }));
   const locked = !!cfg.priceSpreadsheetId;
   const incoming = await require('./incoming').incomingInfo(dir, env);        // null - напрямок без цін з приходів (зараз є лише хліб Рома)
-  return { dir, title: cfg.title, unit: cfg.unit || '', markup, hidePrice: !!cfg.hidePrice, priceLocked: locked, lockedReason: locked ? LOCKED : '', products, incoming };
+  return { dir, title: cfg.title, unit: cfg.unit || '', markup, hidePrice: !!cfg.hidePrice, priceLocked: locked, lockedReason: locked ? LOCKED : '', products, stores, incoming };
+}
+
+// ---------- доступ до позиції по точках (products.access_mode / access_stores; фільтр - rules.productAllowed) ----------
+const ACCESS_MODES = ['all', 'only', 'except'];
+const ACCESS_TEXT = { all: 'усім точкам', only: 'лише точкам', except: 'усім, крім' };
+const accessOf = (x) => ({ mode: ACCESS_MODES.includes(x.access_mode) ? x.access_mode : 'all', stores: Array.isArray(x.access_stores) ? x.access_stores.map(String) : [] });
+async function dirStores(dir, env) {
+  if (!env.data || !env.data.stores) return [];
+  return (await env.data.stores()).filter((st) => (st.directions || []).indexOf(dir) >= 0);
+}
+
+// Задати доступ відміченим позиціям. payload: { dir, ids, mode: 'all'|'only'|'except', stores: [store_id] }.
+// 'all' - список точок очищується. 'only'/'except' - потрібна хоч одна точка; точки - лише активні точки цього напрямку.
+// Позиції, у яких уже рівно такий доступ, пропускаються. Збій посеред запису: у журналі лише записане.
+async function admAssortAccess(payload, env) {
+  payload = payload || {};
+  const dir = String(payload.dir || '');
+  const cfg = cfgOf(dir);
+  const mode = String(payload.mode || '');
+  if (!ACCESS_MODES.includes(mode)) throw new Error('Невірний режим доступу');
+  const raw = Array.isArray(payload.stores) ? payload.stores.map(String) : [];
+  if (new Set(raw).size !== raw.length) throw new Error('Точка вказана двічі');
+  const byId = new Map((await dirStores(dir, env)).map((st) => [st.id, st]));
+  raw.forEach((id) => { if (!byId.has(id)) throw new Error('Точку не знайдено або в неї немає цього напрямку. Оновіть сторінку.'); });
+  const storeIds = mode === 'all' ? [] : raw.slice().sort();
+  if (mode !== 'all' && !storeIds.length) throw new Error('Відмітьте хоча б одну точку');
+
+  const list = pickByIds(await env.adm.dirProducts(dir), payload).sort(bySort);
+  const same = (x) => { const a = accessOf(x); return a.mode === mode && a.stores.slice().sort().join('|') === storeIds.join('|'); };
+  const todo = list.filter((x) => !same(x));
+  if (!todo.length) throw new Error('Змін немає');
+  const done = [];
+  let failed = null;
+  try {
+    for (const x of todo) {
+      if (!await env.adm.setProduct(dir, x.id, { access_mode: mode, access_stores: storeIds })) { failed = x; throw new Error(NOT_FOUND); }
+      done.push(x);
+    }
+  } finally {
+    if (done.length) {
+      const who = mode === 'all' ? '' : ' ' + storeIds.length + ' ТТ (' + storeIds.slice(0, 6).map((id) => byId.get(id).label).join(', ') +
+        (storeIds.length > 6 ? ', …ще ' + (storeIds.length - 6) : '') + ')';
+      const head = cfg.title + ': доступ - ' + ACCESS_TEXT[mode] + who + ' - ' + done.length + ' поз.' +
+        (failed ? ' (збій на «' + failed.name + '», решту не записано)' : '');
+      const names = done.slice(0, LOG_ITEMS).map((x) => x.name).join('; ') + (done.length > LOG_ITEMS ? '; …ще ' + (done.length - LOG_ITEMS) : '');
+      await logSafe(env, 'Змінено асортимент', (head + ': ' + names).slice(0, LOG_MAX));
+    }
+  }
+  return { changed: done.length, skipped: list.length - todo.length, names: done.map((x) => x.name) };
 }
 
 // позиції за payload.ids (відмічені в списку): непорожньо, без дублів, не більше MAX_ROWS, усі існують
@@ -135,4 +187,4 @@ async function admAssortStop(payload, env) {
   return { changed: done.length, skipped: list.length - todo.length, names: done.map((x) => x.name) };
 }
 
-module.exports = { admAssortment, admPricePreview, admPriceApply, admAssortStop, MAX_ROWS };
+module.exports = { admAssortment, admPricePreview, admPriceApply, admAssortStop, admAssortAccess, MAX_ROWS };

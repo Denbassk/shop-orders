@@ -85,6 +85,7 @@ function createAdminRuntime(opts = {}) {
     priceBulkPreview: (p) => assort.admPricePreview(p, env()),
     priceBulkApply: (p) => assort.admPriceApply(p, env()),
     assortStop: (p) => assort.admAssortStop(p, env()),
+    assortAccess: (p) => assort.admAssortAccess(p, env()),
     vegNewPreview: (p) => vegNew.admVegNewPreview(p, env()),
     vegNewApply: (p) => vegNew.admVegNewApply(p, env()),
     incomingPreview: (p) => incoming.admIncomingPreview(p, env()),
