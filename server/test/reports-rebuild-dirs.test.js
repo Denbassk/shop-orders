@@ -182,3 +182,92 @@ test('report_at: після успішної збірки викликаєтьс
   noisy.env.markReport = async () => { throw new Error('база лежить'); };
   assert.ok((await rebuildReports('veg', noisy.env)).sheets, 'збій markReport не ламає збірку');
 });
+
+test('овочі: датовані копії «<лист> ДД.ММ.РРРР» - пишуться в день із замовленнями, лишаються наступного ранку, прибираються при скасуванні всього і через 7 днів', async () => {
+  const t = makeEnv({ target: fresh(), existing: ['Зведена Овочі 11.10.2026', 'Замовлення Овочі 14.10.2026', 'Зведена Овочі (копія)'],
+    orders: { veg: [order('a', [['Картопля', 10, 14.5]])] } });
+  const r = await rebuildReports('veg', t.env);
+  assert.deepEqual(r.sheets, ['Замовлення Овочі', 'Зведена Овочі'], 'основні листи як були');
+  assert.deepEqual(r.dated.written, ['Замовлення Овочі 19.10.2026', 'Зведена Овочі 19.10.2026']);
+  assert.deepEqual(r.dated.removed, ['Зведена Овочі 11.10.2026'], 'старше 7 днів - видалено; 6 днів і чужі назви - лишились');
+  assert.ok(t.titles.has('Зведена Овочі 19.10.2026') && t.titles.has('Замовлення Овочі 19.10.2026'));
+  assert.ok(texts(t.log).includes('Картопля'));
+
+  // наступний ранок: замовлень на 20.10 нема - основні листи порожні з підказкою, копія 19.10 лишається
+  t.orders.veg = [];
+  t.titles.delete('Зведена Овочі 11.10.2026');
+  t.log.length = 0;
+  t.setAt(new Date('2026-10-20T07:00:00+03:00'));
+  const r2 = await rebuildReports('veg', t.env);
+  assert.deepEqual(r2.dated, { written: [], removed: [] });
+  assert.ok(t.titles.has('Зведена Овочі 19.10.2026'));
+  assert.ok(texts(t.log).includes('Замовлення попередніх днів - на листах «Зведена Овочі ДД.ММ.РРРР» (дата замовлення)'));
+  assert.ok(texts(t.log).includes('Замовлення попередніх днів - на листах «Замовлення Овочі ДД.ММ.РРРР» (дата замовлення)'));
+});
+
+test('овочі: усі замовлення дня скасовано - датована копія цього дня видаляється; збій датованих листів не ламає основні', async () => {
+  const t = makeEnv({ target: fresh(), orders: { veg: [order('a', [['Картопля', 10, 14.5]])] } });
+  await rebuildReports('veg', t.env);
+  t.orders.veg = [];
+  const r = await rebuildReports('veg', t.env);
+  assert.deepEqual(r.dated.removed.sort(), ['Замовлення Овочі 19.10.2026', 'Зведена Овочі 19.10.2026']);
+  assert.ok(batches(t.log).some((b) => b[2].some((q) => q.deleteSheet)), 'deleteSheet надіслано');
+
+  const bad = makeEnv({ target: fresh(), orders: { veg: [order('a', [['Картопля', 10, 14.5]])] } });
+  bad.env.google.sheetList = async () => { throw new Error('Google 503'); };
+  const r2 = await rebuildReports('veg', bad.env);
+  assert.deepEqual(r2.sheets, ['Замовлення Овочі', 'Зведена Овочі']);
+  assert.match(r2.datedError, /Google 503/);
+});
+
+test('овочі: уранці, поки за сьогодні нема замовлень, основні листи показують ВЧОРАШНІ (дата в заголовку); перше замовлення дня перемикає на сьогодні', async () => {
+  const t = makeEnv({ target: fresh() });
+  const byDay = { '2026-10-19': [order('a', [['Картопля', 10, 14.5]])], '2026-10-20': [] };
+  t.env.data.reportSnapshot = async (dir, d) => ({ orders: dir === 'veg' ? (byDay[d] || []) : [], stores: STORES, orderStores: STORES, products: [] });
+
+  t.setAt(new Date('2026-10-20T07:06:00+03:00'));                   // вівторок, ранок, замовлень ще нема
+  const r = await rebuildReports('veg', t.env);
+  assert.equal(r.reportDay, '2026-10-19');
+  assert.equal(r.rows, 1);
+  const tx = texts(t.log);
+  assert.ok(tx.includes('Замовлення овочів - 19.10.2026'), 'заголовок - день замовлення');
+  assert.ok(tx.includes('Картопля'));
+  assert.ok(!tx.includes('Замовлень на сьогодні ще немає'));
+  assert.equal(tx.filter((x) => x === 'ВЧОРАШНІ замовлення 19.10.2026 - доставка СЬОГОДНІ 20.10.2026. Нових замовлень ще немає').length, 2, 'червоне попередження на обох листах');
+  assert.equal(r.dated, undefined, 'датовану копію вчора не переписуємо');
+  assert.deepEqual(await rebuildReports('veg', t.env), { skipped: 'без змін', rows: 1 }, 'tick без змін не пише');
+
+  byDay['2026-10-20'] = [order('c', [['Цибуля', 3, 19]], '2026-10-20T09:33:00+03:00')];
+  t.log.length = 0;
+  t.setAt(new Date('2026-10-20T09:34:00+03:00'));
+  const r2 = await rebuildReports('veg', t.env);
+  assert.equal(r2.reportDay, undefined);
+  const tx2 = texts(t.log);
+  assert.ok(tx2.includes('Замовлення овочів - 20.10.2026'));
+  assert.ok(tx2.includes('Цибуля') && !tx2.includes('Картопля'));
+});
+
+test('овочі: позавчорашні замовлення не підставляються (лише вчора)', async () => {
+  const t = makeEnv({ target: fresh() });
+  t.env.data.reportSnapshot = async (dir, d) => ({ orders: dir === 'veg' && d === '2026-10-18' ? [order('a', [['Картопля', 10, 14.5]])] : [], stores: STORES, orderStores: STORES, products: [] });
+  t.setAt(new Date('2026-10-20T07:06:00+03:00'));
+  const r = await rebuildReports('veg', t.env);
+  assert.equal(r.rows, 0);
+  assert.equal(r.reportDay, undefined);
+  assert.ok(texts(t.log).includes('Замовлень на сьогодні ще немає'));
+});
+
+test('овочі: вчорашні - лише до 12:00; о 12:00 без сьогоднішніх замовлень лист порожній (щоб не повезти вчорашнє вдруге)', async () => {
+  const t = makeEnv({ target: fresh() });
+  t.env.data.reportSnapshot = async (dir, d) => ({ orders: dir === 'veg' && d === '2026-10-19' ? [order('a', [['Картопля', 10, 14.5]])] : [], stores: STORES, orderStores: STORES, products: [] });
+  t.setAt(new Date('2026-10-20T11:59:00+03:00'));
+  assert.equal((await rebuildReports('veg', t.env)).reportDay, '2026-10-19');
+  t.log.length = 0;
+  t.setAt(new Date('2026-10-20T12:00:00+03:00'));
+  const r = await rebuildReports('veg', t.env);
+  assert.equal(r.reportDay, undefined);
+  assert.equal(r.rows, 0);
+  const tx = texts(t.log);
+  assert.ok(tx.includes('Замовлення овочів - 20.10.2026') && tx.includes('Замовлень на сьогодні ще немає'));
+  assert.ok(!tx.some((x) => /ВЧОРАШНІ|Картопля/.test(x)));
+});

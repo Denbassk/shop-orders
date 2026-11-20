@@ -21,6 +21,8 @@ const layout = (legacy) => ({
   head: legacy ? ['№', 'Назва овочу', 'Ціна/кг', 'Кількість, кг', 'Сума, грн'] : ['№', 'Назва овочу', 'Ціна/кг', 'Сума, грн', 'Кількість, кг'],
   qtyFmt: legacy ? { halign: 'center', num: '0.###' } : { halign: 'center' },
   sumFmt: { halign: 'right', num: '#,##0.00' },
+  // порожній день: підказка, де лежать замовлення попередніх днів (датовані листи, reports/rebuild.js). Apps Script такого не мав.
+  datedHint: legacy ? null : (name) => 'Замовлення попередніх днів - на листах «' + name + ' ДД.ММ.РРРР» (дата замовлення)',
 });
 const isUaStore = (s) => String((s && s.edrpou) || '').replace(/\D/g, '') === UA_EDRPOU;
 
@@ -73,12 +75,12 @@ function ordersPlan(rows, c, L) {
   const missing = all.filter((s) => !ordered[R.addrKey(s.addrVeg)]).map((s) => s.label + (isUaStore(s) ? UA_MARK : ''));
   const ua = uaAddrKeys(c.stores, 'addrVeg');
 
-  const data = [], g = { title: [], sub: [], head: [], store: [], row: [], total: [], grand: [], missHead: [], miss: [] };
+  const data = [], g = { title: [], sub: [], note: [], head: [], store: [], row: [], total: [], grand: [], missHead: [], miss: [] };
   const push = (v, t) => { data.push(v); if (t) g[t].push(data.length); };
 
   push(['Замовлення овочів - ' + c.today, '', '', '', ''], 'title');
   push(['ТТ із замовленнями: ' + Object.keys(byStore).length + ' з ' + all.length + '   (оновлено ' + c.stamp + ')', '', '', '', ''], 'sub');
-  push(['', '', '', '', ''], null);
+  push([c.note || '', '', '', '', ''], c.note ? 'note' : null);
   push(L.head, 'head');
 
   let num = 1, grandQty = 0, grandSum = 0;
@@ -104,6 +106,7 @@ function ordersPlan(rows, c, L) {
     push(['', '', '', '', ''], null);
   } else {
     push(['Замовлень на сьогодні ще немає', '', '', '', ''], 'missHead');
+    if (L.datedHint) push([L.datedHint(VEG_ORDERS_SHEET), '', '', '', ''], 'missHead');
     push(['', '', '', '', ''], null);
   }
 
@@ -118,6 +121,7 @@ function ordersPlan(rows, c, L) {
 
     w.fmt(g.title, 'A', 'E', { bg: '#2E7D32', color: '#FFFFFF', bold: true, size: 14 });
     w.fmt(g.sub, 'A', 'E', { bg: '#E8F5E9', color: '#2E7D32', size: 11 });
+    if (g.note.length) w.fmt(g.note, 'A', 'E', { bg: '#C62828', color: '#FFFFFF', bold: true, size: 12 });
     w.fmt(g.head, 'A', 'E', { bg: '#37474F', color: '#FFFFFF', bold: true, halign: 'center' });
     w.fmt(g.store, 'A', 'E', { bg: '#FFF3E0', color: '#E65100', bold: true });
 
@@ -169,17 +173,18 @@ function summaryPlan(rows, c, L) {
     if (addr) stores[R.addrKey(addr)] = 1;
   });
 
-  const data = [], g = { title: [], sub: [], head: [], row: [], total: [], empty: [] };
+  const data = [], g = { title: [], sub: [], note: [], head: [], row: [], total: [], empty: [] };
   const push = (v, t) => { data.push(v); if (t) g[t].push(data.length); };
 
   push(['Зведене замовлення овочів - ' + c.today, '', '', '', ''], 'title');
   push(['ТТ: ' + Object.keys(stores).length + '   |   разом ' + grandQty + ' кг   |   ' + grandSum.toFixed(2) + ' грн   (оновлено ' + c.stamp + ')',
     '', '', '', ''], 'sub');
-  push(['', '', '', '', ''], null);
+  push([c.note || '', '', '', '', ''], c.note ? 'note' : null);
   push(L.head, 'head');
 
   if (!rows.length) {
     push(['Замовлень на сьогодні ще немає', '', '', '', ''], 'empty');
+    if (L.datedHint) push([L.datedHint(VEG_SUMMARY_SHEET), '', '', '', ''], 'empty');
   } else {
     let num = 1;
     Object.keys(sum).sort(uk).forEach((name) => {
@@ -196,6 +201,7 @@ function summaryPlan(rows, c, L) {
 
     w.fmt(g.title, 'A', 'E', { bg: '#2E7D32', color: '#FFFFFF', bold: true, size: 14 });
     w.fmt(g.sub, 'A', 'E', { bg: '#E8F5E9', color: '#2E7D32', size: 11 });
+    if (g.note.length) w.fmt(g.note, 'A', 'E', { bg: '#C62828', color: '#FFFFFF', bold: true, size: 12 });
     w.fmt(g.head, 'A', 'E', { bg: '#37474F', color: '#FFFFFF', bold: true, halign: 'center' });
     if (g.row.length) {
       const even = g.row.filter((_, i) => i % 2 === 1);
@@ -218,14 +224,18 @@ function summaryPlan(rows, c, L) {
     info: `Зведена Овочі: позицій ${Object.keys(sum).length}, разом ${grandQty} кг / ${grandSum} грн` };
 }
 
-// rows - робочі рядки (normalizeRawRows / reports/rows.js). opts: { stores (усі, rowToStore), now, nowBy }
+// rows - робочі рядки (normalizeRawRows / reports/rows.js). opts: { stores (усі, rowToStore), now, nowBy, dayAt }
+// dayAt - момент дня, ЗА ЯКИЙ звіт (дата в заголовку, точки цього дня); без нього - день now. Час «оновлено» - завжди now.
+// Якщо день звіту не сьогодні - третій рядок (був порожній) стає червоним попередженням: це вчорашні, їх везуть сьогодні.
 function buildVegReports(rows, opts = {}) {
   const stores = opts.stores || [], L = layout(!!opts.legacy);
   const clock = (name) => (opts.nowBy && opts.nowBy[name]) || opts.now || new Date();
   const ctxFor = (name) => {
-    const at = clock(name), k = R.kyivNow(at);
-    const dayCtx = { at, settings: {}, lateRows: [] };
-    return { today: k.dmy, stamp: k.time, stores,
+    const at = clock(name), k = R.kyivNow(at), dayAt = opts.dayAt || at;
+    const dayCtx = { at: dayAt, settings: {}, lateRows: [] };
+    const dayDmy = R.kyivNow(dayAt).dmy;
+    const note = dayDmy !== k.dmy ? 'ВЧОРАШНІ замовлення ' + dayDmy + ' - доставка СЬОГОДНІ ' + k.dmy + '. Нових замовлень ще немає' : '';
+    return { today: dayDmy, stamp: k.time, note, stores,
       allToday: stores.filter((s) => s.directions.indexOf('veg') >= 0 && R.dayAllowed('veg', s, dayCtx)) };
   };
   return {

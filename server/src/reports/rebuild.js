@@ -72,9 +72,43 @@ async function writeBread(env, id, rows, snap, day) {
   return out;
 }
 
-async function writeVeg(env, id, rows, snap) {
-  const { sheets, sizes, plans } = await writePlans(env, id, veg.buildVegReports(rows, { stores: snap.stores, now: env.at }));
-  return { sheets, sizes, plans };
+// Овочі: основні листи показують лише СЬОГОДНІ і першим tick-ом наступного ранку перебудовуються на новий день. Постачальник
+// дивиться звіт уранці в день доставки (інцидент 19.11.2026: замовлення середи «зникли» у четвер о 7:00, лишились лише в сирому).
+// Тому кожна збірка дня із замовленнями пише ще й датовані копії «<лист> ДД.ММ.РРРР» (дата замовлення); день без замовлень (усе
+// скасовано) прибирає свою датовану копію; копії старші за VEG_DATED_KEEP_DAYS видаляються. Збій датованих листів основні не ламає.
+const VEG_DATED_KEEP_DAYS = 7;
+const VEG_YESTERDAY_UNTIL_H = 12;     // до 12:00 за Києвом основні листи овочів без сьогоднішніх замовлень показують вчорашні
+const VEG_DATED_RE = new RegExp('^(' + [veg.VEG_ORDERS_SHEET, veg.VEG_SUMMARY_SHEET].join('|') + ') (\\d{2})\\.(\\d{2})\\.(\\d{4})$');
+const dayNumOf = (y, m, d) => Date.UTC(+y, +m - 1, +d) / 86400000;
+
+async function vegDated(env, id, rows, plans, day) {
+  const dmy = dmyOfDay(day);
+  const names = [veg.VEG_ORDERS_SHEET, veg.VEG_SUMMARY_SHEET];
+  const written = [];
+  if (rows.length) {
+    for (const n of names) { await writeSheet(env.google, id, n + ' ' + dmy, plans[n]); written.push(n + ' ' + dmy); }
+  }
+  const today = dayNumOf(day.slice(0, 4), day.slice(5, 7), day.slice(8, 10));
+  const drop = (await env.google.sheetList(id)).filter((s) => {
+    const m = String(s.title).match(VEG_DATED_RE);
+    if (!m) return false;
+    const age = Math.round(today - dayNumOf(m[4], m[3], m[2]));
+    return age >= VEG_DATED_KEEP_DAYS || (age === 0 && !rows.length);
+  });
+  if (drop.length) await env.google.batchUpdate(id, drop.map((s) => ({ deleteSheet: { sheetId: s.sheetId } })));
+  return { written, removed: drop.map((s) => s.title) };
+}
+
+async function writeVeg(env, id, rows, snap, day) {
+  const dayAt = day === R.kyivNow(env.at).day ? null : new Date(day + 'T12:00:00Z');
+  const { sheets, sizes, plans } = await writePlans(env, id, veg.buildVegReports(rows, { stores: snap.stores, now: env.at, dayAt }));
+  const out = { sheets, sizes, plans };
+  // показ учорашніх (dayAt): датовану копію вчора вже записала збірка того дня - не переписуємо її з червоним «доставка СЬОГОДНІ»
+  if (!dayAt) {
+    try { out.dated = await vegDated(env, id, rows, plans, day); }
+    catch (e) { console.error('Овочі, датовані листи: ' + e.message); out.datedError = e.message; }
+  }
+  return out;
 }
 
 async function writeNbhz(env, id, rows, snap, day) {
@@ -93,7 +127,7 @@ async function writeNbhz(env, id, rows, snap, day) {
 function writeDir(dir, env, id, rows, snap, day) {
   return dir === 'bakery' ? writeBakery(env, id, rows, snap)
     : dir === 'bread' ? writeBread(env, id, rows, snap, day)
-    : dir === 'veg' ? writeVeg(env, id, rows, snap)
+    : dir === 'veg' ? writeVeg(env, id, rows, snap, day)
     : writeNbhz(env, id, rows, snap, day);
 }
 
@@ -109,22 +143,34 @@ async function rebuildLocked(dir, env, { force }) {
   // refreshNbhzExport: вночі (до 6:00 і після 20:59) не смикаємо
   if (dir === 'nbhz' && !force && (k.hh < 6 || k.hh > 20)) return { skipped: 'ніч', rows: 0 };
 
-  const snap = await env.data.reportSnapshot(dir, day);
-  const rows = rowsFromOrders(dir, snap.orders, snap.orderStores, day);
+  let snap = await env.data.reportSnapshot(dir, day);
+  let rows = rowsFromOrders(dir, snap.orders, snap.orderStores, day);
+  // Овочі: доставка - наступного дня, постачальник дивиться звіт уранці в день доставки. Поки за сьогодні нема жодного замовлення
+  // овочів, основні листи показують ВЧОРАШНІ замовлення (дата в заголовку); перше замовлення дня перемикає на сьогодні.
+  // Інцидент 19.11.2026: о 7:06 звіт перебудувався на четвер (порожній), замовлення середи лишились лише в сирому листі.
+  // Лише до VEG_YESTERDAY_UNTIL_H (ранок дня доставки): пізніше вчорашні можна прийняти за замовлення на завтра і повезти вдруге
+  // (середа вдень до перших замовлень, четвер увечері) - тоді лист порожній з підказкою про датовані листи.
+  let reportDay = day;
+  if (dir === 'veg' && !rows.length && k.hh < VEG_YESTERDAY_UNTIL_H) {
+    const y = R.kyivNow(new Date(Date.parse(day + 'T12:00:00Z') - 86400000)).day;
+    const ySnap = await env.data.reportSnapshot(dir, y);
+    const yRows = rowsFromOrders(dir, ySnap.orders, ySnap.orderStores, y);
+    if (yRows.length) { reportDay = y; snap = ySnap; rows = yRows; }
+  }
   const spreadsheetId = env.target.spreadsheetId(dir);
   // Немає замовлень за день (вихідний, усе скасовано) - звіт будується порожнім («ще немає»), а не пропускається: інакше після
   // скасування останнього замовлення в листах лишились би вчорашні/скасовані рядки. Apps Script тут виходив (refreshBakeryReports:
   // if (!rows.length) return) - щоб не брати глобальний замок; на сервері замка нема, а сигнатура з датою пише порожній звіт раз.
 
-  const sig = crypto.createHash('sha1').update(JSON.stringify([day, rows, snap.stores.map(projStore),
+  const sig = crypto.createHash('sha1').update(JSON.stringify([day, reportDay, rows, snap.stores.map(projStore),
     (snap.products || []).map((p) => [p.name, p.status, p.category])])).digest('hex');
   const key = spreadsheetId + '|' + dir;
   if (!force && lastSig[key] === sig && await sheetsOnPlace(env, spreadsheetId, SHEETS[dir](env, day))) return { skipped: 'без змін', rows: rows.length };
 
-  const { sizes, plans, ...res } = await writeDir(dir, env, spreadsheetId, rows, snap, day);
+  const { sizes, plans, ...res } = await writeDir(dir, env, spreadsheetId, rows, snap, reportDay);
   lastSig[key] = sig;                                  // лише після успіху всіх листів
   if (env.markReport) { try { await env.markReport(dir, env.at); } catch (e) { console.error('час збирання звіту ' + dir + ': ' + e.message); } }   // markReport_ -> settings report_at_<dir>
-  return { rows: rows.length, ...res, target: env.target.mode };
+  return { rows: rows.length, ...res, ...(reportDay !== day ? { reportDay } : {}), target: env.target.mode };
 }
 
 // force - перебудувати навіть без змін (ручний запуск)
