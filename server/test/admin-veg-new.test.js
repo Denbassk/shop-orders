@@ -47,17 +47,17 @@ test('vegNewPreview: назва з прайсу збігається з products
 
 test('vegNewApply: додає вибрані позиції зі статусом "стоп", sort після наявних активних, один запис у журнал', async () => {
   const { env, st } = mk([{ id: 'p1', name: 'Буряк', price: 18, status: 'active', sort: 2 }]);
-  const r = await V.admVegNewApply({ dir: 'veg', names: ['Картопля', 'Мандарин (Муркот)'] }, env);
+  const r = await V.admVegNewApply({ dir: 'veg', access: { mode: 'all' }, names: ['Картопля', 'Мандарин (Муркот)'] }, env);
   assert.equal(r.added, 2);
   assert.deepEqual(st.added, [
-    { dir: 'veg', id: 'Картопля', name: 'Картопля', price: 17, status: 'stop', sort: 3 },
-    { dir: 'veg', id: 'Мандарин (Муркот)', name: 'Мандарин (Муркот)', price: 110, status: 'stop', sort: 4 },
+    { dir: 'veg', id: 'Картопля', name: 'Картопля', price: 17, status: 'stop', sort: 3, access_mode: 'all', access_stores: [] },
+    { dir: 'veg', id: 'Мандарин (Муркот)', name: 'Мандарин (Муркот)', price: 110, status: 'stop', sort: 4, access_mode: 'all', access_stores: [] },
   ]);
-  assert.deepEqual(st.log, [['Додано в асортимент', DIRECTIONS.veg.title + ': з прайсу (стоп) - 2 поз.: Картопля; Мандарин (Муркот)']]);
+  assert.deepEqual(st.log, [['Додано в асортимент', DIRECTIONS.veg.title + ': з прайсу (стоп, доступ - усім точкам) - 2 поз.: Картопля; Мандарин (Муркот)']]);
 });
 
 test('vegNewApply: порожній вибір, дубль, забагато - помилки до запису', async () => {
-  const go = (p) => V.admVegNewApply({ dir: 'veg', ...p }, mk([]).env);
+  const go = (p) => V.admVegNewApply({ dir: 'veg', access: { mode: 'all' }, ...p }, mk([]).env);
   await assert.rejects(go({ names: [] }), { message: 'Оберіть позиції' });
   await assert.rejects(go({}), { message: 'Оберіть позиції' });
   await assert.rejects(go({ names: ['Картопля', 'картопля'] }), { message: 'Позиція вказана двічі' });
@@ -66,14 +66,14 @@ test('vegNewApply: порожній вибір, дубль, забагато - �
 
 test('vegNewApply: позиції вже нема серед нових (з\'явилась у products або зникла з прайсу з моменту перегляду)', async () => {
   const { env } = mk([{ id: 'Картопля', name: 'Картопля', price: 17, status: 'active', sort: 0 }]);
-  await assert.rejects(V.admVegNewApply({ dir: 'veg', names: ['Картопля'] }, env), /вже немає серед нових/);
-  await assert.rejects(V.admVegNewApply({ dir: 'veg', names: ['Таке не знайдеш'] }, mk([]).env), /вже немає серед нових/);
+  await assert.rejects(V.admVegNewApply({ dir: 'veg', access: { mode: 'all' }, names: ['Картопля'] }, env), /вже немає серед нових/);
+  await assert.rejects(V.admVegNewApply({ dir: 'veg', access: { mode: 'all' }, names: ['Таке не знайдеш'] }, mk([]).env), /вже немає серед нових/);
 });
 
 test('vegNewApply: збій посеред запису - у журналі лише додане, помилка нагору', async () => {
   const { env, st } = mk([], PRICE_ROWS, { failOn: 2 });
-  await assert.rejects(V.admVegNewApply({ dir: 'veg', names: ['Картопля', 'Морква'] }, env), /збій запису/);
-  assert.deepEqual(st.log, [['Додано в асортимент', DIRECTIONS.veg.title + ': з прайсу (стоп) - 1 поз. (збій на «Морква», решту не додано): Картопля']]);
+  await assert.rejects(V.admVegNewApply({ dir: 'veg', access: { mode: 'all' }, names: ['Картопля', 'Морква'] }, env), /збій запису/);
+  assert.deepEqual(st.log, [['Додано в асортимент', DIRECTIONS.veg.title + ': з прайсу (стоп, доступ - усім точкам) - 1 поз. (збій на «Морква», решту не додано): Картопля']]);
 });
 
 test('runtime: vegNewPreview / vegNewApply підключено до пульту', () => {

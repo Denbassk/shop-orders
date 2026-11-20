@@ -45,6 +45,28 @@ async function dirStores(dir, env) {
   return (await env.data.stores()).filter((st) => (st.directions || []).indexOf(dir) >= 0);
 }
 
+// Перевірка доступу з запиту: access = { mode, stores }. Для 'all' список точок очищується; 'only'/'except' - хоч одна точка,
+// лише активні точки цього напрямку. required - доступ обовʼязковий (нова позиція: рішення власника 20.11 «питати при додаванні»).
+// -> { mode, stores (відсортовані store_id), text (для журналу) } або null (не задано і не обовʼязково)
+async function accessInput(dir, access, env, { required = false } = {}) {
+  if (access == null || access === '' || (typeof access === 'object' && !access.mode)) {
+    if (required) throw new Error(ACCESS_REQUIRED);
+    return null;
+  }
+  const mode = String(access.mode || '');
+  if (!ACCESS_MODES.includes(mode)) throw new Error('Невірний режим доступу');
+  const raw = Array.isArray(access.stores) ? access.stores.map(String) : [];
+  if (new Set(raw).size !== raw.length) throw new Error('Точка вказана двічі');
+  const byId = new Map((await dirStores(dir, env)).map((st) => [st.id, st]));
+  raw.forEach((id) => { if (!byId.has(id)) throw new Error('Точку не знайдено або в неї немає цього напрямку. Оновіть сторінку.'); });
+  const stores = mode === 'all' ? [] : raw.slice().sort();
+  if (mode !== 'all' && !stores.length) throw new Error('Відмітьте хоча б одну точку');
+  const text = ACCESS_TEXT[mode] + (mode === 'all' ? '' : ' ' + stores.length + ' ТТ (' + stores.slice(0, 6).map((id) => byId.get(id).label).join(', ') +
+    (stores.length > 6 ? ', …ще ' + (stores.length - 6) : '') + ')');
+  return { mode, stores, text };
+}
+const ACCESS_REQUIRED = 'Оберіть, яким точкам доступна позиція';
+
 // Задати доступ відміченим позиціям. payload: { dir, ids, mode: 'all'|'only'|'except', stores: [store_id] }.
 // 'all' - список точок очищується. 'only'/'except' - потрібна хоч одна точка; точки - лише активні точки цього напрямку.
 // Позиції, у яких уже рівно такий доступ, пропускаються. Збій посеред запису: у журналі лише записане.
@@ -52,14 +74,9 @@ async function admAssortAccess(payload, env) {
   payload = payload || {};
   const dir = String(payload.dir || '');
   const cfg = cfgOf(dir);
-  const mode = String(payload.mode || '');
-  if (!ACCESS_MODES.includes(mode)) throw new Error('Невірний режим доступу');
-  const raw = Array.isArray(payload.stores) ? payload.stores.map(String) : [];
-  if (new Set(raw).size !== raw.length) throw new Error('Точка вказана двічі');
-  const byId = new Map((await dirStores(dir, env)).map((st) => [st.id, st]));
-  raw.forEach((id) => { if (!byId.has(id)) throw new Error('Точку не знайдено або в неї немає цього напрямку. Оновіть сторінку.'); });
-  const storeIds = mode === 'all' ? [] : raw.slice().sort();
-  if (mode !== 'all' && !storeIds.length) throw new Error('Відмітьте хоча б одну точку');
+  if (!ACCESS_MODES.includes(String(payload.mode || ''))) throw new Error('Невірний режим доступу');
+  const acc = await accessInput(dir, { mode: payload.mode, stores: payload.stores }, env, { required: true });
+  const mode = acc.mode, storeIds = acc.stores;
 
   const list = pickByIds(await env.adm.dirProducts(dir), payload).sort(bySort);
   const same = (x) => { const a = accessOf(x); return a.mode === mode && a.stores.slice().sort().join('|') === storeIds.join('|'); };
@@ -74,9 +91,7 @@ async function admAssortAccess(payload, env) {
     }
   } finally {
     if (done.length) {
-      const who = mode === 'all' ? '' : ' ' + storeIds.length + ' ТТ (' + storeIds.slice(0, 6).map((id) => byId.get(id).label).join(', ') +
-        (storeIds.length > 6 ? ', …ще ' + (storeIds.length - 6) : '') + ')';
-      const head = cfg.title + ': доступ - ' + ACCESS_TEXT[mode] + who + ' - ' + done.length + ' поз.' +
+      const head = cfg.title + ': доступ - ' + acc.text + ' - ' + done.length + ' поз.' +
         (failed ? ' (збій на «' + failed.name + '», решту не записано)' : '');
       const names = done.slice(0, LOG_ITEMS).map((x) => x.name).join('; ') + (done.length > LOG_ITEMS ? '; …ще ' + (done.length - LOG_ITEMS) : '');
       await logSafe(env, 'Змінено асортимент', (head + ': ' + names).slice(0, LOG_MAX));
@@ -187,4 +202,4 @@ async function admAssortStop(payload, env) {
   return { changed: done.length, skipped: list.length - todo.length, names: done.map((x) => x.name) };
 }
 
-module.exports = { admAssortment, admPricePreview, admPriceApply, admAssortStop, admAssortAccess, MAX_ROWS };
+module.exports = { admAssortment, admPricePreview, admPriceApply, admAssortStop, admAssortAccess, accessInput, accessOf, dirStores, ACCESS_REQUIRED, MAX_ROWS };

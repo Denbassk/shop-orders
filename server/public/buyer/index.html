@@ -1084,7 +1084,7 @@ async function showWo() {
   const groups = new Map();
   list.forEach((x) => { const c = String(x[0].category || '').trim() || 'Інше'; if (!groups.has(c)) groups.set(c, []); groups.get(c).push(x); });
   const sub = (p) => money(p.price) + ' грн' + (S.products.hasCost && p.cost > 0 ? ' · собівартість ' + money(p.cost) : '') + (p.availability ? ' · ' + p.availability : '') + (p.barcode ? ' · ' + p.barcode : '');
-  const item = ([p, i]) => '<button class="item" onclick="askProduct(' + i + ')"><span class="grow"><span class="t">' + esc(p.name) + '</span><span class="s">' + esc(sub(p)) + '</span></span>' + (S.products.hasCost && !(p.cost > 0) ? '<span class="pill closed">без собівартості</span>' : '') + (p.stop ? '<span class="pill closed">стоп</span>' : '') + '</button>';
+  const item = ([p, i]) => '<button class="item" onclick="askProduct(' + i + ')"><span class="grow"><span class="t">' + esc(p.name) + '</span><span class="s">' + esc(sub(p)) + '</span></span>' + (S.products.hasCost && !(p.cost > 0) ? '<span class="pill closed">без собівартості</span>' : '') + (p.stop ? '<span class="pill closed">стоп</span>' : '') + accPill(p.access) + '</button>';
   box.innerHTML = '<div class="pgrid">' + [...groups].map(([c, xs]) => {
     const st = xs.filter(([p]) => p.stop).length;
     return section(c, '<div class="card">' + xs.slice(0, 300).map(item).join('') + '</div>', xs.length + ' поз.' + (st ? ' · стоп ' + st : ''));
@@ -1118,20 +1118,60 @@ function askNewProduct() {
         '<div class="lbl">Собівартість, грн (для списань)</div><input id="npk" type="text" inputmode="decimal">' +
         '<div class="lbl">Наявність (необов\'язково)</div><input id="npa" type="text" maxlength="60">' : '') +
       (boxed ? '<div class="lbl">Штук в ящику (необов\'язково)</div><input id="npx" type="text" inputmode="numeric" maxlength="20">' : '') +
+      '<div class="lbl">Кому доступна позиція</div>' + NPA_MODES.map(([m, t]) => '<label class="pick card" style="margin:8px 0"><input type="radio" name="npam" value="' + m + '" onchange="npAccMode(this.value)"><span class="grow t">' + t + '</span></label>').join('') +
+      '<div class="hint" id="npah"></div><div id="npas"></div>' +
       '<div class="hint"></div><button class="btn dark" id="npok">Додати</button><button class="btn ghost" onclick="closeSheet()">Скасувати</button>';
+    NPA = { mode: '', sel: {}, q: '' };
     $('npsub').textContent = (S.info && S.info.title) || '';
     $('npok').onclick = saveNewProduct;
+    npAccHint();
     $('npn').focus();
   });
+}
+// ----- кому доступна нова позиція (обовʼязково; рішення 20.11). Сервер: buyerAddProduct + admin/assortment.accessInput -----
+const NPA_MODES = [['all', 'Усім точкам'], ['only', 'Лише відміченим точкам'], ['except', 'Усім, крім відмічених']];
+let NPA = { mode: '', sel: {}, q: '' };
+function accPill(a) {
+  if (!a || a.mode === 'all') return '';
+  return '<span class="pill late">' + (a.mode === 'only' ? 'лише ' : 'крім ') + a.stores.length + ' ТТ</span>';
+}
+function npAccMode(m) {
+  NPA.mode = m;
+  const box = $('npas');
+  if (m === 'all') box.innerHTML = '';
+  else if (!$('npaq')) {
+    box.innerHTML = '<input id="npaq" type="search" placeholder="Пошук точки" autocomplete="off"><div id="npal" class="card" style="max-height:320px;overflow:auto;margin-top:8px"></div>';
+    $('npaq').oninput = () => { NPA.q = $('npaq').value; npAccList(); };
+    npAccList();
+  }
+  npAccHint();
+}
+function npAccList() {
+  const q = NPA.q.trim().toLowerCase();
+  const list = ((S.products && S.products.stores) || []).filter((s) => !q || s.label.toLowerCase().includes(q));
+  $('npal').innerHTML = list.length ? list.map((s) => '<label class="pick" style="margin:0"><input type="checkbox" data-id="' + esc(s.id) + '"' + (NPA.sel[s.id] ? ' checked' : '') + ' onchange="npAccTog(this)"><span class="grow t">' + esc(s.label) + '</span></label>').join('')
+    : '<div class="info">Нічого не знайдено</div>';
+}
+function npAccTog(cb) { const id = cb.getAttribute('data-id'); if (cb.checked) NPA.sel[id] = true; else delete NPA.sel[id]; npAccHint(); }
+function npAccHint() {
+  const n = Object.keys(NPA.sel).length, h = $('npah');
+  if (!h) return;
+  h.textContent = !NPA.mode ? 'Обовʼязково: оберіть, яким точкам буде доступна позиція.'
+    : NPA.mode === 'all' ? 'Позицію побачать і зможуть замовити всі точки напрямку.'
+    : NPA.mode === 'only' ? 'Позицію побачать ЛИШЕ відмічені точки (відмічено: ' + n + '). Інші її не побачать.'
+    : 'Позицію побачать усі точки, КРІМ відмічених (відмічено: ' + n + ').';
 }
 async function saveNewProduct() {
   const av = S.products.hasAvailability, body = { name: $('npn').value, price: $('npp').value, barcode: $('npb').value };
   if (av) { body.category = $('npc').value; body.cost = $('npk').value; body.availability = $('npa').value; }
   if ($('npx')) body.box = $('npx').value;
+  if (!NPA.mode) { npAccHint(); return toast('❌ Оберіть, яким точкам доступна позиція'); }
+  body.access = { mode: NPA.mode, stores: NPA.mode === 'all' ? [] : Object.keys(NPA.sel) };
+  if (NPA.mode !== 'all' && !body.access.stores.length) return toast('❌ Відмітьте хоча б одну точку');
   const b = $('npok'); b.disabled = true; b.textContent = 'Додаю…';
   try {
     const r = await call('addProduct', body);
-    S.products.products.push({ id: r.id, name: r.name, barcode: r.barcode, price: r.price, cost: r.cost || 0, stop: false, category: r.category, availability: r.availability, box: body.box || '', sort: r.sort });
+    S.products.products.push({ id: r.id, name: r.name, barcode: r.barcode, price: r.price, cost: r.cost || 0, stop: false, category: r.category, availability: r.availability, box: body.box || '', sort: r.sort, access: r.access });
     S.q = ''; closeSheet(); renderProducts();
     toast('✅ Додано: ' + r.name + (r.noCost ? ' (без собівартості - у списаннях продавців не буде)' : ''));
   } catch (e) { b.disabled = false; b.textContent = 'Додати'; toast('❌ ' + e.message); }

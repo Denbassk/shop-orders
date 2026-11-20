@@ -58,12 +58,12 @@ test('setProduct: невірна собівартість і чужий напр
 
 test('нова позиція ВК: собівартість зберігається і повертається; без неї або з нулем - noCost', async () => {
   const { env, calls } = envOf([]);
-  const a = await B.buyerAddProduct('bakery', { name: 'Пиріг', price: '40', cost: '15,5', category: 'Випічка' }, env);
+  const a = await B.buyerAddProduct('bakery', { access: { mode: 'all' }, name: 'Пиріг', price: '40', cost: '15,5', category: 'Випічка' }, env);
   assert.equal(calls.add[0].cost, 15.5);
   assert.deepEqual([a.cost, a.noCost], [15.5, false]);
-  const b = await B.buyerAddProduct('bakery', { name: 'Тістечко', price: '40' }, env);
+  const b = await B.buyerAddProduct('bakery', { access: { mode: 'all' }, name: 'Тістечко', price: '40' }, env);
   assert.deepEqual([b.cost, b.noCost], [0, true]);
-  const c = await B.buyerAddProduct('bakery', { name: 'Кекс', price: '40', cost: '0' }, env);
+  const c = await B.buyerAddProduct('bakery', { access: { mode: 'all' }, name: 'Кекс', price: '40', cost: '0' }, env);
   assert.equal(c.noCost, true);
 });
 

@@ -136,7 +136,7 @@ test('закупниця: ціна/собівартість через спіл�
   assert.deepEqual(st.set[0], ['bakery', 'b1', { price: 50.5, cost: 20 }]);
   for (const bad of ['', 'abc', -1, '100001']) await assert.rejects(B.buyerSetProduct('bakery', { id: 'b1', price: bad }, env), /Невірна ціна: Борщ/, String(bad));
   for (const bad of ['', 'abc', -1, '100001', null]) await assert.rejects(B.buyerSetProduct('bakery', { id: 'b1', cost: bad }, env), /Невірна собівартість: Борщ/, String(bad));
-  await assert.rejects(B.buyerAddProduct('bakery', { name: 'Новий', price: '100001' }, env), /Невірна ціна/);
+  await assert.rejects(B.buyerAddProduct('bakery', { access: { mode: 'all' }, name: 'Новий', price: '100001' }, env), /Невірна ціна/);
 });
 
 test('пульт: пункт «Ассортимент и цены» у меню напрямка, екран assort з пошуком, вибором, перегляд «було -> стало» і підтвердження', () => {

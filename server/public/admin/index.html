@@ -2606,23 +2606,26 @@ function drawAccess() {
   var m = DIRS[AS.dir], h = '', n = ACC.names.length;
   h += '<div class="info">Позиций: <b>' + n + '</b> — ' + esc(ACC.names.slice(0, 6).join(', ')) + (n > 6 ? ' и ещё ' + (n - 6) : '') + '</div>';
   if (ACC.mixed) h += '<div class="note" style="margin-top:12px">У отмеченных позиций сейчас разный доступ — будет задан один для всех.</div>';
-  h += '<div class="chips" id="acc_mode" style="margin:16px 0 8px">' + ACC_MODES.map(function (x) {
-    return '<button type="button" class="chip" data-m="' + x[0] + '" onclick="accMode(\'' + x[0] + '\')">' + x[1] + '</button>';
-  }).join('') + '</div>';
-  h += '<div class="s" id="acc_hint" style="margin:0 4px 12px"></div>';
-  h += '<div id="acc_tools"></div><div id="acc_stores"></div>';
+  h += accBlock();
   h += '<div style="margin-top:18px"><button class="btn" onclick="askAccess()">Сохранить</button></div>';
   h += '<button class="btn ghost" onclick="drawAssort()">Назад к списку</button>';
   setHead('Доступ по точкам', m.t);
   view('<div style="grid-column:1/-1;max-width:720px">' + h + '</div>');
   accMode(ACC.mode);
 }
+function accBlock() {
+  return '<div class="chips" id="acc_mode" style="margin:16px 0 8px">' + ACC_MODES.map(function (x) {
+    return '<button type="button" class="chip" data-m="' + x[0] + '" onclick="accMode(\'' + x[0] + '\')">' + x[1] + '</button>';
+  }).join('') + '</div>' +
+    '<div class="s" id="acc_hint" style="margin:0 4px 12px"></div>' +
+    '<div id="acc_tools"></div><div id="acc_stores"></div>';
+}
 function accMode(mode) {
   ACC.mode = mode;
   var chips = document.querySelectorAll('#acc_mode .chip');
   for (var i = 0; i < chips.length; i++) chips[i].className = 'chip' + (chips[i].getAttribute('data-m') === mode ? ' on' : '');
   var tools = document.getElementById('acc_tools');
-  if (mode === 'all') { tools.innerHTML = ''; }
+  if (mode === 'all' || !mode) { tools.innerHTML = ''; }
   else if (!document.getElementById('acc_q')) {
     tools.innerHTML = '<div class="atools astools"><input type="search" id="acc_q" class="atq" placeholder="Поиск точки" value="' + attr(ACC.q) + '"></div>' +
       '<div class="asbar" style="margin:0 0 12px"><button type="button" onclick="accAll(true)">Отметить найденные</button><button type="button" onclick="accAll(false)">Снять найденные</button></div>';
@@ -2637,14 +2640,15 @@ function accStores() {
 }
 function accHint() {
   var cnt = Object.keys(ACC.sel).length, hint = document.getElementById('acc_hint');
-  hint.textContent = ACC.mode === 'all' ? 'Позицию видят и могут заказать все точки направления.'
+  hint.textContent = !ACC.mode ? 'Обязательно: выберите, каким точкам будут доступны позиции.'
+    : ACC.mode === 'all' ? 'Позицию видят и могут заказать все точки направления.'
     : ACC.mode === 'only' ? 'Позицию видят и могут заказать ТОЛЬКО отмеченные точки (отмечено: ' + cnt + '). Остальные её не увидят.'
     : 'Позицию видят все точки, КРОМЕ отмеченных (отмечено: ' + cnt + ').';
 }
 function fillAccess() {
   var el = document.getElementById('acc_stores');
   accHint();
-  if (ACC.mode === 'all') { el.innerHTML = ''; return; }
+  if (ACC.mode === 'all' || !ACC.mode) { el.innerHTML = ''; return; }
   var list = accStores();
   el.innerHTML = '<div class="card">' + (list.length ? list.map(function (st, i) {
     return '<label class="pick" style="display:flex"><input type="checkbox"' + (ACC.sel[st.id] ? ' checked' : '') + ' data-id="' + attr(st.id) + '" onchange="accToggle(this)">' +
@@ -2798,23 +2802,32 @@ function drawVn() {
         '<span class="grow"><span class="t">' + esc(x.name) + '</span></span>' +
         '<span class="right" style="white-space:nowrap">' + esc(asMoney(x.price)) + '</span></label>';
     }).join('') + '</div>';
+    h += '<div class="ascnt" style="margin:22px 4px 0">Кому будут доступны</div>' + accBlock();
     h += '<div style="margin-top:18px"><button class="btn" onclick="askVnApply()">Добавить отмеченные (на стопе)</button></div>';
   }
   h += '<button class="btn ghost" onclick="loadAssort(VN.dir)">Назад к списку</button>';
   view('<div style="grid-column:1/-1;max-width:720px">' + h + '</div>');
   vnCount();
+  if (r.n) { ACC = { ids: [], names: [], mode: '', sel: {}, q: '', mixed: false }; accMode(''); }
 }
 function vnToggle(i, on) { var x = VN.r.rows[i]; if (on) VN.sel[x.name] = true; else delete VN.sel[x.name]; vnCount(); }
 function vnCount() { var c = document.getElementById('vn_cnt'); if (c) c.textContent = Object.keys(VN.sel).length + ' из ' + VN.r.n; }
 function askVnApply() {
   var k = VN.dir, m = DIRS[k], names = Object.keys(VN.sel);
   if (!names.length) return toast('Отметьте позиции');
+  if (!ACC || !ACC.mode) return toast('Выберите, каким точкам будут доступны позиции');
+  var access = { mode: ACC.mode, stores: ACC.mode === 'all' ? [] : Object.keys(ACC.sel) };
+  if (ACC.mode !== 'all' && !access.stores.length) return toast('Отметьте хотя бы одну точку');
+  var labels = AS.d.stores.filter(function (st) { return ACC.sel[st.id]; }).map(function (st) { return st.label; });
+  var who = ACC.mode === 'all' ? 'Доступ: всем точкам'
+    : (ACC.mode === 'only' ? 'Доступ: только ' : 'Доступ: всем, кроме ') + labels.length + ' ТТ: ' + labels.slice(0, 6).join(', ') + (labels.length > 6 ? ' и ещё ' + (labels.length - 6) : '');
   confirmSheet({
     title: 'Добавить новые позиции?', sub: m.t, yes: 'Добавить (на стопе)',
     what: [names.length + ' позиций: ' + names.slice(0, 6).join(', ') + (names.length > 6 ? ' и ещё ' + (names.length - 6) : ''),
+           who,
            'Позиции появятся в ассортименте со статусом «стоп» — продавцы их не увидят, пока вы сами не снимете стоп',
            'Действие попадёт в журнал'],
-    run: function () { return call('vegNewApply', { dir: k, names: names }); },
+    run: function () { return call('vegNewApply', { dir: k, names: names, access: access }); },
     done: function (res) { toast('Добавлено: ' + res.added + ' поз. (на стопе)'); loadAssort(k); }
   });
 }

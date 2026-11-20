@@ -25,11 +25,12 @@ async function admVegNewPreview(payload, env) {
   return { dir: DIR, rows, n: rows.length };
 }
 
-// payload: { names: [...] } - назви, відмічені в перегляді
+// payload: { names: [...], access: { mode, stores } } - назви, відмічені в перегляді; доступ по точках обовʼязковий (рішення 20.11)
 async function admVegNewApply(payload, env) {
   payload = payload || {};
   const names = Array.isArray(payload.names) ? payload.names.map(String) : [];
   if (!names.length) throw new Error('Оберіть позиції');
+  const acc = await require('./assortment').accessInput(DIR, payload.access, env, { required: true });
   if (names.length > MAX_ROWS) throw new Error('Позицій не більше ' + MAX_ROWS + ' за раз');
   if (new Set(names.map(nameKey)).size !== names.length) throw new Error('Позиція вказана двічі');
 
@@ -48,14 +49,14 @@ async function admVegNewApply(payload, env) {
   try {
     for (let i = 0; i < todo.length; i++) {
       const r = todo[i];
-      const row = { dir: DIR, id: r.name, name: r.name, price: r.price, status: 'stop', sort: maxSort + 1 + i };
+      const row = { dir: DIR, id: r.name, name: r.name, price: r.price, status: 'stop', sort: maxSort + 1 + i, access_mode: acc.mode, access_stores: acc.stores };
       try { await env.adm.addProduct(row); } catch (e) { failed = r; throw e; }
       done.push(row);
     }
   } finally {
     if (done.length) {
       const names8 = done.slice(0, LOG_ITEMS).map((r) => r.name).join('; ') + (done.length > LOG_ITEMS ? '; …ще ' + (done.length - LOG_ITEMS) : '');
-      const head = cfg.title + ': з прайсу (стоп) - ' + done.length + ' поз.' + (failed ? ' (збій на «' + failed.name + '», решту не додано)' : '');
+      const head = cfg.title + ': з прайсу (стоп, доступ - ' + acc.text + ') - ' + done.length + ' поз.' + (failed ? ' (збій на «' + failed.name + '», решту не додано)' : '');
       await logSafe(env, 'Додано в асортимент', (head + ': ' + names8).slice(0, LOG_MAX));
     }
   }

@@ -7,6 +7,7 @@ const R = require('../rules');
 const P = require('../prices');
 const { STORE_NOT_FOUND } = require('../admin/write');
 const { nameKey } = require('../import/parse');
+const A = require('../admin/assortment');
 
 function cfgOf(dir) {
   const cfg = Object.prototype.hasOwnProperty.call(DIRECTIONS, dir) ? DIRECTIONS[dir] : null;
@@ -64,9 +65,11 @@ async function buyerProducts(dir, env) {
   const list = (await env.adm.dirProducts(dir)).map((x) => ({
     id: x.id, name: x.name, barcode: x.barcode || '', price: Number(x.price) || 0, stop: x.status === 'stop',
     category: x.category || '', availability: x.availability || '', box: x.box || '', sort: Number(x.sort) || 0,
-    cost: dir === 'bakery' ? Number(x.cost) || 0 : 0,
+    cost: dir === 'bakery' ? Number(x.cost) || 0 : 0, access: A.accessOf(x),
   })).sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name, 'uk'));
-  return { dir, title: cfg.title, hasAvailability: dir === 'bakery', hasCost: dir === 'bakery', products: list };
+  // точки напрямку - для вибору «кому доступна» при додаванні позиції
+  const stores = (await A.dirStores(dir, env)).map((st) => ({ id: st.id, label: st.label }));
+  return { dir, title: cfg.title, hasAvailability: dir === 'bakery', hasCost: dir === 'bakery', products: list, stores };
 }
 
 const NOT_FOUND = 'Товар не знайдено. Оновіть сторінку.';
@@ -130,14 +133,19 @@ async function buyerAddProduct(dir, p, env) {
     const box = String(p.box == null ? '' : p.box).trim().slice(0, 20);
     row.box = box || null;
   }
+  // кому доступна - обовʼязково (рішення власника 20.11: нові позиції - питати по точках)
+  const acc = await A.accessInput(dir, p.access, env, { required: true });
+  row.access_mode = acc.mode; row.access_stores = acc.stores;
   const list = await env.adm.dirProducts(dir);
   const dup = list.find((x) => String(x.id) === id || nameKey(x.name) === nameKey(name));
   if (dup) throw new Error('Така позиція вже є: ' + dup.name + (dup.status === 'stop' ? ' (стоп - зніміть стоп у списку)' : ''));
   row.sort = list.filter((x) => Number(x.sort) < 1000).reduce((m, x) => Math.max(m, Number(x.sort) || 0), 0) + 1;
   await env.adm.addProduct(row);
   await logSafe(env, 'Додано в асортимент', cfg.title + ' / ' + name + ': ' + money2(row.price) + ' грн' +
-    (row.category ? ', ' + row.category : '') + (row.cost != null ? ', собівартість ' + money2(row.cost) : '') + (barcode ? ', ' + barcode : ''));
+    (row.category ? ', ' + row.category : '') + (row.cost != null ? ', собівартість ' + money2(row.cost) : '') + (barcode ? ', ' + barcode : '') +
+    ', доступ - ' + acc.text);
   return { id, name, price: row.price, barcode, category: row.category || '', availability: row.availability || '', stop: false, sort: row.sort,
+    access: { mode: acc.mode, stores: acc.stores },
     cost: row.cost || 0, noCost: bakery && !(row.cost > 0) };
 }
 const money2 = (n) => String(Math.round(Number(n) * 100) / 100);
