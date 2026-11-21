@@ -42,7 +42,8 @@ function createData(sb, { now = Date.now } = {}) {
   // перехід через північ і кінець діапазону не чекають кешу.
   const directions = async () => {
     const [base, s] = await Promise.all([directionsBase(), settings()]);
-    return R.withDeadlineOverrides(base, s.deadline_override, new Date(now()));
+    const at = new Date(now());
+    return R.withLeadOverrides(R.withDeadlineOverrides(base, s.deadline_override, at), s.lead_override, at);
   };
 
   const productsMemo = {};

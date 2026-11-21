@@ -427,7 +427,7 @@ function openStore(s){
     var offday = s.dayOk && s.dayOk[k] === false;
     var sub = offday && s.dayOff && s.dayOff[k]
       ? esc(s.dayOff[k])
-      : esc(d.subtitle) + (d.deadline ? ' · до ' + d.deadline : '');
+      : (d.delivery ? '<b>Доставка ' + esc(d.delivery) + '</b>' : esc(d.subtitle)) + (d.deadline ? ' · до ' + d.deadline : '');
     var tag = offday ? esc(d.dayOffTag || 'Не ваш день')
                      : (done ? 'Відправлено' : (d.closed ? 'Закрито' : 'Замовити'));
     h += '<div class="dir' + (done||offday?' done':'') + '" style="background:' + d.color +
@@ -471,6 +471,8 @@ function drawProd(){
     return !S.q || p.name.toLowerCase().indexOf(S.q.toLowerCase()) >= 0;
   });
   var h='';
+  if (d.delivery) h += '<div style="margin:0 0 12px;padding:12px 14px;border-radius:14px;background:#e7f0ff;border:1px solid #b9cff5;' +
+    'color:#173a73;font-size:16px">Замовлення на доставку: <b>' + esc(d.delivery) + '</b></div>';
   if (!d.products.length)
     h += '<div class="err">Асортимент порожній: усі позиції на стопі або лист ще не ' +
          'заповнено. Замовити не вийде - повідомте закупницю.</div>';
@@ -586,6 +588,7 @@ function done(r){
     '<h2>' + (r.replaced ? 'Зміни збережено' : 'Замовлення прийнято') + '</h2><p><b>' + esc(r.direction) + '</b> · ' + esc(r.store) + '</p>' +
     '<p>' + r.positions + ' позицій' +
       ((S.prod && S.prod.hidePrice) ? '' : ' на ' + money(r.total) + ' грн') + '</p>' +
+    (r.delivery ? '<p><b>Доставка: ' + esc(r.delivery) + '</b></p>' : '') +
     '<p>' + esc(r.date||'') + ' ' + esc(r.time) + '</p>' +
     (r.duplicate ? '<p style="color:#b3261e">Повторна відправка — дублі не створені</p>' : '') +
     (r.buffered ? '<p style="color:#7a5200">Таблиця зараз повільна — замовлення збережене і само запишеться в неї за кілька хвилин. Повторно не відправляйте.</p>' : '') +
@@ -619,6 +622,11 @@ function beat(){
         if (S.boot.directions[k]) S.boot.directions[k].deadline = d.deadlines[k];
       });
       if (S.prod && d.deadlines[S.prod.dir]) S.prod.deadline = d.deadlines[S.prod.dir];
+    }
+    if (d.deliveries){
+      Object.keys(d.deliveries).forEach(function(k){
+        if (S.boot.directions[k]) S.boot.directions[k].delivery = d.deliveries[k];
+      });
     }
     if (d.notices){
       S.boot.notices = d.notices;

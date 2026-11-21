@@ -114,6 +114,26 @@ function build() {
     "      try { renderNotices(); } catch (e) {}\n" +
     "    }\n");
 
+  // 3в'. тимчасовий строк доставки з пульту (settings.lead_override, 20.11.2026): дата доставки на плитці напрямку, банер над
+  //      товарами і рядок на екрані «Замовлення прийнято». Без строку сервер цих полів не віддає - тоді все як раніше.
+  html = patch(html, "      : esc(d.subtitle) + (d.deadline ? ' · до ' + d.deadline : '');",
+    "      : (d.delivery ? '<b>Доставка ' + esc(d.delivery) + '</b>' : esc(d.subtitle)) + (d.deadline ? ' · до ' + d.deadline : '');");
+  html = patch(html, "  var h='';\n  if (!d.products.length)",
+    "  var h='';\n" +
+    "  if (d.delivery) h += '<div style=\"margin:0 0 12px;padding:12px 14px;border-radius:14px;background:#e7f0ff;border:1px solid #b9cff5;' +\n" +
+    "    'color:#173a73;font-size:16px\">Замовлення на доставку: <b>' + esc(d.delivery) + '</b></div>';\n" +
+    "  if (!d.products.length)");
+  html = patch(html, "    '<p>' + esc(r.date||'') + ' ' + esc(r.time) + '</p>' +",
+    "    (r.delivery ? '<p><b>Доставка: ' + esc(r.delivery) + '</b></p>' : '') +\n" +
+    "    '<p>' + esc(r.date||'') + ' ' + esc(r.time) + '</p>' +");
+  html = patch(html, "    if (d.notices){\n      S.boot.notices = d.notices;",
+    "    if (d.deliveries){\n" +
+    "      Object.keys(d.deliveries).forEach(function(k){\n" +
+    "        if (S.boot.directions[k]) S.boot.directions[k].delivery = d.deliveries[k];\n" +
+    "      });\n" +
+    "    }\n" +
+    "    if (d.notices){\n      S.boot.notices = d.notices;");
+
   // 3г. сервісні повідомлення з пульту: контейнер банера між шапкою і #wrap + код scripts/front-notice.js перед </body>
   html = patch(html, '<div class="wrap" id="wrap"></div>', '<div id="nbox"></div>\n<div class="wrap" id="wrap"></div>');
   const noticeJs = fs.readFileSync(path.join(__dirname, 'front-notice.js'), 'utf8').replace(/\r\n/g, '\n').trim();

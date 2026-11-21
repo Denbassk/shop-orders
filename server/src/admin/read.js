@@ -72,6 +72,8 @@ async function admToday(env) {
       reportAt: env.reportAt ? await env.reportAt(k) : '',
       minLeft: cfg.deadline ? deadlineLeftMin(cfg.deadline, n) : null,
     });
+    // тимчасовий строк доставки (пульт «Время приёма»): поля лише коли запис є
+    if (cfg.leadOverride) Object.assign(dirs[dirs.length - 1], { leadOverride: cfg.leadOverride, delivery: R.deliveryOf(cfg, env.at) });
   }
   return { today: n.dmy, day: n.day, time: pad(n.hh) + ':' + pad(n.mm), dow: DAY_RU_FULL[n.dow], dirs, incoming: incomingBanner(settings) };
 }

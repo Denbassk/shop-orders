@@ -116,6 +116,48 @@ async function admRevertDeadline(payload, env) {
   return { ok: true, reverted: had, dir, title: cfg.title, base: eff ? R.baseDeadlineOf(eff) : (cfg.deadline || '') };
 }
 
+// Тимчасовий строк доставки (settings.lead_override, див. rules.withLeadOverrides): продавець бачить «Доставка: вт 24.11».
+// payload: { dir, days 1..7, from? (за замовч. сьогодні), to? ('' = без кінця) }. Дата замовлення в базі не змінюється.
+function liveLeads(cur, today) {
+  const out = {};
+  Object.keys(cur && typeof cur === 'object' ? cur : {}).forEach((k) => {
+    const st = R.leadOverrideState(cur[k], today);
+    if (st === 'active' || st === 'scheduled') out[k] = cur[k];
+  });
+  return out;
+}
+const daysWord = (n) => n + ' дн.';
+
+async function admSetLead(payload, env) {
+  const dir = String(payload.dir || '');
+  const cfg = cfgOf(dir);
+  const today = dayOf(env);
+  const days = Number(payload.days);
+  if (!R.isLead(days)) throw new Error('Строк доставки - від 1 до ' + R.LEAD_MAX + ' днів');
+  let from = payload.from ? String(payload.from) : today;
+  const to = payload.to ? String(payload.to) : '';
+  if (!R.isDay(from) || (to && !R.isDay(to))) throw new Error('Невірна дата');
+  if (to && to < from) throw new Error('Дата «по» раніше дати «з»');
+  if (to && to < today) throw new Error('Цей період уже минув');
+  if (from < today) from = today;
+  const v = liveLeads(await env.adm.getSetting('lead_override'), today);
+  v[dir] = { days, from, to, at: new Date(env.at).toISOString() };
+  await env.adm.setSetting('lead_override', v);
+  await logSafe(env, 'Тимчасово змінено строк доставки', cfg.title + ': через ' + daysWord(days) + ', з ' + ruDay(from) + (to ? ' по ' + ruDay(to) : ' без кінця'));
+  return { ok: true, dir, title: cfg.title, days, from, to, active: from <= today };
+}
+
+async function admRevertLead(payload, env) {
+  const dir = String(payload.dir || '');
+  const cfg = cfgOf(dir);
+  const v = liveLeads(await env.adm.getSetting('lead_override'), dayOf(env));
+  const had = !!v[dir];
+  delete v[dir];
+  await env.adm.setSetting('lead_override', v);
+  if (had) await logSafe(env, 'Знято строк доставки', cfg.title + ' - дата доставки продавцям не показується');
+  return { ok: true, reverted: had, dir, title: cfg.title };
+}
+
 // Увімкнути/вимкнути напрямок ЦІЛКОМ - зникає з меню всіх продавців. Існуючі замовлення і звіти не чіпає.
 async function admSetDirEnabled(payload, env) {
   const dir = String(payload.dir || '');
@@ -193,4 +235,4 @@ async function admBatch(payload, call) {
   return Promise.all(calls.map((c) => ((!c || !ADM_BATCH_OK[c.a]) ? { ok: false, error: 'not allowed' } : call(c.a, c.p || {}))));
 }
 
-module.exports = { STORE_NOT_FOUND, cfgOf, logSafe, admCancelOrder, admOpenStore, admOpenAll, admCloseAll, admSetDeadline, admRevertDeadline, admSetDirEnabled, admEditOrder, admBatch };
+module.exports = { STORE_NOT_FOUND, cfgOf, logSafe, admCancelOrder, admOpenStore, admOpenAll, admCloseAll, admSetDeadline, admRevertDeadline, admSetLead, admRevertLead, admSetDirEnabled, admEditOrder, admBatch };

@@ -41,6 +41,8 @@ async function apiBootstrap(env) {
       hasCategories: c.hasCategories, closed: R.deadlinePassed(k, undefined, ctx),
       dayOffTag: c.dayOffTag || 'Не ваш день',
     };
+    const dl = R.deliveryOf(c, env.at);
+    if (dl) dirs[k].delivery = dl.short;                          // «вт 24.11» - лише коли пульт задав строк доставки (lead_override)
   });
 
   const list = stores.map((s) => {
@@ -81,10 +83,14 @@ async function apiRefresh(payload, env) {
     ord[s.id] = o;
   });
 
-  const closed = {}, deadlines = {};
+  const closed = {}, deadlines = {}, deliveries = {};
+  let anyDelivery = false;
   Object.keys(directions).forEach((k) => {
     if (off[k]) return;
     closed[k] = R.deadlinePassed(k, undefined, ctx);
+    const dl = R.deliveryOf(directions[k], env.at);
+    deliveries[k] = dl ? dl.short : '';
+    if (dl) anyDelivery = true;
     deadlines[k] = directions[k].deadline;          // ефективний: відкритий екран продавця підхоплює тимчасову зміну без перезавантаження
   });
 
@@ -102,11 +108,13 @@ async function apiRefresh(payload, env) {
     }
   }
 
-  return {
+  const out = {
     version: settings.app_version,
     today: R.kyivNow(env.at).dmy,
     ordered: ord, closed, deadlines, notices: N.forSeller(settings.service_notice, env.at), late, lateLeft, locked,
   };
+  if (anyDelivery) out.deliveries = deliveries;               // відкритий екран підхоплює дату доставки без перезавантаження
+  return out;
 }
 
 // Порядок як у loadSheetProducts_: keepOrder - порядок рядків (sort), інакше категорія, потім назва (uk).
@@ -161,7 +169,9 @@ async function apiProducts(payload, env) {
     products.forEach((p) => { if (p.category && cats.indexOf(p.category) < 0) cats.push(p.category); });
   }
 
+  const delivery = R.deliveryOf(cfg, env.at);
   return {
+    ...(delivery ? { delivery: delivery.full } : {}),           // «вівторок, 24.11» - банер над товарами (лише зі строком доставки)
     dir: dirKey,
     unit: cfg.unit,
     hidePrice: !!cfg.hidePrice,

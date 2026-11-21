@@ -118,6 +118,8 @@ async function apiSubmitOrder(payload, env) {
     direction: cfg.title, store: store.label, test: !!settings.test_mode,
     replaced: replaceAll,
   };
+  const delivery = R.deliveryOf(cfg, env.at);
+  if (delivery) result.delivery = delivery.full;                // «Доставка: вівторок, 24.11» на екрані «Замовлення прийнято»
 
   const res = await env.data.submitOrderTx({
     order_id: orderId || ('srv-' + randomUUID()),

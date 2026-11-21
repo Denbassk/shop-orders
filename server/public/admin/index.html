@@ -2292,6 +2292,9 @@ function dlInfoHtml(x) {
   return 'Дедлайн <b>' + esc(x.deadline || '—') + '</b>';
 }
 function dlSub(x) {
+  return dlSubDl(x) + (x.delivery ? ' · доставка ' + esc(x.delivery.short) : '');
+}
+function dlSubDl(x) {
   var o = x.deadlineOverride;
   if (o && o.active) return 'сейчас до ' + esc(x.deadline) + ' — временно (' + esc(dlPeriod(o)) + '), в Довіднике ' + esc(x.baseDeadline || '—');
   if (o) return 'запланировано: до ' + esc(o.deadline) + ' на ' + esc(dlPeriod(o));
@@ -2338,6 +2341,7 @@ function loadDeadline(k) {
     if (o) h += '<button class="btn ghost" onclick="askDeadlineRevert()">Вернуть как в Довіднике</button>';
     h += '<div class="s" style="margin:16px 4px 0;line-height:1.5">Время в Довіднике не меняется. Продавцы увидят новое время в течение минуты, ' +
       'закупщица — сразу. Каждое изменение попадает в журнал.</div>';
+    h += ldHtml(x, d.day);
     view(h);
     dlMode(DL.mode);
   }).catch(fail);
@@ -2391,6 +2395,62 @@ function askDeadlineRevert() {
       if (r && r.reverted && typeof offerNotice === 'function') offerNotice(r);
       else toast('Время приёма: как в Довіднике');
     }
+  });
+}
+
+// ===== срок доставки (settings.lead_override, действия setLead / revertLead) =====
+// Продавец видит «Доставка: вт 24.11» на плитке, над товарами и после отправки. Дата заказа в базе не меняется.
+function ldStatus(x) {
+  var o = x.leadOverride, per = o ? 'с ' + dlRu(o.from) + (o.to ? ' по ' + dlRu(o.to) : ', без даты окончания') : '';
+  if (o && o.active && x.delivery)
+    return 'Продавцы видят <b>«Доставка: ' + esc(x.delivery.short) + '»</b> — доставка через <b>' + o.days + ' дн.</b> (' + esc(per) + ').';
+  if (o) return 'Запланировано: доставка через <b>' + o.days + ' дн.</b> ' + esc(per) + '. Сейчас дата доставки продавцам не показывается.';
+  return 'Дата доставки продавцам не показывается (обычный режим — на следующий день).';
+}
+function ldHtml(x, today) {
+  var o = x.leadOverride;
+  var h = '<div style="height:26px"></div><div class="info">' + ldStatus(x) + '</div>';
+  h += section('Срок доставки',
+    '<div class="card" style="padding:16px">' +
+      '<div class="s" style="margin:0 4px 8px">Доставка через, дней</div>' +
+      '<input type="number" id="ld_days" class="dlin" min="1" max="7" step="1" value="' + attr(o ? o.days : 2) + '">' +
+      '<div class="dlrow" style="margin-top:14px">' +
+        '<div><div class="s" style="margin:0 4px 8px">С</div><input type="date" id="ld_from" class="dlin" min="' + attr(today) + '" value="' + attr(o ? o.from : today) + '"></div>' +
+        '<div><div class="s" style="margin:0 4px 8px">По (пусто — без конца)</div><input type="date" id="ld_to" class="dlin" min="' + attr(today) + '" value="' + attr(o ? o.to : '') + '"></div>' +
+      '</div>' +
+    '</div>');
+  h += '<button class="btn" onclick="askLeadApply()">Применить срок</button>';
+  if (o) h += '<button class="btn ghost" onclick="askLeadRevert()">Убрать срок доставки</button>';
+  return h;
+}
+function askLeadApply() {
+  var k = DL.dir, m = DIRS[k];
+  var days = +((document.getElementById('ld_days') || {}).value || 0);
+  var from = (document.getElementById('ld_from') || {}).value || DL.today;
+  var to = (document.getElementById('ld_to') || {}).value || '';
+  if (!(days >= 1 && days <= 7 && Math.round(days) === days)) return toast('Срок — от 1 до 7 дней');
+  if (to && to < from) return toast('Дата «по» раньше даты «с»');
+  if (to && to < DL.today) return toast('Этот период уже прошёл');
+  if (from < DL.today) from = DL.today;
+  confirmSheet({
+    title: 'Изменить срок доставки?', sub: m.t,
+    what: ['Заказ, отправленный в день X, доставляется в день X + ' + days,
+      'С ' + dlRu(from) + (to ? ' по ' + dlRu(to) + ' включительно' : ' без даты окончания'),
+      'Продавцы увидят дату доставки на плитке, над товарами и после отправки',
+      'Дата заказа, отчёты и файл для поставщика не меняются', 'Действие попадёт в журнал'],
+    yes: 'Применить',
+    run: function () { return call('setLead', { dir: k, days: days, from: from, to: to }); },
+    done: function () { apply('dir', { dir: k }); toast('Срок доставки: через ' + days + ' дн.'); }
+  });
+}
+function askLeadRevert() {
+  var k = DL.dir, m = DIRS[k];
+  confirmSheet({
+    title: 'Убрать срок доставки?', sub: m.t,
+    what: ['Продавцы перестанут видеть дату доставки', 'Принятые заказы не меняются', 'Действие попадёт в журнал'],
+    yes: 'Убрать',
+    run: function () { return call('revertLead', { dir: k }); },
+    done: function () { apply('dir', { dir: k }); toast('Срок доставки убран'); }
   });
 }
 

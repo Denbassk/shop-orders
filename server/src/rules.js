@@ -133,6 +133,49 @@ function withDeadlineOverrides(directions, overrides, at) {
 
 const baseDeadlineOf = (cfg) => (cfg.baseDeadline !== undefined ? cfg.baseDeadline : cfg.deadline) || '';
 
+// --- Тимчасовий строк доставки (пульт, 20.11.2026: Рома після обстрілу возить на післязавтра) ---
+// settings.lead_override = { <dir>: { days: 1..7, from: 'yyyy-MM-dd', to: 'yyyy-MM-dd' | '' (без кінця), at: ISO } }.
+// Дата замовлення (order_date) лишається днем подачі - змінюється лише те, що бачить продавець: «Доставка: вт 24.11».
+// Без запису напрямок дату доставки не показує (як і раніше). Після `to` запис ігнорується сам.
+const LEAD_MAX = 7;
+const isLead = (n) => Number.isInteger(n) && n >= 1 && n <= LEAD_MAX;
+
+// 'active' | 'scheduled' | 'expired' | 'bad'
+function leadOverrideState(ov, today) {
+  if (!ov || !isLead(ov.days) || !isDay(ov.from) || (ov.to && (!isDay(ov.to) || ov.to < ov.from))) return 'bad';
+  if (ov.to && today > ov.to) return 'expired';
+  return today >= ov.from ? 'active' : 'scheduled';
+}
+
+// { dir: cfg } -> cfg'.leadDays (діє зараз, лише коли запис активний) і cfg'.leadOverride (активний або запланований)
+function withLeadOverrides(directions, overrides, at) {
+  if (!overrides || typeof overrides !== 'object') return directions;
+  const today = kyivNow(at).day;
+  let out = directions;
+  Object.keys(overrides).forEach((k) => {
+    const cfg = directions[k], ov = overrides[k], st = leadOverrideState(ov, today);
+    if (!cfg || st === 'bad' || st === 'expired') return;
+    if (out === directions) out = { ...directions };
+    out[k] = { ...cfg, leadOverride: { days: ov.days, from: ov.from, to: ov.to || '', active: st === 'active', at: ov.at || '' } };
+    if (st === 'active') out[k].leadDays = ov.days;
+  });
+  return out;
+}
+
+const DOW_SHORT = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+const DOW_FULL = ['неділя', 'понеділок', 'вівторок', 'середа', 'четвер', 'пʼятниця', 'субота'];
+
+// Дата доставки замовлення, поданого сьогодні: null, якщо строк для напрямку не задано.
+// { day: 'yyyy-MM-dd', short: 'вт 24.11', full: 'вівторок, 24.11', days }
+function deliveryOf(cfg, at) {
+  const n = cfg && cfg.leadDays;
+  if (!isLead(n)) return null;
+  const d = new Date(kyivNow(at).day + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  const day = d.toISOString().slice(0, 10), dm = day.slice(8, 10) + '.' + day.slice(5, 7), w = d.getUTCDay();
+  return { day, short: DOW_SHORT[w] + ' ' + dm, full: DOW_FULL[w] + ', ' + dm, days: n };
+}
+
 function deadlinePassed(dirKey, storeId, ctx) {
   const cfg = dirCfg(dirKey, ctx);
   if (!cfg.deadline) return false;
@@ -293,6 +336,7 @@ module.exports = {
   kyivNow, dirCfg, disabledDirections, dirEnabled,
   lateAllowed, lateStatus, lateLeftMin, deadlinePassed, windowOpen,
   isHM, isDay, dayDiff, deadlineOverrideState, withDeadlineOverrides, baseDeadlineOf,
+  LEAD_MAX, isLead, leadOverrideState, withLeadOverrides, deliveryOf,
   parseDays, todayDow, storeDays, dayAllowed, dayNamesOf, dayOffText,
   dmyToDay, minOrderOf,
   shortenAddress, addrKey, canonKey, statusKey,
