@@ -104,7 +104,8 @@ function writerFor(meta, data, width) {
     grid: { rows: Math.max(gp.rowCount || 0, n), cols: Math.max(gp.columnCount || 0, width) },
     fmt(rows, c1, c2, f) {
       if (rows && !rows.length) return w;
-      ranges(rows, c1, c2).forEach((rg) => { reqs.push(fmtReq(rg, f)); });
+      // порожній формат (напр. кількість без 0.###) - запиту нема: repeatCell з порожнім fields Google відхиляє
+      ranges(rows, c1, c2).forEach((rg) => { const q = fmtReq(rg, f); if (q.repeatCell.fields) reqs.push(q); });
       return w;
     },
     // o: { color: '#rrggbb', style: 'SOLID'|'SOLID_MEDIUM', sides: ['top','bottom','left','right','innerHorizontal','innerVertical'] };

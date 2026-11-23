@@ -169,3 +169,14 @@ test('звіти хліба і ВК: кількість без формату «
   const bakery = require('../src/reports/bakery');
   assert.equal(has(bakery.buildBakeryReports([], { stores: [], products: [], now: AT })), false);
 });
+
+test('sheetWriter: fmt без жодного поля не дає запиту repeatCell з порожнім fields (Google його відхиляє)', () => {
+  const { writerFor } = require('../src/reports/sheetWriter');
+  const w = writerFor({ properties: { sheetId: 1, gridProperties: { rowCount: 10, columnCount: 5 } } }, [['a', 1]], 2);
+  const before = w.requests().length;
+  w.fmt(null, 'B', 'B', {});
+  assert.equal(w.requests().length, before);
+  w.fmt(null, 'B', 'B', { num: undefined, halign: 'center' });
+  assert.equal(w.requests().length, before + 1);
+  assert.equal(w.requests()[before].repeatCell.fields, 'userEnteredFormat.horizontalAlignment');
+});
