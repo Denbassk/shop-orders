@@ -8,15 +8,16 @@ const TITLE = 'Списання випічки і кулінарії';
 const NO_COST = ' (без собівартості)', PART_COST = ' (частково без собівартості)';
 const storeKey = (x) => x.store + (x.code ? ' · №' + x.code : '');
 // group - у що групуємо, item - з чого складається група
+// gPrice / iPrice - чи має сенс ціна за одиницю в рядку групи / складу: лише коли рядок = один товар (інакше середня по різних товарах нічого не каже)
 const SLICES = [
-  { key: 'stores', sheet: 'Точки', nameHead: 'Точка', note: 'Склад кожної точки - товари', group: storeKey, item: (x) => x.name },
-  { key: 'products', sheet: 'Товари', nameHead: 'Товар', note: 'Склад кожного товару - точки, де його списали', group: (x) => x.name, item: storeKey },
-  { key: 'sellers', sheet: 'Продавці', nameHead: 'Продавець · точка', note: 'Склад кожного рядка - товари, які списав продавець', group: (x) => x.seller + ' · ' + x.store, item: (x) => x.name },
-  { key: 'cats', sheet: 'Категорії', nameHead: 'Категорія', note: 'Склад кожної категорії - товари', group: (x) => x.cat, item: (x) => x.name },
+  { key: 'stores', sheet: 'Точки', nameHead: 'Точка', note: 'Склад кожної точки - товари', group: storeKey, item: (x) => x.name, iPrice: true },
+  { key: 'products', sheet: 'Товари', nameHead: 'Товар', note: 'Склад кожного товару - точки, де його списали', group: (x) => x.name, item: storeKey, gPrice: true, iPrice: true },
+  { key: 'sellers', sheet: 'Продавці', nameHead: 'Продавець · точка', note: 'Склад кожного рядка - товари, які списав продавець', group: (x) => x.seller + ' · ' + x.store, item: (x) => x.name, iPrice: true },
+  { key: 'cats', sheet: 'Категорії', nameHead: 'Категорія', note: 'Склад кожної категорії - товари', group: (x) => x.cat, item: (x) => x.name, iPrice: true },
   { key: 'entities', sheet: 'Юрособи', nameHead: 'Юрособа', note: 'Склад кожної юрособи - категорії', group: (x) => x.entity, item: (x) => x.cat },
 ];
-const HEAD = ['№', null, 'Списано, шт', 'Подач', 'Собівартість, грн', 'З націнкою, грн', 'Частка, %'];
-const WIDTHS = [5, 58, 13, 9, 17, 17, 11];
+const HEAD = ['№', null, 'Списано, шт', 'Подач', 'Ціна, грн', 'Ціна з націнкою, грн', 'Собівартість, грн', 'З націнкою, грн', 'Частка, %'];
+const WIDTHS = [5, 58, 13, 9, 13, 15, 17, 17, 11];
 
 const isZero = (x) => x.qty > 0 && !(x.sum > 0);   // позиція без собівартості: кількість є, сума 0
 
@@ -25,17 +26,20 @@ function groupBy(rows, d, totalSum) {
   for (const x of rows) {
     const k = key(x);
     let g = m.get(k);
-    if (!g) m.set(k, g = { name: k, qty: 0, sum: 0, sum20: 0, docs: new Set(), items: new Map() });
-    g.qty += x.qty; g.sum += x.sum; g.sum20 += x.sum20; g.docs.add(x.id);
+    if (!g) m.set(k, g = { name: k, qty: 0, qtyC: 0, sum: 0, sum20: 0, docs: new Set(), items: new Map() });
+    const qc = isZero(x) ? 0 : x.qty;   // кількість лише з відомою собівартістю - для ціни за одиницю
+    g.qty += x.qty; g.qtyC += qc; g.sum += x.sum; g.sum20 += x.sum20; g.docs.add(x.id);
     const ik = itemKey(x);
     let it = g.items.get(ik);
-    if (!it) g.items.set(ik, it = { name: ik, qty: 0, sum: 0, sum20: 0, docs: new Set(), rows: 0, zero: 0 });
-    it.qty += x.qty; it.sum += x.sum; it.sum20 += x.sum20; it.docs.add(x.id); it.rows++; if (isZero(x)) it.zero++;
+    if (!it) g.items.set(ik, it = { name: ik, qty: 0, qtyC: 0, sum: 0, sum20: 0, docs: new Set(), rows: 0, zero: 0 });
+    it.qty += x.qty; it.qtyC += qc; it.sum += x.sum; it.sum20 += x.sum20; it.docs.add(x.id); it.rows++; if (isZero(x)) it.zero++;
   }
   const byName = (a, b) => b.sum - a.sum || uk(a.name, b.name);
+  // ціна за одиницю = сума / кількість (середньозважена, якщо ціна за період змінювалась); без собівартості - null
+  const price = (e, on) => (on && e.qtyC > 0 ? { price: r2(e.sum / e.qtyC), price20: r2(e.sum20 / e.qtyC) } : { price: null, price20: null });
   return [...m.values()].sort(byName).map((g) => ({
-    name: g.name, qty: r3(g.qty), sum: r2(g.sum), sum20: r2(g.sum20), docs: g.docs.size, share: totalSum > 0 ? g.sum / totalSum : 0,
-    items: [...g.items.values()].sort(byName).map((it) => ({ name: it.name, qty: r3(it.qty), sum: r2(it.sum), sum20: r2(it.sum20), docs: it.docs.size,
+    name: g.name, qty: r3(g.qty), sum: r2(g.sum), sum20: r2(g.sum20), docs: g.docs.size, share: totalSum > 0 ? g.sum / totalSum : 0, ...price(g, d.gPrice),
+    items: [...g.items.values()].sort(byName).map((it) => ({ name: it.name, qty: r3(it.qty), sum: r2(it.sum), sum20: r2(it.sum20), docs: it.docs.size, ...price(it, d.iPrice),
       cost: !it.zero ? 'ok' : it.zero === it.rows ? 'none' : 'part' })),
   }));
 }
@@ -65,14 +69,16 @@ function sliceModel(rep, sl) {
   m.push([]);
   m.push(HEAD.map((h, i) => T(i === 1 ? sl.nameHead : h, S.head)));
   sl.groups.forEach((g, i) => {
-    m.push([N(i + 1, S.gRank), T(g.name, S.store), N(g.qty, S.gQty), N(g.docs, S.gQty), N(g.sum, S.gMoney), N(g.sum20, S.gMoney), N(g.share, S.gPct)]);
+    m.push([N(i + 1, S.gRank), T(g.name, S.store), N(g.qty, S.gQty), N(g.docs, S.gQty), g.price == null ? E(S.store) : N(g.price, S.gMoney), g.price20 == null ? E(S.store) : N(g.price20, S.gMoney),
+      N(g.sum, S.gMoney), N(g.sum20, S.gMoney), N(g.share, S.gPct)]);
     for (const it of g.items) {
       const mark = it.cost === 'none' ? NO_COST : it.cost === 'part' ? PART_COST : '';
-      m.push([E(S.text), T(it.name + mark, it.cost === 'ok' ? S.item : S.itemRed), N(it.qty, S.qty), N(it.docs, S.qty), N(it.sum, S.money), N(it.sum20, S.money), E(S.text)]);
+      m.push([E(S.text), T(it.name + mark, it.cost === 'ok' ? S.item : S.itemRed), N(it.qty, S.qty), N(it.docs, S.qty), it.price == null ? E(S.text) : N(it.price, S.money), it.price20 == null ? E(S.text) : N(it.price20, S.money),
+        N(it.sum, S.money), N(it.sum20, S.money), E(S.text)]);
     }
   });
   const t = rep.total;
-  m.push([E(S.tText), T('РАЗОМ', S.tText), N(t.qty, S.tQty), N(t.docs, S.tQty), N(t.sum, S.tMoney), N(t.sum20, S.tMoney), N(t.sum > 0 ? 1 : 0, S.tPct)]);
+  m.push([E(S.tText), T('РАЗОМ', S.tText), N(t.qty, S.tQty), N(t.docs, S.tQty), E(S.tText), E(S.tText), N(t.sum, S.tMoney), N(t.sum20, S.tMoney), N(t.sum > 0 ? 1 : 0, S.tPct)]);
   return m;
 }
 
@@ -100,6 +106,7 @@ function summaryModel(rep, at) {
   for (const line of [
     '«Списано, шт» - скільки одиниць товару списали.',
     '«Подач» - скільки окремих списань (документів), які надіслали продавці.',
+    '«Ціна, грн» і «Ціна з націнкою, грн» - ціна за одиницю товару (сума ÷ кількість; якщо ціна за період змінювалась - середньозважена). Порожньо там, де рядок - не один товар (точка, категорія, юрособа) або немає собівартості.',
     '«Собівартість, грн» - сума за собівартістю, основна.',
     '«З націнкою, грн» - та сама сума з націнкою (+20%, до 19.10.2026 було +15%; старі рядки не перераховувались).',
     '«Частка, %» - частка групи в загальній собівартості за період.',

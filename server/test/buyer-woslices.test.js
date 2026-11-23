@@ -56,6 +56,23 @@ test('звіт за період: позиція без собівартості
   assert.ok(cells.some((t) => t.includes('Позиції без собівартості')) && cells.includes('• Борщ'));
 });
 
+test('звіт за період: ціна за одиницю (без націнки і з нею) - лише де рядок = один товар; рядки без собівартості її не занижують', () => {
+  const r = buildSlices(inRange('2026-10-22', '2026-10-23'), { from: '2026-10-22', to: '2026-10-23' });
+  const by = Object.fromEntries(r.slices.map((s) => [s.key, s]));
+  const salad = by.products.groups.find((g) => g.name === 'Салат А');
+  assert.deepEqual([salad.price, salad.price20], [10, 12], 'групa = товар - ціна є');
+  assert.deepEqual([by.products.groups[0].items[0].price, by.products.groups[0].items[0].price20], [10, 12], 'склад товару - точка');
+  const borsch = by.stores.groups.find((g) => g.name.startsWith('Танкопія')).items[0];
+  assert.deepEqual([borsch.price, borsch.price20], [24, 28.8], '2 шт без собівартості не тягнуть ціну вниз: 24 / 1, а не 24 / 3');
+  assert.equal(by.stores.groups[0].price, null, 'точка - різні товари, середня ціна не має сенсу');
+  assert.equal(by.entities.groups[0].items[0].price, null);
+  const only = buildSlices([ROWS[4]], { from: '2026-10-23', to: '2026-10-23' });
+  assert.equal(only.slices[1].groups[0].price, null, 'без собівартості - ціни немає, не 0 і не NaN');
+  const p = parts(buildSlicesXlsx(r, new Date('2026-10-23T12:00:00Z')));
+  for (const t of ['Ціна, грн', 'Ціна з націнкою, грн']) assert.ok(p['xl/worksheets/sheet3.xml'].includes(t), t);
+  assert.ok(/<c r="E\d+" s="\d+"><v>28\.8<\/v>/.test(p['xl/worksheets/sheet2.xml']) || /<c r="F\d+" s="\d+"><v>28\.8<\/v>/.test(p['xl/worksheets/sheet2.xml']), 'ціна з націнкою борщу у колонці F');
+});
+
 test('xlsx звіту за період: 6 аркушів з назвами, шапка закріплена і друкується на кожній сторінці, числа - числами, підписи колонок', () => {
   const rep = buildSlices(inRange('2026-10-22', '2026-10-23'), { from: '2026-10-22', to: '2026-10-23', entity: '', cat: '' });
   const p = parts(buildSlicesXlsx(rep, new Date('2026-10-23T12:00:00Z')));
