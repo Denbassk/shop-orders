@@ -48,7 +48,7 @@ const show = (d) => d.slice(0, 12).map((x) => `${x.cell} ${x.prop}: gas=${x.gas}
 
 test('Заказы + Данные Заказов: значення і формати збігаються з BreadReport.gs (різні маршрути, ЄДРПОУ, невідома адреса)', () => {
   const gas = gasRun(ROWS, 'buildBreadOrdersSheet_(breadTodayRows_()); buildBreadSummarySheet_(breadTodayRows_());');
-  const plans = B.buildBreadReports(B.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY), { stores: STORES, now: NOW });
+  const plans = B.buildBreadReports(B.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY), { stores: STORES, now: NOW, legacy: true });
   for (const name of ['Заказы', 'Данные Заказов']) {
     const d = diffSheets(gas.sheet(BREAD_ID, name), ours(plans[name]), { skip: new Set(['grid']), loose: looseFor('bread')(name) });
     assert.equal(d.length, 0, name + ':\n' + show(d));
@@ -56,7 +56,7 @@ test('Заказы + Данные Заказов: значення і форма
 });
 
 test('Заказы: ЄДРПОУ за замовчуванням і своє (ЮА), код ТТ з Довідника, невідомої адреси - порожній код', () => {
-  const plans = B.buildBreadReports(B.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY), { stores: STORES, now: NOW });
+  const plans = B.buildBreadReports(B.normalizeRawRows(ROWS.map((r) => r.slice()), TODAY), { stores: STORES, now: NOW, legacy: true });
   const data = plans['Заказы'].data;
   const sep = data.filter((r) => r[0] === '' && (r[6] !== '' || r[7] !== ''));
   assert.deepEqual(sep.map((r) => [r[6], r[7]]), [['44413718', '101'], ['44413718', '103'], ['45672783', '102'], ['44413718', '']]);
@@ -64,7 +64,7 @@ test('Заказы: ЄДРПОУ за замовчуванням і своє (Ю
 
 test('порожній день: «Замовлень на … немає» в обох листах', () => {
   const gas = gasRun([], 'buildBreadOrdersSheet_(breadTodayRows_()); buildBreadSummarySheet_(breadTodayRows_());');
-  const plans = B.buildBreadReports([], { stores: STORES, now: NOW });
+  const plans = B.buildBreadReports([], { stores: STORES, now: NOW, legacy: true });
   for (const name of ['Заказы', 'Данные Заказов']) {
     const d = diffSheets(gas.sheet(BREAD_ID, name), ours(plans[name]), { skip: new Set(['grid']) });
     assert.equal(d.length, 0, name + ':\n' + show(d));
@@ -102,7 +102,7 @@ test('«Завантаження»: повний лист (посилання н
 test('ведучі нулі штрихкоду і номера ТТ зберігаємо текстом (Apps Script setValues + «@» їх, найімовірніше, зʼїдає - навмисна відмінність)', () => {
   const st = [store('z', 'Зубенка, 23', 'м. Харків вул. Зубенка, 23', '0103')];
   const rows = [[TODAY, 'Харьков-17', 'Зубенка, 23', '0482000000003', 'Хліб', 20, 1]];
-  const { Заказы: orders, 'Данные Заказов': summary } = B.buildBreadReports(rows, { stores: st, now: NOW });
+  const { Заказы: orders, 'Данные Заказов': summary } = B.buildBreadReports(rows, { stores: st, now: NOW, legacy: true });
   assert.equal(orders.data[1][7], '0103');
   assert.equal(orders.data[2][3], '0482000000003');
   assert.equal(summary.data.find((r) => r[1] === 'Хліб' && r[0] === '0482000000003')[0], '0482000000003', 'у нижньому блоці рядок лишається текстом, бо число змінило б запис');

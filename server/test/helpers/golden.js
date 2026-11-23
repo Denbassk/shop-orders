@@ -37,10 +37,10 @@ function plansFor(dir, fx) {
   const now = new Date(fx.takenAt);
   const stores = fx.stores, products = fx.products;
   const id = DIRECTIONS[dir].spreadsheetId, gid = fx.sheetIds || {};
-  if (dir === 'bakery') return bakery.buildBakeryReports(rows, { stores, products, now });
+  if (dir === 'bakery') return bakery.buildBakeryReports(rows, { stores, products, now, legacy: true });
   if (dir === 'veg') return veg.buildVegReports(rows, { stores, now, legacy: true });
   if (dir === 'bread') {
-    const plans = bread.buildBreadReports(rows, { stores, now });
+    const plans = bread.buildBreadReports(rows, { stores, now, legacy: true });
     plans[bread.BREAD_DOWNLOAD_SHEET] = bread.breadDownloadPlan({ spreadsheetId: id, ordersGid: gid[bread.BREAD_ORDERS_SHEET], summaryGid: gid[bread.BREAD_SUMMARY_SHEET], now });
     return plans;
   }

@@ -94,7 +94,7 @@ function ordersPlan(rows, c) {
     // штрихкод і номер магазину - текстом, інакше Google з'їдає нулі
     w.fmt(null, 'D', 'D', { num: '@' });
     w.fmt(null, 'G', 'H', { num: '@' });
-    w.fmt(null, 'F', 'F', { num: '0.###' });
+    w.fmt(null, 'F', 'F', { num: c.qty });
 
     // Sheets сам ставить формат дати на блок колонки A від першої дати до кінця таблиці (разом з рядками-роздільниками)
     if (g.row.length) w.fmt(Array.from({ length: data.length - g.row[0] + 1 }, (_, i) => g.row[0] + i), 'A', 'A', { num: 'dd.mm.yyyy' });
@@ -186,7 +186,7 @@ function summaryPlan(rows, c) {
   const apply = (w) => {
     w.fmt(null, 'A', 'E', { font: 'Arial', size: 10, valign: 'middle', color: '#212121', bg: '#FFFFFF', halign: 'left' });
     w.fmt(null, 'C', 'C', { num: '@' });
-    w.fmt(null, 'E', 'E', { num: '0.###' });
+    w.fmt(null, 'E', 'E', { num: c.qty });
 
     w.fmt([1], 'A', 'E', { bg: '#FFFF00', bold: true, halign: 'center' });
 
@@ -199,7 +199,7 @@ function summaryPlan(rows, c) {
     if (g.sumRow.length) {
       w.fmt(g.sumRow, 'A', 'A', { num: '@' });      // штрихкод текстом: без наукового запису і без втрати ведучих нулів
       w.border(g.sumRow, 'A', 'C');
-      w.fmt(g.sumRow, 'C', 'C', { halign: 'center', num: '0.###' });
+      w.fmt(g.sumRow, 'C', 'C', { halign: 'center', num: c.qty });
     }
     w.fmt(g.grand, 'A', 'C', { bg: '#E0E0E0', bold: true, size: 11 });
     w.fmt(g.missHead, 'A', 'E', { bg: '#FFEBEE', color: '#C62828', bold: true });
@@ -219,7 +219,8 @@ function buildBreadReports(rows, opts = {}) {
   const dayCtx = { at, settings: {}, lateRows: [] };
   // opts.delivery ('ДД.ММ.РРРР') - тимчасовий строк доставки з пульту (lead_override, 23.11.2026): у колонці «Дата заказа» файлу для
   // Роми стоїть день ДОСТАВКИ (замовлення в неділю -> вівторок). Без строку - день подачі, як раніше.
-  const c = { today: k.dmy, orderDate: opts.delivery || '', stores, dayAllowed: (s) => R.dayAllowed('bread', s, dayCtx) };
+  // qty: формат кількості. «0.###» давав «3,» замість «3» - лишився лише як opts.legacy для звірки з Apps Script (як у veg.js)
+  const c = { qty: opts.legacy ? '0.###' : undefined, today: k.dmy, orderDate: opts.delivery || '', stores, dayAllowed: (s) => R.dayAllowed('bread', s, dayCtx) };
   return {
     [BREAD_ORDERS_SHEET]: ordersPlan(rows, c),
     [BREAD_SUMMARY_SHEET]: summaryPlan(rows, c),

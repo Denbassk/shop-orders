@@ -153,3 +153,19 @@ test('звіт хліба: зі строком доставки колонка �
   assert.equal(dl.data[1][0], 'за 22.11.2026 · доставка 24.11.2026');
   assert.equal(bread.breadDownloadPlan({ spreadsheetId: 'x', ordersGid: 1, now: AT }).data[1][0], 'за 22.11.2026');
 });
+
+test('звіти хліба і ВК: кількість без формату «0.###» («3,» замість «3»); legacy - старий формат для звірки', () => {
+  const stores = [{ id: 's1', label: 'Т1', code: '7', edrpou: '', addrBread: 'вул. Тест, 1', route: 'М1', directions: ['bread'], days: {} }];
+  const rows = [['22.11.2026', 'М1', 'вул. Тест, 1', '482', 'Хліб', 10, 3]];
+  // формати живуть у plan.apply(w): записуємо всі виклики w.* через Proxy
+  const has = (plans) => Object.values(plans).some((pl) => {
+    const calls = [];
+    const w = new Proxy({}, { get: (t, k) => (...args) => { calls.push(args); return w; } });
+    if (pl.apply) pl.apply(w);
+    return JSON.stringify(calls).includes('0.###');
+  });
+  assert.equal(has(bread.buildBreadReports(rows, { stores, now: AT })), false);
+  assert.equal(has(bread.buildBreadReports(rows, { stores, now: AT, legacy: true })), true);
+  const bakery = require('../src/reports/bakery');
+  assert.equal(has(bakery.buildBakeryReports([], { stores: [], products: [], now: AT })), false);
+});

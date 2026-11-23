@@ -19,7 +19,7 @@ const nowBy = Object.fromEntries(SHEETS.map((n) => [n, dateAt(stampOf(n))]));
 
 const dmy = fx.day;
 const rows = B.normalizeRawRows(fx.raw, dmy);
-const build = (r = rows, over = {}) => B.buildBakeryReports(r, { stores: fx.stores, products: fx.products, nowBy, ...over });
+const build = (r = rows, over = {}) => B.buildBakeryReports(r, { stores: fx.stores, products: fx.products, nowBy, legacy: true, ...over });
 
 // Google віддає рядки без хвостових порожніх клітинок і без порожніх рядків наприкінці
 function trim(grid) {
@@ -95,7 +95,7 @@ const NOW = dateAt('10:15:30');
 function same(rowsIn, over = {}, label = '') {
   const input = { rows: rowsIn, stores: over.stores || fx.stores, products: over.products || fx.products, nowBy: over.nowBy || Object.fromEntries(SHEETS.map((n) => [n, over.now || NOW])) };
   const gas = runBakeryGas(input);
-  const ours = B.buildBakeryReports(rowsIn, { stores: input.stores, products: input.products, nowBy: input.nowBy });
+  const ours = B.buildBakeryReports(rowsIn, { stores: input.stores, products: input.products, nowBy: input.nowBy, legacy: true });
   for (const n of SHEETS) assert.deepEqual(requestsOf(ours[n], n), json(gas[n]), `${label}: ${n}`);
   return ours;
 }

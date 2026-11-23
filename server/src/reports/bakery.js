@@ -205,15 +205,15 @@ function ordersPlan(rows, c) {
       const even = g.row.filter((_, i) => i % 2 === 1);
       w.fmt(even, 'A', 'D', { bg: '#F8F9FA' });
       w.fmt(g.row, 'A', 'A', { halign: 'center' });
-      w.fmt(g.row, 'C', 'C', { halign: 'center', num: '0.###' });
+      w.fmt(g.row, 'C', 'C', { halign: 'center', num: c.qty });
       w.fmt(g.row, 'D', 'D', { halign: 'right', num: '#,##0.00' });
     }
-    // 0.### - щоб кількість була "11", а не "11,00"
+    // без формату (General): кількість «11», а не «11,00» і не «11,» (0.### - лише legacy)
     w.fmt(g.total, 'A', 'D', { bg: '#E8F5E9', color: '#2E7D32', bold: true });
-    w.fmt(g.total, 'C', 'C', { halign: 'center', num: '0.###' });
+    w.fmt(g.total, 'C', 'C', { halign: 'center', num: c.qty });
     w.fmt(g.total, 'D', 'D', { halign: 'right', num: '#,##0.00' });
     w.fmt(g.grand, 'A', 'D', { bg: '#388E3C', color: '#FFFFFF', bold: true, size: 11 });
-    w.fmt(g.grand, 'C', 'C', { halign: 'center', num: '0.###' });
+    w.fmt(g.grand, 'C', 'C', { halign: 'center', num: c.qty });
     w.fmt(g.grand, 'D', 'D', { halign: 'right', num: '#,##0.00' });
     w.fmt(g.missHead, 'A', 'D', { bg: '#FFEBEE', color: '#C62828', bold: true });
     w.fmt(g.miss, 'A', 'A', { color: '#C62828' });
@@ -276,7 +276,7 @@ function summaryPlan(rows, c) {
 
     // формати задаємо явно, щоб % з колонки D не перетікав у C
     w.fmt(null, 'A', 'A', { num: '@' });
-    w.fmt(null, 'B', 'B', { num: '0.###' });
+    w.fmt(null, 'B', 'B', { num: c.qty });
     w.fmt(null, 'C', 'C', { num: '#,##0.00' });
     w.fmt(null, 'D', 'D', { num: '@' });
 
@@ -357,7 +357,7 @@ function routePlan(rows, c) {
   const apply = (w) => {
     w.fmt(null, 'A', 'D', { font: 'Arial', size: 10, valign: 'middle', color: '#000000', bg: '#FFFFFF' });
     w.rowHeights(22);
-    w.fmt(null, 'C', 'C', { num: '0.###', halign: 'center' });
+    w.fmt(null, 'C', 'C', { num: c.qty, halign: 'center' });
     w.fmt(null, 'D', 'D', { halign: 'center' });
 
     w.fmt(g.title, 'A', 'D', { bg: '#1565C0', color: '#FFFFFF', bold: true, size: 12 });
@@ -389,7 +389,8 @@ function buildBakeryReports(rows, opts = {}) {
   const ctxFor = (name) => {
     const at = clock(name), k = R.kyivNow(at);
     const dayCtx = { at, settings: {}, lateRows: [] };
-    return { today: k.dmy, stamp: k.time, catMap, stores,
+    // qty: «0.###» давав «3,» замість «3» - лише opts.legacy для звірки з Apps Script (як у veg.js)
+    return { qty: opts.legacy ? '0.###' : undefined, today: k.dmy, stamp: k.time, catMap, stores,
       allToday: stores.filter((s) => s.directions.indexOf('bakery') >= 0 && R.dayAllowed('bakery', s, dayCtx)) };
   };
   return {
