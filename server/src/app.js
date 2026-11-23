@@ -119,6 +119,9 @@ function createApp(opts = {}) {
   const buyerApi = (dir) => (opts.buyerApi ? opts.buyerApi(dir) : getAdminRt().buyerApi(dir));
   const buyerWoReport = (dir, p) => (opts.buyerWoReport ? opts.buyerWoReport(dir, p) : require('./buyer/woReport').dayReport(dir, p));
   const buyerWoSlices = (dir, p) => (opts.buyerWoSlices ? opts.buyerWoSlices(dir, p) : require('./buyer/woSlices').slicesReport(dir, p));
+  // каталог списань: позиції беруться з дії products закупниці (та сама відповідь, що бачить вкладка «Асортимент»)
+  const buyerWoCatalog = (dir, p) => (opts.buyerWoCatalog ? opts.buyerWoCatalog(dir, p) : require('./buyer/woCatalog').catalogReport(dir, p, {
+    load: async () => { const r = await buyerApi(dir)('products', {}); if (!r || !r.ok) throw new Error((r && r.error) || 'Не вдалося прочитати асортимент'); return r.data; } }));
   const buyerRawReport = (dir, p) => (opts.buyerRawReport ? opts.buyerRawReport(dir, p) : require('./buyer/rawReport').rawReport(dir, p));
   const buyerXlsx = (dir, key) => (opts.buyerXlsx ? opts.buyerXlsx(dir, key) : getAdminRt().buyerXlsx(dir, key));
   const noStore = (res) => { res.set('Cache-Control', 'no-store'); res.set('Referrer-Policy', 'no-referrer'); };
@@ -176,6 +179,7 @@ function createApp(opts = {}) {
     }
   });
   woXlsxRoute('writeoff-report', (dir, q) => buyerWoReport(dir, { date: q('date'), entity: q('entity') }));
+  woXlsxRoute('writeoff-catalog', (dir) => buyerWoCatalog(dir, {}));   // уся номенклатура з ціною і ціною +20%, незалежно від списань
   woXlsxRoute('writeoff-slices', (dir, q) => buyerWoSlices(dir, { days: q('days'), from: q('from'), to: q('to'), entity: q('entity'), cat: q('cat'), slice: q('slice') }));
 
   // Сирі замовлення ВК за обраний день (рядки «_Сырые_Заказы_ВК», старші дні - «_Архів»): GET /buyer/<код>/<ключ>/raw-report/bakery?date=ГГГГ-ММ-ДД

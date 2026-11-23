@@ -923,8 +923,11 @@ function woRepDraw() {
     '<label for="woTo">по</label><input class="pk" type="date" id="woTo" value="' + esc(WO.to && WO.to !== WO.from ? WO.to : '') + '" max="' + esc(today) + '"' + min + ' onchange="woPick()">' +
     (on ? '<button class="wob" onclick="woPickClear()">✕ Скинути</button>' : '') +
     woRepEntities().map((e, i) => '<button class="btn dark sm" onclick="woDownload(' + i + ')">⬇ ' + esc(e) + '</button>').join('') + '</div>' +
-    '<div class="hint">Дата (і «по» - щоб побачити період) керує статистикою нижче. Excel для друку - окремий файл по кожній юрособі за дату списання (з «Дата списання»): точки, товари, кількість, собівартість, суми. Готовий до друку на A4.</div></div>';
+    '<div class="hint">Дата (і «по» - щоб побачити період) керує статистикою нижче. Excel для друку - окремий файл по кожній юрособі за дату списання (з «Дата списання»): точки, товари, кількість, собівартість, суми. Готовий до друку на A4.</div>' +
+    '<div class="worow"><label>Каталог цін</label><button class="btn dark sm" onclick="woCatalogDl()">⬇ Усі позиції: ціна і ціна з націнкою</button></div>' +
+    '<div class="hint">Уся номенклатура випічки і кулінарії (в тому числі «стоп» і те, що не списували): ціна (собівартість) і ціна з націнкою +20%, як рахується сума списання продавця. Не залежить від дати.</div></div>';
 }
+function woCatalogDl() { return woFetchFile(BASE + '/writeoff-catalog/' + S.dir, 'Готую каталог цін', 'writeoff-catalog.xlsx'); }
 function woPeriodText() {
   const d = WO.data, from = WO.from || (d && d.from) || '', to = WO.to || (d && d.to) || '';
   if (!from) return WO.days === 1 ? 'сьогодні' : 'останні ' + WO.days + ' днів';
