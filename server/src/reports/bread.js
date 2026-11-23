@@ -78,7 +78,7 @@ function ordersPlan(rows, c) {
     data.push(['', '', '', '', '', '', asText(o.edrpou), asText(o.code)]);          // спершу рядок із ЄДРПОУ і номером магазину
     g.sep.push(data.length);
     o.items.forEach((it) => {
-      data.push([serialOfDmy(c.today), o.route, o.store, it.barcode, it.name, it.qty, '', '']);
+      data.push([serialOfDmy(c.orderDate || c.today), o.route, o.store, it.barcode, it.name, it.qty, '', '']);
       g.row.push(data.length);
     });
   });
@@ -157,7 +157,7 @@ function summaryPlan(rows, c) {
 
   if (keys.length) {
     data.push(['', '', '', '', '']);
-    data.push(['ЗВЕДЕННЯ ПО ПОЗИЦІЯХ - ' + c.today, '', '', '', '']);
+    data.push(['ЗВЕДЕННЯ ПО ПОЗИЦІЯХ - ' + c.today + (c.orderDate ? ' · доставка ' + c.orderDate : ''), '', '', '', '']);
     g.band.push(data.length);
     data.push(['Штрих-код', 'Название Продукта', 'Общее Количество', '', '']);
     g.sumHead.push(data.length);
@@ -217,7 +217,9 @@ function buildBreadReports(rows, opts = {}) {
   const at = opts.now || new Date();
   const k = R.kyivNow(at);
   const dayCtx = { at, settings: {}, lateRows: [] };
-  const c = { today: k.dmy, stores, dayAllowed: (s) => R.dayAllowed('bread', s, dayCtx) };
+  // opts.delivery ('ДД.ММ.РРРР') - тимчасовий строк доставки з пульту (lead_override, 23.11.2026): у колонці «Дата заказа» файлу для
+  // Роми стоїть день ДОСТАВКИ (замовлення в неділю -> вівторок). Без строку - день подачі, як раніше.
+  const c = { today: k.dmy, orderDate: opts.delivery || '', stores, dayAllowed: (s) => R.dayAllowed('bread', s, dayCtx) };
   return {
     [BREAD_ORDERS_SHEET]: ordersPlan(rows, c),
     [BREAD_SUMMARY_SHEET]: summaryPlan(rows, c),
@@ -234,7 +236,7 @@ function breadDownloadPlan(opts) {
   const stamp = k.time.slice(0, 5);
   const data = [], link = [];
   data.push(['ЗАМОВЛЕННЯ ХЛІБ РОМА']);
-  data.push(['за ' + k.dmy]);
+  data.push(['за ' + k.dmy + (opts.delivery ? ' · доставка ' + opts.delivery : '')]);
   data.push(['']);
   data.push(['⬇  ЗАВАНТАЖИТИ EXCEL «' + BREAD_ORDERS_SHEET + '» за ' + k.dmy]);
   link.push({ row: 4, url: xlsxUrl(opts.spreadsheetId, opts.ordersGid), size: 14 });

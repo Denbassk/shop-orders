@@ -48,14 +48,24 @@ async function writeBakery(env, id, rows, snap) {
   return { sheets, sizes, plans };
 }
 
+// дата доставки (ДД.ММ.РРРР), коли в пульті задано строк доставки хліба; інакше '' (звіт як раніше). Збій читання - як раніше.
+async function breadDelivery(env) {
+  try {
+    const dirs = env.data.directions ? await env.data.directions() : null;
+    const d = dirs && dirs.bread ? R.deliveryOf(dirs.bread, env.at) : null;
+    return d ? d.day.slice(8, 10) + '.' + d.day.slice(5, 7) + '.' + d.day.slice(0, 4) : '';
+  } catch (e) { console.error('строк доставки (хліб): ' + e.message); return ''; }
+}
+
 async function writeBread(env, id, rows, snap, day) {
-  const { sheets, sizes, ids, plans } = await writePlans(env, id, bread.buildBreadReports(rows, { stores: snap.stores, now: env.at }));
+  const delivery = await breadDelivery(env);
+  const { sheets, sizes, ids, plans } = await writePlans(env, id, bread.buildBreadReports(rows, { stores: snap.stores, now: env.at, delivery }));
   const out = { sheets, sizes, plans };
   // лист «Завантаження» (Export.gs): повний раз на день, далі лише час збирання; збій не ламає звіти
   try {
     const meta = await env.google.sheetMeta(id, bread.BREAD_DOWNLOAD_SHEET);
-    if (!meta || linkDay[id] !== day) {
-      const plan = bread.breadDownloadPlan({ spreadsheetId: id, ordersGid: ids[bread.BREAD_ORDERS_SHEET], summaryGid: ids[bread.BREAD_SUMMARY_SHEET], now: env.at });
+    if (!meta || linkDay[id] !== day + '|' + delivery) {
+      const plan = bread.breadDownloadPlan({ spreadsheetId: id, ordersGid: ids[bread.BREAD_ORDERS_SHEET], summaryGid: ids[bread.BREAD_SUMMARY_SHEET], now: env.at, delivery });
       await writeSheet(env.google, id, bread.BREAD_DOWNLOAD_SHEET, plan);
       sizes[bread.BREAD_DOWNLOAD_SHEET] = sizeOf(plan);
       plans[bread.BREAD_DOWNLOAD_SHEET] = plan;
@@ -63,7 +73,7 @@ async function writeBread(env, id, rows, snap, day) {
       await env.google.batchUpdate(id, bread.breadDownloadStampRequests(meta.properties.sheetId, env.at));
       sizes[bread.BREAD_DOWNLOAD_SHEET] = { rows: 9, cols: 1 };
     }
-    linkDay[id] = day;
+    linkDay[id] = day + '|' + delivery;
     sheets.push(bread.BREAD_DOWNLOAD_SHEET);
   } catch (e) {
     console.error('Завантаження (хліб): ' + e.message);
@@ -162,8 +172,9 @@ async function rebuildLocked(dir, env, { force }) {
   // скасування останнього замовлення в листах лишились би вчорашні/скасовані рядки. Apps Script тут виходив (refreshBakeryReports:
   // if (!rows.length) return) - щоб не брати глобальний замок; на сервері замка нема, а сигнатура з датою пише порожній звіт раз.
 
-  const sig = crypto.createHash('sha1').update(JSON.stringify([day, reportDay, rows, snap.stores.map(projStore),
-    (snap.products || []).map((p) => [p.name, p.status, p.category])])).digest('hex');
+  const sigParts = [day, reportDay, rows, snap.stores.map(projStore), (snap.products || []).map((p) => [p.name, p.status, p.category])];
+  if (dir === 'bread') { const dl = await breadDelivery(env); if (dl) sigParts.push(dl); }   // зміна строку доставки = перебудова
+  const sig = crypto.createHash('sha1').update(JSON.stringify(sigParts)).digest('hex');
   const key = spreadsheetId + '|' + dir;
   if (!force && lastSig[key] === sig && await sheetsOnPlace(env, spreadsheetId, SHEETS[dir](env, day))) return { skipped: 'без змін', rows: rows.length };
 

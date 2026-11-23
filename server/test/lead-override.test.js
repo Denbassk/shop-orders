@@ -134,3 +134,22 @@ test('сайт продавця: плитка, банер над товарам�
   assert.ok(html.includes("(r.delivery ? '<p><b>Доставка: ' + esc(r.delivery) + '</b></p>' : '')"));
   assert.ok(html.includes('S.boot.directions[k].delivery = d.deliveries[k]'));
 });
+
+// ---------- файл для Роми (23.11.2026): у колонці «Дата заказа» - день доставки ----------
+const bread = require('../src/reports/bread');
+const { serialOfDmy } = require('../src/reports/sheetsTypes');
+
+test('звіт хліба: зі строком доставки колонка «Дата заказа» = день доставки, зведення і «Завантаження» з поміткою', () => {
+  const stores = [{ id: 's1', label: 'Т1', code: '7', edrpou: '', addrBread: 'вул. Тест, 1', route: 'М1', directions: ['bread'], days: {} }];
+  const rows = [['22.11.2026', 'М1', 'вул. Тест, 1', '482', 'Хліб', 10, 5]];
+  const plain = bread.buildBreadReports(rows, { stores, now: AT });
+  const withDl = bread.buildBreadReports(rows, { stores, now: AT, delivery: '24.11.2026' });
+  const cellA = (plan) => plan.data.find((r) => typeof r[0] === 'number')[0];
+  assert.equal(cellA(plain['Заказы']), serialOfDmy('22.11.2026'));
+  assert.equal(cellA(withDl['Заказы']), serialOfDmy('24.11.2026'));
+  assert.ok(withDl['Данные Заказов'].data.some((r) => String(r[0]).includes('доставка 24.11.2026')));
+  assert.ok(!plain['Данные Заказов'].data.some((r) => String(r[0]).includes('доставка')));
+  const dl = bread.breadDownloadPlan({ spreadsheetId: 'x', ordersGid: 1, now: AT, delivery: '24.11.2026' });
+  assert.equal(dl.data[1][0], 'за 22.11.2026 · доставка 24.11.2026');
+  assert.equal(bread.breadDownloadPlan({ spreadsheetId: 'x', ordersGid: 1, now: AT }).data[1][0], 'за 22.11.2026');
+});
