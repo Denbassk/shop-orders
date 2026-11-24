@@ -24,8 +24,9 @@ function incomingCfg(dir) {
 }
 
 async function compute(dir, env) {
-  const [products, incoming] = await Promise.all([env.adm.dirProducts(dir), env.incoming.fetch(dir)]);
-  return I.planIncoming(products, incoming);
+  const products = await env.adm.dirProducts(dir);
+  const incoming = await env.incoming.fetch(dir, products);
+  return I.planIncoming(products, incoming, { checkNames: dir === 'bakery' });
 }
 
 const sum2 = (rows, f) => P.round2(rows.reduce((s, r) => s + r[f], 0));
@@ -70,9 +71,12 @@ async function admIncomingApply(payload, env) {
 
   const done = [];
   let failed = null;
+  const applyNames = Boolean(payload.applyNames);
   try {
     for (const r of todo) {
-      if (!await env.adm.setProduct(dir, r.id, { price: r.new })) { failed = r; throw new Error('Товар не знайдено. Оновіть сторінку.'); }
+      const patch = { price: r.new };
+      if (applyNames && r.nameDiff && r.incName) patch.name = r.incName;
+      if (!await env.adm.setProduct(dir, r.id, patch)) { failed = r; throw new Error('Товар не знайдено. Оновіть сторінку.'); }
       done.push(r);
     }
   } finally {

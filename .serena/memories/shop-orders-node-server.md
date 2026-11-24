@@ -1,6 +1,6 @@
 # Node-сервер (перенос з Apps Script) і сторінка закупниці
 
-Стан на 21.10.2026. Перенос: Node 22 + Express + Supabase + Fly.io, код у `server\`.
+Стан на 21.10.2026 (потім: переключення виконано 23.10, пульт 03.11, ціни з приходів 10.11 — див. `mem:project_overview`). Перенос: Node 22 + Express + Supabase + Fly.io, код у `server\`.
 План: plans/2026-10-18-node-supabase-migration.md. Правила Genspark: plans/HANDOFF-genspark.md.
 Статус: genspark/task-8 -> plans/genspark-status.md; genspark/task-9 -> plans/genspark-task9.md.
 

@@ -26,8 +26,12 @@ async function admAssortment(payload, env) {
   const products = (await env.adm.dirProducts(dir)).slice().sort(bySort)
     .map((x) => {
       const price = Number(x.price) || 0;
-      return { id: x.id, name: x.name, barcode: x.barcode || '', price, sellerPrice: P.round2(price * markup), stop: x.status === 'stop', category: x.category || '',
+      const item = { id: x.id, name: x.name, barcode: x.barcode || '', price, sellerPrice: P.round2(price * markup), stop: x.status === 'stop', category: x.category || '',
         access: accessOf(x) };
+      if (dir === 'bakery' && Number(x.cost) > 0) item.cost = Number(x.cost);
+      if (x.availability) item.availability = x.availability;
+      if (x.box) item.box = x.box;
+      return item;
     });
   // точки напрямку - для вибору «доступ по точках»
   const stores = (await dirStores(dir, env)).map((st) => ({ id: st.id, label: st.label }));
@@ -202,4 +206,62 @@ async function admAssortStop(payload, env) {
   return { changed: done.length, skipped: list.length - todo.length, names: done.map((x) => x.name) };
 }
 
-module.exports = { admAssortment, admPricePreview, admPriceApply, admAssortStop, admAssortAccess, accessInput, accessOf, dirStores, ACCESS_REQUIRED, MAX_ROWS };
+// Редагування окремої позиції з пульта: назва, штрихкод, ціна, категорія, собівартість, наявність / ящик
+async function admAssortEdit(payload, env) {
+  payload = payload || {};
+  const dir = String(payload.dir || '');
+  const cfg = cfgOf(dir);
+  const list = await env.adm.dirProducts(dir);
+  const cur = list.find((x) => String(x.id) === String(payload.id));
+  if (!cur) throw new Error(NOT_FOUND);
+
+  const patch = {}, log = [];
+  if (payload.name !== undefined) {
+    const name = String(payload.name == null ? '' : payload.name).trim().replace(/\s+/g, ' ');
+    if (!name) throw new Error('Вкажіть назву');
+    if (name.length > 120) throw new Error('Назва задовга (до 120 символів)');
+    const nk = name.toLowerCase().replace(/\s+/g, ' ');
+    const dup = list.find((x) => String(x.id) !== String(cur.id) && String(x.name || '').toLowerCase().replace(/\s+/g, ' ') === nk);
+    if (dup) throw new Error('Позиція з такою назвою вже є: ' + dup.name);
+    if (name !== cur.name) { patch.name = name; log.push('назва "' + cur.name + '" → "' + name + '"'); }
+  }
+  if (payload.barcode !== undefined) {
+    const barcode = String(payload.barcode == null ? '' : payload.barcode).trim();
+    if (barcode && !/^\d{4,20}$/.test(barcode)) throw new Error('Штрихкод — лише цифри (4-20) або порожньо');
+    if (barcode !== (cur.barcode || '')) { patch.barcode = barcode; log.push('штрихкод "' + (cur.barcode || '') + '" → "' + barcode + '"'); }
+  }
+  if (payload.price !== undefined) {
+    const price = P.parseMoney(payload.price);
+    if (isNaN(price)) throw new Error('Невірна ціна: ' + cur.name);
+    if (price !== P.round2(Number(cur.price) || 0)) {
+      if (cfg.priceSpreadsheetId) throw new Error(LOCKED);
+      patch.price = price;
+      log.push('ціна ' + (Number(cur.price) || 0) + ' → ' + price);
+    }
+  }
+  if (dir === 'bakery') {
+    if (payload.category !== undefined) {
+      const cat = String(payload.category == null ? '' : payload.category).trim().slice(0, 40);
+      if (cat !== (cur.category || '')) { patch.category = cat || null; log.push('категорія "' + (cur.category || '') + '" → "' + cat + '"'); }
+    }
+    if (payload.availability !== undefined) {
+      const av = String(payload.availability == null ? '' : payload.availability).trim().slice(0, 60);
+      if (av !== (cur.availability || '')) { patch.availability = av || null; log.push('наявність "' + (cur.availability || '') + '" → "' + av + '"'); }
+    }
+    if (payload.cost !== undefined) {
+      const cost = String(payload.cost == null ? '' : payload.cost).trim() === '' ? 0 : P.parseMoney(payload.cost);
+      if (isNaN(cost)) throw new Error('Невірна собівартість: ' + cur.name);
+      if (cost !== (Number(cur.cost) || 0)) { patch.cost = cost; log.push('собівартість ' + (Number(cur.cost) || 0) + ' → ' + cost); }
+    }
+  } else if ((dir === 'bread' || dir === 'nbhz') && payload.box !== undefined) {
+    const box = String(payload.box == null ? '' : payload.box).trim().slice(0, 20);
+    if (box !== (cur.box || '')) { patch.box = box || null; log.push('ящик "' + (cur.box || '') + '" → "' + box + '"'); }
+  }
+
+  if (!log.length) throw new Error('Змін немає');
+  if (!await env.adm.setProduct(dir, cur.id, patch)) throw new Error(NOT_FOUND);
+  await logSafe(env, 'Змінено асортимент', (cfg.title + ' / ' + (patch.name || cur.name) + ': ' + log.join('; ')).slice(0, LOG_MAX));
+  return { id: cur.id, ...patch };
+}
+
+module.exports = { admAssortment, admAssortEdit, admPricePreview, admPriceApply, admAssortStop, admAssortAccess, accessInput, accessOf, dirStores, ACCESS_REQUIRED, MAX_ROWS };

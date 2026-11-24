@@ -114,27 +114,45 @@ test('incomingApply: порожній список, дубль, невідоми
 
 test('checkIncomingPrices: підсумок у settings, одне повідомлення в журнал на новий набір змін, прайс не міняється', async () => {
   const { env, st } = mk();
+  const nDirs = Object.keys(I.INCOMING).length;
   const r1 = await A.checkIncomingPrices(env);
   assert.equal(r1.bread.n, 3); assert.equal(r1.bread.notified, true);
   assert.equal(st.set.length, 0);
   const s = st.settings.incoming_price_changes;
   assert.equal(s.checkedAt, AT.toISOString()); assert.equal(s.dirs.bread.n, 3); assert.equal(s.dirs.bread.big, 1);
   assert.deepEqual(s.dirs.bread.items[0], { name: 'Батон', old: 24.06, new: 25.26 });
-  assert.equal(st.log.length, 1); assert.equal(st.log[0][0], 'Змінилась вхідна ціна'); assert.match(st.log[0][1], /Сушки 32.16 → 39.06/);
+  assert.equal(st.log.length, nDirs); assert.equal(st.log[0][0], 'Змінилась вхідна ціна'); assert.match(st.log[0][1], /Сушки 32.16 → 39.06/);
   // той самий набір - вдруге в журнал не пишемо
   env.at = new Date(AT.getTime() + 4 * 3600 * 1000);
   const r2 = await A.checkIncomingPrices(env);
-  assert.equal(r2.bread.notified, false); assert.equal(st.log.length, 1);
+  assert.equal(r2.bread.notified, false); assert.equal(st.log.length, nDirs);
 });
 
 test('checkIncomingPrices: свіжа перевірка (<3 год) - пропуск без запиту; force обходить', async () => {
   const { env, st } = mk();
+  const nDirs = Object.keys(I.INCOMING).length;
   await A.checkIncomingPrices(env);
   env.at = new Date(AT.getTime() + 60 * 60000);
   assert.deepEqual(await A.checkIncomingPrices(env), { skipped: 'перевірка свіжа' });
-  assert.equal(st.fetches, 1);
+  assert.equal(st.fetches, nDirs);
   await A.checkIncomingPrices(env, { force: true });
-  assert.equal(st.fetches, 2);
+  assert.equal(st.fetches, nDirs * 2);
+});
+
+test('bakery incoming і admAssortEdit: звірка назв з приходів та редагування позиції в пульті', async () => {
+  const rPlan = I.planIncoming(
+    [{ id: 'b1', barcode: '482901', name: 'Салат старий', price: 50, status: 'active', sort: 1 }],
+    [{ barcode: '482901', name: 'Салат новий', price: 55, docDate: '2026-11-08' }],
+    { checkNames: true }
+  );
+  assert.equal(rPlan.rows.length, 1);
+  assert.equal(rPlan.rows[0].nameDiff, true);
+  assert.equal(rPlan.rows[0].incName, 'Салат новий');
+
+  const { admAssortEdit } = require('../src/admin/assortment');
+  const { env, st } = mk({ rows: [{ id: 'b1', barcode: '482901', name: 'Салат старий', price: 50, cost: 30, category: 'Кулінарія' }] });
+  await admAssortEdit({ dir: 'bakery', id: 'b1', name: 'Салат оновлений', barcode: '482999', price: '55,5', cost: '32', category: 'Випічка' }, env);
+  assert.deepEqual(st.set[0], ['bakery', 'b1', { name: 'Салат оновлений', barcode: '482999', price: 55.5, category: 'Випічка', cost: 32 }]);
 });
 
 test('checkIncomingPrices: збій BigQuery - виняток, старий підсумок не затирається', async () => {

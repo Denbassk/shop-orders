@@ -10,3 +10,5 @@ _to_delete/
 
 *.bak
 supabase/.temp/
+
+.vscode/mcp.json
