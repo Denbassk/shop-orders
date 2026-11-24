@@ -84,6 +84,7 @@ function createAdminRuntime(opts = {}) {
     noticeAdd: (p) => notices.admNoticeAdd(p, env()),
     noticeOff: (p) => notices.admNoticeOff(p, env()),
     assortment: (p) => assort.admAssortment(p, env()),
+    assortAdd: (p) => assort.admAssortAdd(p, env()),
     assortEdit: (p) => assort.admAssortEdit(p, env()),
     priceBulkPreview: (p) => assort.admPricePreview(p, env()),
     priceBulkApply: (p) => assort.admPriceApply(p, env()),

@@ -3,6 +3,7 @@
 // Ціни овочей приходять із прайсу постачальника і перезаписуються при кожному читанні (vegPrices.js) - там лише перегляд.
 const P = require('../prices');
 const { cfgOf, logSafe } = require('./write');
+const { nameKey } = require('../import/parse');
 
 const NOT_FOUND = 'Товар не знайдено. Оновіть сторінку.';
 const MAX_ROWS = 500;
@@ -264,4 +265,45 @@ async function admAssortEdit(payload, env) {
   return { id: cur.id, ...patch };
 }
 
-module.exports = { admAssortment, admAssortEdit, admPricePreview, admPriceApply, admAssortStop, admAssortAccess, accessInput, accessOf, dirStores, ACCESS_REQUIRED, MAX_ROWS };
+const money2 = (n) => String(Math.round(Number(n) * 100) / 100);
+async function admAssortAdd(payload, env) {
+  payload = payload || {};
+  const dir = String(payload.dir || '');
+  const cfg = unlocked(dir);
+  const name = P.normalizeWeightName(payload.name);
+  if (!name) throw new Error('Вкажіть назву');
+  if (name.length > 120) throw new Error('Назва задовга (до 120 символів)');
+  const price = P.parseMoney(payload.price);
+  if (isNaN(price)) throw new Error('Невірна ціна: вкажіть число від 0');
+  const barcode = String(payload.barcode == null ? '' : payload.barcode).trim();
+  if (barcode && !/^\d{4,20}$/.test(barcode)) throw new Error('Штрихкод - лише цифри (4-20) або порожньо');
+  const id = barcode || nameKey(name);
+  const row = { dir, id, barcode, name, price, status: 'active' };
+  const bakery = dir === 'bakery';
+  if (bakery) {
+    row.category = String(payload.category == null ? '' : payload.category).trim().slice(0, 40) || null;
+    row.availability = String(payload.availability == null ? '' : payload.availability).trim().slice(0, 60) || null;
+    if (String(payload.cost == null ? '' : payload.cost).trim() !== '') {
+      const cost = P.parseMoney(payload.cost);
+      if (isNaN(cost)) throw new Error('Невірна собівартість');
+      row.cost = cost;
+    }
+  } else if (dir === 'bread' || dir === 'nbhz') {
+    const box = String(payload.box == null ? '' : payload.box).trim().slice(0, 20);
+    row.box = box || null;
+  }
+  const acc = await accessInput(dir, payload.access, env, { required: true });
+  row.access_mode = acc.mode;
+  row.access_stores = acc.stores;
+  const list = await env.adm.dirProducts(dir);
+  const dup = list.find((x) => String(x.id) === id || nameKey(x.name) === nameKey(name));
+  if (dup) throw new Error('Така позиція вже є: ' + dup.name + (dup.status === 'stop' ? ' (стоп - зніміть стоп у списку)' : ''));
+  row.sort = list.filter((x) => Number(x.sort) < 1000).reduce((m, x) => Math.max(m, Number(x.sort) || 0), 0) + 1;
+  await env.adm.addProduct(row);
+  await logSafe(env, 'Додано в асортимент', (cfg.title + ' / ' + name + ': ' + money2(row.price) + ' грн' +
+    (row.category ? ', ' + row.category : '') + (row.cost != null ? ', собівартість ' + money2(row.cost) : '') + (barcode ? ', ' + barcode : '') +
+    ', доступ - ' + acc.text).slice(0, LOG_MAX));
+  return { id, name, price: row.price, barcode, category: row.category || '', availability: row.availability || '', stop: false, sort: row.sort,
+    access: { mode: acc.mode, stores: acc.stores }, cost: row.cost || 0 };
+}
+module.exports = { admAssortment, admAssortAdd, admAssortEdit, admPricePreview, admPriceApply, admAssortStop, admAssortAccess, accessInput, accessOf, dirStores, ACCESS_REQUIRED, MAX_ROWS };

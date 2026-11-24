@@ -69,6 +69,7 @@ function drawAssort() {
       '<button class="btn" type="button" onclick="vnPreview()">Проверить прайс</button></div>';
   }
   else if (d.hidePrice) h += '<div class="note">Продавцы этого направления цен не видят, но цены используются в расчётах.</div>';
+  if (!d.priceLocked) h += '<div style="margin-bottom:14px"><button class="btn" type="button" onclick="openAddProduct()">+ Новая позиция</button></div>';
   if (d.incoming) {
     var ic = d.incoming, when = ic.checkedAt ? incWhen(ic.checkedAt) : '';
     h += '<div class="card incbox" style="padding:16px;margin-bottom:14px"><div class="ascnt" style="margin:0 4px 6px">Входящие цены из приходов</div>' +
@@ -450,6 +451,62 @@ function askVnApply() {
   });
 }
 
+// ===== добавление новой позиции (assortAdd) =====
+function openAddProduct() {
+  var m = DIRS[AS.dir], cats = [], seenCat = {};
+  AS.d.products.forEach(function (x) { if (x.category && !seenCat[x.category]) { seenCat[x.category] = true; cats.push(x.category); } });
+  var h = '<div class="card" style="padding:16px">';
+  h += '<div class="s" style="margin:0 4px 6px">Название (вес автоматически приведётся к «гр»)</div><input type="text" id="ad_name" maxlength="120" placeholder="Например: Салат Цезар 200 гр">';
+  h += '<div class="s" style="margin:14px 4px 6px">Штрихкод</div><input type="text" id="ad_bc" inputmode="numeric" maxlength="20" placeholder="4-20 цифр или пусто">';
+  h += '<div class="s" style="margin:14px 4px 6px">Цена (грн)</div><input type="text" id="ad_price" inputmode="decimal" placeholder="Например 45,50">';
+  if (AS.dir === 'bakery') {
+    h += '<div class="s" style="margin:14px 4px 6px">Категория (например, Кулінарія или Випічка)</div>' +
+         '<input type="text" id="ad_cat" list="ad_cats" maxlength="40" placeholder="Кулінарія / Випічка">' +
+         '<datalist id="ad_cats">' + cats.map(function (c) { return '<option value="' + attr(c) + '">'; }).join('') + '</datalist>';
+    h += '<div class="s" style="margin:14px 4px 6px">Себестоимость для списаний (грн)</div>' +
+         '<input type="text" id="ad_cost" inputmode="decimal" placeholder="Необязательно (без неё нет в списаниях)">';
+    h += '<div class="s" style="margin:14px 4px 6px">Наличие / график</div>' +
+         '<input type="text" id="ad_av" maxlength="60" placeholder="Необязательно">';
+  } else if (AS.dir === 'bread' || AS.dir === 'nbhz') {
+    h += '<div class="s" style="margin:14px 4px 6px">Шт в ящике</div>' +
+         '<input type="text" id="ad_box" maxlength="20" placeholder="Необязательно">';
+  }
+  h += '</div>';
+  h += '<div class="ascnt" style="margin:22px 4px 0">Кому будет доступна</div>' + accBlock();
+  h += '<div style="margin-top:18px"><button class="btn" onclick="askAddProduct()">Добавить позицию</button></div>';
+  h += '<button class="btn ghost" onclick="drawAssort()">Назад к списку</button>';
+  setHead('Новая позиция', m.t);
+  view('<div style="grid-column:1/-1;max-width:720px">' + h + '</div>');
+  ACC = { ids: [], names: [], mode: '', sel: {}, q: '', mixed: false };
+  accMode('');
+}
+function askAddProduct() {
+  var k = AS.dir, m = DIRS[k];
+  var name = document.getElementById('ad_name').value.trim();
+  var priceRaw = document.getElementById('ad_price').value;
+  if (!name) return toast('Укажите название');
+  if (!String(priceRaw).trim() || isNaN(asNum(priceRaw)) || asNum(priceRaw) < 0) return toast('Укажите корректную цену');
+  if (!ACC || !ACC.mode) return toast('Выберите, каким точкам будет доступна позиция');
+  var access = { mode: ACC.mode, stores: ACC.mode === 'all' ? [] : Object.keys(ACC.sel) };
+  if (ACC.mode !== 'all' && !access.stores.length) return toast('Отметьте хотя бы одну точку');
+  var labels = AS.d.stores.filter(function (st) { return ACC.sel[st.id]; }).map(function (st) { return st.label; });
+  var who = ACC.mode === 'all' ? 'Доступ: всем точкам'
+    : (ACC.mode === 'only' ? 'Доступ: только ' : 'Доступ: всем, кроме ') + labels.length + ' ТТ: ' + labels.slice(0, 6).join(', ') + (labels.length > 6 ? ' и ещё ' + (labels.length - 6) : '');
+  var payload = { dir: k, name: name, barcode: document.getElementById('ad_bc').value, price: priceRaw, access: access };
+  if (k === 'bakery') {
+    payload.category = document.getElementById('ad_cat').value;
+    payload.cost = document.getElementById('ad_cost').value;
+    payload.availability = document.getElementById('ad_av').value;
+  } else if (k === 'bread' || k === 'nbhz') {
+    payload.box = document.getElementById('ad_box').value;
+  }
+  confirmSheet({
+    title: 'Добавить новую позицию?', sub: m.t, yes: 'Добавить позицию',
+    what: [name + ' — ' + asMoney(asNum(priceRaw)) + ' грн', who, 'Позиция сразу станет активной и появится у продавцов в течение минуты', 'Действие попадёт в журнал'],
+    run: function () { return call('assortAdd', payload); },
+    done: function (res) { toast('Добавлено: ' + res.name); loadAssort(k, { f: AS.f, q: AS.q }); }
+  });
+}
 // ===== редактирование отдельной позиции (assortEdit) =====
 var ED = null;
 function openEditProduct(i) {
