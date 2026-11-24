@@ -99,6 +99,25 @@ async function buyerSetProduct(dir, p, env) {
     if (isNaN(cost)) throw new Error('Невірна собівартість: ' + cur.name);
     if (cost !== (Number(cur.cost) || 0)) { patch.cost = cost; log.push('собівартість ' + (Number(cur.cost) || 0) + ' → ' + cost); }
   }
+  if (p.name !== undefined) {
+    const name = String(p.name == null ? '' : p.name).trim().replace(/\s+/g, ' ');
+    if (!name) throw new Error('Вкажіть назву');
+    if (name.length > 120) throw new Error('Назва задовга (до 120 символів)');
+    if (name !== cur.name) { patch.name = name; log.push('назва "' + cur.name + '" → "' + name + '"'); }
+  }
+  if (p.barcode !== undefined) {
+    const barcode = String(p.barcode == null ? '' : p.barcode).trim();
+    if (barcode && !/^\d{4,20}$/.test(barcode)) throw new Error('Штрихкод - лише цифри (4-20) або порожньо');
+    if (barcode !== (cur.barcode || '')) { patch.barcode = barcode; log.push('штрихкод "' + (cur.barcode || '') + '" → "' + barcode + '"'); }
+  }
+  if (p.category !== undefined && dir === 'bakery') {
+    const cat = String(p.category == null ? '' : p.category).trim().slice(0, CATEGORY_MAX);
+    if (cat !== (cur.category || '')) { patch.category = cat || null; log.push('категорія "' + (cur.category || '') + '" → "' + cat + '"'); }
+  }
+  if ((dir === 'bread' || dir === 'nbhz') && p.box !== undefined) {
+    const box = String(p.box == null ? '' : p.box).trim().slice(0, 20);
+    if (box !== (cur.box || '')) { patch.box = box || null; log.push('ящик "' + (cur.box || '') + '" → "' + box + '"'); }
+  }
   if (!log.length) throw new Error('Змін немає');
   if (!await env.adm.setProduct(dir, cur.id, patch)) throw new Error(NOT_FOUND);
   await logSafe(env, 'Змінено асортимент', cfg.title + ' / ' + cur.name + ': ' + log.join('; '));

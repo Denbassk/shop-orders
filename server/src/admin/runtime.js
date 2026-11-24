@@ -52,7 +52,7 @@ function createAdminRuntime(opts = {}) {
     const at = new Date();
     let ats = null;                                   // час збирання звітів - один запит на виклик
     return { at, data: dataFresh, adm, links, storeEdit: process.env.PULT_STORE_EDIT === 'on',
-      incoming: { fetch: (dir) => incomingData.fetchIncoming(defaultBq(), incomingData.INCOMING[dir]) },
+      incoming: { fetch: (dir, products) => incomingData.fetchIncoming(defaultBq(), incomingData.INCOMING[dir], products) },
       vegPriceRows: async () => {
         const priceId = DIRECTIONS.veg.priceSpreadsheetId;
         const title = await googleApi.firstSheetTitle(priceId);
@@ -84,6 +84,7 @@ function createAdminRuntime(opts = {}) {
     noticeAdd: (p) => notices.admNoticeAdd(p, env()),
     noticeOff: (p) => notices.admNoticeOff(p, env()),
     assortment: (p) => assort.admAssortment(p, env()),
+    assortEdit: (p) => assort.admAssortEdit(p, env()),
     priceBulkPreview: (p) => assort.admPricePreview(p, env()),
     priceBulkApply: (p) => assort.admPriceApply(p, env()),
     assortStop: (p) => assort.admAssortStop(p, env()),

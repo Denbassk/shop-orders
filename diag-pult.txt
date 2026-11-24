@@ -1,0 +1,441 @@
+diag-pult 10/22/2026 15:48:32
+
+===== summary.js: функції, missing =====
+3: // { unit, stats:[{k,v}], top:[{name,qty,sum}], groups:{title,list}, missing:[...]|null, missingTitle, note }.
+5: function num(v) {
+14: function addTo(m, k, qty, sum) {
+25: function missingList(rows) {
+44: function coverage(rows) {
+48: function totalRow(rows, re, qi, si) {
+54: function bread({ orders, summary }) {
+65: const missing = missingList(summary);
+67: stats: [{ k: 'точок замовило', v: stores.size + (missing ? ' з ' + (stores.size + missing.length) : '') },
+69: top: top(prods), groups: { title: 'По маршрутах', list: top(routes, 60) }, missing, missingTitle: 'Не замовили' };
+72: function nbhz({ exportRows, routes, title }) {
+84: let missing = null, all = null;
+89: missing = list.filter((r) => !have.has(norm(r[2]))).map((r) => txt(r[2]) + (txt(r[0]) ? ' · ' + txt(r[0]) : ''));
+94: top: top(prods), groups: { title: 'По маршрутах', list: top(rmap, 60) }, missing,
+95: missingTitle: 'Немає у вивантаженні', note: title || '' };
+98: function bakery({ orders, summary, routes }) {
+114: let missing = missingList(orders);
+115: if (!missing && cov && cov[0] === cov[1]) missing = [];
+119: top: top(prods), groups: { title: 'Розвозка по маршрутах', list: rl }, missing, missingTitle: 'Не замовили' };
+122: function veg({ orders, summary }) {
+128: let missing = missingList(orders);
+129: if (!missing && cov && cov[0] === cov[1]) missing = [];
+133: top: top(prods), groups: null, missing, missingTitle: 'Не замовили' };
+136: module.exports = { bread, nbhz, bakery, veg, num, missingList, coverage };
+
+===== runtime/api: як закупниця отримує зведення Google =====
+runtime.js:86: sheets: (p) => buyerSheets.list(dir, { fresh: !!(p && p.fresh) }),
+runtime.js:87: sheet: (p) => buyerSheets.read(dir, (p || {}).key, { fresh: !!(p && p.fresh) }),
+runtime.js:88: summary: (p) => buyerSheets.summary(dir, { fresh: !!(p && p.fresh) }),
+
+===== admin/read.js повністю =====
+// Пульт: читання (екрани «Сегодня», «График», пошук точок). Перенос admToday_, admDays_, admSchedule_, admStores_ (app/Admin.gs).
+// env = { at, data, reportAt? (dir) -> 'HH:mm' | '' }. «Замовила» - за orders у базі (store_id), як read.js продавця.
+const R = require('../rules');
+const { DIRECTIONS } = require('../directions');
+
+const UA_EDRPOU = '45672783';
+const isUaStore = (s) => String((s && s.edrpou) || '').replace(/\D/g, '') === UA_EDRPOU;
+const DAY_RU_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const DAY_RU_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+const pad = (n) => ('0' + n).slice(-2);
+const byLabel = (a, b) => a.label.localeCompare(b.label, 'uk');
+
+async function load(env) {
+  const d = env.data;
+  const [stores, settings, directions, ordered] = await Promise.all([
+    d.stores(), d.settings(), d.directions(), d.orderedToday(R.kyivNow(env.at).day)]);
+  const ctx = { at: env.at, settings, directions, lateRows: [] };
+  const keys = Object.keys(DIRECTIONS).filter((k) => directions[k]);
+  const isOrd = (k, s) => !!(ordered[k] && ordered[k].has(s.id));
+  return { stores, settings, ctx, keys, isOrd };
+}
+
+// графік точки по напрямку: дні, чи сьогодні, коли наступний
+function admDays(dirKey, store, ctx) {
+  const cfg = R.dirCfg(dirKey, ctx);
+  if (!cfg.orderDays) return { free: true, label: 'каждый день', today: true, next: '' };
+  const days = R.storeDays(dirKey, store);
+  if (!days.length) return { free: true, label: 'без ограничений', today: true, next: '' };
+  const dow = R.todayDow(ctx.at);
+  let next = '';
+  for (let i = 1; i <= 7; i++) {
+    const d = (dow + i) % 7;
+    if (days.indexOf(d) < 0) continue;
+    next = (i === 1) ? 'завтра' : ('в ' + DAY_RU_FULL[d]);
+    break;
+  }
+  return { free: false, label: days.map((d) => DAY_RU_SHORT[d]).join(', '), today: days.indexOf(dow) >= 0, next };
+}
+
+function deadlineLeftMin(deadline, n) {
+  const p = String(deadline).split(':');
+  return (+p[0] * 60 + +p[1]) - (n.hh * 60 + n.mm);
+}
+
+// екран "Сегодня"
+async function admToday(env) {
+  const { stores, settings, ctx, keys, isOrd } = await load(env);
+  const n = R.kyivNow(env.at);
+  const dirs = [];
+  for (const k of keys) {
+    const cfg = R.dirCfg(k, ctx);
+    let total = 0, ordered = 0, offDay = 0, all = 0;
+    const waiting = [];
+    stores.forEach((s) => {
+      if (s.directions.indexOf(k) < 0) return;
+      all++;
+      if (!R.dayAllowed(k, s, ctx)) { offDay++; return; }      // сьогодні не їхній день
+      total++;
+      if (isOrd(k, s)) ordered++; else waiting.push(s.label);
+    });
+    dirs.push({
+      key: k, title: cfg.title, color: cfg.color, deadline: cfg.deadline || '',
+      closed: R.deadlinePassed(k, undefined, ctx), openedAll: R.lateAllowed(k, ctx), enabled: R.dirEnabled(k, settings),
+      total, ordered, waiting: waiting.slice(0, 40),
+      all, offDay, byDays: !!cfg.orderDays,
+      noDayToday: !!cfg.orderDays && total === 0 && all > 0,
+      reportAt: env.reportAt ? await env.reportAt(k) : '',
+      minLeft: cfg.deadline ? deadlineLeftMin(cfg.deadline, n) : null,
+    });
+  }
+  return { today: n.dmy, time: pad(n.hh) + ':' + pad(n.mm), dow: DAY_RU_FULL[n.dow], dirs };
+}
+
+// графік по всіх точках: кому що і коли доступно
+async function admSchedule(payload, env) {
+  payload = payload || {};
+  const only = String(payload.dir || '');
+  const { stores, ctx, keys: all, isOrd } = await load(env);
+  const keys = only ? [only] : all;
+  const n = R.kyivNow(env.at);
+  const rows = stores.map((s) => {
+    const cells = [];
+    keys.forEach((k) => {
+      if (s.directions.indexOf(k) < 0) return;
+      const d = admDays(k, s, ctx);
+      const cfg = R.dirCfg(k, ctx);
+      cells.push({ dir: k, title: cfg.title, deadline: cfg.deadline || '', days: d.label, today: d.today, next: d.next, ordered: isOrd(k, s) });
+    });
+    return { id: s.id, label: s.label, ua: isUaStore(s), code: s.code, route: s.route, cells };
+  }).filter((r) => r.cells.length);
+  rows.sort(byLabel);
+  return {
+    dir: only, dow: DAY_RU_FULL[n.dow], today: n.dmy,
+    dirs: keys.map((k) => { const c = R.dirCfg(k, ctx); return { key: k, title: c.title, deadline: c.deadline || '', byDays: !!c.orderDays }; }),
+    rows,
+  };
+}
+
+// пошук точок
+async function admStores(payload, env) {
+  payload = payload || {};
+  const q = String(payload.q || '').trim().toLowerCase();
+  const dir = String(payload.dir || '');
+  const { stores, isOrd } = await load(env);
+  return stores.filter((s) => {
+    if (dir && s.directions.indexOf(dir) < 0) return false;
+    if (!q) return true;
+    return (s.label + ' ' + s.address + ' ' + s.code).toLowerCase().indexOf(q) >= 0;
+  }).slice(0, 60).map((s) => ({
+    id: s.id, label: s.label, ua: isUaStore(s), code: s.code, route: s.route,
+    zone: s.zone, directions: s.directions,
+    ordered: dir ? isOrd(dir, s) : false,
+  }));
+}
+
+// --- крок 3б: admDirStores_, admStore_, admLogRead_. Замість сирого листа - замовлення дня з бази (env.adm.dayOrders).
+const hmOf = (iso) => { const k = R.kyivNow(new Date(iso)); return pad(k.hh) + ':' + pad(k.mm); };
+const round3 = (x) => Math.round(x * 1000) / 1000;
+const STORE_NOT_FOUND = 'Торгову точку не знайдено. Оновіть сторінку.';   // findStore_ (Registry.gs)
+async function safeLink(fn, dir) { if (!fn) return ''; try { return (await fn(dir)) || ''; } catch (e) { return ''; } }
+
+// хто саме замовив по напрямку, а хто ні
+async function admDirStores(payload, env) {
+  payload = payload || {};
+  const dir = String(payload.dir || '');
+  const { stores, ctx } = await load(env);
+  const cfg = R.dirCfg(dir, ctx);
+  const n = R.kyivNow(env.at);
+  const hasTime = (dir === 'bakery' || dir === 'veg');
+  const agg = {};
+  (await env.adm.dayOrders(dir, n.day)).forEach((o) => {
+    if (!o.lines.length) return;
+    const a = agg[o.store_id] || (agg[o.store_id] = { n: 0, qty: 0, time: '' });
+    o.lines.forEach((l) => { a.n++; a.qty += Number(l.qty) || 0; });
+    if (hasTime) a.time = hmOf(o.created_at);                // замовлення за created_at - лишається останнє
+  });
+  const done = [], wait = [], off = [];
+  stores.forEach((s) => {
+    if (s.directions.indexOf(dir) < 0) return;
+    const d = admDays(dir, s, ctx);
+    const a = agg[s.id];
+    const row = { id: s.id, label: s.label, ua: isUaStore(s), code: s.code, route: s.route,
+      n: a ? a.n : 0, qty: a ? round3(a.qty) : 0, time: a ? a.time : '',
+      days: d.label, next: d.next, dayOk: d.today };
+    // не їхній день: показуємо окремо, а не ховаємо
+    if (!d.today) { off.push(row); return; }
+    if (a) done.push(row); else wait.push(row);
+  });
+  done.sort((a, b) => (b.time || '').localeCompare(a.time || '') || byLabel(a, b));
+  wait.sort(byLabel);
+  off.sort(byLabel);
+  const links = env.links || {};
+  return { dir, title: cfg.title, unit: cfg.unit, done, wait, off,
+    byDays: !!cfg.orderDays, dow: DAY_RU_FULL[n.dow],
+    xlsx: await safeLink(links.xlsx, dir), sheetUrl: await safeLink(links.sheetUrl, dir) };
+}
+
+// картка точки. row - id рядка замовлення в базі (для editOrder), sheet/firstRow - без сирого листа
+async function admStore(payload, env) {
+  payload = payload || {};
+  const { stores, ctx, isOrd } = await load(env);
+  const store = stores.find((s) => s.id === String(payload.storeId));
+  if (!store) throw new Error(STORE_NOT_FOUND);
+  const dir = String(payload.dir || store.directions[0]);
+  const cfg = R.dirCfg(dir, ctx);
+  const n = R.kyivNow(env.at);
+  const [orders, lateRows] = await Promise.all([env.adm.dayOrders(dir, n.day), env.data.lateRows(dir, store.id)]);
+  const rows = [];
+  orders.filter((o) => o.store_id === store.id).forEach((o) => o.lines.forEach((l) => {
+    rows.push({ row: l.id, name: String(l.name == null ? '' : l.name), qty: Number(l.qty) || 0 });
+  }));
+  let qty = 0;
+  rows.forEach((x) => { qty += x.qty; });
+  const pairCtx = { ...ctx, lateRows };
+  return {
+    id: store.id, label: store.label, ua: isUaStore(store), code: store.code,
+    route: store.route, zone: store.zone, directions: store.directions,
+    dir, dirTitle: cfg.title, unit: cfg.unit, today: n.dmy,
+    sheet: '', firstRow: rows.length ? rows[0].row : 0,
+    rows, qty: round3(qty),
+    marked: isOrd(dir, store),
+    dayOk: R.dayAllowed(dir, store, pairCtx),
+    schedule: store.directions.map((k) => {
+      const d = admDays(k, store, ctx);
+      const c = R.dirCfg(k, ctx);
+      return { dir: k, title: c.title, deadline: c.deadline || '', days: d.label, today: d.today, next: d.next };
+    }),
+    closed: R.deadlinePassed(dir, store.id, pairCtx),
+    lateLeft: R.lateLeftMin(dir, store.id, pairCtx),
+  };
+}
+
+// журнал у пульті: 30 останніх, нові першими
+async function admLogRead(env) {
+  const rows = await env.adm.logRows(30);
+  return rows.map((x) => {
+    const k = R.kyivNow(new Date(x.at));
+    return { when: k.dmy + ' ' + pad(k.hh) + ':' + pad(k.mm), what: String(x.action || ''), details: String(x.details || '') };
+  });
+}
+
+// --- крок 3в. Час збирання звіту (settings report_at_<dir>, ISO) -> 'HH:mm', якщо сьогодні за Києвом (reportAt_)
+function reportAtOf(iso, at) {
+  if (!iso) return '';
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return '';
+  const k = R.kyivNow(t);
+  return k.day === R.kyivNow(at).day ? pad(k.hh) + ':' + pad(k.mm) : '';
+}
+
+const REPORT_DIRS = ['bread', 'bakery', 'veg', 'nbhz'];
+// Зібрати звіт напрямку просто зараз (admReport_). env.rebuild(dir, { force }) - reports/rebuild.js
+async function admReport(payload, env) {
+  payload = payload || {};
+  const dir = String(payload.dir || '');
+  const cfg = R.dirCfg(dir, { directions: await env.data.directions() });
+  if (REPORT_DIRS.indexOf(dir) < 0) throw new Error('Невідомий напрямок');
+  await env.rebuild(dir, { force: true });
+  const iso = new Date(env.at).toISOString();
+  try { await env.adm.setReportAt(dir, iso); } catch (e) { console.error('час звіту: ' + e.message); }        // markReport_
+  try { await env.adm.adminLog('Зібрано звіт', cfg.title); } catch (e) { console.error('журнал: ' + e.message); }  // adminLog_
+  return { at: reportAtOf(iso, env.at), xlsx: await safeLink((env.links || {}).xlsx, dir) };
+}
+
+module.exports = { admToday, admDays, admSchedule, admStores, admDirStores, admStore, admLogRead, admReport, reportAtOf, isUaStore, DAY_RU_FULL };
+
+===== дії пульта (admin) =====
+fails.js:6: get: async (role) => { const d = chk(await sb.from('settings').select('value').eq('key', key(role)).limit(1)) || []; return d.length ? d[0].value : undefined; },
+fails.js:7: set: async (role, v) => { chk(await sb.from('settings').upsert({ key: key(role), value: v })); },
+fails.js:8: del: async (role) => { chk(await sb.from('settings').delete().eq('key', key(role))); },
+runtime.js:40: reportAt: async (k) => { ats = ats || adm.reportAts(); return read.reportAtOf((await ats)[k], at); } };
+runtime.js:43: today: () => read.admToday(env()),
+runtime.js:44: schedule: (p) => read.admSchedule(p, env()),
+runtime.js:45: stores: (p) => read.admStores(p, env()),
+runtime.js:46: dirStores: (p) => read.admDirStores(p, env()),
+runtime.js:47: store: (p) => read.admStore(p, env()),
+runtime.js:48: log: () => read.admLogRead(env()),
+runtime.js:49: report: (p) => read.admReport(p, env()),
+runtime.js:50: cancelOrder: (p) => write.admCancelOrder(p, env()),
+runtime.js:51: openStore: (p) => write.admOpenStore(p, env()),
+runtime.js:52: openAll: (p) => write.admOpenAll(p, env()),
+runtime.js:53: closeAll: (p) => write.admCloseAll(p, env()),
+runtime.js:54: setDirEnabled: (p) => write.admSetDirEnabled(p, env()),
+runtime.js:55: editOrder: (p) => write.admEditOrder(p, env()),
+runtime.js:56: batch: (p) => write.admBatch(p, (a, q) => api(a, q)),
+runtime.js:57: health: () => tools.admHealth(env()),
+runtime.js:58: healthClear: () => tools.admHealthClear(env()),
+runtime.js:59: card: (p) => tools.admCard(p, env()),
+runtime.js:71: sourceId: (d) => (sheetsMode === 'target' ? target.spreadsheetId(d) : DIRECTIONS[d].spreadsheetId) });
+runtime.js:75: today: () => buyer.buyerToday(dir, env()),
+runtime.js:76: remove: (p) => buyer.buyerDelete(dir, p, env()),
+runtime.js:77: editOrder: (p) => write.admEditOrder({ ...(p || {}), dir }, env()),
+runtime.js:78: products: () => buyer.buyerProducts(dir, env()),
+runtime.js:79: setProduct: (p) => buyer.buyerSetProduct(dir, p, env()),
+runtime.js:80: info: () => buyer.buyerInfo(dir, env()),
+runtime.js:81: late: () => buyer.buyerLate(dir, env()),
+runtime.js:82: approve: (p) => write.admOpenStore({ ...(p || {}), dir }, env()),
+runtime.js:83: openAll: () => write.admOpenAll({ dir }, env()),
+runtime.js:84: closeAll: () => write.admCloseAll({ dir }, env()),
+runtime.js:85: report: () => read.admReport({ dir }, env()),
+runtime.js:86: sheets: (p) => buyerSheets.list(dir, { fresh: !!(p && p.fresh) }),
+runtime.js:87: sheet: (p) => buyerSheets.read(dir, (p || {}).key, { fresh: !!(p && p.fresh) }),
+runtime.js:88: summary: (p) => buyerSheets.summary(dir, { fresh: !!(p && p.fresh) }),
+runtime.js:90: writeoffs: (p) => require('../buyer/writeoffs').stats(dir, p || {}),
+runtime.js:91: board: () => read.admDirStores({ dir }, { ...env(), links: {} }),
+
+===== таблиця stores: колонки (міграції) =====
+> D:\shop-orders\supabase\migrations\20261019000001_schema.sql:3:create table public.stores (
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:4:  store_id     text primary key,            -- canonKey_(адреса) з Довідника
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:5:  active       boolean not null default true,
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:6:  label        text not null,
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:7:  address      text not null,
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:8:  code         text not null default '',
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:9:  route        text not null default '',
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:10:  type         text not null default 'Магазин',
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:11:  addr_bread   text not null,
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:12:  addr_bakery  text not null,
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:13:  addr_veg     text not null,
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:14:  addr_nbhz    text not null,
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:15:  route_nbhz   text not null default '',
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:16:  zone         text not null default '',
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:17:  edrpou       text not null default '',
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:18:  days         jsonb not null default '{"veg":[],"bakery":[]}'::jsonb,  -- 0 нд ... 6 сб
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:19:  directions   text[] not null default '{}',
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:20:  sort         int not null default 0
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:21:);
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:22:
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:23:create table public.directions (
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:24:  dir  text primary key,                    -- bread | nbhz | bakery | veg
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:25:  cfg  jsonb not null                       -- статичні поля DIRECTIONS (Config.gs), без функцій
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:26:);
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:27:
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:28:create table public.products (
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:29:  dir           text not null references public.directions(dir),
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:30:  id            text not null,              -- штрихкод, інакше nameKey_(назва)
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:31:  barcode       text not null default '',
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:32:  name          text not null,
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:33:  price         numeric(12,2) not null default 0,
+> D:\shop-orders\supabase\migrations\20261019000001_schema.sql:93:alter table public.stores        enable row level security;
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:94:alter table public.directions    enable row level security;
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:95:alter table public.products      enable row level security;
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:96:alter table public.settings      enable row level security;
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:97:alter table public.orders        enable row level security;
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:98:alter table public.order_lines   enable row level security;
+  D:\shop-orders\supabase\migrations\20261019000001_schema.sql:99:alter table public.late_requests enable row level security;
+> D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:4:alter table public.stores
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:5:  add column bread       boolean not null default false,
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:6:  add column nbhz        boolean not null default false,
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:7:  add column bakery      boolean not null default false,
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:8:  add column veg         boolean not null default false,
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:9:  add column days_veg    text not null default '',
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:10:  add column days_bakery text not null default '',
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:11:  add column note        text not null default '';
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:12:
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:13:create function pg_temp.days_text(j jsonb) returns text language sql immutable as $$
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:14:  select coalesce(string_agg((array['Нд','Пн','Вт','Ср','Чт','Пт','Сб'])[d + 1], ', ' order by (d + 6) % 7), '')
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:15:  from (select x::int as d from jsonb_array_elements_text(coalesce(j, '[]'::jsonb)) as t(x)) q
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:16:$$;
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:17:
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:18:update public.stores set
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:19:  bread       = 'bread'  = any(directions),
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:20:  nbhz        = 'nbhz'   = any(directions),
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:21:  bakery      = 'bakery' = any(directions),
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:22:  veg         = 'veg'    = any(directions),
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:23:  days_veg    = pg_temp.days_text(days->'veg'),
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:24:  days_bakery = pg_temp.days_text(days->'bakery');
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:25:
+> D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:26:alter table public.stores
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:27:  drop column directions,
+  D:\shop-orders\supabase\migrations\20261019000002_stores_columns.sql:28:  drop column days;
+
+===== пульт: екрани точки =====
+> D:\shop-orders\server\public\admin\index.html:923:function loadStore(id, dir) {
+  D:\shop-orders\server\public\admin\index.html:924:  setHead('Точка', '');
+  D:\shop-orders\server\public\admin\index.html:925:  spin();
+  D:\shop-orders\server\public\admin\index.html:926:  call('store', { storeId: id, dir: dir || '' }).then(function (d) {
+  D:\shop-orders\server\public\admin\index.html:927:    S.dir = d.dir;
+  D:\shop-orders\server\public\admin\index.html:928:    setHead(d.label + (d.ua ? ' · ЮА' : ''), (d.code ? '№ ' + d.code : '') + (d.route ? ' · маршрут ' + d.route : ''));
+  D:\shop-orders\server\public\admin\index.html:929:
+  D:\shop-orders\server\public\admin\index.html:930:    var sched = {};
+  D:\shop-orders\server\public\admin\index.html:931:    (d.schedule || []).forEach(function (c) { sched[c.dir] = c; });
+  D:\shop-orders\server\public\admin\index.html:932:
+  D:\shop-orders\server\public\admin\index.html:933:    var h = '<div class="chips">' + d.directions.map(function (k) {
+  D:\shop-orders\server\public\admin\index.html:934:      var c = sched[k] || { today: true };
+  D:\shop-orders\server\public\admin\index.html:935:      return '<button class="chip' + (k === d.dir ? ' on' : '') + '" style="' +
+  D:\shop-orders\server\public\admin\index.html:936:        (c.today ? '' : 'opacity:.5') + '" onclick="apply(\'store\',{store:\'' +
+  D:\shop-orders\server\public\admin\index.html:937:        attr(d.id) + '\',dir:\'' + k + '\'})">' + esc(DIRS[k] ? DIRS[k].short : k) +
+> D:\shop-orders\server\public\admin\index.html:1035:function askCancel(id, dir, n) {
+  D:\shop-orders\server\public\admin\index.html:1036:  confirmSheet({
+  D:\shop-orders\server\public\admin\index.html:1037:    title: 'Отменить заказ?', sub: DIRS[dir].t,
+  D:\shop-orders\server\public\admin\index.html:1038:    what: ['Из рабочего листа удалятся ' + n + ' строк сегодняшнего заказа',
+  D:\shop-orders\server\public\admin\index.html:1039:           'Снимется метка «уже заказывали» — точка сможет заказать заново',
+  D:\shop-orders\server\public\admin\index.html:1040:           'Действие попадёт в журнал'],
+  D:\shop-orders\server\public\admin\index.html:1041:    yes: 'Да, отменить',
+  D:\shop-orders\server\public\admin\index.html:1042:    run: function () { return call('cancelOrder', { storeId: id, dir: dir }); },
+  D:\shop-orders\server\public\admin\index.html:1043:    done: function (r) { toast('Удалено строк: ' + r.removed); apply('store', { store: id, dir: dir }); }
+  D:\shop-orders\server\public\admin\index.html:1044:  });
+  D:\shop-orders\server\public\admin\index.html:1045:}
+  D:\shop-orders\server\public\admin\index.html:1046:
+  D:\shop-orders\server\public\admin\index.html:1047:function askClearMark(id, dir) {
+  D:\shop-orders\server\public\admin\index.html:1048:  confirmSheet({
+  D:\shop-orders\server\public\admin\index.html:1049:    title: 'Снять метку?', sub: DIRS[dir].t,
+> D:\shop-orders\server\public\admin\index.html:1059:function askOpenStore(id, dir) {
+  D:\shop-orders\server\public\admin\index.html:1060:  confirmSheet({
+  D:\shop-orders\server\public\admin\index.html:1061:    title: 'Открыть приём точке?', sub: DIRS[dir].t,
+  D:\shop-orders\server\public\admin\index.html:1062:    what: ['Точка сможет отправить заказ ближайшие 30 минут',
+  D:\shop-orders\server\public\admin\index.html:1063:           'На остальные точки это не влияет',
+  D:\shop-orders\server\public\admin\index.html:1064:           'Метку «уже заказывали» не трогаем — дубля не будет'],
+  D:\shop-orders\server\public\admin\index.html:1065:    yes: 'Открыть на 30 минут',
+  D:\shop-orders\server\public\admin\index.html:1066:    run: function () { return call('openStore', { storeId: id, dir: dir }); },
+  D:\shop-orders\server\public\admin\index.html:1067:    done: function (r) { toast('Открыто на ' + (r.left || 30) + ' мин'); apply('store', { store: id, dir: dir }); }
+  D:\shop-orders\server\public\admin\index.html:1068:  });
+  D:\shop-orders\server\public\admin\index.html:1069:}
+  D:\shop-orders\server\public\admin\index.html:1070:
+  D:\shop-orders\server\public\admin\index.html:1071:function askOpenAll(dir) {
+  D:\shop-orders\server\public\admin\index.html:1072:  confirmSheet({
+  D:\shop-orders\server\public\admin\index.html:1073:    title: 'Открыть всем до конца дня?', sub: DIRS[dir].t,
+> D:\shop-orders\server\public\admin\index.html:1370:function loadEdit(id, dir) {
+  D:\shop-orders\server\public\admin\index.html:1371:  setHead('Изменить заказ', '');
+  D:\shop-orders\server\public\admin\index.html:1372:  spin();
+  D:\shop-orders\server\public\admin\index.html:1373:  call('store', { storeId: id, dir: dir || '' }).then(function (d) {
+  D:\shop-orders\server\public\admin\index.html:1374:    S.edit = d;
+  D:\shop-orders\server\public\admin\index.html:1375:    setHead('Изменить заказ', d.label + ' · ' + (DIRS[d.dir] ? DIRS[d.dir].short : d.dir));
+  D:\shop-orders\server\public\admin\index.html:1376:    if (!d.rows.length) return view('<div class="info">Сегодня заказа нет — менять нечего.</div>');
+  D:\shop-orders\server\public\admin\index.html:1377:    var rows = d.rows.map(function (r, i) {
+  D:\shop-orders\server\public\admin\index.html:1378:      return '<div class="item" style="min-height:58px;padding:10px 16px">' +
+  D:\shop-orders\server\public\admin\index.html:1379:        '<span class="grow"><span style="font-size:15px">' + esc(r.name) + '</span>' +
+  D:\shop-orders\server\public\admin\index.html:1380:        '<span class="s">было ' + r.qty + '</span></span>' +
+  D:\shop-orders\server\public\admin\index.html:1381:        '<input type="text" inputmode="decimal" data-i="' + i + '" value="' + r.qty + '" ' +
+  D:\shop-orders\server\public\admin\index.html:1382:        'style="flex:none;width:92px;padding:12px;text-align:center;font-weight:600"></div>';
+  D:\shop-orders\server\public\admin\index.html:1383:    }).join('');
+  D:\shop-orders\server\public\admin\index.html:1384:    view('<div class="info">Впишите новое количество. <b>0</b> — убрать позицию.<br>' +
+> D:\shop-orders\server\public\admin\index.html:1430:function loadCard(id) {
+  D:\shop-orders\server\public\admin\index.html:1431:  setHead('Карточка точки', '');
+  D:\shop-orders\server\public\admin\index.html:1432:  spin();
+  D:\shop-orders\server\public\admin\index.html:1433:  call('card', { storeId: id }).then(function (c) {
+  D:\shop-orders\server\public\admin\index.html:1434:    S.card = c;
+  D:\shop-orders\server\public\admin\index.html:1435:    var f = c.f;
+  D:\shop-orders\server\public\admin\index.html:1436:    setHead(c.label, 'строка ' + c.row + ' Довідника');
+  D:\shop-orders\server\public\admin\index.html:1437:
+  D:\shop-orders\server\public\admin\index.html:1438:    function txt(k, label, mode, ph) {
+  D:\shop-orders\server\public\admin\index.html:1439:      return '<div style="margin-top:14px"><div class="s" style="margin:0 4px 8px">' + esc(label) + '</div>' +
+  D:\shop-orders\server\public\admin\index.html:1440:        '<input type="text" id="cf_' + k + '" value="' + esc(f[k]) + '"' +
+  D:\shop-orders\server\public\admin\index.html:1441:        (mode ? ' inputmode="' + mode + '"' : '') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + '></div>';
+  D:\shop-orders\server\public\admin\index.html:1442:    }
+  D:\shop-orders\server\public\admin\index.html:1443:    function chk(k, label, sub) {
+  D:\shop-orders\server\public\admin\index.html:1444:      return '<label class="pick"><input type="checkbox" id="cf_' + k + '"' + (f[k] ? ' checked' : '') + '>' +

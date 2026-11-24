@@ -1,5 +1,8 @@
 # shop-orders — застосунок замовлень Фемелі Маркет
 
+> **Увага: опис стану ДО 23.10.2026 (Apps Script).** З 23.10 продавці й пульт працюють на Node + Supabase + Fly.io;
+> актуальне — `mem:project_overview`. Нижче — історія та правила Apps Script (він лишився як відкат, v74/v75).
+
 Google Apps Script веб-застосунок: продавці 37+ магазинів Харкова відправляють
 щоденні замовлення з телефона. GitHub: https://github.com/Denbassk/shop-orders
 Локально: `D:\shop-orders`, код Apps Script у `app/`, clasp scriptId у `app/.clasp.json`.
