@@ -345,21 +345,35 @@ function incPreview() {
   }).catch(function (e) { drawAssort(); toast(e && e.message ? e.message : String(e)); });
 }
 
+function incMissingHtml(r) {
+  if (!r.noIncoming) return '';
+  var list = Array.isArray(r.missing) ? r.missing : [];
+  if (!list.length) return '<div class="s" style="margin:10px 4px 0">Без прихода за 45 дней: ' + r.noIncoming + ' поз. — цена не меняется.</div>';
+  return '<details style="margin:10px 4px 0"><summary class="s" style="cursor:pointer;text-decoration:underline">Без прихода за 45 дней: ' + r.noIncoming + ' поз. (показать список)</summary>' +
+    '<div class="card" style="margin-top:8px">' + list.map(function (m) {
+      return '<div class="asrow"><span class="nm">' + esc(m.name) + (m.stop ? '<span class="asstop">стоп</span>' : '') + '</span>' +
+        '<span class="s">' + (m.barcode ? 'ШК ' + esc(m.barcode) : 'без ШК') + '</span></div>';
+    }).join('') + '</div></details>';
+}
 function drawInc() {
   var r = INC.r, h = '';
   if (!r.n) {
-    h += '<div class="ok">Все цены в прайсе совпадают с последними приходами.</div>';
-    if (r.noIncoming) h += '<div class="s" style="margin:10px 4px 0">Без прихода за последние 45 дней: ' + r.noIncoming + ' поз. — их цена не меняется.</div>';
+    h += '<div class="ok">Все цены в прайсе совпадают с последними приходами.</div>' + incMissingHtml(r);
   } else {
     h += '<div class="info">Входящая цена изменилась у <b>' + r.n + '</b> поз. Отмечено: <b id="inc_cnt"></b><br>Данные приходов на ' + esc(incWhen(r.checkedAt)) + '</div>';
     if (r.big) h += '<div class="note" style="margin-top:12px">Изменение больше 30% у ' + r.big + ' поз. — не отмечены, проверьте накладную (акция или ошибка?) и отметьте вручную.</div>';
-    if (r.noIncoming) h += '<div class="s" style="margin:10px 4px 0">Без прихода за 45 дней: ' + r.noIncoming + ' поз. — цена не меняется.</div>';
-    var hasNameDiff = r.rows.some(function (x) { return x.nameDiff; });
-    if (hasNameDiff) {
+    h += incMissingHtml(r);
+    if (r.rows.some(function (x) { return x.nameDiff; })) {
       h += '<label class="pick" style="display:flex;margin-top:14px;background:var(--sf,#fff);border-radius:12px;border:1px solid var(--ln,#DCE0E5)">' +
         '<input type="checkbox" id="inc_names">' +
         '<span class="grow"><span class="t">Также обновить названия из приходов BigQuery</span>' +
         '<span class="s">Для позиций, где наименование в накладной отличается от справочника</span></span></label>';
+    }
+    if (r.rows.some(function (x) { return x.barcodeDiff; })) {
+      h += '<label class="pick" style="display:flex;margin-top:10px;background:var(--sf,#fff);border-radius:12px;border:1px solid var(--ln,#DCE0E5)">' +
+        '<input type="checkbox" id="inc_barcodes" checked>' +
+        '<span class="grow"><span class="t">Также обновить несовпадающие штрихкоды из приходов BigQuery</span>' +
+        '<span class="s">Подставит штрихкод из накладной, если в справочнике он пустой или отличается</span></span></label>';
     }
     h += '<div class="card" style="margin-top:16px"><div class="ashead"><span>Название · приход</span><span>Было → Стало</span></div>' +
       r.rows.map(function (x, i) {
@@ -368,9 +382,10 @@ function drawInc() {
           ? '<span>' + esc(asMoney(x.old)) + '</span>'
           : '<s>' + esc(asMoney(x.old)) + '</s> → <b class="' + (up ? 'up' : 'dn') + '">' + esc(asMoney(x.new)) + '</b>';
         var nameNote = x.nameDiff ? '<div class="s" style="color:#1565C0">В приходе: ' + esc(x.incName) + '</div>' : '';
+        var bcNote = x.barcodeDiff ? '<div class="s" style="color:#B3261E">ШК: ' + (x.barcode ? esc(x.barcode) : 'пусто') + ' → в приходе ' + esc(x.incBarcode) + '</div>' : '';
         return '<label class="pick" style="display:flex"><input type="checkbox"' + (INC.sel[x.id] ? ' checked' : '') + ' onchange="incToggle(' + i + ',this.checked)">' +
           '<span class="grow"><span class="t">' + esc(x.name) + (x.stop ? '<span class="asstop">стоп</span>' : '') + (x.big ? '<span class="asstop" style="background:var(--warn,#B3261E)">&gt;30%</span>' : '') + '</span>' +
-          nameNote +
+          nameNote + bcNote +
           '<span class="s">приход ' + esc(incDate(x.docDate)) + (pct ? ' · ' + esc(pct) : '') + '</span></span>' +
           '<span class="right" style="white-space:nowrap">' + priceHtml + '</span></label>';
       }).join('') + '</div>';
@@ -394,7 +409,7 @@ function askIncApply() {
            'Сервер ещё раз сверит цены с приходами; если что-то изменилось — ничего не запишет',
            'Продавцы увидят новые цены в течение минуты; уже отправленные заказы не меняются',
            'Действие попадёт в журнал'],
-    run: function () { var an = document.getElementById('inc_names'); return call('incomingApply', { dir: k, applyNames: Boolean(an && an.checked), rows: rows.map(function (x) { return { id: x.id, old: x.old, new: x.new }; }) }); },
+    run: function () { var an = document.getElementById('inc_names'); return call('incomingApply', { dir: k, applyNames: Boolean(an && an.checked), applyBarcodes: Boolean(document.getElementById('inc_barcodes') && document.getElementById('inc_barcodes').checked), rows: rows.map(function (x) { return { id: x.id, old: x.old, new: x.new }; }) }); },
     done: function (res) { toast('Цены обновлены: ' + res.changed + ' поз.'); loadAssort(k); }
   });
 }

@@ -1,16 +1,11 @@
-// Пульт: ціни з приходів (BigQuery). Три речі:
-//   admIncomingPreview - свіжий запит, перегляд «було -> стало» (нічого не пише);
-//   admIncomingApply   - застосування вибраних позицій: сервер ПЕРЕРАХОВУЄ зміни з приходу і приймає лише ті рядки, що збігаються
-//                        (ціна з екрана не довіряється); ціна, що вже інша, - помилка ДО запису;
-//   checkIncomingPrices - автоперевірка в tick: підсумок у settings.incoming_price_changes + одне повідомлення в журнал на новий набір змін.
-//                        Прайс автоматично НЕ змінюється.
+// Пульт: ціни з приходів (BigQuery).
 const crypto = require('node:crypto');
 const P = require('../prices');
 const I = require('../incoming');
 const { cfgOf, logSafe } = require('./write');
 
 const KEY = 'incoming_price_changes';
-const MIN_INTERVAL_MS = 3 * 3600 * 1000;       // автоперевірка не частіше, ніж раз на 3 години
+const MIN_INTERVAL_MS = 3 * 3600 * 1000;
 const MAX_ROWS = 200;
 const ITEMS_IN_SUMMARY = 10;
 const LOG_ITEMS = 8;
@@ -18,7 +13,7 @@ const LOG_MAX = 900;
 const STALE = 'Ціна змінилась з моменту перегляду. Оновіть екран.';
 
 function incomingCfg(dir) {
-  const cfg = cfgOf(dir);                       // «Невідомий напрямок», якщо ключа нема
+  const cfg = cfgOf(dir);
   if (!Object.prototype.hasOwnProperty.call(I.INCOMING, dir)) throw new Error('Для цього напрямку ціни з приходів не підтримується');
   return cfg;
 }
@@ -26,7 +21,7 @@ function incomingCfg(dir) {
 async function compute(dir, env) {
   const products = await env.adm.dirProducts(dir);
   const incoming = await env.incoming.fetch(dir, products);
-  return I.planIncoming(products, incoming, { checkNames: dir === 'bakery' });
+  return I.planIncoming(products, incoming, { checkNames: dir === 'bakery', matchByName: dir === 'bakery' });
 }
 
 const sum2 = (rows, f) => P.round2(rows.reduce((s, r) => s + r[f], 0));
@@ -46,11 +41,19 @@ async function admIncomingPreview(payload, env) {
   const dir = String((payload || {}).dir || '');
   incomingCfg(dir);
   const plan = await compute(dir, env);
-  return { dir, rows: plan.rows, n: plan.rows.length, big: plan.rows.filter((r) => r.big).length, noIncoming: plan.noIncoming,
-    sumOld: sum2(plan.rows, 'old'), sumNew: sum2(plan.rows, 'new'), checkedAt: env.at.toISOString() };
+  return {
+    dir,
+    rows: plan.rows,
+    n: plan.rows.length,
+    big: plan.rows.filter((r) => r.big).length,
+    noIncoming: plan.noIncoming,
+    ...(plan.missing ? { missing: plan.missing } : {}),
+    sumOld: sum2(plan.rows, 'old'),
+    sumNew: sum2(plan.rows, 'new'),
+    checkedAt: env.at.toISOString(),
+  };
 }
 
-// payload: { dir, rows: [{ id, old, new }] } - те, що бачили в перегляді
 async function admIncomingApply(payload, env) {
   payload = payload || {};
   const dir = String(payload.dir || '');
@@ -72,10 +75,12 @@ async function admIncomingApply(payload, env) {
   const done = [];
   let failed = null;
   const applyNames = Boolean(payload.applyNames);
+  const applyBarcodes = Boolean(payload.applyBarcodes);
   try {
     for (const r of todo) {
       const patch = { price: r.new };
       if (applyNames && r.nameDiff && r.incName) patch.name = r.incName;
+      if (applyBarcodes && r.barcodeDiff && r.incBarcode && /^\d{4,20}$/.test(r.incBarcode)) patch.barcode = r.incBarcode;
       if (!await env.adm.setProduct(dir, r.id, patch)) { failed = r; throw new Error('Товар не знайдено. Оновіть сторінку.'); }
       done.push(r);
     }
@@ -90,7 +95,6 @@ async function admIncomingApply(payload, env) {
   return { changed: done.length, rows: done.map((r) => ({ id: r.id, name: r.name, old: r.old, new: r.new })) };
 }
 
-// Автоперевірка (tick). Збій BigQuery - виняток (tick занесе його в «Здоров'я»), старий підсумок лишається.
 async function checkIncomingPrices(env, { force = false } = {}) {
   const prev = await env.adm.getSetting(KEY);
   if (!force && prev && prev.checkedAt && env.at.getTime() - Date.parse(prev.checkedAt) < MIN_INTERVAL_MS) return { skipped: 'перевірка свіжа' };
@@ -110,7 +114,6 @@ async function checkIncomingPrices(env, { force = false } = {}) {
   return out;
 }
 
-// для екрана «Сегодня»: { dir: { n, big, checkedAt } } лише де є розбіжності
 function incomingBanner(settings) {
   const s = settings && settings[KEY];
   const out = {};
@@ -121,7 +124,6 @@ function incomingBanner(settings) {
   return out;
 }
 
-// для екрана «Ассортимент и цены»: null - напрямок без цін з приходів
 async function incomingInfo(dir, env) {
   if (!Object.prototype.hasOwnProperty.call(I.INCOMING, dir)) return null;
   let s = null;
