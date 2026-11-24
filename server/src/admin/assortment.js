@@ -217,7 +217,7 @@ async function admAssortEdit(payload, env) {
 
   const patch = {}, log = [];
   if (payload.name !== undefined) {
-    const name = String(payload.name == null ? '' : payload.name).trim().replace(/\s+/g, ' ');
+    const name = P.normalizeWeightName(payload.name);
     if (!name) throw new Error('Вкажіть назву');
     if (name.length > 120) throw new Error('Назва задовга (до 120 символів)');
     const nk = name.toLowerCase().replace(/\s+/g, ' ');

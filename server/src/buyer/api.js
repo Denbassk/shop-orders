@@ -100,7 +100,7 @@ async function buyerSetProduct(dir, p, env) {
     if (cost !== (Number(cur.cost) || 0)) { patch.cost = cost; log.push('собівартість ' + (Number(cur.cost) || 0) + ' → ' + cost); }
   }
   if (p.name !== undefined) {
-    const name = String(p.name == null ? '' : p.name).trim().replace(/\s+/g, ' ');
+    const name = P.normalizeWeightName(p.name);
     if (!name) throw new Error('Вкажіть назву');
     if (name.length > 120) throw new Error('Назва задовга (до 120 символів)');
     if (name !== cur.name) { patch.name = name; log.push('назва "' + cur.name + '" → "' + name + '"'); }
@@ -130,7 +130,7 @@ const CATEGORY_MAX = 40;
 async function buyerAddProduct(dir, p, env) {
   const cfg = cfgOf(dir);
   p = p || {};
-  const name = String(p.name == null ? '' : p.name).trim().replace(/\s+/g, ' ');
+  const name = P.normalizeWeightName(p.name);
   if (!name) throw new Error('Вкажіть назву');
   if (name.length > 120) throw new Error('Назва задовга (до 120 символів)');
   const price = P.parseMoney(p.price);

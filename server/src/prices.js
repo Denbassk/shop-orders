@@ -44,4 +44,13 @@ function fmtChange(mode, value) {
   return mode === 'pct' ? s + '%' : s + ' грн';
 }
 
-module.exports = { MONEY_MAX, PCT_MIN, PCT_MAX, round2, parseMoney, planPriceChange, fmtChange };
+function normalizeWeightName(raw) {
+  let s = String(raw == null ? "" : raw).trim().replace(/\s+/g, " ");
+  s = s.replace(/(^|[^\d.,])(\d+[.,]\d+)\s*(?:гр\.?|г\.?)(?![а-яіїєґa-z0-9])/giu, (m, p, n) => {
+    const v = parseFloat(n.replace(",", "."));
+    return v > 0 ? `${p}${Math.round(v * 1000)} гр` : m;
+  });
+  s = s.replace(/(^|[^\d.,])(\d+)\s*(?:гр\.?|г\.?)(?![а-яіїєґa-z0-9])/giu, (m, p, n) => `${p}${n} гр`);
+  return s.replace(/\s{2,}/g, " ").trim();
+}
+module.exports = { normalizeWeightName, MONEY_MAX, PCT_MIN, PCT_MAX, round2, parseMoney, planPriceChange, fmtChange };
