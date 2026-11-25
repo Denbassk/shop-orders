@@ -286,7 +286,9 @@ export default function IncomingView({ initialDir = 'bread', toast, onApplied })
         <div className="rounded-2xl glass-panel divide-y divide-slate-200 dark:divide-cyan-400/10 overflow-hidden">
           {rows.map((r) => {
             const checked = selected.has(r.id);
+            const priceDiff = Math.abs((Number(r.new) || 0) - (Number(r.old) || 0)) >= 0.005;
             const up = r.new > r.old;
+            const metaReason = [r.nameDiff && 'Название', r.barcodeDiff && 'ШК'].filter(Boolean).join(' + ') || 'Без изм. цены';
             return (
               <div
                 key={r.id}
@@ -356,24 +358,41 @@ export default function IncomingView({ initialDir = 'bread', toast, onApplied })
 
                 {/* Price Change Right Block */}
                 <div className="flex items-center justify-end gap-3 shrink-0 pl-8 sm:pl-0">
-                  <div className="text-right">
-                    <div className="text-xs text-slate-500 line-through">
-                      {fmtMoney(r.old)} грн
-                    </div>
-                    <div className="text-base font-extrabold text-slate-900 dark:text-white">
-                      {fmtMoney(r.new)} грн
-                    </div>
-                  </div>
+                  {priceDiff ? (
+                    <>
+                      <div className="text-right">
+                        <div className="text-xs text-slate-500 line-through">
+                          {fmtMoney(r.old)} грн
+                        </div>
+                        <div className="text-base font-extrabold text-slate-900 dark:text-white">
+                          {fmtMoney(r.new)} грн
+                        </div>
+                      </div>
 
-                  <span
-                    className={`px-2.5 py-1 rounded-xl text-xs font-extrabold min-w-[64px] text-center ${
-                      up
-                        ? 'bg-rose-100 text-rose-900 dark:bg-rose-500/20 dark:text-rose-300'
-                        : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-300'
-                    }`}
-                  >
-                    {r.pct > 0 ? `+${r.pct}%` : `${r.pct}%`}
-                  </span>
+                      <span
+                        className={`px-2.5 py-1 rounded-xl text-xs font-extrabold min-w-[64px] text-center ${
+                          up
+                            ? 'bg-rose-100 text-rose-900 dark:bg-rose-500/20 dark:text-rose-300'
+                            : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-300'
+                        }`}
+                      >
+                        {r.pct != null ? (r.pct > 0 ? `+${r.pct}%` : `${r.pct}%`) : 'Цена'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-right">
+                        <div className="text-[11px] text-slate-400">цена без изм.</div>
+                        <div className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                          {fmtMoney(r.new)} грн
+                        </div>
+                      </div>
+
+                      <span className="px-2.5 py-1 rounded-xl text-xs font-bold min-w-[64px] text-center bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800/80 dark:text-cyan-200/80 dark:border-cyan-400/15">
+                        {metaReason}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             );
