@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html.dark body {
+    background-color: #08111e;
+    background-image:
+      radial-gradient(circle at 16% 0%, rgba(20, 184, 166, 0.16), transparent 42%),
+      radial-gradient(circle at 88% 12%, rgba(14, 165, 233, 0.12), transparent 38%),
+      radial-gradient(circle at 50% 100%, rgba(13, 148, 136, 0.08), transparent 50%);
+    background-attachment: fixed;
+    color: #e6f1ff;
+  }
+
+  html:not(.dark) body {
+    background-color: #dce6f2;
+    background-image:
+      radial-gradient(circle at 12% 0%, rgba(13, 148, 136, 0.08), transparent 40%),
+      radial-gradient(circle at 90% 10%, rgba(2, 132, 199, 0.07), transparent 40%);
+    background-attachment: fixed;
+    color: #0f172a;
+  }
+}
+
+.glass-panel {
+  @apply bg-white border border-slate-300/90 shadow-[0_2px_12px_rgba(15,23,42,0.06)]
+         dark:bg-[#0d1b2e]/75 dark:backdrop-blur-xl dark:border-cyan-400/15 dark:shadow-[0_10px_30px_rgba(0,0,0,0.45)];
+}
+
+.glass-sub {
+  @apply bg-slate-100/90 border border-slate-300/80
+         dark:bg-[#081322]/70 dark:border-cyan-400/10;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all
+         bg-teal-600 text-white hover:bg-teal-700 shadow-sm
+         dark:bg-gradient-to-r dark:from-teal-400 dark:to-cyan-400 dark:text-slate-950 dark:hover:from-teal-300 dark:hover:to-cyan-300 dark:shadow-[0_4px_18px_rgba(20,184,166,0.28)]
+         disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all
+         bg-white text-slate-800 border border-slate-300 hover:bg-slate-100
+         dark:bg-cyan-950/40 dark:text-cyan-100 dark:border-cyan-400/20 dark:hover:bg-cyan-900/50 dark:hover:border-cyan-400/35
+         disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all
+         bg-rose-600 text-white hover:bg-rose-700
+         dark:bg-rose-500/20 dark:text-rose-200 dark:border dark:border-rose-400/35 dark:hover:bg-rose-500/30
+         disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.input-field {
+  @apply w-full rounded-xl px-3.5 py-2.5 text-sm transition-colors outline-none
+         bg-white text-slate-900 border border-slate-300 placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-500/20
+         dark:bg-[#081322]/85 dark:text-slate-100 dark:border-cyan-400/20 dark:placeholder:text-slate-500 dark:focus:border-teal-400 dark:focus:ring-teal-400/20;
+}
+
+/* Custom slim scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(20, 184, 166, 0.55);
+}
+
+/* Search input icon clearance */
+input.pl-9, input.pl-10, input.pl-11 { padding-left: 2.5rem !important; }

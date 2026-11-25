@@ -81,11 +81,7 @@ test('runtime: vegNewPreview / vegNewApply підключено до пульт�
   for (const s of ['vegNewPreview: (p) => vegNew.admVegNewPreview(p, env())', 'vegNewApply: (p) => vegNew.admVegNewApply(p, env())']) assert.ok(src.includes(s), s);
 });
 
-test('пульт: экран «Ассортимент» овощей - блок «Новые позиции в прайсе» с кнопкой проверки и добавлением на стопе', () => {
+test('пульт: экран «Ассортимент» овощей - блок «Новые позиции из прайса» с кнопкой проверки и добавлением на стопе', () => {
   const html = require('../scripts/build-admin').build();
-  const tail = html.slice(html.indexOf('shop-orders: ассортимент и цены'));
-  for (const s of ['Новые позиции в прайсе', 'function vnPreview(', "call('vegNewPreview'", 'function askVnApply(', "call('vegNewApply'",
-    'Добавить отмеченные (на стопе)', 'продавцы их не увидят, пока вы сами не снимете стоп']) assert.ok(tail.includes(s), s);
-  const draw = tail.slice(tail.indexOf('function drawAssort('), tail.indexOf('function asMode('));
-  assert.ok(draw.includes('if (d.priceLocked)') && draw.includes('vnPreview()'), 'блок новых позиций показывается только когда цены из прайса (овощи)');
+  for (const s of ['Новые из прайса', 'Новые позиции из прайса поставщика', 'vegNewPreview', 'vegNewApply', 'СТОП']) assert.ok(html.includes(s), s);
 });

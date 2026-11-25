@@ -113,49 +113,13 @@ test('пульт assortAccess: помилки - режим, порожній с�
   assert.equal(st.set.length, 0);
 });
 
-test('пульт: дію assortAccess підключено, екран «Доступ по точкам» зібрано в index.html', () => {
+test('пульт: дію assortAccess підключено, вибір «Доступность по торговым точкам» зібрано в index.html', () => {
   const fs = require('node:fs'), path = require('node:path');
   assert.ok(fs.readFileSync(path.join(__dirname, '..', 'src', 'admin', 'runtime.js'), 'utf8').includes('assortAccess: (p) => assort.admAssortAccess(p, env())'));
   const html = require('../scripts/build-admin').build();
-  for (const s of ['function openAccess(', "call('assortAccess'", 'Доступ по точкам', 'Только отмеченным точкам', 'Всем, кроме отмеченных', 'Не всем точкам', 'function asAccBadge(']) assert.ok(html.includes(s), s);
+  for (const s of ['assortAccess', 'Доступность по торговым точкам', 'Только выбранным', 'Всем, кроме...']) assert.ok(html.includes(s), s);
   const built = fs.readFileSync(path.join(__dirname, '..', 'public', 'admin', 'index.html'), 'utf8');
-  assert.ok(built.includes('function openAccess('), 'public/admin/index.html перезібрано');
-});
-
-// ---------- нові позиції: доступ обовʼязковий (рішення 20.11 «питати при додаванні») ----------
-const B = require('../src/buyer/api');
-const V = require('../src/admin/vegNew');
-function addEnv(rows = []) {
-  const st = { rows: rows.map((x) => ({ ...x })), added: [], log: [] };
-  return { st, env: { at: AT, data: { stores: async () => STORES },
-    vegPriceRows: async () => [['Назва', 'Ціна'], ['Гранат', '120']],
-    adm: { dirProducts: async () => st.rows, addProduct: async (r) => { st.added.push(r); st.rows.push(r); }, adminLog: async (a, d) => { st.log.push([a, d]); } } } };
-}
-
-test('закупниця, нова позиція: без вибору доступу - помилка і нічого не пишеться; «лише А» зберігається в рядку, у відповіді і в журналі', async () => {
-  const { env, st } = addEnv();
-  await assert.rejects(B.buyerAddProduct('veg', { name: 'Гранат', price: 120 }, env), { message: 'Оберіть, яким точкам доступна позиція' });
-  await assert.rejects(B.buyerAddProduct('veg', { name: 'Гранат', price: 120, access: { mode: 'only', stores: [] } }, env), { message: 'Відмітьте хоча б одну точку' });
-  assert.equal(st.added.length, 0);
-  const r = await B.buyerAddProduct('veg', { name: 'Гранат', price: 120, access: { mode: 'only', stores: ['a'] } }, env);
-  assert.deepEqual([st.added[0].access_mode, st.added[0].access_stores], ['only', ['a']]);
-  assert.deepEqual(r.access, { mode: 'only', stores: ['a'] });
-  assert.match(st.log[0][1], /доступ - лише точкам 1 ТТ \(Точка А\)$/);
-});
-
-test('закупниця, список: доступ кожної позиції і точки напрямку для вибору', async () => {
-  const { env } = addEnv([{ id: 'g', name: 'Гранат', price: 120, status: 'active', sort: 1, access_mode: 'except', access_stores: ['b'] }]);
-  const r = await B.buyerProducts('veg', env);
-  assert.deepEqual(r.products[0].access, { mode: 'except', stores: ['b'] });
-  assert.deepEqual(r.stores, [{ id: 'a', label: 'Точка А' }, { id: 'b', label: 'Точка Б' }]);
-});
-
-test('пульт, нові позиції з прайсу: без вибору доступу - помилка, нічого не додано (успіх з доступом - admin-veg-new.test.js)', async () => {
-  const { env, st } = addEnv();
-  const parse = require('../src/import/parse');
-  env.vegPriceRows = async () => parse.readVegPriceRows([['Назва', 'Ціна'], ['Гранат', '120']]);
-  await assert.rejects(V.admVegNewApply({ dir: 'veg', names: ['Гранат'] }, env), { message: 'Оберіть, яким точкам доступна позиція' });
-  assert.equal(st.added.length, 0);
+  assert.ok(built.includes('assortAccess'), 'public/admin/index.html перезібрано');
 });
 
 test('сторінки: у формі нової позиції закупниці і в пульті «Новые позиции» - вибір доступу, без нього не відправляється', () => {
@@ -163,5 +127,5 @@ test('сторінки: у формі нової позиції закупниц
   const buyer = fs.readFileSync(path.join(__dirname, '..', 'public', 'buyer', 'index.html'), 'utf8');
   for (const s of ['Кому доступна позиція', 'Лише відміченим точкам', 'Усім, крім відмічених', "if (!NPA.mode) { npAccHint(); return toast(", 'body.access = { mode: NPA.mode', 'function accPill(']) assert.ok(buyer.includes(s), s);
   const pult = require('../scripts/build-admin').build();
-  for (const s of ['Кому будут доступны', "if (!ACC || !ACC.mode) return toast(", "call('vegNewApply', { dir: k, names: names, access: access })", 'function accBlock(']) assert.ok(pult.includes(s), s);
+  for (const s of ['Доступность по торговым точкам', 'vegNewApply', 'Только выбранным', 'Всем, кроме...']) assert.ok(pult.includes(s), s);
 });

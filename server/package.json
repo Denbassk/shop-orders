@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node src/app.js",
     "test": "node --test \"test/**/*.test.js\"",
+    "build:admin": "node scripts/build-admin.js",
     "import:dry": "node scripts/import-reference.js --dry",
     "import": "node scripts/import-reference.js"
   },

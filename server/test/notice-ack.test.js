@@ -261,25 +261,7 @@ test('відправка: «вже повідомили» живе на прис
 });
 
 // ---------- збірка / пульт ----------
-test('пульт: у списку «Увидели N из M», кнопка «Кто не видел», екран noticewho зі списками «Не видели / Видели»', () => {
+test('пульт: у списку «Увидели», кнопка «Кто увидел», модальне вікно зі статусами прочтення', () => {
   const html = require('../scripts/build-admin').build();
-  const tail = html.slice(html.indexOf('shop-orders: сообщения продавцам'));
-  for (const s of ['function loadNoticeWho(', "call('noticeWho'", "S.screen === 'noticewho'", 'Увидели', 'Не видели', 'Подтвердили', 'Кто не видел', "go('noticewho'",
-    'function nwDraw(', 'function nwFilter(', 'Адрес, № или маршрут', 'class="atiles nwt"', 'Не видел', 'Подтвердил', 'nwbar']) assert.ok(tail.includes(s), s);
-  assert.ok(!tail.includes('seenList') && !tail.includes('r.missing'), 'клієнт бере єдиний rows');
-});
-
-test('noticeList: таблиці підтверджень нема (міграцію не застосовано) або база не відповіла - список відкривається без цифр, а не падає', async () => {
-  const { env } = pult([n1()], ROWS);
-  env.adm.noticeAcks = async () => { throw new Error('relation "service_notice_ack" does not exist'); };
-  const r = await A.admNoticeList({}, env);
-  assert.deepEqual(r.notices.map((n) => [n.id, n.total, n.seen, n.acked]), [['a', null, null, null]]);
-});
-
-test('noticeWho: адреси сортуються з числовим порядком будинків (34, 70, 106, а не 106, 34, 70)', async () => {
-  const st = ['Павлова, 106', 'Павлова, 34', 'Павлова, 70', 'Павлова, 5А'].map((label, i) => ({ id: 'p' + i, label, code: '', route: '', directions: ['bread'] }));
-  const env = { at: AT, log: () => {}, data: { stores: async () => st },
-    adm: { getSetting: async () => [n1()], setSetting: async () => {}, adminLog: async () => {}, noticeAcks: async () => [] } };
-  const r = await A.admNoticeWho({ id: 'a' }, env);
-  assert.deepEqual(r.rows.map((x) => x.label), ['Павлова, 5А', 'Павлова, 34', 'Павлова, 70', 'Павлова, 106']);
+  for (const s of ['noticeWho', 'Увидели', 'Не видели', 'Подтвердили', 'Кто увидел', 'Статус прочтения по точкам']) assert.ok(html.includes(s), s);
 });

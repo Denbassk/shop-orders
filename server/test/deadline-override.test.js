@@ -268,19 +268,8 @@ test('сайт продавця: автооновлення (refresh) підхо
 });
 
 // ---------- пульт: меню напрямка -> «Время приёма» ----------
-test('пульт: пункт «Время приёма» у меню напрямка, екран deadline, дії setDeadline/revertDeadline через confirmSheet', () => {
+test('пульт: екран «Время и доставка», дії setDeadline/revertDeadline та позначка тимчасового дедлайну на «Сегодня»', () => {
   const html = require('../scripts/build-admin').build();
-  const dir = html.slice(html.indexOf('function loadDir(k)'), html.indexOf('// ================= ГРАФИК ПО ТОЧКАМ'));
-  assert.ok(dir.includes("item('Время приёма'"), 'пункт меню в «Управление приёмом»');
-  assert.ok(dir.includes("go(\\'deadline\\',{dir:\\'' + k + '\\'})"));
-  assert.ok(dir.includes('dlInfoHtml(x)'), 'шапка напрямка показує ефективний і прописаний дедлайн');
-  // пометка - в ДЕЙСТВУЮЩЕМ экране «Сегодня» (тема admin-theme.html перекрывает loadToday з app/ui і малює картки сама)
-  const today = html.slice(html.lastIndexOf('function loadToday()'));
-  const card = today.slice(today.indexOf('<span class="m">до '), today.indexOf('<span class="m">до ') + 400);
-  assert.ok(card.includes("(x.deadlineOverride && x.deadlineOverride.active ? ' (врем.)' : '')"), 'на картці «Сегодня» позначено тимчасовий дедлайн: ' + card);
-  const tail = html.slice(html.indexOf('shop-orders: время приёма'));
-  for (const s of ['function loadDeadline(', 'function askDeadlineApply(', 'function askDeadlineRevert(', "call('today')",
-    "call('setDeadline'", "call('revertDeadline'", 'confirmSheet({', 'Только сегодня', 'По датам', 'Применить', 'Вернуть как в Довіднике',
-    'Сейчас уже ', "S.screen === 'deadline'"]) assert.ok(tail.includes(s), s);
-  assert.ok(!tail.includes('google.script'));
+  for (const s of ['Время и доставка', 'Временный дедлайн приёма', 'setDeadline', 'revertDeadline', 'setLead', 'revertLead']) assert.ok(html.includes(s), s);
+  assert.ok(!html.includes('google.script'));
 });
