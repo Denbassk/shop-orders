@@ -58,7 +58,7 @@ export default function Sidebar({
               <img src={logoLight} alt="Фемели Маркет" className="h-9 w-auto object-contain block dark:hidden shrink-0" />
               <img src={logoDark} alt="Фемели Маркет" className="h-9 w-auto object-contain hidden dark:block shrink-0" />
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--gd-teal)] truncate">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--gd-muted)] truncate">
                   Пульт управления
                 </div>
               </div>
@@ -69,7 +69,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onCloseMobile}
-              className="p-2 rounded-xl text-slate-600 hover:bg-slate-200/80 dark:text-slate-300 dark:hover:bg-cyan-950/60"
+              className="p-2 rounded-full text-slate-600 hover:bg-slate-200/80 dark:text-slate-300 dark:hover:bg-cyan-950/60"
               title="Закрыть меню"
             >
               <X className="w-5 h-5" />
@@ -78,7 +78,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 dark:text-cyan-200/80 dark:hover:text-white dark:hover:bg-cyan-950/60 transition-colors"
+              className="p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 dark:text-cyan-200/80 dark:hover:text-white dark:hover:bg-cyan-950/60 transition-colors"
               title={isCollapsed ? 'Развернуть панель' : 'Свернуть панель'}
               aria-label={isCollapsed ? 'Развернуть панель' : 'Свернуть панель'}
             >
@@ -115,11 +115,11 @@ export default function Sidebar({
                         if (isMobile) onCloseMobile();
                       }}
                       title={isCollapsed ? item.label : undefined}
-                      className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                      className={`group relative w-full flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition-all ${
                         isCollapsed ? 'justify-center' : ''
                       } ${
                         active
-                          ? 'bg-teal-600 text-white shadow-sm dark:bg-gradient-to-r dark:from-teal-500/25 dark:to-cyan-500/10 dark:text-teal-200 dark:border dark:border-teal-400/35 dark:shadow-[0_0_20px_rgba(20,184,166,0.16)]'
+                          ? 'bg-[var(--gd-pick)] text-[var(--gd-pick-ink)] shadow-[inset_0_1px_0_white,0_2px_7px_rgb(var(--gd-dark-shadow)/16%)] font-extrabold'
                           : 'text-slate-700 hover:bg-slate-200/80 hover:text-slate-950 dark:text-slate-300/85 dark:hover:bg-cyan-950/45 dark:hover:text-white border border-transparent'
                       }`}
                     >
@@ -170,7 +170,7 @@ export default function Sidebar({
             type="button"
             onClick={onLogout}
             title={isCollapsed ? 'Выйти' : undefined}
-            className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:text-rose-700 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-300 dark:hover:bg-rose-950/35 transition-colors ${
+            className={`w-full flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium text-slate-600 hover:text-rose-700 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-300 dark:hover:bg-rose-950/35 transition-colors ${
               isCollapsed ? 'justify-center' : ''
             }`}
           >
