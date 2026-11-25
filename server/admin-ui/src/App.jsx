@@ -8,6 +8,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Info,
+  Search,
+  Bell,
+  ChevronRight,
 } from 'lucide-react';
 import { adminPost, apiCall, apiLogout, setAuthHandler } from './api';
 import Sidebar, { NAV_ITEMS } from './components/Sidebar';
@@ -60,6 +63,21 @@ export default function App() {
     }
   });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickQuery, setQuickQuery] = useState('');
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setQuickOpen((v) => !v);
+      } else if (e.key === 'Escape') {
+        setQuickOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -270,47 +288,78 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-30 h-16 px-4 sm:px-6 flex items-center justify-between gap-3 border-b border-slate-300/80 bg-white/85 backdrop-blur-md dark:bg-[#081220]/80 dark:border-cyan-400/15">
+      <div className="flex-1 flex flex-col min-w-0 p-2.5 sm:p-4 lg:p-5 gap-3.5">
+        {/* Top Spatial Pill Bar */}
+        <header className="sticky top-2.5 z-30 rounded-full px-3.5 sm:px-5 py-2 gd-rail-shell border flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-200/70 dark:text-cyan-200 dark:hover:bg-cyan-950/60"
+              className="lg:hidden p-2 rounded-full hover:bg-[var(--gd-inner)]"
               aria-label="Открыть меню"
             >
               <Menu className="w-5 h-5" />
             </button>
 
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white truncate">
+              <h1 className="text-base sm:text-lg font-extrabold tracking-tight truncate">
                 {currentPageTitle}
               </h1>
               {todayData && (
-                <div className="text-[11px] font-medium text-slate-500 dark:text-cyan-200/65 truncate">
+                <div className="text-[11px] font-medium text-[var(--gd-muted)] truncate">
                   {todayData.today} ({todayData.dow}) · Киев {todayData.time}
                 </div>
               )}
             </div>
           </div>
 
+          {/* Center Spatial Quick-Jump Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              setQuickQuery('');
+              setQuickOpen(true);
+            }}
+            className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] transition-colors min-w-[260px] lg:min-w-[330px] text-left"
+          >
+            <span className="gd-orb" aria-hidden="true" />
+            <span className="text-xs font-semibold truncate flex-1">
+              Быстрый переход по пульту…
+            </span>
+            <kbd className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[var(--gd-raised)] text-[var(--gd-muted)]">
+              Ctrl K
+            </kbd>
+            <Search className="w-3.5 h-3.5 text-[var(--gd-muted)]" />
+          </button>
+
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => loadDashboard()}
               disabled={refreshing}
-              className="btn-secondary px-3 py-2 text-xs"
+              className="btn-secondary px-3.5 py-2 text-xs"
               title="Обновить сводку"
             >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Обновить</span>
             </button>
 
             <button
               type="button"
+              onClick={() => setActiveTab('notices')}
+              className="relative w-9 h-9 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] inline-grid place-items-center transition-colors"
+              title="Сообщения продавцам"
+            >
+              <Bell className="w-4 h-4" />
+              {noticeCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--gd-coral)]" />
+              )}
+            </button>
+
+            <button
+              type="button"
               onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-              className="p-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:bg-cyan-950/45 dark:border-cyan-400/20 dark:text-cyan-200 dark:hover:bg-cyan-900/50 transition-colors"
+              className="w-9 h-9 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] inline-grid place-items-center transition-colors"
               title={theme === 'dark' ? 'Переключить на светлую тему' : 'Переключить на тёмную тему'}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -318,8 +367,8 @@ export default function App() {
           </div>
         </header>
 
-        {/* Main Workspace */}
-        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+        {/* Main Spatial Glass Stage */}
+        <main className="flex-1 rounded-[28px] sm:rounded-[34px] gd-stage-frame p-4 sm:p-6 lg:p-7 max-w-[1440px] w-full mx-auto">
           {activeTab === 'today' && (
             <TodayView
               todayData={todayData}
@@ -412,6 +461,59 @@ export default function App() {
           {activeTab === 'log' && <LogView toast={toast} />}
         </main>
       </div>
+
+
+      {/* Quick Jump Command Palette */}
+      {quickOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setQuickOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl p-5 glass-panel space-y-3 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--gd-muted)]" />
+              <input
+                type="text"
+                autoFocus
+                value={quickQuery}
+                onChange={(e) => setQuickQuery(e.target.value)}
+                placeholder="Перейти в раздел..."
+                className="input-field pl-10"
+              />
+            </div>
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {NAV_ITEMS.filter((item) =>
+                `${item.label} ${item.section}`.toLowerCase().includes(quickQuery.trim().toLowerCase())
+              ).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setQuickOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-left hover:bg-[var(--gd-raised)] transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className="w-4 h-4 text-[var(--gd-teal)]" />
+                      <div>
+                        <div className="text-xs font-bold">{item.label}</div>
+                        <div className="text-[10px] text-[var(--gd-muted)]">{item.section}</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[var(--gd-muted)]" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Stack */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0">

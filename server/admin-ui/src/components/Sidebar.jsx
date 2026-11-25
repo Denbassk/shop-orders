@@ -49,7 +49,7 @@ export default function Sidebar({
       <div className="flex flex-col h-full select-none">
         {/* Header with Brand + Icon Collapse Button */}
         <div
-          className={`flex items-center h-16 px-3.5 border-b border-slate-300/80 dark:border-cyan-400/15 ${
+          className={`flex items-center h-16 px-3.5 border-b border-[var(--gd-line)] ${
             isCollapsed ? 'justify-center' : 'justify-between'
           }`}
         >
@@ -58,7 +58,7 @@ export default function Sidebar({
               <img src={logoLight} alt="Фемели Маркет" className="h-9 w-auto object-contain block dark:hidden shrink-0" />
               <img src={logoDark} alt="Фемели Маркет" className="h-9 w-auto object-contain hidden dark:block shrink-0" />
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300/85 truncate">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--gd-teal)] truncate">
                   Пульт управления
                 </div>
               </div>
@@ -98,7 +98,7 @@ export default function Sidebar({
             return (
               <div key={sec} className="space-y-1">
                 {!isCollapsed && (
-                  <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-cyan-300/45">
+                  <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--gd-muted)] opacity-80">
                     {sec}
                   </div>
                 )}
