@@ -47,19 +47,19 @@ export default function Sidebar({
     const isCollapsed = !isMobile && collapsed;
     return (
       <div className="flex flex-col h-full select-none">
-        {/* Header with Brand + Icon Collapse Button */}
+        {/* Header with Brand + Collapse Button */}
         <div
-          className={`flex items-center h-16 px-3.5 border-b border-[var(--gd-line)] ${
+          className={`flex items-center h-16 px-4 border-b border-[var(--gd-line)] ${
             isCollapsed ? 'justify-center' : 'justify-between'
           }`}
         >
           {!isCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <img src={logoLight} alt="Фемели Маркет" className="h-9 w-auto object-contain block dark:hidden shrink-0" />
-              <img src={logoDark} alt="Фемели Маркет" className="h-9 w-auto object-contain hidden dark:block shrink-0" />
+              <img src={logoLight} alt="Фемели Маркет" className="h-8 w-auto object-contain block dark:hidden shrink-0" />
+              <img src={logoDark} alt="Фемели Маркет" className="h-8 w-auto object-contain hidden dark:block shrink-0" />
               <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--gd-muted)] truncate">
-                  Пульт управления
+                <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--gd-muted)] truncate">
+                  Пульт
                 </div>
               </div>
             </div>
@@ -69,36 +69,36 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onCloseMobile}
-              className="p-2 rounded-full text-slate-600 hover:bg-slate-200/80 dark:text-slate-300 dark:hover:bg-cyan-950/60"
+              className="w-9 h-9 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] inline-grid place-items-center transition-colors"
               title="Закрыть меню"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           ) : (
             <button
               type="button"
               onClick={onToggleCollapse}
-              className="p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 dark:text-cyan-200/80 dark:hover:text-white dark:hover:bg-cyan-950/60 transition-colors"
+              className="w-9 h-9 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] inline-grid place-items-center transition-colors"
               title={isCollapsed ? 'Развернуть панель' : 'Свернуть панель'}
               aria-label={isCollapsed ? 'Развернуть панель' : 'Свернуть панель'}
             >
               {isCollapsed ? (
-                <PanelLeftOpen className="w-5 h-5" />
+                <PanelLeftOpen className="w-4 h-4" />
               ) : (
-                <PanelLeftClose className="w-5 h-5" />
+                <PanelLeftClose className="w-4 h-4" />
               )}
             </button>
           )}
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-4">
+        <div className="flex-1 overflow-y-auto py-3.5 px-2.5 space-y-4">
           {sections.map((sec) => {
             const items = NAV_ITEMS.filter((i) => i.section === sec);
             return (
               <div key={sec} className="space-y-1">
                 {!isCollapsed && (
-                  <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--gd-muted)] opacity-80">
+                  <div className="px-3.5 pb-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--gd-muted)] opacity-75">
                     {sec}
                   </div>
                 )}
@@ -115,22 +115,17 @@ export default function Sidebar({
                         if (isMobile) onCloseMobile();
                       }}
                       title={isCollapsed ? item.label : undefined}
-                      className={`group relative w-full flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition-all ${
-                        isCollapsed ? 'justify-center' : ''
+                      className={`group relative w-full flex items-center gap-3 rounded-full transition-all duration-200 ${
+                        isCollapsed ? 'justify-center w-11 h-11 mx-auto p-0' : 'px-3.5 py-2.5 text-[13px]'
                       } ${
                         active
-                          ? 'bg-[var(--gd-pick)] text-[var(--gd-pick-ink)] shadow-[inset_0_1px_0_white,0_2px_7px_rgb(var(--gd-dark-shadow)/16%)] font-extrabold'
-                          : 'text-slate-700 hover:bg-slate-200/80 hover:text-slate-950 dark:text-slate-300/85 dark:hover:bg-cyan-950/45 dark:hover:text-white border border-transparent'
+                          ? 'bg-[var(--gd-pick)] text-[var(--gd-pick-ink)] font-extrabold shadow-[inset_0_1px_0_white,0_3px_10px_rgb(var(--gd-dark-shadow)/18%)]'
+                          : 'text-[var(--gd-ink)] font-semibold opacity-85 hover:opacity-100 hover:bg-[var(--gd-inner)]'
                       }`}
                     >
-                      {active && (
-                        <span className="hidden dark:block absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-teal-400 shadow-[0_0_10px_#2dd4bf]" />
-                      )}
                       <Icon
-                        className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-105 ${
-                          active
-                            ? 'text-white dark:text-teal-300'
-                            : 'text-slate-500 group-hover:text-slate-800 dark:text-cyan-300/65 dark:group-hover:text-teal-200'
+                        className={`w-[17px] h-[17px] shrink-0 transition-transform group-hover:scale-105 ${
+                          active ? 'text-[var(--gd-pick-ink)] stroke-[2.2]' : 'text-[var(--gd-ink)] opacity-85 stroke-[1.8]'
                         }`}
                       />
                       {!isCollapsed && (
@@ -138,12 +133,12 @@ export default function Sidebar({
                       )}
                       {badge != null && badge > 0 && !isCollapsed && (
                         <span
-                          className={`px-2 py-0.5 text-[11px] font-bold rounded-full ${
+                          className={`px-2 py-0.5 text-[10.5px] font-extrabold rounded-full ${
                             item.id === 'health'
-                              ? 'bg-amber-500 text-slate-950'
+                              ? 'bg-[var(--gd-coral)] text-[#231a16]'
                               : active
-                              ? 'bg-white/20 text-white dark:bg-teal-400/25 dark:text-teal-200'
-                              : 'bg-teal-100 text-teal-900 dark:bg-teal-500/20 dark:text-teal-300'
+                              ? 'bg-[#241b17]/12 text-[var(--gd-pick-ink)]'
+                              : 'bg-[var(--gd-raised)] text-[var(--gd-ink)] border border-[var(--gd-line)]'
                           }`}
                         >
                           {badge}
@@ -151,9 +146,7 @@ export default function Sidebar({
                       )}
                       {badge != null && badge > 0 && isCollapsed && (
                         <span
-                          className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-[#0b1728] ${
-                            item.id === 'health' ? 'bg-amber-400' : 'bg-teal-400'
-                          }`}
+                          className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[var(--gd-coral)]"
                         />
                       )}
                     </button>
@@ -165,13 +158,13 @@ export default function Sidebar({
         </div>
 
         {/* Footer Logout */}
-        <div className="p-2.5 border-t border-slate-300/80 dark:border-cyan-400/15">
+        <div className="p-2.5 border-t border-[var(--gd-line)]">
           <button
             type="button"
             onClick={onLogout}
             title={isCollapsed ? 'Выйти' : undefined}
-            className={`w-full flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium text-slate-600 hover:text-rose-700 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-300 dark:hover:bg-rose-950/35 transition-colors ${
-              isCollapsed ? 'justify-center' : ''
+            className={`w-full flex items-center gap-3 rounded-full px-3.5 py-2.5 text-[12.5px] font-semibold text-[var(--gd-muted)] hover:text-[var(--gd-coral)] hover:bg-[var(--gd-inner)] transition-colors ${
+              isCollapsed ? 'justify-center px-0' : ''
             }`}
           >
             <LogOut className="w-4 h-4 shrink-0" />
@@ -184,23 +177,25 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Desktop Rail */}
-      <aside
-        className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 border-r border-slate-300/90 bg-white/95 dark:bg-[#0a1627]/85 dark:backdrop-blur-xl dark:border-cyan-400/15 ${
-          collapsed ? 'w-[72px]' : 'w-64'
-        }`}
-      >
-        {renderNavContent(false)}
-      </aside>
+      {/* Desktop Floating Spatial Glass Rail */}
+      <div className="hidden lg:block shrink-0 p-2.5 sm:p-4 lg:pr-0">
+        <aside
+          className={`sticky top-4 h-[calc(100svh-2rem)] flex flex-col rounded-[32px] gd-rail-shell border transition-all duration-200 overflow-hidden ${
+            collapsed ? 'w-[68px]' : 'w-64'
+          }`}
+        >
+          {renderNavContent(false)}
+        </aside>
+      </div>
 
       {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
+        <div className="fixed inset-0 z-50 lg:hidden flex p-3">
           <div
-            className="fixed inset-0 bg-slate-950/65 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/45 backdrop-blur-sm"
             onClick={onCloseMobile}
           />
-          <aside className="relative z-10 w-72 max-w-[85vw] bg-white dark:bg-[#0b182b] border-r border-slate-300 dark:border-cyan-400/20 shadow-2xl">
+          <aside className="relative z-10 w-72 max-w-[85vw] rounded-[30px] gd-rail-shell border overflow-hidden shadow-2xl">
             {renderNavContent(true)}
           </aside>
         </div>

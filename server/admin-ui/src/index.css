@@ -24,7 +24,7 @@
   --gd-pick: #fff9f3;
   --gd-pick-ink: #241b17;
   --gd-coral: #a43c27;
-  --gd-teal: #09644f;
+  --gd-teal: #c95d3e;
   --gd-ochre: #996300;
   --gd-graph-ink: #40332d;
   --gd-focus: #194b48;
@@ -53,7 +53,7 @@ html.dark {
   --gd-pick: #f9eee0;
   --gd-pick-ink: #241b17;
   --gd-coral: #ff9177;
-  --gd-teal: #75dac0;
+  --gd-teal: #f39a7d;
   --gd-ochre: #f1be58;
   --gd-graph-ink: #e7d9cd;
   --gd-focus: #f9bf9b;
@@ -248,7 +248,7 @@ html.dark {
   background: var(--gd-surface);
 }
 
-/* Гармонизация старых cyan/teal/slate акцентов внутри страниц под тёплую палитру */
+/* Гармонизация старых cyan/teal/slate акцентов внутри страниц под тёплую персиковую палитру */
 .gd-stage-frame .bg-teal-500,
 .gd-stage-frame .bg-teal-600 {
   background-color: var(--gd-teal) !important;
