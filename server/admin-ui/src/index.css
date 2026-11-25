@@ -189,7 +189,7 @@ html.dark {
   @apply inline-flex items-center justify-center gap-2 rounded-full px-3.5 py-2 text-xs font-bold transition-all
          bg-rose-600 text-white hover:bg-rose-700
          dark:bg-rose-500/20 dark:text-rose-200 dark:border dark:border-rose-400/35 dark:hover:bg-rose-500/30
-         disabled:opacity-50 disabled:pointer-events: none;
+         disabled:opacity-50 disabled:pointer-events-none;
 }
 
 .input-field {
@@ -236,3 +236,4 @@ html.dark {
 
 /* Search input icon clearance */
 input.pl-9, input.pl-10, input.pl-11 { padding-left: 2.5rem !important; }
+
