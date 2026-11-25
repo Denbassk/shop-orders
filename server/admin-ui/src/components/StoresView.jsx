@@ -14,6 +14,14 @@ import { Modal } from './Modal';
 
 const DAYS_LIST = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const ZONES_LIST = ['Салтовка', 'Новые дома', 'Центр', 'не возится'];
+const ENTITIES = [
+  { key: 'family', label: 'Фемели Маркет', edrpou: '44413718' },
+  { key: 'ua', label: 'ЮА Маркет', edrpou: '45672783' },
+];
+const entityByEdrpou = (val) => {
+  const digits = String(val || '').replace(/\D/g, '');
+  return ENTITIES.find((e) => e.edrpou === digits)?.key || 'other';
+};
 
 export default function StoresView({ toast }) {
   const [data, setData] = useState(null);
@@ -21,6 +29,7 @@ export default function StoresView({ toast }) {
   const [q, setQ] = useState('');
   const [view, setView] = useState('cards'); // cards | table
   const [showInactive, setShowInactive] = useState(false);
+  const [entityFilter, setEntityFilter] = useState('all'); // all | family | ua
 
   // Store Card Modal
   const [cardModal, setCardModal] = useState(null); // { summary, edit }
@@ -133,6 +142,8 @@ export default function StoresView({ toast }) {
 
   const rows = (data?.rows || []).filter((r) => {
     if (!showInactive && !r.active) return false;
+    if (entityFilter === 'ua' && !r.ua) return false;
+    if (entityFilter === 'family' && r.ua) return false;
     const term = q.trim().toLowerCase();
     if (!term) return true;
     return `${r.label} ${r.address} ${r.code} ${r.route} ${r.zone}`.toLowerCase().includes(term);
@@ -190,7 +201,18 @@ export default function StoresView({ toast }) {
           />
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <select
+            value={entityFilter}
+            onChange={(e) => setEntityFilter(e.target.value)}
+            className="input-field py-1.5 text-xs w-auto"
+            aria-label="Фильтр по юрлицу"
+          >
+            <option value="all">Все юрлица</option>
+            <option value="family">Фемели Маркет</option>
+            <option value="ua">ЮА Маркет</option>
+          </select>
+
           <label className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer px-2">
             <input
               type="checkbox"
@@ -418,7 +440,7 @@ export default function StoresView({ toast }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold mb-1">Маршрут</label>
                   <input
@@ -443,6 +465,30 @@ export default function StoresView({ toast }) {
                         {z}
                       </option>
                     ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold mb-1">Юрлицо</label>
+                  <select
+                    disabled={!cardModal.edit?.editable}
+                    value={entityByEdrpou(editFields.edrpou)}
+                    onChange={(e) => {
+                      const found = ENTITIES.find((x) => x.key === e.target.value);
+                      if (found) setEditFields({ ...editFields, edrpou: found.edrpou });
+                    }}
+                    className="input-field"
+                  >
+                    {ENTITIES.map((ent) => (
+                      <option key={ent.key} value={ent.key}>
+                        {ent.label} ({ent.edrpou})
+                      </option>
+                    ))}
+                    {entityByEdrpou(editFields.edrpou) === 'other' && (
+                      <option value="other">Другое ({editFields.edrpou || 'не задано'})</option>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -609,7 +655,7 @@ export default function StoresView({ toast }) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold mb-1">Маршрут</label>
               <input
@@ -632,6 +678,29 @@ export default function StoresView({ toast }) {
                     {z}
                   </option>
                 ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold mb-1">Юрлицо</label>
+              <select
+                value={entityByEdrpou(addForm.edrpou)}
+                onChange={(e) => {
+                  const found = ENTITIES.find((x) => x.key === e.target.value);
+                  if (found) setAddForm({ ...addForm, edrpou: found.edrpou });
+                }}
+                className="input-field"
+              >
+                {ENTITIES.map((ent) => (
+                  <option key={ent.key} value={ent.key}>
+                    {ent.label} ({ent.edrpou})
+                  </option>
+                ))}
+                {entityByEdrpou(addForm.edrpou) === 'other' && (
+                  <option value="other">Другое ({addForm.edrpou || 'не задано'})</option>
+                )}
               </select>
             </div>
             <div>
