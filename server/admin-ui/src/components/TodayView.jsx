@@ -34,6 +34,9 @@ export default function TodayView({
   toast,
 }) {
   const [busyDir, setBusyDir] = useState('');
+  const [dismissedSig, setDismissedSig] = useState(() => {
+    try { return localStorage.getItem('pult_bq_banner_dismissed') || ''; } catch { return ''; }
+  });
 
   if (!todayData) {
     return (
@@ -48,6 +51,12 @@ export default function TodayView({
   const incomingEntries = Object.entries(todayData.incoming || {}).filter(
     ([, info]) => info && info.n > 0
   );
+  const incomingSig = incomingEntries.map(([k, i]) => `${k}:${i.n}:${i.big || 0}`).join('|');
+  const showIncomingBanner = incomingEntries.length > 0 && incomingSig !== dismissedSig;
+  const dismissIncomingBanner = () => {
+    setDismissedSig(incomingSig);
+    try { localStorage.setItem('pult_bq_banner_dismissed', incomingSig); } catch {}
+  };
 
   const runDirAction = async (dirKey, fn, successMsg) => {
     setBusyDir(dirKey);
@@ -65,7 +74,7 @@ export default function TodayView({
   return (
     <div className="space-y-5">
       {/* BigQuery Incoming Price Changes Alert */}
-      {incomingEntries.length > 0 && (
+      {showIncomingBanner && (
         <div className="rounded-2xl p-4 border border-amber-400/70 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-400/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
@@ -85,7 +94,7 @@ export default function TodayView({
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {incomingEntries.map(([k]) => (
               <button
                 key={k}
@@ -97,6 +106,14 @@ export default function TodayView({
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             ))}
+            <button
+              type="button"
+              onClick={dismissIncomingBanner}
+              title="Скрыть уведомление до следующих изменений"
+              className="px-2.5 py-2 rounded-xl text-xs font-semibold text-amber-800 hover:bg-amber-500/15 dark:text-amber-200/75 dark:hover:bg-amber-400/15 transition-colors"
+            >
+              Скрыть
+            </button>
           </div>
         </div>
       )}

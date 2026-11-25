@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { adminPost, apiCall, apiLogout, setAuthHandler } from './api';
 import Sidebar, { NAV_ITEMS } from './components/Sidebar';
+import logoDark from './assets/logo-dark.png';
+import logoLight from './assets/logo-light.png';
 import TodayView from './components/TodayView';
 import DirOrdersView from './components/DirOrdersView';
 import IncomingView from './components/IncomingView';
@@ -199,11 +201,10 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-sm rounded-3xl p-7 glass-panel space-y-6">
           <div className="flex flex-col items-center text-center space-y-2">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-teal-500 to-cyan-500 text-slate-950 font-extrabold text-xl shadow-[0_0_24px_rgba(20,184,166,0.35)]">
-              ФМ
-            </div>
-            <h1 className="text-xl font-extrabold text-slate-900 dark:text-white">
-              Пульт Фемелі Маркет
+            <img src={logoLight} alt="Фемели Маркет" className="h-14 w-auto object-contain block dark:hidden" />
+            <img src={logoDark} alt="Фемели Маркет" className="h-14 w-auto object-contain hidden dark:block" />
+            <h1 className="text-lg font-extrabold text-slate-900 dark:text-white">
+              Пульт управления
             </h1>
             <p className="text-xs text-slate-500 dark:text-cyan-200/65">
               Введите PIN-код администратора для входа

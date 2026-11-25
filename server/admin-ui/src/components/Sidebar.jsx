@@ -1,4 +1,6 @@
 import React from 'react';
+import logoDark from '../assets/logo-dark.png';
+import logoLight from '../assets/logo-light.png';
 import {
   LayoutDashboard,
   ArrowDownToLine,
@@ -53,14 +55,10 @@ export default function Sidebar({
         >
           {!isCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-teal-500 to-cyan-500 text-slate-950 font-extrabold text-sm shadow-[0_0_18px_rgba(20,184,166,0.35)]">
-                ФМ
-              </div>
+              <img src={logoLight} alt="Фемели Маркет" className="h-9 w-auto object-contain block dark:hidden shrink-0" />
+              <img src={logoDark} alt="Фемели Маркет" className="h-9 w-auto object-contain hidden dark:block shrink-0" />
               <div className="min-w-0">
-                <div className="text-sm font-bold tracking-tight truncate text-slate-900 dark:text-white">
-                  Фемелі Маркет
-                </div>
-                <div className="text-[11px] font-medium text-teal-700 dark:text-teal-300/80 truncate">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300/85 truncate">
                   Пульт управления
                 </div>
               </div>

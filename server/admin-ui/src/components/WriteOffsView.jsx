@@ -11,6 +11,13 @@ import {
 import { apiCall, fmtMoney } from '../api';
 import { Modal } from './Modal';
 
+
+const ENTITY_TITLES = {
+  '44413718': 'Фемели Маркет',
+  '45672783': 'ЮА Маркет',
+};
+const entityLabel = (b) => ENTITY_TITLES[String(b?.edrpou || '').replace(/\D/g, '')] || b?.name || '';
+
 const PERIODS = [
   { id: 'today', label: 'Сегодня' },
   { id: 'yesterday', label: 'Вчера' },
@@ -146,7 +153,7 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
                     : 'bg-slate-100 text-slate-700 dark:bg-[#081322] dark:text-slate-300'
                 }`}
               >
-                {b.name} ({fmtMoney(b.sum)} грн)
+                {entityLabel(b)} ({fmtMoney(b.sum)} грн)
               </button>
             ))}
           </div>
@@ -244,7 +251,7 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
                   >
                     <ExternalLink className="w-3.5 h-3.5 text-teal-600 dark:text-teal-300" />
                     <span>
-                      Таблица {b.name} (ЕГРПОУ {b.edrpou})
+                      Таблица {entityLabel(b)}
                     </span>
                   </a>
                 ))}
