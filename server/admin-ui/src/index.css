@@ -253,20 +253,14 @@ html.dark {
 .gd-stage-frame .bg-teal-600 {
   background-color: var(--gd-teal) !important;
 }
-.gd-stage-frame .text-teal-600,
-.gd-stage-frame .dark:text-teal-300,
-.gd-stage-frame .dark:text-teal-400 {
+.gd-stage-frame [class*="text-teal-"] {
   color: var(--gd-teal) !important;
 }
-.gd-stage-frame .dark:text-cyan-200/70,
-.gd-stage-frame .dark:text-cyan-200/65,
-.gd-stage-frame .dark:text-cyan-200/60,
-.gd-stage-frame .dark:text-cyan-100/70 {
+.gd-stage-frame [class*="text-cyan-200"],
+.gd-stage-frame [class*="text-cyan-100"] {
   color: var(--gd-muted) !important;
 }
-.gd-stage-frame .dark:border-cyan-400/15,
-.gd-stage-frame .dark:border-cyan-400/20,
-.gd-stage-frame .dark:border-cyan-400/10 {
+.gd-stage-frame [class*="border-cyan-400"] {
   border-color: var(--gd-line) !important;
 }
 
