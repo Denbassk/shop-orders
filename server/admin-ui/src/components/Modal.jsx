@@ -11,7 +11,8 @@ export function Portal({ children }) {
   return createPortal(children, document.body);
 }
 
-export function Modal({ open, onClose, title, subtitle, maxWidth = 'max-w-xl', children, footer }) {
+// center: окно по центру и на телефоне (короткие подтверждения); иначе на телефоне - парящая карточка у низа
+export function Modal({ open, onClose, title, subtitle, maxWidth = 'max-w-xl', children, footer, center = false, bare = false, className = '' }) {
   const titleId = useId();
   const boxRef = useRef(null);
   const closeRef = useRef(onClose);
@@ -41,7 +42,7 @@ export function Modal({ open, onClose, title, subtitle, maxWidth = 'max-w-xl', c
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className={`fixed inset-0 z-50 flex ${center ? 'items-center' : 'items-end sm:items-center'} justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4`}>
       <div
         className="fixed inset-0 bg-[rgb(var(--gd-dark-shadow)/45%)] dark:bg-black/55 backdrop-blur-sm transition-opacity"
         onClick={onClose}
@@ -50,10 +51,12 @@ export function Modal({ open, onClose, title, subtitle, maxWidth = 'max-w-xl', c
         ref={boxRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-labelledby={bare ? undefined : titleId}
+        aria-label={bare ? title : undefined}
         tabIndex={-1}
-        className={`gd-modal relative z-10 w-full ${maxWidth} max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-3xl overflow-hidden outline-none`}
+        className={`gd-modal relative z-10 w-full ${maxWidth} max-h-[88svh] sm:max-h-[92vh] flex flex-col rounded-3xl overflow-hidden outline-none ${className}`}
       >
+        {bare ? children : (<>
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gd-line">
           <div className="min-w-0">
             <h3 id={titleId} className="text-base sm:text-lg font-bold text-gd-ink truncate">
@@ -79,6 +82,7 @@ export function Modal({ open, onClose, title, subtitle, maxWidth = 'max-w-xl', c
             {footer}
           </div>
         )}
+        </>)}
       </div>
     </div>,
     document.body
