@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Plus,
   Search,
@@ -14,7 +14,7 @@ import {
   Save,
 } from 'lucide-react';
 import { apiCall, fmtMoney, normalizeWeightName } from '../api';
-import { Modal, AccessSelector } from './Modal';
+import { Modal, AccessSelector, Portal } from './Modal';
 
 const DIRS = [
   { id: 'bread', label: 'Хлеб Рома' },
@@ -74,16 +74,21 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
     if (initialDir) setDir(initialDir);
   }, [initialDir]);
 
+  const dirRef = useRef(dir);
+  dirRef.current = dir;
+
   const load = async (targetDir = dir) => {
     setLoading(true);
     setSelected(new Set());
     try {
       const res = await apiCall('assortment', { dir: targetDir });
+      if (dirRef.current !== targetDir) return;
       setData(res);
     } catch (e) {
+      if (dirRef.current !== targetDir) return;
       toast(e.message, 'err');
     } finally {
-      setLoading(false);
+      if (dirRef.current === targetDir) setLoading(false);
     }
   };
 
@@ -194,9 +199,12 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
   };
 
   // --- Bulk Stop / Unstop ---
+  const [bulkStopBusy, setBulkStopBusy] = useState(false);
   const handleBulkStop = async (stopFlag) => {
+    if (bulkStopBusy) return;
     const ids = Array.from(selected);
     if (!ids.length) return;
+    setBulkStopBusy(true);
     try {
       const res = await apiCall('assortStop', { dir, ids, stop: stopFlag });
       toast(
@@ -208,6 +216,8 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
       await load(dir);
     } catch (err) {
       toast(err.message, 'err');
+    } finally {
+      setBulkStopBusy(false);
     }
   };
 
@@ -326,10 +336,10 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
       {/* Header & Direction Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          <h2 className="text-lg font-bold text-gd-ink">
             Ассортимент и цены
           </h2>
-          <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+          <p className="text-xs text-gd-muted">
             {data?.priceLocked
               ? 'Цены обновляются из прайса поставщика · доступны стопы и доступ по точкам'
               : `Наценка для продавцов: ×${data?.markup || 1} · управление позициями, ценами и доступом`}
@@ -342,10 +352,10 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
               key={d.id}
               type="button"
               onClick={() => setDir(d.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 py-2 rounded-full text-xs font-bold transition-all ${
                 dir === d.id
-                  ? 'bg-teal-600 text-white dark:bg-teal-400 dark:text-slate-950'
-                  : 'glass-panel text-slate-700 dark:text-slate-300 hover:border-teal-400/50'
+                  ? 'bg-gd-accent text-gd-on-accent'
+                  : 'glass-panel text-gd-muted hover:border-gd-accent/50'
               }`}
             >
               {d.label}
@@ -356,15 +366,15 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
 
       {/* Incoming Banner inside Assortment */}
       {data?.incoming?.enabled && data.incoming.n > 0 && (
-        <div className="rounded-2xl p-3.5 border border-amber-400/70 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-400/35 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs font-semibold text-amber-950 dark:text-amber-200">
+        <div className="rounded-2xl p-3.5 border border-gd-warn/40 bg-gd-warn/15 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs font-semibold text-gd-warn">
             В приходах BigQuery найдено <b>{data.incoming.n}</b> расхождений цен
             {data.incoming.big > 0 ? ` (из них ${data.incoming.big} >30%)` : ''}
           </div>
           <button
             type="button"
             onClick={() => onOpenIncoming(dir)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-600 text-white dark:bg-amber-400 dark:text-slate-950"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-gd-warn text-gd-on-accent"
           >
             <span>Сверить приходы</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -376,7 +386,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
       <div className="rounded-2xl p-4 glass-panel space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gd-muted" />
             <input
               type="text"
               value={q}
@@ -418,8 +428,8 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                 onClick={() => setFilter(f.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                   filter === f.id
-                    ? 'bg-slate-900 text-white dark:bg-cyan-400/20 dark:text-teal-200 dark:border dark:border-teal-400/40'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-[#081322] dark:text-slate-300'
+                    ? 'bg-gd-accent text-gd-on-accent'
+                    : 'bg-gd-inner text-gd-muted hover:bg-gd-raised'
                 }`}
               >
                 {f.label}
@@ -430,7 +440,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
           <button
             type="button"
             onClick={toggleSelectFiltered}
-            className="text-xs font-semibold text-teal-700 hover:underline dark:text-teal-300"
+            className="text-xs font-semibold text-gd-accent hover:underline"
           >
             {filtered.length > 0 && filtered.every((p) => selected.has(p.id))
               ? 'Снять выделение'
@@ -447,7 +457,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl glass-panel divide-y divide-slate-200 dark:divide-cyan-400/10 overflow-hidden">
+        <div className="rounded-2xl glass-panel divide-y divide-gd-line overflow-hidden">
           {filtered.map((p) => {
             const checked = selected.has(p.id);
             const acc = p.access || { mode: 'all', stores: [] };
@@ -457,8 +467,8 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                 onClick={() => toggleRow(p.id)}
                 className={`flex items-center justify-between gap-3 px-4 py-3 cursor-pointer transition-colors ${
                   checked
-                    ? 'bg-indigo-50/75 dark:bg-indigo-500/10'
-                    : 'hover:bg-slate-50 dark:hover:bg-cyan-950/25'
+                    ? 'bg-gd-accent/12'
+                    : 'hover:bg-gd-inner'
                 }`}
               >
                 <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -470,8 +480,8 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                     }}
                     className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-colors ${
                       checked
-                        ? 'bg-indigo-600 border-indigo-600 text-white'
-                        : 'border-slate-400 bg-white dark:bg-[#081322] dark:border-slate-500'
+                        ? 'bg-gd-accent border-gd-accent text-gd-on-accent'
+                        : 'border-gd-line bg-white'
                     }`}
                   >
                     {checked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
@@ -482,27 +492,27 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                       <span
                         className={`font-bold text-sm ${
                           p.stop
-                            ? 'line-through text-slate-400 dark:text-slate-500'
-                            : 'text-slate-900 dark:text-white'
+                            ? 'line-through text-gd-muted'
+                            : 'text-gd-ink'
                         }`}
                       >
                         {p.name}
                       </span>
 
                       {p.stop && (
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-500/20 dark:text-rose-300">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gd-danger/15 text-gd-danger border border-gd-danger/30">
                           СТОП
                         </span>
                       )}
 
                       {p.category && (
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-cyan-950/60 dark:text-cyan-200">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gd-inner text-gd-muted">
                           {p.category}
                         </span>
                       )}
 
                       {acc.mode !== 'all' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-500/20 dark:text-purple-200">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-gd-accent/12 text-gd-accent border border-gd-accent/30">
                           <MapPin className="w-3 h-3" />
                           {acc.mode === 'only'
                             ? `Только ${acc.stores.length} ТТ`
@@ -511,13 +521,13 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                       )}
                     </div>
 
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                    <div className="text-[11px] text-gd-muted mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                       {p.barcode && <span className="font-mono">ШК: {p.barcode}</span>}
                       {p.box && <span>Ящик: {p.box}</span>}
                       {p.availability && <span>Наличие: {p.availability}</span>}
                       {p.cost > 0 && <span>Себест.: {fmtMoney(p.cost)} грн</span>}
                       {acc.mode !== 'all' && acc.stores.length > 0 && (
-                        <span className="text-purple-700 dark:text-purple-300 truncate max-w-md">
+                        <span className="text-gd-accent truncate max-w-md">
                           {acc.stores
                             .slice(0, 4)
                             .map((id) => storeMap.get(id) || id)
@@ -532,11 +542,11 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                 {/* Price & Edit Button */}
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
-                    <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    <div className="text-sm font-extrabold text-gd-ink">
                       {fmtMoney(p.price)} грн
                     </div>
                     {!data?.hidePrice && data?.markup > 1 && (
-                      <div className="text-[11px] text-teal-700 dark:text-teal-300">
+                      <div className="text-[11px] text-gd-accent">
                         продавец: {fmtMoney(p.sellerPrice)}
                       </div>
                     )}
@@ -548,7 +558,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                       e.stopPropagation();
                       openEditModal(p);
                     }}
-                    className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-200/80 dark:text-slate-400 dark:hover:text-white dark:hover:bg-cyan-950/60"
+                    className="p-2 rounded-xl text-gd-muted hover:text-gd-ink hover:bg-gd-raised"
                     title="Редактировать позицию"
                   >
                     <Edit3 className="w-4 h-4" />
@@ -559,18 +569,19 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
           })}
 
           {!filtered.length && (
-            <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
+            <div className="p-8 text-center text-sm text-gd-muted">
               Позиции не найдены
             </div>
           )}
         </div>
       )}
 
-      {/* Floating Bulk Action Bar */}
+      {/* Floating Bulk Action Bar (портал: иначе fixed считается от main) */}
       {selected.size > 0 && (
+        <Portal>
         <div className="fixed bottom-4 left-4 right-4 lg:left-72 z-40 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 text-white shadow-2xl border border-slate-700 dark:bg-[#0d1f36]/95 dark:backdrop-blur-xl dark:border-teal-400/40">
-            <span className="text-xs font-bold px-2 text-teal-300">
+          <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-2xl gd-modal shadow-2xl">
+            <span className="text-xs font-bold px-2 text-gd-accent">
               Выбрано: {selected.size}
             </span>
 
@@ -578,7 +589,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
               <button
                 type="button"
                 onClick={openPriceModal}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-teal-500 text-slate-950 hover:bg-teal-400"
+                className="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
               >
                 <Percent className="w-3.5 h-3.5" />
                 <span>Изменить цены</span>
@@ -588,7 +599,8 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
             <button
               type="button"
               onClick={() => handleBulkStop(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/25 text-rose-200 border border-rose-400/40 hover:bg-rose-500/35"
+              disabled={bulkStopBusy}
+              className="btn-danger inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
             >
               <Ban className="w-3.5 h-3.5" />
               <span>На стоп</span>
@@ -597,7 +609,8 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
             <button
               type="button"
               onClick={() => handleBulkStop(false)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/25 text-emerald-200 border border-emerald-400/40 hover:bg-emerald-500/35"
+              disabled={bulkStopBusy}
+              className="disabled:opacity-50 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gd-ok/15 text-gd-ok border border-gd-ok/40 hover:bg-gd-ok/25"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Снять стоп</span>
@@ -609,7 +622,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                 setBulkAccess({ mode: 'all', stores: [] });
                 setAccessModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 text-white hover:bg-white/20"
+              className="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
             >
               <MapPin className="w-3.5 h-3.5" />
               <span>Доступ по ТТ</span>
@@ -618,12 +631,13 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
             <button
               type="button"
               onClick={() => setSelected(new Set())}
-              className="text-xs text-slate-400 hover:text-white px-2"
+              className="text-xs text-gd-muted hover:text-gd-ink px-2"
             >
               Сброс
             </button>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Modal 1: Add New Product */}
@@ -652,7 +666,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
       >
         <form id="add-product-form" onSubmit={handleAddSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+            <label className="block text-xs font-bold mb-1 text-gd-muted">
               Название товара *
             </label>
             <input
@@ -664,7 +678,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
               className="input-field"
             />
             {addForm.name.trim() && normAddPreview !== addForm.name.trim() && (
-              <div className="text-xs text-teal-700 dark:text-teal-300 mt-1">
+              <div className="text-xs text-gd-accent mt-1">
                 Будет сохранено как: <b>{normAddPreview}</b>
               </div>
             )}
@@ -672,7 +686,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-bold mb-1 text-gd-muted">
                 Цена, грн *
               </label>
               <input
@@ -688,7 +702,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
             </div>
 
             <div>
-              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-bold mb-1 text-gd-muted">
                 Штрихкод (4–20 цифр)
               </label>
               <input
@@ -704,7 +718,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
           {dir === 'bakery' ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Категория
                 </label>
                 <input
@@ -716,7 +730,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Себестоимость
                 </label>
                 <input
@@ -730,7 +744,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Наличие / дни
                 </label>
                 <input
@@ -745,7 +759,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
           ) : (
             (dir === 'bread' || dir === 'nbhz') && (
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Ящик / тара
                 </label>
                 <input
@@ -793,7 +807,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
         {editItem && (
           <form id="edit-product-form" onSubmit={handleEditSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-bold mb-1 text-gd-muted">
                 Название
               </label>
               <input
@@ -804,7 +818,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                 className="input-field"
               />
               {editForm.name && normEditPreview !== editForm.name.trim() && (
-                <div className="text-xs text-teal-700 dark:text-teal-300 mt-1">
+                <div className="text-xs text-gd-accent mt-1">
                   Нормализуется в: <b>{normEditPreview}</b>
                 </div>
               )}
@@ -812,7 +826,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Цена, грн {data?.priceLocked && '(из прайса)'}
                 </label>
                 <input
@@ -827,7 +841,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
               </div>
 
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Штрихкод
                 </label>
                 <input
@@ -842,7 +856,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
             {dir === 'bakery' && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  <label className="block text-xs font-bold mb-1 text-gd-muted">
                     Категория
                   </label>
                   <input
@@ -853,7 +867,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  <label className="block text-xs font-bold mb-1 text-gd-muted">
                     Себестоимость
                   </label>
                   <input
@@ -866,7 +880,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                  <label className="block text-xs font-bold mb-1 text-gd-muted">
                     Наличие
                   </label>
                   <input
@@ -881,7 +895,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
 
             {(dir === 'bread' || dir === 'nbhz') && (
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Ящик / тара
                 </label>
                 <input
@@ -932,7 +946,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-bold mb-1 text-gd-muted">
                 Способ изменения
               </label>
               <select
@@ -949,7 +963,7 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
             </div>
 
             <div>
-              <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-bold mb-1 text-gd-muted">
                 Значение (можно с минусом, напр. -5)
               </label>
               <input
@@ -968,21 +982,21 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
 
           {pricePreview && (
             <div className="space-y-2">
-              <div className="text-xs font-bold text-slate-700 dark:text-cyan-200">
+              <div className="text-xs font-bold text-gd-muted">
                 Предпросмотр ({pricePreview.n} поз. изменятся, пропущено: {pricePreview.skipped}):
               </div>
-              <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-300 dark:border-cyan-400/15 divide-y divide-slate-200 dark:divide-cyan-400/10">
+              <div className="max-h-64 overflow-y-auto rounded-xl border border-gd-line divide-y divide-gd-line">
                 {pricePreview.rows.map((r) => (
                   <div
                     key={r.id}
                     className="flex items-center justify-between px-3.5 py-2 text-xs"
                   >
-                    <span className="font-medium text-slate-800 dark:text-slate-200 truncate pr-2">
+                    <span className="font-medium text-gd-ink truncate pr-2">
                       {r.name}
                     </span>
                     <span className="font-bold shrink-0">
-                      <span className="text-slate-500 line-through mr-2">{fmtMoney(r.old)}</span>
-                      <span className="text-teal-700 dark:text-teal-300">{fmtMoney(r.new)} грн</span>
+                      <span className="text-gd-muted line-through mr-2">{fmtMoney(r.old)}</span>
+                      <span className="text-gd-accent">{fmtMoney(r.new)} грн</span>
                     </span>
                   </div>
                 ))}
@@ -1051,14 +1065,14 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
         }
       >
         {loadingVegNew ? (
-          <div className="p-8 text-center text-sm text-slate-500">Читаю прайс поставщика…</div>
+          <div className="p-8 text-center text-sm text-gd-muted">Читаю прайс поставщика…</div>
         ) : vegNewRows.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-300">
+          <div className="p-8 text-center text-sm text-gd-muted">
             Все позиции из прайса поставщика уже есть в ассортименте.
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-300 dark:border-cyan-400/15 divide-y divide-slate-200 dark:divide-cyan-400/10">
+            <div className="max-h-56 overflow-y-auto rounded-xl border border-gd-line divide-y divide-gd-line">
               {vegNewRows.map((r) => {
                 const checked = vegNewSel.has(r.name);
                 return (
@@ -1071,23 +1085,23 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
                       else next.add(r.name);
                       setVegNewSel(next);
                     }}
-                    className="w-full flex items-center justify-between px-3.5 py-2.5 text-left text-xs hover:bg-slate-50 dark:hover:bg-cyan-950/30"
+                    className="w-full flex items-center justify-between px-3.5 py-2.5 text-left text-xs hover:bg-gd-inner"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span
                         className={`w-4 h-4 rounded flex items-center justify-center border ${
                           checked
-                            ? 'bg-indigo-600 border-indigo-600 text-white'
-                            : 'border-slate-400'
+                            ? 'bg-gd-accent border-gd-accent text-gd-on-accent'
+                            : 'border-gd-line'
                         }`}
                       >
                         {checked && <Check className="w-3 h-3 stroke-[3]" />}
                       </span>
-                      <span className="font-semibold text-slate-900 dark:text-white truncate">
+                      <span className="font-semibold text-gd-ink truncate">
                         {r.name}
                       </span>
                     </div>
-                    <span className="font-bold text-teal-700 dark:text-teal-300 shrink-0">
+                    <span className="font-bold text-gd-accent shrink-0">
                       {fmtMoney(r.price)} грн
                     </span>
                   </button>

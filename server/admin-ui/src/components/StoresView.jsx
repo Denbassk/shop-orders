@@ -154,10 +154,10 @@ export default function StoresView({ toast }) {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          <h2 className="text-lg font-bold text-gd-ink">
             Торговые точки ({rows.length})
           </h2>
-          <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+          <p className="text-xs text-gd-muted">
             Реквизиты, маршруты, графики направлений и заказы за сегодня
           </p>
         </div>
@@ -191,7 +191,7 @@ export default function StoresView({ toast }) {
       {/* Controls */}
       <div className="rounded-2xl p-4 glass-panel flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gd-muted" />
           <input
             type="text"
             value={q}
@@ -213,26 +213,27 @@ export default function StoresView({ toast }) {
             <option value="ua">ЮА Маркет</option>
           </select>
 
-          <label className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer px-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-gd-muted cursor-pointer px-2">
             <input
               type="checkbox"
               checked={showInactive}
               onChange={(e) => setShowInactive(e.target.checked)}
-              className="rounded accent-teal-600"
+              className="rounded"
             />
             <span>Выключенные</span>
           </label>
 
-          <div className="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-[#081322] border border-slate-200 dark:border-cyan-400/15">
+          <div className="inline-flex rounded-xl p-1 bg-gd-inner border border-gd-line">
             <button
               type="button"
               onClick={() => setView('cards')}
               className={`p-1.5 rounded-lg transition-colors ${
                 view === 'cards'
-                  ? 'bg-white text-slate-900 shadow-sm dark:bg-teal-500/25 dark:text-teal-200'
-                  : 'text-slate-500'
+                  ? 'bg-gd-accent text-gd-on-accent'
+                  : 'text-gd-muted hover:bg-gd-inner'
               }`}
               title="Плитки"
+              aria-label="Плитки"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
@@ -241,10 +242,11 @@ export default function StoresView({ toast }) {
               onClick={() => setView('table')}
               className={`p-1.5 rounded-lg transition-colors ${
                 view === 'table'
-                  ? 'bg-white text-slate-900 shadow-sm dark:bg-teal-500/25 dark:text-teal-200'
-                  : 'text-slate-500'
+                  ? 'bg-gd-accent text-gd-on-accent'
+                  : 'text-gd-muted hover:bg-gd-inner'
               }`}
               title="Таблица"
+              aria-label="Таблица"
             >
               <TableIcon className="w-4 h-4" />
             </button>
@@ -266,43 +268,43 @@ export default function StoresView({ toast }) {
               key={s.id}
               type="button"
               onClick={() => openStoreDetail(s.id)}
-              className={`text-left rounded-2xl p-4 glass-panel hover:border-teal-500/60 dark:hover:border-teal-400/45 transition-all flex flex-col justify-between gap-2.5 ${
+              className={`text-left rounded-2xl p-4 glass-panel hover:border-gd-accent/60 transition-all flex flex-col justify-between gap-2.5 ${
                 !s.active ? 'opacity-60' : ''
               }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
-                  <div className="font-bold text-sm text-slate-900 dark:text-white">
+                  <div className="font-bold text-sm text-gd-ink">
                     {s.label}
                   </div>
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                       s.ua
-                        ? 'bg-blue-100 text-blue-900 dark:bg-sky-500/20 dark:text-sky-300'
-                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                        ? 'bg-gd-accent/12 text-gd-accent'
+                        : 'bg-gd-inner text-gd-muted'
                     }`}
                   >
                     {s.ua ? 'ЮА маркет' : 'Фемелі'}
                   </span>
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                <div className="text-xs text-gd-muted mt-0.5 truncate">
                   {s.address}
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                 {s.code && (
-                  <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#081322] text-slate-700 dark:text-slate-300 font-mono">
+                  <span className="px-2 py-0.5 rounded bg-gd-inner text-gd-muted font-mono">
                     #{s.code}
                   </span>
                 )}
                 {s.route && (
-                  <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#081322] text-slate-700 dark:text-slate-300">
+                  <span className="px-2 py-0.5 rounded bg-gd-inner text-gd-muted">
                     М-т: {s.route}
                   </span>
                 )}
                 {s.zone && (
-                  <span className="px-2 py-0.5 rounded bg-teal-50 text-teal-800 dark:bg-teal-500/15 dark:text-teal-300">
+                  <span className="px-2 py-0.5 rounded bg-gd-accent/12 text-gd-accent">
                     {s.zone}
                   </span>
                 )}
@@ -313,7 +315,7 @@ export default function StoresView({ toast }) {
       ) : (
         <div className="rounded-2xl glass-panel overflow-x-auto">
           <table className="w-full text-xs text-left">
-            <thead className="bg-slate-100/90 dark:bg-[#081322] text-slate-600 dark:text-cyan-200/75 uppercase border-b border-slate-200 dark:border-cyan-400/15">
+            <thead className="bg-gd-inner text-gd-muted uppercase border-b border-gd-line">
               <tr>
                 <th className="px-3.5 py-3">Название</th>
                 <th className="px-3.5 py-3">Код</th>
@@ -323,23 +325,23 @@ export default function StoresView({ toast }) {
                 <th className="px-3.5 py-3">Дни овощи / выпечка</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-cyan-400/10">
+            <tbody className="divide-y divide-gd-line">
               {rows.map((s) => (
                 <tr
                   key={s.id}
                   onClick={() => openStoreDetail(s.id)}
-                  className="cursor-pointer hover:bg-slate-50 dark:hover:bg-cyan-950/25"
+                  className="cursor-pointer hover:bg-gd-inner"
                 >
-                  <td className="px-3.5 py-2.5 font-bold text-slate-900 dark:text-white">
+                  <td className="px-3.5 py-2.5 font-bold text-gd-ink">
                     {s.label}
                   </td>
-                  <td className="px-3.5 py-2.5 font-mono text-slate-600 dark:text-slate-300">
+                  <td className="px-3.5 py-2.5 font-mono text-gd-muted">
                     {s.code || '—'}
                   </td>
                   <td className="px-3.5 py-2.5">{s.ua ? 'ЮА маркет' : 'Фемелі'}</td>
                   <td className="px-3.5 py-2.5">{s.route || '—'}</td>
                   <td className="px-3.5 py-2.5">{s.zone || '—'}</td>
-                  <td className="px-3.5 py-2.5 text-slate-600 dark:text-slate-300">
+                  <td className="px-3.5 py-2.5 text-gd-muted">
                     {[s.daysVeg && `Ов: ${s.daysVeg}`, s.daysBakery && `Вып: ${s.daysBakery}`]
                       .filter(Boolean)
                       .join(' · ') || '—'}
@@ -389,20 +391,20 @@ export default function StoresView({ toast }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {(cardModal.summary.dirs || []).map((d) => (
                 <div key={d.dir} className="rounded-xl p-3 glass-sub text-xs space-y-1">
-                  <div className="flex items-center justify-between font-bold text-slate-900 dark:text-white">
+                  <div className="flex items-center justify-between font-bold text-gd-ink">
                     <span>{d.title}</span>
                     {d.order ? (
-                      <span className="text-emerald-700 dark:text-emerald-300">
+                      <span className="text-gd-ok">
                         Заказано: {d.order.qty} {d.unit}
                       </span>
                     ) : d.available ? (
-                      <span className="text-slate-500">Нет заказа</span>
+                      <span className="text-gd-muted">Нет заказа</span>
                     ) : (
-                      <span className="text-slate-400">Не подключено</span>
+                      <span className="text-gd-muted">Не подключено</span>
                     )}
                   </div>
                   {d.available && (
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <div className="text-[11px] text-gd-muted">
                       График: {d.daysLabel}
                     </div>
                   )}
@@ -411,7 +413,7 @@ export default function StoresView({ toast }) {
             </div>
 
             {!cardModal.edit?.editable && (
-              <div className="rounded-xl p-3 text-xs bg-amber-50 text-amber-900 border border-amber-300 dark:bg-amber-500/10 dark:text-amber-200 dark:border-amber-400/30">
+              <div className="rounded-xl p-3 text-xs bg-gd-warn/15 text-gd-warn border border-gd-warn/30">
                 Редактирование боевых точек в пульте сейчас отключено (источник правды — Справочник ТТ в Google). Тестовые точки (id с «test») доступны для правки.
               </div>
             )}
@@ -517,7 +519,7 @@ export default function StoresView({ toast }) {
                       disabled={!cardModal.edit?.editable}
                       checked={!!editFields[k]}
                       onChange={(e) => setEditFields({ ...editFields, [k]: e.target.checked })}
-                      className="rounded accent-teal-600"
+                      className="rounded"
                     />
                     <span>{label}</span>
                   </label>
@@ -543,8 +545,8 @@ export default function StoresView({ toast }) {
                           }
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
                             active
-                              ? 'bg-teal-600 text-white border-teal-600 dark:bg-teal-400 dark:text-slate-950'
-                              : 'bg-white dark:bg-[#081322] border-slate-300 dark:border-slate-700'
+                              ? 'bg-gd-accent text-gd-on-accent border-gd-accent'
+                              : 'bg-gd-inner border-gd-line'
                           }`}
                         >
                           {d}
@@ -572,8 +574,8 @@ export default function StoresView({ toast }) {
                           }
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
                             active
-                              ? 'bg-teal-600 text-white border-teal-600 dark:bg-teal-400 dark:text-slate-950'
-                              : 'bg-white dark:bg-[#081322] border-slate-300 dark:border-slate-700'
+                              ? 'bg-gd-accent text-gd-on-accent border-gd-accent'
+                              : 'bg-gd-inner border-gd-line'
                           }`}
                         >
                           {d}
@@ -725,7 +727,7 @@ export default function StoresView({ toast }) {
                   type="checkbox"
                   checked={!!addForm[k]}
                   onChange={(e) => setAddForm({ ...addForm, [k]: e.target.checked })}
-                  className="rounded accent-teal-600"
+                  className="rounded"
                 />
                 <span>{label}</span>
               </label>

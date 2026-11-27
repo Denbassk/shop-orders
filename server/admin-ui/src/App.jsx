@@ -137,6 +137,10 @@ export default function App() {
       if (wo) setWoBrief(wo);
       if (nl?.notices) setNoticeCount(nl.notices.length);
       return td;
+    } catch (err) {
+      // Не пробрасываем: вызывается из обработчиков без catch. Сообщаем тостом.
+      toast(`Не удалось загрузить сводку: ${err?.message || 'ошибка сети'}`, 'err');
+      return null;
     } finally {
       setRefreshing(false);
     }
@@ -174,8 +178,9 @@ export default function App() {
         return;
       }
       setPin('');
-      setAuthState('authed');
+      // Сначала данные, потом экран: ошибка загрузки придёт тостом, а не на скрытый экран входа.
       await loadDashboard();
+      setAuthState('authed');
     } catch (err) {
       setLoginErr(err.message || 'Ошибка входа');
     } finally {
@@ -205,7 +210,7 @@ export default function App() {
   if (authState === 'checking') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="flex items-center gap-3 text-sm font-semibold text-teal-600 dark:text-teal-300">
+        <div className="flex items-center gap-3 text-sm font-semibold text-gd-accent">
           <RefreshCw className="w-5 h-5 animate-spin" />
           <span>Загрузка пульта Фемелі Маркет…</span>
         </div>
@@ -221,17 +226,17 @@ export default function App() {
           <div className="flex flex-col items-center text-center space-y-2">
             <img src={logoLight} alt="Фемели Маркет" className="h-14 w-auto object-contain block dark:hidden" />
             <img src={logoDark} alt="Фемели Маркет" className="h-14 w-auto object-contain hidden dark:block" />
-            <h1 className="text-lg font-extrabold text-slate-900 dark:text-white">
+            <h1 className="text-lg font-extrabold text-gd-ink">
               Пульт управления
             </h1>
-            <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+            <p className="text-xs text-gd-muted">
               Введите PIN-код администратора для входа
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
-              <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gd-muted" />
               <input
                 type="password"
                 inputMode="numeric"
@@ -245,7 +250,7 @@ export default function App() {
             </div>
 
             {loginErr && (
-              <div className="text-xs font-semibold text-center text-rose-600 dark:text-rose-400">
+              <div className="text-xs font-semibold text-center text-gd-danger">
                 {loginErr}
               </div>
             )}
@@ -263,7 +268,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-              className="text-xs text-slate-500 hover:text-slate-800 dark:text-cyan-200/60 dark:hover:text-white inline-flex items-center gap-1.5"
+              className="text-xs text-gd-muted hover:text-gd-ink inline-flex items-center gap-1.5"
             >
               {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               <span>{theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}</span>
@@ -295,6 +300,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
+              aria-label="Открыть меню"
               className="lg:hidden p-2 rounded-full hover:bg-[var(--gd-inner)]"
               aria-label="Открыть меню"
             >
@@ -322,7 +328,6 @@ export default function App() {
             }}
             className="hidden md:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] transition-colors min-w-[260px] lg:min-w-[330px] text-left"
           >
-            <span className="gd-orb" aria-hidden="true" />
             <span className="text-xs font-semibold truncate flex-1">
               Быстрый переход по пульту…
             </span>
@@ -349,6 +354,7 @@ export default function App() {
               onClick={() => setActiveTab('notices')}
               className="relative w-9 h-9 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] inline-grid place-items-center transition-colors"
               title="Сообщения продавцам"
+              aria-label="Сообщения продавцам"
             >
               <Bell className="w-4 h-4" />
               {noticeCount > 0 && (
@@ -361,6 +367,7 @@ export default function App() {
               onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               className="w-9 h-9 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] inline-grid place-items-center transition-colors"
               title={theme === 'dark' ? 'Переключить на светлую тему' : 'Переключить на тёмную тему'}
+              aria-label={theme === 'dark' ? 'Переключить на светлую тему' : 'Переключить на тёмную тему'}
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
@@ -466,7 +473,7 @@ export default function App() {
       {/* Quick Jump Command Palette */}
       {quickOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-[rgb(var(--gd-dark-shadow)/45%)] dark:bg-black/55 backdrop-blur-sm"
           onClick={() => setQuickOpen(false)}
         >
           <div
@@ -516,16 +523,16 @@ export default function App() {
       )}
 
       {/* Toast Stack */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0">
+      <div role="status" aria-live="polite" className="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0">
         {toasts.map((t) => (
           <div
             key={t.id}
             className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-bold shadow-xl border backdrop-blur-xl ${
               t.type === 'err'
-                ? 'bg-rose-600 text-white border-rose-500 dark:bg-rose-950/90 dark:text-rose-200 dark:border-rose-500/40'
+                ? 'bg-gd-danger text-gd-on-danger border-gd-danger'
                 : t.type === 'ok'
-                ? 'bg-emerald-600 text-white border-emerald-500 dark:bg-emerald-950/90 dark:text-emerald-200 dark:border-emerald-500/40'
-                : 'bg-slate-900 text-white border-slate-700 dark:bg-[#0d1f36]/95 dark:text-cyan-100 dark:border-cyan-400/30'
+                ? 'bg-gd-ok text-white border-gd-ok dark:text-[#0f2418]'
+                : 'gd-modal text-gd-ink'
             }`}
           >
             {t.type === 'err' ? (

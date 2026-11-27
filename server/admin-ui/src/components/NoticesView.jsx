@@ -13,6 +13,7 @@ export default function NoticesView({ toast, onCountChange }) {
   const [until, setUntil] = useState('');
   const [modalFlag, setModalFlag] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [offBusy, setOffBusy] = useState(false);
 
   // Who saw modal
   const [whoData, setWhoData] = useState(null);
@@ -60,12 +61,17 @@ export default function NoticesView({ toast, onCountChange }) {
   };
 
   const handleOff = async (id) => {
+    if (offBusy) return;
+    if (!window.confirm('Снять сообщение для продавцов?')) return;
+    setOffBusy(true);
     try {
       await apiCall('noticeOff', { id });
       toast('Сообщение выключено', 'ok');
       await load();
     } catch (err) {
       toast(err.message, 'err');
+    } finally {
+      setOffBusy(false);
     }
   };
 
@@ -87,18 +93,18 @@ export default function NoticesView({ toast, onCountChange }) {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+        <h2 className="text-lg font-bold text-gd-ink">
           Сообщения продавцам
         </h2>
-        <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+        <p className="text-xs text-gd-muted">
           Объявления в приложении заказа с контролем прочтения по каждой торговой точке
         </p>
       </div>
 
       {/* Create Notice Form */}
       <form onSubmit={handleAdd} className="rounded-2xl p-5 glass-panel space-y-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-          <Megaphone className="w-4 h-4 text-teal-600 dark:text-teal-300" />
+        <div className="flex items-center gap-2 text-sm font-bold text-gd-ink">
+          <Megaphone className="w-4 h-4 text-gd-accent" />
           <span>Новое объявление</span>
         </div>
 
@@ -115,7 +121,7 @@ export default function NoticesView({ toast, onCountChange }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
           <div>
-            <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+            <label className="block text-xs font-bold mb-1 text-gd-muted">
               Кому показать
             </label>
             <select value={dir} onChange={(e) => setDir(e.target.value)} className="input-field">
@@ -128,7 +134,7 @@ export default function NoticesView({ toast, onCountChange }) {
           </div>
 
           <div>
-            <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+            <label className="block text-xs font-bold mb-1 text-gd-muted">
               Показывать до (Киев)
             </label>
             <input
@@ -146,7 +152,7 @@ export default function NoticesView({ toast, onCountChange }) {
                 type="checkbox"
                 checked={modalFlag}
                 onChange={(e) => setModalFlag(e.target.checked)}
-                className="rounded accent-teal-600"
+                className="rounded"
               />
               <span>Всплывающее окно («Понятно»)</span>
             </label>
@@ -171,25 +177,25 @@ export default function NoticesView({ toast, onCountChange }) {
             >
               <div className="space-y-1.5 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-900 dark:bg-teal-500/20 dark:text-teal-300">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gd-accent/12 text-gd-accent">
                     {n.dirTitle}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                  <span className="text-xs text-gd-muted">
                     до {n.until.replace('T', ' ')}
                   </span>
                   {n.modal && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gd-warn/15 text-gd-warn">
                       Модальное окно
                     </span>
                   )}
                 </div>
 
-                <p className="text-sm font-medium text-slate-900 dark:text-white whitespace-pre-wrap">
+                <p className="text-sm font-medium text-gd-ink whitespace-pre-wrap">
                   {n.text}
                 </p>
 
                 {n.total != null && (
-                  <div className="text-xs text-slate-600 dark:text-cyan-200/75">
+                  <div className="text-xs text-gd-muted">
                     Увидели: <b>{n.seen}</b> из <b>{n.total}</b> ТТ
                     {n.modal && ` · нажали «Понятно»: ${n.acked}`}
                   </div>
@@ -208,6 +214,8 @@ export default function NoticesView({ toast, onCountChange }) {
                 <button
                   type="button"
                   onClick={() => handleOff(n.id)}
+                  disabled={offBusy}
+                  aria-label="Выключить сообщение"
                   className="btn-danger px-3 py-2 text-xs"
                   title="Выключить сообщение"
                 >
@@ -218,7 +226,7 @@ export default function NoticesView({ toast, onCountChange }) {
           ))}
 
           {!data?.notices?.length && (
-            <div className="rounded-2xl p-8 glass-panel text-center text-sm text-slate-500 dark:text-slate-400">
+            <div className="rounded-2xl p-8 glass-panel text-center text-sm text-gd-muted">
               Активных сообщений продавцам сейчас нет
             </div>
           )}
@@ -259,10 +267,10 @@ export default function NoticesView({ toast, onCountChange }) {
                   key={f.id}
                   type="button"
                   onClick={() => setWhoFilter(f.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold ${
                     whoFilter === f.id
-                      ? 'bg-teal-600 text-white dark:bg-teal-400 dark:text-slate-950'
-                      : 'bg-slate-100 text-slate-700 dark:bg-[#081322] dark:text-slate-300'
+                      ? 'bg-gd-accent text-gd-on-accent'
+                      : 'bg-gd-inner text-gd-muted'
                   }`}
                 >
                   {f.label}
@@ -270,25 +278,25 @@ export default function NoticesView({ toast, onCountChange }) {
               ))}
             </div>
 
-            <div className="rounded-xl border border-slate-300 dark:border-cyan-400/15 divide-y divide-slate-200 dark:divide-cyan-400/10 max-h-80 overflow-y-auto">
+            <div className="rounded-xl border border-gd-line divide-y divide-gd-line max-h-80 overflow-y-auto">
               {whoRows.map((r) => (
                 <div
                   key={r.id}
                   className="flex items-center justify-between px-3.5 py-2.5 text-xs"
                 >
-                  <span className="font-bold text-slate-900 dark:text-white">{r.label}</span>
+                  <span className="font-bold text-gd-ink">{r.label}</span>
                   {r.status === 'ack' ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-semibold">
+                    <span className="inline-flex items-center gap-1 text-gd-ok font-semibold">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Подтверждено ({r.seenAt})
                     </span>
                   ) : r.status === 'seen' ? (
-                    <span className="inline-flex items-center gap-1 text-sky-700 dark:text-sky-300 font-semibold">
+                    <span className="inline-flex items-center gap-1 text-gd-accent font-semibold">
                       <Clock className="w-3.5 h-3.5" />
                       Увидели ({r.seenAt})
                     </span>
                   ) : (
-                    <span className="text-rose-600 dark:text-rose-400 font-semibold">
+                    <span className="text-gd-danger font-semibold">
                       Не видели
                     </span>
                   )}

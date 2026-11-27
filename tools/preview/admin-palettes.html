@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Пульт — кофе с молоком + акценты</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Manrope, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; padding: 10px 16px; background: #111; color: #eee; font-size: 13px; align-items: center; flex-wrap: wrap; }
+  .bar button { border: 1px solid #555; background: #222; color: #eee; border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; }
+  .bar button[aria-pressed="true"] { background: #eee; color: #111; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(520px, 1fr)); }
+
+  /* Сцена = однотонный фон + едва заметная виньетка (ΔL ≈ 3%), чтобы blur стекла было на чём показать */
+  .scene { min-height: 560px; padding: 28px; display: grid; grid-template-columns: 170px 1fr; align-content: start; gap: 18px; color: var(--ink);
+    background: radial-gradient(120% 90% at 30% 10%, var(--bg-hi), var(--bg) 70%); }
+  .scene h3 { grid-column: 1 / -1; margin: 0; font-size: 15px; font-weight: 800; }
+  .scene h3 small { font-weight: 500; color: var(--muted); margin-left: 8px; }
+
+  /* Стекло — те же параметры, что в index.css (.gd-rail-shell / .glass-panel), меняются только цвета */
+  .rail, .panel { border: 1px solid var(--rim); border-radius: 22px; padding: 14px;
+    box-shadow: inset 1px 1px 1px var(--edge-light), inset -1px -1px 1px var(--edge-shade), 0 6px 18px rgb(var(--shadow) / 12%);
+    backdrop-filter: blur(14px) saturate(1.25); -webkit-backdrop-filter: blur(14px) saturate(1.25); }
+  .rail { background: linear-gradient(165deg, var(--gloss), transparent 32% 73%, var(--gloss)), var(--glass); display: flex; flex-direction: column; gap: 4px; }
+  .panel { background: linear-gradient(144deg, var(--gloss), transparent 66%), var(--glass); }
+  .nav { padding: 8px 10px; border-radius: 12px; font-size: 13px; font-weight: 650; color: var(--muted); }
+  .nav.on { background: var(--accent-soft); color: var(--accent-ink); }
+  .logo { font-weight: 900; color: #d2232a; font-size: 13px; padding: 4px 8px 10px; letter-spacing: .02em; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .kpi { flex: 1; min-width: 110px; border-radius: 16px; padding: 10px 12px; background: var(--inner); border: 1px solid var(--line); }
+  .kpi b { display: block; font-size: 22px; }
+  .kpi span { font-size: 12px; color: var(--muted); }
+  .btn { border-radius: 999px; padding: 8px 14px; font: 750 13px Manrope, system-ui; border: 1px solid transparent; cursor: pointer; }
+  .p { background: var(--accent); color: var(--on-accent); }
+  .s { background: var(--raised); color: var(--ink); border-color: var(--rim); }
+  .d { background: color-mix(in srgb, var(--danger) 14%, var(--inner)); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+  .chip { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .warn { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+  .bad { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td, th { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+  th { color: var(--muted); font-weight: 650; font-size: 12px; }
+  input { width: 100%; border-radius: 12px; padding: 8px 12px; background: var(--inner); border: 1px solid var(--line); color: var(--ink); font: inherit; }
+  input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+
+  /* ---------- База «кофе с молоком» — общая для всех вариантов ---------- */
+  .scene { --bg:#d6c3ae; --bg-hi:#dfcfbc; --ink:#2a211b; --muted:#5e4f44; --line:rgb(60 40 28/14%); --rim:rgb(255 250 243/55%);
+       --edge-light:rgb(255 251 245/85%); --edge-shade:rgb(60 40 28/16%); --gloss:rgb(255 250 243/40%); --glass:rgb(255 250 243/45%);
+       --inner:rgb(255 250 243/50%); --raised:rgb(255 251 246/82%); --shadow:60 40 28;
+       --ok:#2e6e48; --warn:#7f5300; --danger:#a8322a; }
+  .scene.dark { --bg:#2b221d; --bg-hi:#342a24; --ink:#f4ebe1; --muted:#c7b8aa; --line:rgb(255 240 225/12%); --rim:rgb(255 240 225/18%);
+       --edge-light:rgb(255 240 225/28%); --edge-shade:rgb(0 0 0/40%); --gloss:rgb(255 240 225/7%); --glass:rgb(70 56 48/50%);
+       --inner:rgb(255 240 225/6%); --raised:rgb(84 70 61/85%); --shadow:0 0 0;
+       --ok:#7fcb9a; --warn:#e8b75a; --danger:#f2877a; }
+  /* K1 Эспрессо: монохром, акцент тёмный шоколад / в тёмной теме сливки */
+  .K1 { --accent:#4a3226; --on-accent:#fff8f0; --accent-soft:rgb(74 50 38/14%); --accent-ink:#3b271d; }
+  .K1.dark { --accent:#e9d3bb; --on-accent:#2a1c14; --accent-soft:rgb(233 211 187/16%); --accent-ink:#f1dfcb; }
+  /* K2 Петроль: глубокий сине-зелёный, холодный противовес тёплой базе */
+  .K2 { --accent:#2c5c63; --on-accent:#fff; --accent-soft:rgb(44 92 99/14%); --accent-ink:#1f454a; }
+  .K2.dark { --accent:#86c0c3; --on-accent:#0f2426; --accent-soft:rgb(134 192 195/16%); --accent-ink:#a9d6d8; }
+  /* K3 Оливка: природный, «продуктовый» */
+  .K3 { --accent:#56652a; --on-accent:#fff; --accent-soft:rgb(86 101 42/15%); --accent-ink:#3f4b1d; }
+  .K3.dark { --accent:#bccb84; --on-accent:#1b2108; --accent-soft:rgb(188 203 132/16%); --accent-ink:#d2dda6; }
+  /* K4 Чернильный синий: строгий, максимальный контраст к тёплому */
+  .K4 { --accent:#34466e; --on-accent:#fff; --accent-soft:rgb(52 70 110/14%); --accent-ink:#26355a; }
+  .K4.dark { --accent:#a9bbe3; --on-accent:#141c30; --accent-soft:rgb(169 187 227/16%); --accent-ink:#c3d0ec; }
+</style>
+</head>
+<body>
+<div class="bar">Тема:
+  <button id="tl" aria-pressed="true">Светлая</button>
+  <button id="td" aria-pressed="false">Тёмная</button>
+  <span style="opacity:.7">Стекло (blur, rim, gloss, тени) одинаковое во всех вариантах; меняются только фон и цвета.</span>
+</div>
+<div class="grid" id="g"></div>
+<template id="t">
+  <section class="scene">
+    <h3></h3>
+    <nav class="rail">
+      <div class="logo">ФЕМЕЛІ МАРКЕТ</div>
+      <div class="nav on">Сегодня</div><div class="nav">Заказы</div><div class="nav">Ассортимент</div><div class="nav">Точки</div><div class="nav">Списания</div>
+    </nav>
+    <main class="panel">
+      <div class="row">
+        <div class="kpi"><b>34/37</b><span>точек отправили</span></div>
+        <div class="kpi"><b>1 284</b><span>позиций</span></div>
+        <div class="kpi"><b>3</b><span>опоздали</span></div>
+      </div>
+      <div class="row">
+        <button class="btn p">Сформировать заявку</button>
+        <button class="btn s">Экспорт</button>
+        <button class="btn d">Стоп позиции</button>
+        <span class="chip ok">принят</span><span class="chip warn">после дедлайна</span><span class="chip bad">не отправил</span>
+      </div>
+      <div class="row"><input placeholder="Поиск по точке или товару"></div>
+      <table>
+        <tr><th>Точка</th><th>Хлеб Рома</th><th>НБХЗ</th><th>Статус</th></tr>
+        <tr><td>Сумская 12</td><td>48</td><td>22</td><td><span class="chip ok">принят</span></td></tr>
+        <tr><td>Героев Труда 7</td><td>36</td><td>18</td><td><span class="chip warn">после дедлайна</span></td></tr>
+        <tr><td>Клочковская 90</td><td>—</td><td>—</td><td><span class="chip bad">не отправил</span></td></tr>
+      </table>
+    </main>
+  </section>
+</template>
+<script>
+const P = [['K1','K1. Кофе + эспрессо','монохром, самый спокойный'],['K2','K2. Кофе + петроль','тёплое/холодное, современно'],['K3','K3. Кофе + оливка','природно, но близко к зелёному «принят»'],['K4','K4. Кофе + чернильный синий','строго, акцент виден лучше всех']];
+const g = document.getElementById('g'), t = document.getElementById('t');
+P.forEach(([k,n,s]) => { const c = t.content.cloneNode(true); const sc = c.querySelector('.scene'); sc.classList.add(k); sc.querySelector('h3').innerHTML = n + '<small>' + s + '</small>'; g.appendChild(c); });
+function setDark(d){ document.querySelectorAll('.scene').forEach(s=>s.classList.toggle('dark',d)); tl.setAttribute('aria-pressed',!d); td.setAttribute('aria-pressed',d); }
+tl.onclick=()=>setDark(false); td.onclick=()=>setDark(true);
+</script>
+</body>
+</html>

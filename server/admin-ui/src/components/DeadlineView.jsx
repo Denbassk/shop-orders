@@ -112,10 +112,10 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          <h2 className="text-lg font-bold text-gd-ink">
             Время приёма и срок доставки
           </h2>
-          <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+          <p className="text-xs text-gd-muted">
             Временный перенос дедлайна (на праздники/выходные) и подсказка даты доставки продавцам
           </p>
         </div>
@@ -126,10 +126,10 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
               key={d.key}
               type="button"
               onClick={() => setDir(d.key)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 py-2 rounded-full text-xs font-bold transition-all ${
                 dir === d.key
-                  ? 'bg-teal-600 text-white dark:bg-teal-400 dark:text-slate-950'
-                  : 'glass-panel text-slate-700 dark:text-slate-300 hover:border-teal-400/50'
+                  ? 'bg-gd-accent text-gd-on-accent'
+                  : 'glass-panel text-gd-muted hover:border-gd-accent/50'
               }`}
             >
               {d.title}
@@ -144,21 +144,21 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
           <form onSubmit={handleSaveDeadline} className="rounded-2xl p-5 glass-panel space-y-4">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-300">
+                <div className="p-2 rounded-xl bg-gd-accent/12 text-gd-accent">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-bold text-gd-ink">
                     Временный дедлайн приёма
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+                  <p className="text-xs text-gd-muted">
                     Базовый в справочнике: <b>{current.baseDeadline || '—'}</b>
                   </p>
                 </div>
               </div>
 
               {current.deadlineOverride && (
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300">
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gd-warn/15 text-gd-warn">
                   Активен: {current.deadlineOverride.deadline}
                 </span>
               )}
@@ -166,7 +166,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Время (ЧЧ:ММ)
                 </label>
                 <input
@@ -179,7 +179,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
               </div>
 
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   С даты
                 </label>
                 <input
@@ -195,7 +195,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
               </div>
 
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   По дату (включ.)
                 </label>
                 <input
@@ -209,7 +209,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-cyan-400/10">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gd-line">
               {current.deadlineOverride ? (
                 <button
                   type="button"
@@ -221,7 +221,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
                   <span>Вернуть базовый ({current.baseDeadline})</span>
                 </button>
               ) : (
-                <span className="text-xs text-slate-500">Сейчас действует базовый дедлайн</span>
+                <span className="text-xs text-gd-muted">Сейчас действует базовый дедлайн</span>
               )}
 
               <button type="submit" disabled={savingDl} className="btn-primary text-xs">
@@ -235,21 +235,21 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
           <form onSubmit={handleSaveLead} className="rounded-2xl p-5 glass-panel space-y-4">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-300">
+                <div className="p-2 rounded-xl bg-gd-accent/12 text-gd-accent">
                   <Truck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-bold text-gd-ink">
                     Срок доставки для продавцов
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+                  <p className="text-xs text-gd-muted">
                     Показывает продавцу плашку «Доставка: вт 24.11»
                   </p>
                 </div>
               </div>
 
               {current.leadOverride && (
-                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-900 dark:bg-sky-500/20 dark:text-sky-300">
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gd-accent/12 text-gd-accent">
                   Через {current.leadOverride.days} дн.
                 </span>
               )}
@@ -257,7 +257,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   Через сколько дней
                 </label>
                 <select
@@ -274,7 +274,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
               </div>
 
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   С даты
                 </label>
                 <input
@@ -287,7 +287,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
               </div>
 
               <div>
-                <label className="block text-xs font-bold mb-1 text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-bold mb-1 text-gd-muted">
                   По дату (пусто = бессрочно)
                 </label>
                 <input
@@ -300,7 +300,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-cyan-400/10">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gd-line">
               {current.leadOverride ? (
                 <button
                   type="button"
@@ -312,7 +312,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
                   <span>Убрать дату доставки</span>
                 </button>
               ) : (
-                <span className="text-xs text-slate-500">Дата доставки сейчас не выводится</span>
+                <span className="text-xs text-gd-muted">Дата доставки сейчас не выводится</span>
               )}
 
               <button type="submit" disabled={savingLead} className="btn-primary text-xs">

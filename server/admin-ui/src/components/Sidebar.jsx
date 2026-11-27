@@ -71,6 +71,7 @@ export default function Sidebar({
               onClick={onCloseMobile}
               className="w-9 h-9 rounded-full border border-[var(--gd-line)] bg-[var(--gd-inner)] hover:bg-[var(--gd-raised)] inline-grid place-items-center transition-colors"
               title="Закрыть меню"
+              aria-label="Закрыть меню"
             >
               <X className="w-4 h-4" />
             </button>
@@ -135,9 +136,9 @@ export default function Sidebar({
                         <span
                           className={`px-2 py-0.5 text-[10.5px] font-extrabold rounded-full ${
                             item.id === 'health'
-                              ? 'bg-[var(--gd-coral)] text-[#231a16]'
+                              ? 'bg-[var(--gd-coral)] text-gd-on-danger'
                               : active
-                              ? 'bg-[#241b17]/12 text-[var(--gd-pick-ink)]'
+                              ? 'bg-gd-track text-[var(--gd-pick-ink)]'
                               : 'bg-[var(--gd-raised)] text-[var(--gd-ink)] border border-[var(--gd-line)]'
                           }`}
                         >
@@ -163,6 +164,7 @@ export default function Sidebar({
             type="button"
             onClick={onLogout}
             title={isCollapsed ? 'Выйти' : undefined}
+            aria-label="Выйти"
             className={`w-full flex items-center gap-3 rounded-full px-3.5 py-2.5 text-[12.5px] font-semibold text-[var(--gd-muted)] hover:text-[var(--gd-coral)] hover:bg-[var(--gd-inner)] transition-colors ${
               isCollapsed ? 'justify-center px-0' : ''
             }`}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Search,
@@ -26,15 +26,21 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
   const [editQtys, setEditQtys] = useState({});
   const [savingOrder, setSavingOrder] = useState(false);
 
+  const dirRef = useRef(dir);
+  dirRef.current = dir;
+
   const load = async () => {
+    const reqDir = dir;
     setLoading(true);
     try {
-      const res = await apiCall('dirStores', { dir });
+      const res = await apiCall('dirStores', { dir: reqDir });
+      if (dirRef.current !== reqDir) return;
       setData(res);
     } catch (e) {
+      if (dirRef.current !== reqDir) return;
       toast(e.message, 'err');
     } finally {
-      setLoading(false);
+      if (dirRef.current === reqDir) setLoading(false);
     }
   };
 
@@ -133,11 +139,11 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
             <span>Сегодня</span>
           </button>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h2 className="text-lg font-bold text-gd-ink">
               {data?.title || 'Заказы по направлению'}
             </h2>
             {data && (
-              <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+              <p className="text-xs text-gd-muted">
                 Сегодня {data.dow} · единица измерения: {data.unit || 'шт'}
               </p>
             )}
@@ -157,8 +163,8 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
               onClick={() => onChangeDir(d.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 dir === d.id
-                  ? 'bg-teal-600 text-white dark:bg-teal-400 dark:text-slate-950'
-                  : 'glass-panel text-slate-700 dark:text-slate-300 hover:border-teal-400/50'
+                  ? 'bg-gd-accent text-gd-on-accent'
+                  : 'glass-panel text-gd-muted hover:border-gd-accent/50'
               }`}
             >
               {d.label}
@@ -180,10 +186,10 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
                 key={t.id}
                 type="button"
                 onClick={() => setSubTab(t.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`px-3.5 py-2 rounded-full text-xs font-bold transition-all ${
                   subTab === t.id
-                    ? 'bg-slate-900 text-white dark:bg-cyan-400/20 dark:text-teal-200 dark:border dark:border-teal-400/40'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-[#081322] dark:text-slate-300'
+                    ? 'bg-gd-accent text-gd-on-accent'
+                    : 'bg-gd-inner text-gd-muted hover:bg-gd-raised'
                 }`}
               >
                 {t.label}
@@ -199,7 +205,7 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
                 rel="noreferrer"
                 className="btn-secondary px-3 py-1.5 text-xs"
               >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-300" />
+                <FileSpreadsheet className="w-4 h-4 text-gd-ok" />
                 <span>Скачать Excel</span>
               </a>
             )}
@@ -218,7 +224,7 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
         </div>
 
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gd-muted" />
           <input
             type="text"
             value={q}
@@ -237,36 +243,36 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl glass-panel divide-y divide-slate-200 dark:divide-cyan-400/10 overflow-hidden">
+        <div className="rounded-2xl glass-panel divide-y divide-gd-line overflow-hidden">
           {filtered.map((s) => (
             <div
               key={s.id}
-              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-cyan-950/25 transition-colors"
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 hover:bg-gd-inner transition-colors"
             >
               <div
                 className="min-w-0 flex-1 cursor-pointer"
                 onClick={() => openOrderModal(s.id)}
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-sm text-slate-900 dark:text-white">
+                  <span className="font-bold text-sm text-gd-ink">
                     {s.label}
                   </span>
                   {s.ua && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 dark:bg-sky-500/20 dark:text-sky-300">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gd-accent/12 text-gd-accent">
                       ЮА маркет
                     </span>
                   )}
                   {s.route && (
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                    <span className="text-xs text-gd-muted">
                       Маршрут: {s.route}
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-500 dark:text-cyan-200/60 mt-0.5 flex flex-wrap gap-3">
+                <div className="text-xs text-gd-muted mt-0.5 flex flex-wrap gap-3">
                   <span>График: {s.days}</span>
                   {s.next && !s.dayOk && <span>Следующий заказ: {s.next}</span>}
                   {s.time && (
-                    <span className="inline-flex items-center gap-1 text-teal-700 dark:text-teal-300 font-medium">
+                    <span className="inline-flex items-center gap-1 text-gd-accent font-medium">
                       <Clock className="w-3 h-3" /> {s.time}
                     </span>
                   )}
@@ -277,10 +283,10 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
                 {subTab === 'done' && (
                   <>
                     <div className="text-right mr-2">
-                      <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+                      <div className="text-sm font-extrabold text-gd-ink">
                         {s.qty} {data?.unit || ''}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="text-[11px] text-gd-muted">
                         {s.n} поз.
                       </div>
                     </div>
@@ -303,7 +309,7 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
                       onClick={() => openStoreForLate(s)}
                       className="btn-secondary px-3 py-1.5 text-xs"
                     >
-                      <LockOpen className="w-3.5 h-3.5 text-teal-600 dark:text-teal-300" />
+                      <LockOpen className="w-3.5 h-3.5 text-gd-accent" />
                       <span>Открыть на 30 мин</span>
                     </button>
                     <button
@@ -332,7 +338,7 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
           ))}
 
           {!filtered.length && (
-            <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
+            <div className="p-8 text-center text-sm text-gd-muted">
               Список пуст
             </div>
           )}
@@ -402,18 +408,18 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
         {storeOrder && (
           <div className="space-y-4">
             {storeOrder.rows?.length > 0 ? (
-              <div className="rounded-xl border border-slate-300 dark:border-cyan-400/15 overflow-hidden">
+              <div className="rounded-xl border border-gd-line overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-100 dark:bg-[#081322] text-xs uppercase text-slate-600 dark:text-cyan-200/70">
+                  <thead className="bg-gd-inner text-xs uppercase text-gd-muted">
                     <tr>
                       <th className="text-left px-3.5 py-2.5">Позиция</th>
                       <th className="text-right px-3.5 py-2.5 w-32">Кол-во ({storeOrder.unit})</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-cyan-400/10">
+                  <tbody className="divide-y divide-gd-line">
                     {storeOrder.rows.map((r) => (
                       <tr key={r.row}>
-                        <td className="px-3.5 py-2.5 font-medium text-slate-900 dark:text-slate-100">
+                        <td className="px-3.5 py-2.5 font-medium text-gd-ink">
                           {r.name}
                         </td>
                         <td className="px-3.5 py-2 text-right">
@@ -434,12 +440,12 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
                 </table>
               </div>
             ) : (
-              <div className="p-6 text-center rounded-xl glass-sub text-sm text-slate-600 dark:text-slate-300">
+              <div className="p-6 text-center rounded-xl glass-sub text-sm text-gd-muted">
                 Активных строк заказа в базе на сегодня нет.
               </div>
             )}
 
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-xs text-gd-muted">
               Подсказка: чтобы убрать отдельную позицию из заказа, поставьте количество <b>0</b> и нажмите «Сохранить изменения».
             </div>
           </div>

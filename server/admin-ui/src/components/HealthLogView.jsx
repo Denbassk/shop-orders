@@ -13,6 +13,7 @@ import { apiCall } from '../api';
 export function HealthView({ toast, onLevelChange }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -32,32 +33,37 @@ export function HealthView({ toast, onLevelChange }) {
   }, []);
 
   const handleClearErrors = async () => {
+    if (clearing) return;
+    if (!window.confirm('Очистить журнал ошибок? Это нельзя отменить.')) return;
+    setClearing(true);
     try {
       await apiCall('healthClear', {});
       toast('Список ошибок очищен', 'ok');
       await load();
     } catch (err) {
       toast(err.message, 'err');
+    } finally {
+      setClearing(false);
     }
   };
 
   const levelBadge = (lv) => {
     if (lv === 'bad')
-      return <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />;
+      return <XCircle className="w-4 h-4 text-gd-danger shrink-0" />;
     if (lv === 'warn')
-      return <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />;
-    return <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />;
+      return <AlertTriangle className="w-4 h-4 text-gd-warn shrink-0" />;
+    return <CheckCircle2 className="w-4 h-4 text-gd-ok shrink-0" />;
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          <h2 className="text-lg font-bold text-gd-ink">
             Здоровье системы
           </h2>
           {data && (
-            <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+            <p className="text-xs text-gd-muted">
               {data.summary} · {data.sys?.version}
             </p>
           )}
@@ -81,10 +87,10 @@ export function HealthView({ toast, onLevelChange }) {
                 >
                   {levelBadge(d.level)}
                   <div>
-                    <div className="font-bold text-sm text-slate-900 dark:text-white">
+                    <div className="font-bold text-sm text-gd-ink">
                       {d.title}
                     </div>
-                    <div className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                    <div className="text-xs text-gd-muted mt-0.5">
                       {d.text}
                     </div>
                   </div>
@@ -93,15 +99,15 @@ export function HealthView({ toast, onLevelChange }) {
             </div>
 
             <div className="rounded-2xl p-4 glass-panel space-y-2.5">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-cyan-300/60">
+              <div className="text-xs font-bold uppercase tracking-wider text-gd-muted">
                 Фоновые процессы
               </div>
               {(data.triggers || []).map((t, idx) => (
                 <div key={idx} className="flex items-start gap-2.5 text-xs">
                   {levelBadge(t.level)}
                   <div>
-                    <div className="font-bold text-slate-900 dark:text-white">{t.name}</div>
-                    <div className="text-slate-600 dark:text-slate-300">{t.text}</div>
+                    <div className="font-bold text-gd-ink">{t.name}</div>
+                    <div className="text-gd-muted">{t.text}</div>
                   </div>
                 </div>
               ))}
@@ -109,13 +115,14 @@ export function HealthView({ toast, onLevelChange }) {
 
             <div className="rounded-2xl p-4 glass-panel space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-bold text-slate-900 dark:text-white">
+                <div className="text-sm font-bold text-gd-ink">
                   Последние ошибки ({data.errors?.length || 0})
                 </div>
                 {data.errors?.length > 0 && (
                   <button
                     type="button"
                     onClick={handleClearErrors}
+                    disabled={clearing}
                     className="btn-secondary px-3 py-1.5 text-xs"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -125,21 +132,21 @@ export function HealthView({ toast, onLevelChange }) {
               </div>
 
               {data.errors?.length > 0 ? (
-                <div className="divide-y divide-slate-200 dark:divide-cyan-400/10 text-xs">
+                <div className="divide-y divide-gd-line text-xs">
                   {data.errors.map((e, i) => (
                     <div key={i} className="py-2.5">
-                      <div className="flex items-center justify-between text-slate-500">
-                        <span className="font-bold text-rose-700 dark:text-rose-300">
+                      <div className="flex items-center justify-between text-gd-muted">
+                        <span className="font-bold text-gd-danger">
                           {e.where}
                         </span>
                         <span>{e.at}</span>
                       </div>
-                      <div className="text-slate-800 dark:text-slate-200 mt-0.5">{e.msg}</div>
+                      <div className="text-gd-ink mt-0.5">{e.msg}</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-xs text-slate-500">Ошибок не зафиксировано</div>
+                <div className="text-xs text-gd-muted">Ошибок не зафиксировано</div>
               )}
             </div>
           </>
@@ -173,8 +180,8 @@ export function LogView({ toast }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <ScrollText className="w-5 h-5 text-teal-600 dark:text-teal-300" />
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          <ScrollText className="w-5 h-5 text-gd-accent" />
+          <h2 className="text-lg font-bold text-gd-ink">
             Журнал действий пульта
           </h2>
         </div>
@@ -187,20 +194,20 @@ export function LogView({ toast }) {
       {loading ? (
         <div className="h-64 rounded-2xl glass-panel animate-pulse" />
       ) : (
-        <div className="rounded-2xl glass-panel divide-y divide-slate-200 dark:divide-cyan-400/10 overflow-hidden">
+        <div className="rounded-2xl glass-panel divide-y divide-gd-line overflow-hidden">
           {rows.map((r, i) => (
             <div key={i} className="px-4 py-3 text-xs space-y-0.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-slate-900 dark:text-white">{r.what}</span>
-                <span className="font-mono text-slate-500 shrink-0">{r.when}</span>
+                <span className="font-bold text-gd-ink">{r.what}</span>
+                <span className="font-mono text-gd-muted shrink-0">{r.when}</span>
               </div>
               {r.details && (
-                <div className="text-slate-600 dark:text-slate-300">{r.details}</div>
+                <div className="text-gd-muted">{r.details}</div>
               )}
             </div>
           ))}
           {!rows.length && (
-            <div className="p-8 text-center text-xs text-slate-500">Записей пока нет</div>
+            <div className="p-8 text-center text-xs text-gd-muted">Записей пока нет</div>
           )}
         </div>
       )}

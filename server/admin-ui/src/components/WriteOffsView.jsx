@@ -99,11 +99,11 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
       {/* Header & Period Selector */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          <h2 className="text-lg font-bold text-gd-ink">
             Списания выпечки и кулинарии
           </h2>
           {data && (
-            <p className="text-xs text-slate-500 dark:text-cyan-200/65">
+            <p className="text-xs text-gd-muted">
               Период: {data.from} — {data.to} · хранение актов: {data.keepDays} дн.
             </p>
           )}
@@ -115,10 +115,10 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
               key={p.id}
               type="button"
               onClick={() => setPeriod(p.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                 period === p.id
-                  ? 'bg-teal-600 text-white dark:bg-teal-400 dark:text-slate-950'
-                  : 'glass-panel text-slate-700 dark:text-slate-300 hover:border-teal-400/50'
+                  ? 'bg-gd-accent text-gd-on-accent'
+                  : 'glass-panel text-gd-muted hover:border-gd-accent/50'
               }`}
             >
               {p.label}
@@ -134,10 +134,10 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
             <button
               type="button"
               onClick={() => setEdrpou('')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold ${
                 edrpou === ''
-                  ? 'bg-slate-900 text-white dark:bg-cyan-400/20 dark:text-teal-200 dark:border dark:border-teal-400/40'
-                  : 'bg-slate-100 text-slate-700 dark:bg-[#081322] dark:text-slate-300'
+                  ? 'bg-gd-accent text-gd-on-accent'
+                  : 'bg-gd-inner text-gd-muted'
               }`}
             >
               Все юрлица
@@ -147,10 +147,10 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
                 key={b.edrpou}
                 type="button"
                 onClick={() => setEdrpou(b.edrpou)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold ${
                   edrpou === b.edrpou
-                    ? 'bg-slate-900 text-white dark:bg-cyan-400/20 dark:text-teal-200 dark:border dark:border-teal-400/40'
-                    : 'bg-slate-100 text-slate-700 dark:bg-[#081322] dark:text-slate-300'
+                    ? 'bg-gd-accent text-gd-on-accent'
+                    : 'bg-gd-inner text-gd-muted'
                 }`}
               >
                 {entityLabel(b)} ({fmtMoney(b.sum)} грн)
@@ -164,7 +164,7 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
                 type="button"
                 disabled={togglingOpen}
                 onClick={() => handleToggleOpen(false)}
-                className="btn-secondary text-xs border-amber-400/60 text-amber-900 dark:text-amber-300"
+                className="btn-secondary text-xs border-gd-warn/60 text-gd-warn"
               >
                 <Lock className="w-4 h-4" />
                 <span>Вернуть дедлайн ({data.deadline})</span>
@@ -176,7 +176,7 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
                 onClick={() => handleToggleOpen(true)}
                 className="btn-secondary text-xs"
               >
-                <LockOpen className="w-4 h-4 text-teal-600 dark:text-teal-300" />
+                <LockOpen className="w-4 h-4 text-gd-accent" />
                 <span>Открыть приём списаний до конца дня</span>
               </button>
             )}
@@ -196,44 +196,44 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="rounded-2xl p-4 glass-panel">
-                <div className="text-xs font-medium text-slate-500 dark:text-cyan-200/65">
+                <div className="text-xs font-medium text-gd-muted">
                   Сумма списаний
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                <div className="text-2xl font-extrabold text-gd-ink mt-1">
                   {fmtMoney(data.total)} <span className="text-xs font-normal">грн</span>
                 </div>
               </div>
 
               <div className="rounded-2xl p-4 glass-panel">
-                <div className="text-xs font-medium text-slate-500 dark:text-cyan-200/65">
+                <div className="text-xs font-medium text-gd-muted">
                   Актов / единиц
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
-                  {data.docs} <span className="text-xs font-normal text-slate-500">/ {data.qty} шт</span>
+                <div className="text-2xl font-extrabold text-gd-ink mt-1">
+                  {data.docs} <span className="text-xs font-normal text-gd-muted">/ {data.qty} шт</span>
                 </div>
               </div>
 
               <div className="rounded-2xl p-4 glass-panel">
-                <div className="text-xs font-medium text-slate-500 dark:text-cyan-200/65">
+                <div className="text-xs font-medium text-gd-muted">
                   Подали списания
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
-                  {data.storesCount} <span className="text-xs font-normal text-slate-500">из {data.storesAll} ТТ</span>
+                <div className="text-2xl font-extrabold text-gd-ink mt-1">
+                  {data.storesCount} <span className="text-xs font-normal text-gd-muted">из {data.storesAll} ТТ</span>
                 </div>
               </div>
 
               <div className="rounded-2xl p-4 glass-panel">
-                <div className="text-xs font-medium text-slate-500 dark:text-cyan-200/65">
+                <div className="text-xs font-medium text-gd-muted">
                   Без себестоимости
                 </div>
                 <div
                   className={`text-2xl font-extrabold mt-1 ${
                     data.noCost?.length > 0
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : 'text-slate-900 dark:text-white'
+                      ? 'text-gd-warn'
+                      : 'text-gd-ink'
                   }`}
                 >
-                  {data.noCost?.length || 0} <span className="text-xs font-normal text-slate-500">поз.</span>
+                  {data.noCost?.length || 0} <span className="text-xs font-normal text-gd-muted">поз.</span>
                 </div>
               </div>
             </div>
@@ -249,7 +249,7 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
                     rel="noreferrer"
                     className="btn-secondary text-xs"
                   >
-                    <ExternalLink className="w-3.5 h-3.5 text-teal-600 dark:text-teal-300" />
+                    <ExternalLink className="w-3.5 h-3.5 text-gd-accent" />
                     <span>
                       Таблица {entityLabel(b)}
                     </span>
@@ -261,63 +261,63 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
             {/* Two Columns: By Store & Top Products */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-2xl glass-panel overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-cyan-400/15 flex items-center gap-2 font-bold text-sm">
-                  <Store className="w-4 h-4 text-teal-600 dark:text-teal-300" />
+                <div className="px-4 py-3 border-b border-gd-line flex items-center gap-2 font-bold text-sm">
+                  <Store className="w-4 h-4 text-gd-accent" />
                   <span>По торговым точкам ({data.stores?.length || 0})</span>
                 </div>
-                <div className="divide-y divide-slate-200 dark:divide-cyan-400/10 max-h-96 overflow-y-auto">
+                <div className="divide-y divide-gd-line max-h-96 overflow-y-auto">
                   {(data.stores || []).map((s) => (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => openStoreDocs(s.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-cyan-950/25 transition-colors"
+                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gd-inner transition-colors"
                     >
                       <div className="min-w-0 pr-2">
-                        <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                        <div className="font-bold text-xs text-gd-ink truncate">
                           {s.label}
                         </div>
-                        <div className="text-[11px] text-slate-500">
+                        <div className="text-[11px] text-gd-muted">
                           Актов: {s.docs} · {s.qty} шт
                         </div>
                       </div>
-                      <div className="font-extrabold text-xs text-slate-900 dark:text-teal-300 shrink-0">
+                      <div className="font-extrabold text-xs text-gd-ink shrink-0">
                         {fmtMoney(s.sum)} грн
                       </div>
                     </button>
                   ))}
                   {!data.stores?.length && (
-                    <div className="p-6 text-center text-xs text-slate-500">За период списаний нет</div>
+                    <div className="p-6 text-center text-xs text-gd-muted">За период списаний нет</div>
                   )}
                 </div>
               </div>
 
               <div className="rounded-2xl glass-panel overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-cyan-400/15 flex items-center gap-2 font-bold text-sm">
-                  <Package className="w-4 h-4 text-teal-600 dark:text-teal-300" />
+                <div className="px-4 py-3 border-b border-gd-line flex items-center gap-2 font-bold text-sm">
+                  <Package className="w-4 h-4 text-gd-accent" />
                   <span>Топ-20 списываемых позиций</span>
                 </div>
-                <div className="divide-y divide-slate-200 dark:divide-cyan-400/10 max-h-96 overflow-y-auto">
+                <div className="divide-y divide-gd-line max-h-96 overflow-y-auto">
                   {(data.products || []).map((p, idx) => (
                     <div
                       key={`${p.name}-${idx}`}
                       className="flex items-center justify-between px-4 py-2.5 text-xs"
                     >
                       <div className="min-w-0 pr-2">
-                        <div className="font-semibold text-slate-900 dark:text-white truncate">
+                        <div className="font-semibold text-gd-ink truncate">
                           {p.name}
                         </div>
-                        <div className="text-[11px] text-slate-500">
+                        <div className="text-[11px] text-gd-muted">
                           {p.cat} · {p.qty} шт
                         </div>
                       </div>
-                      <div className="font-extrabold text-slate-900 dark:text-white shrink-0">
+                      <div className="font-extrabold text-gd-ink shrink-0">
                         {fmtMoney(p.sum)} грн
                       </div>
                     </div>
                   ))}
                   {!data.products?.length && (
-                    <div className="p-6 text-center text-xs text-slate-500">Данных нет</div>
+                    <div className="p-6 text-center text-xs text-gd-muted">Данных нет</div>
                   )}
                 </div>
               </div>
@@ -325,11 +325,11 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
 
             {data.noCost?.length > 0 && (
               <div className="rounded-2xl p-4 glass-panel text-xs space-y-1">
-                <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                <div className="font-bold text-gd-warn flex items-center gap-1.5">
                   <AlertCircle className="w-4 h-4" />
                   <span>Позиции без себестоимости (идут с суммой 0 грн):</span>
                 </div>
-                <div className="text-slate-600 dark:text-slate-300">
+                <div className="text-gd-muted">
                   {data.noCost.join(', ')}
                 </div>
               </div>
@@ -355,15 +355,15 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
             {(storeModal.docs || []).map((doc) => (
               <div
                 key={doc.id}
-                className="rounded-xl p-3.5 glass-sub space-y-2.5 border border-slate-300/80 dark:border-cyan-400/15"
+                className="rounded-xl p-3.5 glass-sub space-y-2.5 border border-gd-line"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs">
-                    <span className="font-bold text-slate-900 dark:text-white">
+                    <span className="font-bold text-gd-ink">
                       Акт от {doc.date}
                     </span>
-                    {doc.who && <span className="text-slate-500 ml-2">({doc.who})</span>}
-                    <div className="font-extrabold text-teal-700 dark:text-teal-300 mt-0.5">
+                    {doc.who && <span className="text-gd-muted ml-2">({doc.who})</span>}
+                    <div className="font-extrabold text-gd-accent mt-0.5">
                       Итого: {fmtMoney(doc.total)} грн ({doc.qty} шт)
                     </div>
                   </div>
@@ -378,11 +378,11 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
                   </button>
                 </div>
 
-                <div className="divide-y divide-slate-200 dark:divide-cyan-400/10 text-xs">
+                <div className="divide-y divide-gd-line text-xs">
                   {(doc.lines || []).map((l, i) => (
                     <div key={i} className="py-1.5 flex items-center justify-between gap-2">
-                      <span className="text-slate-800 dark:text-slate-200 truncate">{l.name}</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300 shrink-0">
+                      <span className="text-gd-ink truncate">{l.name}</span>
+                      <span className="font-semibold text-gd-muted shrink-0">
                         {l.qty} × {fmtMoney(l.price)} = <b>{fmtMoney(l.amount)} грн</b>
                       </span>
                     </div>
@@ -391,7 +391,7 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
               </div>
             ))}
             {!storeModal.docs?.length && (
-              <div className="p-6 text-center text-xs text-slate-500">Актов нет</div>
+              <div className="p-6 text-center text-xs text-gd-muted">Актов нет</div>
             )}
           </div>
         )}

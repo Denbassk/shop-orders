@@ -2,62 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Палитра K4 «кофе с молоком + чернильный синий» (утверждена 27.11.2026).
+   *-rgb — каналы для Tailwind-цветов с модификатором прозрачности (bg-gd-accent/15). */
 :root {
-  --gd-ink: #25201e;
-  --gd-muted: #423731;
-  --gd-line: rgb(74 49 33 / 15%);
-  --gd-grid: rgb(74 49 33 / 19%);
-  --gd-rim: rgb(255 253 246 / 51%);
-  --gd-edge-light: rgb(255 254 247 / 84%);
-  --gd-edge-shade: rgb(57 40 28 / 19%);
-  --gd-gloss: rgb(255 251 242 / 45%);
-  --gd-frame: rgb(247 234 219 / 34%);
-  --gd-rail: rgb(241 222 206 / 54%);
-  --gd-card: rgb(250 242 232 / 54%);
-  --gd-card-light: rgb(255 251 245 / 38%);
-  --gd-raised: rgb(255 249 243 / 84%);
-  --gd-inner: rgb(255 250 245 / 44%);
-  --gd-surface: #f6ece2;
-  --gd-track: rgb(81 49 32 / 14%);
-  --gd-primary: #261e1b;
-  --gd-primary-ink: #fffaf5;
-  --gd-pick: #fff9f3;
-  --gd-pick-ink: #241b17;
-  --gd-coral: #a43c27;
-  --gd-teal: #c95d3e;
-  --gd-ochre: #996300;
-  --gd-graph-ink: #40332d;
-  --gd-focus: #194b48;
-  --gd-dark-shadow: 35 21 14;
+  --gd-ink: #2a211b;
+  --gd-muted: #5e4f44;
+  --gd-line: rgb(60 40 28 / 14%);
+  --gd-grid: rgb(60 40 28 / 19%);
+  --gd-rim: rgb(255 250 243 / 55%);
+  --gd-edge-light: rgb(255 251 245 / 85%);
+  --gd-edge-shade: rgb(60 40 28 / 16%);
+  --gd-gloss: rgb(255 250 243 / 40%);
+  --gd-frame: rgb(255 250 243 / 26%);
+  --gd-rail: rgb(255 250 243 / 45%);
+  --gd-card: rgb(255 250 243 / 46%);
+  --gd-card-light: rgb(255 252 248 / 38%);
+  --gd-raised: rgb(255 251 246 / 84%);
+  --gd-inner: rgb(255 250 243 / 50%);
+  --gd-surface: #efe5da;
+  --gd-track: rgb(60 40 28 / 14%);
+  --gd-pick: #fffaf4;
+  --gd-pick-ink: #26355a;
+  --gd-graph-ink: #3d3029;
+  --gd-dark-shadow: 60 40 28;
+  --gd-bg: #d6c3ae;
+  --gd-bg-hi: #dfcfbc;
+
+  --gd-accent-rgb: 52 70 110;   /* #34466e */
+  --gd-on-accent: #ffffff;
+  --gd-ok-rgb: 46 110 72;       /* #2e6e48 */
+  --gd-warn-rgb: 127 83 0;      /* #7f5300 */
+  --gd-danger-rgb: 168 50 42;   /* #a8322a */
+  --gd-on-danger: #ffffff;
+
+  --gd-accent: rgb(var(--gd-accent-rgb));
+  --gd-ok: rgb(var(--gd-ok-rgb));
+  --gd-warn: rgb(var(--gd-warn-rgb));
+  --gd-danger: rgb(var(--gd-danger-rgb));
+  --gd-primary: var(--gd-accent);
+  --gd-primary-ink: var(--gd-on-accent);
+  --gd-focus: var(--gd-accent);
+  /* старые имена — совместимость */
+  --gd-teal: var(--gd-accent);
+  --gd-coral: var(--gd-danger);
+  --gd-ochre: var(--gd-warn);
 }
 
 html.dark {
-  --gd-ink: #fff6e9;
-  --gd-muted: #e5d5c7;
-  --gd-line: rgb(243 221 198 / 19%);
-  --gd-grid: rgb(243 221 198 / 19%);
-  --gd-rim: rgb(255 236 212 / 31%);
-  --gd-edge-light: rgb(255 242 225 / 49%);
-  --gd-edge-shade: rgb(11 6 5 / 30%);
-  --gd-gloss: rgb(255 237 213 / 13%);
-  --gd-frame: rgb(42 31 29 / 52%);
-  --gd-rail: rgb(45 32 30 / 59%);
-  --gd-card: rgb(47 36 34 / 53%);
-  --gd-card-light: rgb(106 88 81 / 30%);
-  --gd-raised: rgb(80 67 61 / 82%);
-  --gd-inner: rgb(78 61 56 / 49%);
-  --gd-surface: #3b302c;
-  --gd-track: rgb(245 226 212 / 16%);
-  --gd-primary: #f3ddca;
-  --gd-primary-ink: #231a16;
-  --gd-pick: #f9eee0;
+  --gd-ink: #f4ebe1;
+  --gd-muted: #c7b8aa;
+  --gd-line: rgb(255 240 225 / 12%);
+  --gd-grid: rgb(255 240 225 / 16%);
+  --gd-rim: rgb(255 240 225 / 18%);
+  --gd-edge-light: rgb(255 240 225 / 28%);
+  --gd-edge-shade: rgb(0 0 0 / 40%);
+  --gd-gloss: rgb(255 240 225 / 7%);
+  --gd-frame: rgb(60 48 41 / 40%);
+  --gd-rail: rgb(70 56 48 / 52%);
+  --gd-card: rgb(70 56 48 / 50%);
+  --gd-card-light: rgb(120 100 88 / 20%);
+  --gd-raised: rgb(84 70 61 / 88%);
+  --gd-inner: rgb(255 240 225 / 6%);
+  --gd-surface: #3a302a;
+  --gd-track: rgb(255 240 225 / 14%);
+  --gd-pick: #f4ebe1;
   --gd-pick-ink: #241b17;
-  --gd-coral: #ff9177;
-  --gd-teal: #f39a7d;
-  --gd-ochre: #f1be58;
   --gd-graph-ink: #e7d9cd;
-  --gd-focus: #f9bf9b;
-  --gd-dark-shadow: 10 4 3;
+  --gd-dark-shadow: 0 0 0;
+  --gd-bg: #2b221d;
+  --gd-bg-hi: #342a24;
+
+  --gd-accent-rgb: 169 187 227; /* #a9bbe3 */
+  --gd-on-accent: #141c30;
+  --gd-ok-rgb: 127 203 154;
+  --gd-warn-rgb: 232 183 90;
+  --gd-danger-rgb: 242 135 122;
+  --gd-on-danger: #2a0f0a;
 }
 
 @layer base {
@@ -70,46 +90,25 @@ html.dark {
     isolation: isolate;
   }
 
-  /* Текстурная сцена на фоне для реального преломления через матовое стекло */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    pointer-events: none;
-    background-image: url("https://cdn.21st.dev/assets/mirror/ea/ea9270b3b7246283219ac52fa77a1213e9d1efb285d76348d3620609ba6cefa7.jpg");
-    background-size: cover;
-    background-position: center 60%;
-    filter: sepia(0.22) saturate(0.78) brightness(0.86);
+  /* Однотонный фон «кофе с молоком» + едва заметная виньетка (ΔL≈3%), чтобы размытию стекла было что показать */
+  html body {
+    background: radial-gradient(120% 90% at 30% 0%, var(--gd-bg-hi), var(--gd-bg) 70%) fixed, var(--gd-bg);
   }
 
-  html.dark body::before {
-    filter: sepia(0.15) saturate(0.75) brightness(0.58);
+  html:not(.dark) { color-scheme: light; background: var(--gd-bg); }
+  html.dark { color-scheme: dark; background: var(--gd-bg); }
+
+  ::selection { background: rgb(var(--gd-accent-rgb) / 28%); }
+
+  :where(button, a, [role="button"], input[type="checkbox"], input[type="radio"]):focus-visible {
+    outline: 2px solid var(--gd-focus);
+    outline-offset: 2px;
   }
 
-  /* Тёплый световой оверлей поверх фона */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      linear-gradient(116deg, rgb(73 48 37 / 35%), transparent 43%, rgb(162 101 63 / 24%) 76%, transparent 100%),
-      linear-gradient(0deg, rgb(53 33 25 / 34%), transparent 58%);
-  }
-
-  html:not(.dark) body {
-    background-color: #ab8e76;
-    color-scheme: light;
-  }
-
-  html.dark body {
-    background-color: #40322b;
-    color-scheme: dark;
-  }
+  input[type="checkbox"], input[type="radio"] { accent-color: var(--gd-accent); }
 }
 
+@layer components {
 .gd-rail-shell {
   border-color: var(--gd-rim);
   background: linear-gradient(165deg, var(--gd-gloss), transparent 32% 73%, var(--gd-gloss)), var(--gd-rail);
@@ -148,6 +147,19 @@ html.dark {
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
 }
 
+/* Модалка: то же стекло, но плотнее — под ней затемнённый интерфейс */
+.gd-modal {
+  border: 1px solid var(--gd-rim);
+  background: linear-gradient(144deg, var(--gd-card-light), transparent 66%), color-mix(in srgb, var(--gd-surface) 88%, transparent);
+  box-shadow:
+    inset 0 1px 1px var(--gd-edge-light),
+    inset 0 -1px 1px var(--gd-edge-shade),
+    0 24px 64px rgb(var(--gd-dark-shadow) / 30%);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  color: var(--gd-ink);
+}
+
 .glass-sub {
   border: 1px solid var(--gd-line);
   background: var(--gd-inner);
@@ -163,17 +175,21 @@ html.dark {
   padding: 0.5rem 1rem;
   font-size: 0.78rem;
   font-weight: 780;
-  transition: all 0.18s ease;
+  transition: background-color .18s ease, border-color .18s ease, filter .18s ease, box-shadow .18s ease;
   background: var(--gd-primary);
   color: var(--gd-primary-ink);
   border: 1px solid transparent;
   box-shadow: 0 2px 8px rgb(var(--gd-dark-shadow) / 16%);
 }
 .btn-primary:hover {
-  filter: brightness(1.14);
+  filter: brightness(1.12);
+}
+html.dark .btn-primary:hover {
+  filter: brightness(1.06);
 }
 .btn-primary:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
+  filter: saturate(0.4);
   pointer-events: none;
 }
 
@@ -186,14 +202,15 @@ html.dark {
   padding: 0.48rem 0.9rem;
   font-size: 0.78rem;
   font-weight: 720;
-  transition: all 0.18s ease;
+  transition: background-color .18s ease, border-color .18s ease, filter .18s ease, box-shadow .18s ease;
   background: var(--gd-raised);
   color: var(--gd-ink);
   border: 1px solid var(--gd-rim);
   box-shadow: inset 0 1px 0 var(--gd-gloss);
 }
 .btn-secondary:hover {
-  background: var(--gd-surface);
+  background: color-mix(in srgb, var(--gd-raised) 70%, rgb(var(--gd-accent-rgb) / 12%));
+  border-color: rgb(var(--gd-accent-rgb) / 30%);
 }
 .btn-secondary:disabled {
   opacity: 0.5;
@@ -209,13 +226,16 @@ html.dark {
   padding: 0.48rem 0.9rem;
   font-size: 0.78rem;
   font-weight: 750;
-  transition: all 0.18s ease;
+  transition: background-color .18s ease, border-color .18s ease, filter .18s ease, box-shadow .18s ease;
   background: color-mix(in srgb, var(--gd-coral) 16%, var(--gd-inner));
   color: var(--gd-coral);
   border: 1px solid color-mix(in srgb, var(--gd-coral) 38%, transparent);
 }
 .btn-danger:hover {
   background: color-mix(in srgb, var(--gd-coral) 25%, var(--gd-inner));
+}
+.btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled {
+  cursor: not-allowed;
 }
 .btn-danger:disabled {
   opacity: 0.5;
@@ -228,7 +248,7 @@ html.dark {
   padding: 0.55rem 0.85rem;
   font-size: 0.85rem;
   outline: none;
-  transition: all 0.18s ease;
+  transition: background-color .18s ease, border-color .18s ease, filter .18s ease, box-shadow .18s ease;
   background: var(--gd-inner);
   color: var(--gd-ink);
   border: 1px solid var(--gd-line);
@@ -247,21 +267,6 @@ html.dark {
   color: var(--gd-ink);
   background: var(--gd-surface);
 }
-
-/* Гармонизация старых cyan/teal/slate акцентов внутри страниц под тёплую персиковую палитру */
-.gd-stage-frame .bg-teal-500,
-.gd-stage-frame .bg-teal-600 {
-  background-color: var(--gd-teal) !important;
-}
-.gd-stage-frame [class*="text-teal-"] {
-  color: var(--gd-teal) !important;
-}
-.gd-stage-frame [class*="text-cyan-200"],
-.gd-stage-frame [class*="text-cyan-100"] {
-  color: var(--gd-muted) !important;
-}
-.gd-stage-frame [class*="border-cyan-400"] {
-  border-color: var(--gd-line) !important;
 }
 
 /* Custom slim scrollbar */
@@ -280,5 +285,3 @@ html.dark {
   background: var(--gd-muted);
 }
 
-/* Search input icon clearance */
-input.pl-9, input.pl-10, input.pl-11 { padding-left: 2.5rem !important; }
