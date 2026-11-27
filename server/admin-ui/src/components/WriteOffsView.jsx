@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { confirmAction } from './Confirm';
 import {
   Trash2,
   LockOpen,
@@ -54,6 +55,10 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
   }, [period, edrpou]);
 
   const handleToggleOpen = async (on) => {
+    const ok = await confirmAction(on
+      ? { title: 'Открыть приём списаний до конца дня?', text: 'Все точки смогут подавать списания до конца дня, даже после дедлайна.', ok: 'Открыть' }
+      : { title: 'Вернуть дедлайн списаний?', text: 'Приём списаний снова закроется по дедлайну.', ok: 'Вернуть дедлайн' });
+    if (!ok) return;
     setTogglingOpen(true);
     try {
       await apiCall('woOpen', { on });
@@ -77,7 +82,9 @@ export default function WriteOffsView({ toast, onRefreshBrief }) {
   };
 
   const handleDeleteDoc = async (docId) => {
-    if (!window.confirm('Удалить этот акт списания безвозвратно?')) return;
+    if (!(await confirmAction({
+      title: 'Удалить акт списания?', text: 'Акт будет удалён безвозвратно.', ok: 'Удалить', danger: true,
+    }))) return;
     setDeletingDocId(docId);
     try {
       const res = await apiCall('woDelete', { docId });

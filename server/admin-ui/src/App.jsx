@@ -26,6 +26,7 @@ import StoresView from './components/StoresView';
 import WriteOffsView from './components/WriteOffsView';
 import NoticesView from './components/NoticesView';
 import { HealthView, LogView } from './components/HealthLogView';
+import { ConfirmHost } from './components/Confirm';
 
 export default function App() {
   // Auth state: 'checking' | 'login' | 'authed'
@@ -521,6 +522,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <ConfirmHost />
 
       {/* Toast Stack */}
       <div role="status" aria-live="polite" className="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0">

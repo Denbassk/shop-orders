@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { confirmAction } from './Confirm';
 import {
   Users,
   FileSpreadsheet,
@@ -7,6 +8,7 @@ import {
   Clock,
   Package,
   Power,
+  Loader2,
   AlertTriangle,
   ArrowRight,
   Trash2,
@@ -269,13 +271,19 @@ export default function TodayView({
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() =>
-                      runDirAction(
-                        d.key,
-                        () => apiCall('closeAll', { dir: d.key }),
-                        `Обычный режим возвращён: ${d.title}`
-                      )
-                    }
+                    onClick={async () => {
+                      const ok = await confirmAction({
+                        title: `Вернуть обычный режим: ${d.title}?`,
+                        text: 'Приём снова закроется по дедлайну. Точки, которые ещё не заказали, после дедлайна заказать не смогут.',
+                        ok: 'Вернуть режим',
+                      });
+                      if (ok)
+                        runDirAction(
+                          d.key,
+                          () => apiCall('closeAll', { dir: d.key }),
+                          `Обычный режим возвращён: ${d.title}`
+                        );
+                    }}
                     className="btn-secondary px-3 py-2 text-xs border-gd-warn/60 text-gd-warn"
                   >
                     <Lock className="w-4 h-4" />
@@ -285,13 +293,19 @@ export default function TodayView({
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() =>
-                      runDirAction(
-                        d.key,
-                        () => apiCall('openAll', { dir: d.key }),
-                        `Приём открыт всем до конца дня: ${d.title}`
-                      )
-                    }
+                    onClick={async () => {
+                      const ok = await confirmAction({
+                        title: `Открыть приём всем: ${d.title}?`,
+                        text: 'Все точки смогут заказывать до конца дня, даже после дедлайна.',
+                        ok: 'Открыть всем',
+                      });
+                      if (ok)
+                        runDirAction(
+                          d.key,
+                          () => apiCall('openAll', { dir: d.key }),
+                          `Приём открыт всем до конца дня: ${d.title}`
+                        );
+                    }}
                     className="btn-secondary px-3 py-2 text-xs"
                   >
                     <LockOpen className="w-4 h-4" />
@@ -322,29 +336,43 @@ export default function TodayView({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => {
+                  onClick={async () => {
                     const nextOn = !d.enabled;
-                    if (
-                      !nextOn &&
-                      !window.confirm(`Выключить направление «${d.title}» у всех продавцов?`)
-                    ) {
-                      return;
-                    }
+                    const lateNote =
+                      nextOn && d.closed && !d.openedAll
+                        ? `Дедлайн сегодня (${d.deadline || '—'}) уже прошёл: после включения приём останется закрытым. Чтобы точки заказали сегодня, нажмите «Открыть всем».`
+                        : '';
+                    const ok = await confirmAction(
+                      nextOn
+                        ? {
+                            title: `Включить «${d.title}»?`,
+                            text: 'Направление снова появится у продавцов.',
+                            note: lateNote,
+                            ok: 'Включить',
+                          }
+                        : {
+                            title: `Выключить «${d.title}»?`,
+                            text: 'Направление пропадёт у всех продавцов, заказать его будет нельзя, пока не включите обратно.',
+                            ok: 'Выключить',
+                            danger: true,
+                          }
+                    );
+                    if (!ok) return;
                     runDirAction(
                       d.key,
                       () => apiCall('setDirEnabled', { dir: d.key, on: nextOn }),
-                      nextOn ? `Направление включено: ${d.title}` : `Направление выключено: ${d.title}`
+                      nextOn
+                        ? lateNote
+                          ? `Направление включено: ${d.title}. Приём сегодня закрыт — для заказов нажмите «Открыть всем»`
+                          : `Направление включено: ${d.title}`
+                        : `Направление выключено: ${d.title}`
                     );
                   }}
-                  className={`ml-auto p-2 rounded-xl border text-xs transition-colors ${
-                    d.enabled
-                      ? 'border-gd-line text-gd-muted hover:text-gd-danger hover:border-gd-danger/30'
-                      : 'border-gd-ok/30 bg-gd-ok/15 text-gd-ok'
-                  }`}
-                  title={d.enabled ? 'Выключить направление' : 'Включить направление'}
-                  aria-label={d.enabled ? 'Выключить направление' : 'Включить направление'}
+                  className={`ml-auto ${d.enabled ? 'btn-secondary' : 'btn-primary'} px-3 py-2 text-xs`}
+                  title={d.enabled ? 'Выключить направление у всех продавцов' : 'Включить направление'}
                 >
-                  <Power className="w-4 h-4" />
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
+                  <span>{d.enabled ? 'Выключить' : 'Включить'}</span>
                 </button>
               </div>
             </div>

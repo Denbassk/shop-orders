@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { confirmAction } from './Confirm';
 import { Megaphone, Plus, Eye, Trash2, CheckCircle2, Clock } from 'lucide-react';
 import { apiCall } from '../api';
 import { Modal } from './Modal';
@@ -42,6 +43,11 @@ export default function NoticesView({ toast, onCountChange }) {
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
+    if (!(await confirmAction({
+      title: 'Опубликовать сообщение продавцам?',
+      text: text.trim(),
+      ok: 'Опубликовать',
+    }))) return;
     setAdding(true);
     try {
       await apiCall('noticeAdd', {
@@ -62,7 +68,9 @@ export default function NoticesView({ toast, onCountChange }) {
 
   const handleOff = async (id) => {
     if (offBusy) return;
-    if (!window.confirm('Снять сообщение для продавцов?')) return;
+    if (!(await confirmAction({
+      title: 'Снять сообщение?', text: 'Продавцы перестанут видеть это сообщение.', ok: 'Снять', danger: true,
+    }))) return;
     setOffBusy(true);
     try {
       await apiCall('noticeOff', { id });

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { confirmAction } from './Confirm';
 import {
   ArrowLeft,
   Search,
@@ -110,7 +111,11 @@ export default function DirOrdersView({ dir, onChangeDir, onBack, toast }) {
 
   const handleCancelOrder = async () => {
     if (!storeOrder) return;
-    if (!window.confirm(`Отменить весь заказ точки «${storeOrder.label}»?`)) return;
+    if (!(await confirmAction({
+      title: `Отменить заказ точки «${storeOrder.label}»?`,
+      text: 'Весь заказ точки за сегодня будет отменён и уберётся из выгрузки.',
+      ok: 'Отменить заказ', cancel: 'Не отменять', danger: true,
+    }))) return;
     setSavingOrder(true);
     try {
       const r = await apiCall('cancelOrder', { dir, storeId: storeOrder.id });

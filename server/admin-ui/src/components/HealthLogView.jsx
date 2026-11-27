@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { confirmAction } from './Confirm';
 import {
   Activity,
   CheckCircle2,
@@ -34,7 +35,10 @@ export function HealthView({ toast, onLevelChange }) {
 
   const handleClearErrors = async () => {
     if (clearing) return;
-    if (!window.confirm('Очистить журнал ошибок? Это нельзя отменить.')) return;
+    if (!(await confirmAction({
+      title: 'Очистить журнал ошибок?', text: 'Записи об ошибках будут удалены. Это нельзя отменить.',
+      ok: 'Очистить', danger: true,
+    }))) return;
     setClearing(true);
     try {
       await apiCall('healthClear', {});

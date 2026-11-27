@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { confirmAction } from './Confirm';
 import { Clock, Truck, RotateCcw, Save } from 'lucide-react';
 import { apiCall } from '../api';
 
@@ -56,6 +57,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
   };
 
   const handleRevertDeadline = async () => {
+    if (!(await confirmAction({ title: 'Вернуть базовый дедлайн?', text: 'Временный дедлайн будет снят для этого направления.', ok: 'Вернуть' }))) return;
     setSavingDl(true);
     try {
       const res = await apiCall('revertDeadline', { dir });
@@ -93,6 +95,7 @@ export default function DeadlineView({ initialDir = 'bread', todayData, onRefres
   };
 
   const handleRevertLead = async () => {
+    if (!(await confirmAction({ title: 'Снять временный срок доставки?', text: 'Вернётся обычный срок доставки этого направления.', ok: 'Снять' }))) return;
     setSavingLead(true);
     try {
       const res = await apiCall('revertLead', { dir });

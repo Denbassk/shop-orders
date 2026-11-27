@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { confirmAction } from './Confirm';
 import {
   Plus,
   Search,
@@ -204,6 +205,9 @@ export default function AssortmentView({ initialDir = 'bread', onOpenIncoming, t
     if (bulkStopBusy) return;
     const ids = Array.from(selected);
     if (!ids.length) return;
+    if (!(await confirmAction(stopFlag
+      ? { title: `Поставить на стоп ${ids.length} поз.?`, text: 'Продавцы не смогут заказывать эти позиции, пока не снимете стоп.', ok: 'Поставить на стоп', danger: true }
+      : { title: `Снять стоп с ${ids.length} поз.?`, text: 'Позиции снова станут доступны продавцам.', ok: 'Снять стоп' }))) return;
     setBulkStopBusy(true);
     try {
       const res = await apiCall('assortStop', { dir, ids, stop: stopFlag });
